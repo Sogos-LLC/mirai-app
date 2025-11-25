@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/mirai-backend
+  IMAGE_NAME: sogos-llc/mirai-app/mirai-backend
 
 jobs:
   build-and-update:
