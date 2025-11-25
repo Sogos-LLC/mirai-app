@@ -57,7 +57,7 @@ spec:
         - name: KRATOS_PUBLIC_URL
           value: "http://kratos-public.kratos.svc.cluster.local:80"
         - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
-          value: "https://auth.sogos.io"
+          value: "https://mirai-auth.sogos.io"
         - name: NEXT_PUBLIC_APP_URL
           value: "https://mirai.sogos.io"
         - name: NEXT_PUBLIC_LANDING_URL

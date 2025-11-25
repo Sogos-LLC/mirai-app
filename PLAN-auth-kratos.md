@@ -7,7 +7,7 @@ Implement user authentication for Mirai SaaS application using Ory Kratos for id
 **Domains:**
 - `get-mirai.sogos.io` - Public landing page (tier selection, marketing)
 - `mirai.sogos.io` - Authenticated application
-- `auth.sogos.io` - Kratos public API (for browser flows)
+- `mirai-auth.sogos.io` - Kratos public API (for browser flows)
 - `mailhog.sogos.io` - Email testing interface (dev only)
 
 ---

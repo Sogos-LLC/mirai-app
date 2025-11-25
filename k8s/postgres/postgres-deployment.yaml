@@ -1,4 +1,5 @@
 # PostgreSQL deployment for Ory Kratos
+# Uses static PV pointing to pre-created NFS directory with no_root_squash enabled
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -15,6 +16,23 @@ data:
   POSTGRES_DB: kratos
   POSTGRES_USER: kratos
 ---
+# Static PV pointing to pre-created directory on Unraid NAS
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-kratos-pv
+  labels:
+    app: postgres-kratos
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 192.168.1.226
+    path: /mnt/user/k8s-nfs/postgres-kratos
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -23,10 +41,12 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: nfs-client
   resources:
     requests:
       storage: 10Gi
+  selector:
+    matchLabels:
+      app: postgres-kratos
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,9 +72,7 @@ spec:
         operator: Exists
         effect: NoSchedule
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 999
-        fsGroup: 999
+        fsGroup: 70
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -85,6 +103,8 @@ spec:
             memory: "512Mi"
             cpu: "500m"
         securityContext:
+          runAsUser: 70
+          runAsNonRoot: true
           allowPrivilegeEscalation: false
           capabilities:
             drop:

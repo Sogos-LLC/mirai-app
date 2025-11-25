@@ -11,7 +11,7 @@ kratos:
 
     serve:
       public:
-        base_url: https://auth.sogos.io
+        base_url: https://mirai-auth.sogos.io
         cors:
           enabled: true
           allowed_origins:

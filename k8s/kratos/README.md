@@ -70,13 +70,12 @@ helm uninstall kratos -n kratos
 The identity schema defines user traits:
 - **email**: Login identifier, used for recovery and verification
 - **name**: First and last name
-- **company**: Company name and user role (owner/admin/member)
 
 ## Endpoints
 
 - **Public API**: `http://kratos-public.kratos.svc.cluster.local:80`
 - **Admin API**: `http://kratos-admin.kratos.svc.cluster.local:80`
-- **Browser URL**: `https://auth.sogos.io` (via Cloudflare tunnel)
+- **Browser URL**: `https://mirai-auth.sogos.io` (via Cloudflare tunnel)
 
 ## Self-Service Flows
 

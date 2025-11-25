@@ -3,12 +3,12 @@
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Cloudflare Tunnel                            │
-├─────────────────┬─────────────────┬─────────────────┬──────────────┤
-│ get-mirai.sogos.io│ mirai.sogos.io  │ auth.sogos.io   │ api.sogos.io │
-│ (Landing Page)    │ (App Frontend)  │ (Kratos Auth)   │ (Go Backend) │
-└─────────────────┴─────────────────┴─────────────────┴──────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            Cloudflare Tunnel                                │
+├─────────────────┬─────────────────┬──────────────────────┬──────────────────┤
+│ get-mirai.sogos │ mirai.sogos.io  │ mirai-auth.sogos.io  │ mirai-api.sogos  │
+│ (Landing Page)  │ (App Frontend)  │ (Kratos Auth)        │ (Go Backend)     │
+└─────────────────┴─────────────────┴──────────────────────┴──────────────────┘
          │                  │                 │               │
          ▼                  ▼                 ▼               ▼
 ┌─────────────────────────────────┐  ┌──────────────┐  ┌──────────────┐
@@ -46,8 +46,8 @@
 |--------|---------|--------|
 | `get-mirai.sogos.io` | Marketing landing page | Configured |
 | `mirai.sogos.io` | Authenticated application | Configured |
-| `auth.sogos.io` | Kratos public API | Configured |
-| `api.sogos.io` | Go Backend API | **NEW - To be added** |
+| `mirai-auth.sogos.io` | Kratos public API | Configured |
+| `mirai-api.sogos.io` | Go Backend API | **NEW - To be added** |
 
 ---
 
@@ -235,7 +235,7 @@ Use golang-migrate for schema management.
 #### 3.1 API Client
 ```typescript
 // frontend/src/lib/api/client.ts
-const API_URL = process.env.NEXT_PUBLIC_API_URL; // https://api.sogos.io
+const API_URL = process.env.NEXT_PUBLIC_API_URL; // https://mirai-api.sogos.io
 
 export async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -261,9 +261,9 @@ After Kratos registration:
 - Team member management
 
 ### Phase 4: Cloudflare Tunnel Update
-Add `api.sogos.io` route:
+Add `mirai-api.sogos.io` route:
 ```yaml
-- hostname: api.sogos.io
+- hostname: mirai-api.sogos.io
   service: http://mirai-backend.mirai.svc.cluster.local:8080
 ```
 
@@ -380,7 +380,7 @@ backend/
 - `frontend/src/store/slices/teamsSlice.ts` - Teams state
 
 ### MODIFY: Cloudflare Tunnel
-- `homelab-platform/ingress/cloudflared-config.yaml` - Add api.sogos.io
+- `homelab-platform/ingress/cloudflared-config.yaml` - Add mirai-api.sogos.io
 
 ### MODIFY: Kratos Identity Schema
 - `k8s/kratos/values.yaml` - Remove company from traits (moved to app DB)
