@@ -10,8 +10,8 @@ images:
 - name: ghcr.io/sojohnnysaid/mirai-app/mirai-frontend
   newTag: d9f16b5
 
-namespace: mirai
+# namespace managed by platform repo, each resource has namespace set explicitly
 
-commonLabels:
+labels:
   app.kubernetes.io/name: mirai-frontend
   app.kubernetes.io/part-of: mirai
