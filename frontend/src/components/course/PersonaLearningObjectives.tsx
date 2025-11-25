@@ -39,7 +39,7 @@ export default function PersonaLearningObjectives({
   };
 
   const addObjective = () => {
-    if (localObjectives.length < 5) { // Max 5 objectives per persona
+    if (localObjectives.length < 20) { // Max 20 objectives per persona
       const newObjectives = [...localObjectives, ''];
       setLocalObjectives(newObjectives);
       saveObjectivesToParent(newObjectives);
@@ -213,7 +213,7 @@ export default function PersonaLearningObjectives({
       </div>
 
       {/* Add Objective Button */}
-      {localObjectives.length < 5 && (
+      {localObjectives.length < 20 && (
         <button
           onClick={addObjective}
           className="flex items-center gap-2 px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"

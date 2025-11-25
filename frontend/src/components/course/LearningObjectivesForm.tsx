@@ -45,7 +45,7 @@ export default function LearningObjectivesForm() {
   };
 
   const addObjective = () => {
-    if (objectives.length < 8) {
+    if (objectives.length < 20) {
       const newObjectives = [...objectives, ''];
       setObjectives(newObjectives);
       saveObjectivesToRedux(newObjectives);
@@ -192,7 +192,7 @@ export default function LearningObjectivesForm() {
       </div>
 
       {/* Add Objective Button */}
-      {objectives.length < 8 && (
+      {objectives.length < 20 && (
         <button
           onClick={addObjective}
           className="flex items-center gap-2 px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
