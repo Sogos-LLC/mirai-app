@@ -1,0 +1,30 @@
+{
+  "id": "course-1761957355288-7uhhu1y67",
+  "version": 1,
+  "status": "draft",
+  "metadata": {
+    "id": "course-1761957355288-7uhhu1y67",
+    "version": 2,
+    "status": "draft",
+    "createdAt": "2025-11-01T00:35:55.313Z",
+    "modifiedAt": "2025-11-01T00:37:42.724Z"
+  },
+  "settings": {
+    "title": "test1",
+    "desiredOutcome": "test1",
+    "destinationFolder": "sales-skills",
+    "categoryTags": [],
+    "dataSource": "open-web"
+  },
+  "personas": [],
+  "learningObjectives": [],
+  "assessmentSettings": {
+    "enableEmbeddedKnowledgeChecks": true,
+    "enableFinalExam": true
+  },
+  "content": {
+    "sections": [],
+    "courseBlocks": []
+  },
+  "exports": []
+}

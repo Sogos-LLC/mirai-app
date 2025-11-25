@@ -1,0 +1,263 @@
+/* ===================================
+   Tailwind Directives
+   =================================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================================
+   Base Styles
+   =================================== */
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+/* ===================================
+   Component Styles
+   =================================== */
+@layer components {
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2 rounded-lg transition-colors hover:bg-primary-100 cursor-pointer;
+  }
+  
+  .sidebar-link.active {
+    @apply bg-primary-200 text-primary-800;
+  }
+}
+
+/* ===================================
+   Sidebar Variables
+   =================================== */
+:root {
+  --sidebar-width-expanded: 256px;
+  --sidebar-width-collapsed: 80px;
+  --sidebar-transition-speed: 0.3s;
+}
+
+/* ===================================
+   Sidebar Structure
+   =================================== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: var(--sidebar-width-expanded);
+  background: white;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  transition: width var(--sidebar-transition-speed);
+  overflow: visible;
+  z-index: 40;
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-width-collapsed);
+}
+
+/* ===================================
+   Sidebar Header
+   =================================== */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  white-space: nowrap;
+  height: 68px;
+}
+
+.sidebar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgb(79, 70, 229);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* ===================================
+   Sidebar Toggle Button
+   =================================== */
+.sidebar-toggle {
+  position: absolute;
+  top: 32px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+}
+
+.sidebar-toggle:hover {
+  background: #f9fafb;
+}
+
+/* ===================================
+   Sidebar Menu
+   =================================== */
+.sidebar-menu {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 16px;
+  overflow-y: auto;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 12px;
+  color: #374151;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: #f3f4f6;
+}
+
+.menu-item.active {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.menu-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.menu-label {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* ===================================
+   Sidebar Recents Section
+   =================================== */
+.sidebar-recents {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recents-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  padding: 0 12px;
+  margin-bottom: 8px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 12px;
+  color: #374151;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+  text-align: left;
+}
+
+.recent-item:hover {
+  background: #f3f4f6;
+}
+
+.recent-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #d1d5db;
+  flex-shrink: 0;
+}
+
+/* ===================================
+   Sidebar Bottom Section
+   =================================== */
+.sidebar-bottom {
+  border-top: 1px solid #e5e7eb;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ===================================
+   Sidebar Animation Prevention
+   Prevent icon shifts during collapse/expand
+   =================================== */
+.sidebar *:not(.menu-label):not(.sidebar-brand):not(.sidebar-recents) {
+  transition: none !important;
+}
+
+/* ===================================
+   Keyframe Animations
+   =================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ===================================
+   Animation Classes
+   =================================== */
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-in;
+  animation-fill-mode: backwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.15s ease-out;
+  animation-fill-mode: forwards;
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}

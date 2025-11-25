@@ -1,0 +1,57 @@
+{
+  "id": "course-1763096180624-wo9plrazd",
+  "version": 1,
+  "status": "draft",
+  "metadata": {
+    "id": "course-1763096180624-wo9plrazd",
+    "version": 2,
+    "status": "draft",
+    "createdAt": "2025-11-14T04:56:20.671Z",
+    "modifiedAt": "2025-11-14T04:56:50.878Z"
+  },
+  "settings": {
+    "title": "test",
+    "desiredOutcome": "test",
+    "destinationFolder": "engineering",
+    "categoryTags": [
+      "Beginner"
+    ],
+    "dataSource": "open-web"
+  },
+  "personas": [
+    {
+      "id": "persona-1763096187011",
+      "name": "Persona 1",
+      "role": "tes",
+      "kpis": "ttest",
+      "responsibilities": "Prospecting new leads, conducting product demonstrations, managing sales pipeline, closing deals",
+      "challenges": "Understanding complex document workflows, competing against established players, articulating ROI",
+      "concerns": "Meeting quarterly targets, handling technical objections, building trust with enterprise buyers",
+      "knowledge": "Basic understanding of SaaS, CRM proficiency, general sales methodology",
+      "learningObjectives": [
+        {
+          "id": "obj-tes-1",
+          "text": "Demonstrate core Doc-O-Matic features aligned to specific customer use cases and industry requirements"
+        },
+        {
+          "id": "obj-tes-2",
+          "text": "Conduct effective discovery to identify document automation pain points and quantify business impact"
+        },
+        {
+          "id": "obj-tes-3",
+          "text": ""
+        }
+      ]
+    }
+  ],
+  "learningObjectives": [],
+  "assessmentSettings": {
+    "enableEmbeddedKnowledgeChecks": true,
+    "enableFinalExam": true
+  },
+  "content": {
+    "sections": [],
+    "courseBlocks": []
+  },
+  "exports": []
+}

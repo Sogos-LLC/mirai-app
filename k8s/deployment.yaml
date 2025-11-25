@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mirai-frontend
+  namespace: mirai
+  labels:
+    app: mirai-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mirai-frontend
+  template:
+    metadata:
+      labels:
+        app: mirai-frontend
+    spec:
+      containers:
+      - name: mirai-frontend
+        image: ghcr.io/sojohnnysaid/mirai-prototype/mirai-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        # MinIO configuration
+        - name: USE_S3_STORAGE
+          value: "true"
+        - name: S3_ENDPOINT
+          value: "http://192.168.1.226:9768"
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: secretkey
+        - name: S3_BUCKET
+          value: "mirai"
+        - name: S3_REGION
+          value: "us-east-1"
+        - name: S3_BASE_PATH
+          value: "data"
+        # Redis caching configuration
+        - name: ENABLE_REDIS_CACHE
+          value: "true"
+        - name: REDIS_URL
+          value: "redis://redis.redis.svc.cluster.local:6379"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault

@@ -1,0 +1,59 @@
+apiVersion: v1
+data:
+  Corefile: |
+    cluster.local:53 {
+        errors
+        cache {
+            success 9984 30
+            denial 9984 5
+        }
+        reload
+        loop
+        bind 169.254.20.10
+        forward . 10.96.0.10 {
+            force_tcp
+        }
+        prometheus :9253
+        health 169.254.20.10:8080
+    }
+    in-addr.arpa:53 {
+        errors
+        cache 30
+        reload
+        loop
+        bind 169.254.20.10
+        forward . 10.96.0.10 {
+            force_tcp
+        }
+        prometheus :9253
+    }
+    ip6.arpa:53 {
+        errors
+        cache 30
+        reload
+        loop
+        bind 169.254.20.10
+        forward . 10.96.0.10 {
+            force_tcp
+        }
+        prometheus :9253
+    }
+    .:53 {
+        errors
+        cache 30
+        reload
+        loop
+        bind 169.254.20.10
+        forward . 1.1.1.1 8.8.8.8
+        prometheus :9253
+    }
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"Corefile":"cluster.local:53 {\n    errors\n    cache {\n        success 9984 30\n        denial 9984 5\n    }\n    reload\n    loop\n    bind 169.254.20.10\n    forward . 10.96.0.10 {\n        force_tcp\n    }\n    prometheus :9253\n    health 169.254.20.10:8080\n}\nin-addr.arpa:53 {\n    errors\n    cache 30\n    reload\n    loop\n    bind 169.254.20.10\n    forward . 10.96.0.10 {\n        force_tcp\n    }\n    prometheus :9253\n}\nip6.arpa:53 {\n    errors\n    cache 30\n    reload\n    loop\n    bind 169.254.20.10\n    forward . 10.96.0.10 {\n        force_tcp\n    }\n    prometheus :9253\n}\n.:53 {\n    errors\n    cache 30\n    reload\n    loop\n    bind 169.254.20.10\n    forward . 1.1.1.1 8.8.8.8\n    prometheus :9253\n}\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"node-local-dns","namespace":"kube-system"}}
+  creationTimestamp: "2025-11-13T16:11:06Z"
+  name: node-local-dns
+  namespace: kube-system
+  resourceVersion: "5082978"
+  uid: a9023954-c3ef-4c50-9452-0d4b50204578

@@ -1,0 +1,215 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-11-14T04:56:50.885Z",
+  "courses": [
+    {
+      "id": "course-1763095447322-406fpmi4b",
+      "title": "test",
+      "status": "generated",
+      "folder": "product",
+      "tags": [
+        "Beginner"
+      ],
+      "createdAt": "2025-11-14T04:44:07.372Z",
+      "modifiedAt": "2025-11-14T04:44:42.330Z"
+    },
+    {
+      "id": "course-1763095484404-8sn4ezetg",
+      "title": "test 2",
+      "status": "generated",
+      "folder": "engineering",
+      "tags": [
+        "Beginner"
+      ],
+      "createdAt": "2025-11-14T04:44:44.418Z",
+      "modifiedAt": "2025-11-14T04:45:08.994Z"
+    },
+    {
+      "id": "course-1763096180624-wo9plrazd",
+      "title": "test",
+      "status": "draft",
+      "folder": "engineering",
+      "tags": [
+        "Beginner"
+      ],
+      "createdAt": "2025-11-14T04:56:20.671Z",
+      "modifiedAt": "2025-11-14T04:56:50.878Z"
+    }
+  ],
+  "folders": [
+    {
+      "id": "library",
+      "name": "Library",
+      "parent": null,
+      "type": "library",
+      "children": [
+        "team",
+        "personal"
+      ]
+    },
+    {
+      "id": "team",
+      "name": "Team-Name",
+      "parent": "library",
+      "type": "team",
+      "children": [
+        "hr",
+        "sales",
+        "product",
+        "engineering"
+      ]
+    },
+    {
+      "id": "hr",
+      "name": "Human Resources",
+      "parent": "team",
+      "type": "folder",
+      "children": [
+        "onboarding",
+        "training",
+        "compliance"
+      ]
+    },
+    {
+      "id": "onboarding",
+      "name": "Onboarding",
+      "parent": "hr",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "training",
+      "name": "Training",
+      "parent": "hr",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "compliance",
+      "name": "Compliance",
+      "parent": "hr",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "sales",
+      "name": "Sales Enablement",
+      "parent": "team",
+      "type": "folder",
+      "children": [
+        "sales-product-knowledge",
+        "sales-skills",
+        "sales-tools"
+      ]
+    },
+    {
+      "id": "sales-product-knowledge",
+      "name": "Product Knowledge",
+      "parent": "sales",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "sales-skills",
+      "name": "Sales Skills",
+      "parent": "sales",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "sales-tools",
+      "name": "Tools & Systems",
+      "parent": "sales",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "product",
+      "name": "Product",
+      "parent": "team",
+      "type": "folder",
+      "children": [
+        "product-features",
+        "product-roadmap"
+      ]
+    },
+    {
+      "id": "product-features",
+      "name": "Feature Training",
+      "parent": "product",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "product-roadmap",
+      "name": "Roadmap",
+      "parent": "product",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "engineering",
+      "name": "Engineering",
+      "parent": "team",
+      "type": "folder",
+      "children": [
+        "eng-backend",
+        "eng-frontend",
+        "eng-devops"
+      ]
+    },
+    {
+      "id": "eng-backend",
+      "name": "Backend Development",
+      "parent": "engineering",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "eng-frontend",
+      "name": "Frontend Development",
+      "parent": "engineering",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "eng-devops",
+      "name": "DevOps",
+      "parent": "engineering",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "personal",
+      "name": "Personal",
+      "parent": "library",
+      "type": "personal",
+      "children": [
+        "my-drafts",
+        "completed-courses",
+        "shared-with-me"
+      ]
+    },
+    {
+      "id": "my-drafts",
+      "name": "My Drafts",
+      "parent": "personal",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "completed-courses",
+      "name": "Completed Courses",
+      "parent": "personal",
+      "type": "folder",
+      "children": []
+    },
+    {
+      "id": "shared-with-me",
+      "name": "Shared with Me",
+      "parent": "personal",
+      "type": "folder",
+      "children": []
+    }
+  ]
+}

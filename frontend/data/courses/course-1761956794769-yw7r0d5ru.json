@@ -1,0 +1,316 @@
+{
+  "id": "course-1761956794769-yw7r0d5ru",
+  "version": 1,
+  "status": "generated",
+  "metadata": {
+    "id": "course-1761956794769-yw7r0d5ru",
+    "version": 2,
+    "status": "draft",
+    "createdAt": "2025-11-01T00:26:34.782Z",
+    "modifiedAt": "2025-11-01T00:27:19.110Z"
+  },
+  "settings": {
+    "title": "test3",
+    "desiredOutcome": "test3",
+    "destinationFolder": "team-sales-product",
+    "categoryTags": [
+      "Expert",
+      "Product"
+    ],
+    "dataSource": "open-web"
+  },
+  "personas": [
+    {
+      "id": "persona-1761956811865",
+      "name": "Persona 1",
+      "role": "test3",
+      "kpis": "test3",
+      "responsibilities": "Prospecting, conducting demos, managing pipeline, closing deals, maintaining CRM records",
+      "challenges": "Understanding complex document workflows, competing against established players, articulating ROI to technical and business stakeholders",
+      "concerns": "Meeting quarterly targets, handling technical objections, building trust with enterprise buyers who have existing solutions",
+      "knowledge": "Basic understanding of SaaS sales cycles, CRM proficiency, general sales methodology, familiarity with document management concepts"
+    }
+  ],
+  "learningObjectives": [
+    {
+      "id": "obj-1",
+      "text": "Articulate Doc-O-Matic's unique value proposition and differentiate from competitors"
+    },
+    {
+      "id": "obj-2",
+      "text": "Conduct effective discovery to identify document automation pain points"
+    },
+    {
+      "id": "obj-3",
+      "text": "Demonstrate core features aligned to customer use cases"
+    },
+    {
+      "id": "obj-4",
+      "text": "Handle common objections with confidence"
+    },
+    {
+      "id": "obj-5",
+      "text": "Build compelling ROI-based business cases"
+    }
+  ],
+  "assessmentSettings": {
+    "enableEmbeddedKnowledgeChecks": true,
+    "enableFinalExam": true
+  },
+  "content": {
+    "sections": [],
+    "courseBlocks": [
+      {
+        "id": "block-1",
+        "type": "heading",
+        "content": "Welcome to Doc-O-Matic Sales Mastery",
+        "order": 0,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-2",
+            "persona-3"
+          ],
+          "learningObjectives": [],
+          "kpis": []
+        }
+      },
+      {
+        "id": "block-2",
+        "type": "text",
+        "content": "In this course, you'll learn how to effectively sell Doc-O-Matic's document automation platform to enterprise clients. Doc-O-Matic helps companies eliminate manual document processes, reduce errors by 90%, and accelerate document turnaround time by 75%. By the end of this training, you'll be equipped to identify opportunities, conduct compelling demonstrations, and close deals with confidence.",
+        "order": 1,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-2"
+          ],
+          "learningObjectives": [
+            "obj-1"
+          ],
+          "kpis": []
+        }
+      },
+      {
+        "id": "block-3",
+        "type": "interactive",
+        "content": "Quick Assessment: What's your current experience level with document automation solutions?",
+        "prompt": "Interactive quiz to gauge baseline knowledge",
+        "order": 2,
+        "alignment": {
+          "personas": [
+            "persona-1"
+          ],
+          "learningObjectives": [],
+          "kpis": []
+        }
+      },
+      {
+        "id": "block-4",
+        "type": "heading",
+        "content": "Understanding Doc-O-Matic's Core Capabilities",
+        "order": 3,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-3"
+          ],
+          "learningObjectives": [
+            "obj-3"
+          ],
+          "kpis": []
+        }
+      },
+      {
+        "id": "block-5",
+        "type": "text",
+        "content": "Doc-O-Matic's platform consists of five core modules:\n\n1. **Template Designer**: Drag-and-drop interface for creating dynamic document templates\n2. **Workflow Automation**: Visual workflow builder for multi-step approval processes\n3. **Data Integration Hub**: Pre-built connectors to 50+ enterprise systems\n4. **E-Signature Engine**: Legally binding electronic signatures with audit trails\n5. **Analytics Dashboard**: Real-time insights into document processing metrics\n\nEach module addresses specific pain points in the document lifecycle, from creation to archival.",
+        "order": 4,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-3"
+          ],
+          "learningObjectives": [
+            "obj-3"
+          ],
+          "kpis": [
+            "conversion rate from demo to trial"
+          ]
+        }
+      },
+      {
+        "id": "block-6",
+        "type": "knowledgeCheck",
+        "content": "{\"question\":\"Which Doc-O-Matic module would best help a client who says \\\"We spend hours copying data from our CRM into contracts\\\"?\",\"options\":[\"Template Designer - for creating document templates\",\"Data Integration Hub - for connecting to enterprise systems\",\"E-Signature Engine - for getting documents signed\",\"Analytics Dashboard - for tracking metrics\"],\"correctAnswer\":1,\"explanation\":\"The Data Integration Hub provides pre-built connectors to 50+ enterprise systems including CRMs, allowing automatic data population in documents.\"}",
+        "prompt": "Knowledge check on matching solutions to client needs",
+        "order": 5,
+        "alignment": {
+          "personas": [
+            "persona-1"
+          ],
+          "learningObjectives": [
+            "obj-3"
+          ],
+          "kpis": []
+        }
+      },
+      {
+        "id": "block-9",
+        "type": "heading",
+        "content": "Positioning Against Competitors",
+        "order": 8,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-2"
+          ],
+          "learningObjectives": [
+            "obj-1"
+          ],
+          "kpis": []
+        }
+      },
+      {
+        "id": "block-10",
+        "type": "text",
+        "content": "Doc-O-Matic's key differentiators:\n\n**vs. DocuSign**: Beyond just signatures - full document lifecycle automation\n**vs. Adobe Sign**: 60% lower total cost of ownership with superior workflow capabilities\n**vs. Legacy DMS**: Cloud-native architecture with no infrastructure requirements\n\nUnique selling points:\n• No-code template designer (competitors require technical resources)\n• Industry-specific pre-built templates (500+ templates across 12 industries)\n• Unlimited users at flat pricing (vs. per-user pricing models)\n• 24/7 implementation support included in all plans",
+        "order": 9,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-2"
+          ],
+          "learningObjectives": [
+            "obj-1"
+          ],
+          "kpis": [
+            "average deal size"
+          ]
+        }
+      },
+      {
+        "id": "block-7",
+        "type": "heading",
+        "content": "Mastering Discovery Conversations",
+        "order": 6,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-2"
+          ],
+          "learningObjectives": [
+            "obj-2"
+          ],
+          "kpis": [
+            "number of demos scheduled"
+          ]
+        }
+      },
+      {
+        "id": "block-8",
+        "type": "text",
+        "content": "Effective discovery is crucial for Doc-O-Matic sales success. Use the IMPACT framework:\n\n**I** - Identify current document processes\n**M** - Measure time and cost of manual tasks\n**P** - Pain points and frustrations\n**A** - Authority and decision-making process\n**C** - Criteria for success\n**T** - Timeline and urgency\n\nKey discovery questions:\n• \"How many documents does your team process monthly?\"\n• \"What percentage require multiple approvals?\"\n• \"How much time do errors and rework consume?\"\n• \"What's the business impact of document delays?\"",
+        "order": 7,
+        "alignment": {
+          "personas": [
+            "persona-1"
+          ],
+          "learningObjectives": [
+            "obj-2"
+          ],
+          "kpis": [
+            "conversion rate from demo to trial"
+          ]
+        }
+      },
+      {
+        "id": "block-11",
+        "type": "heading",
+        "content": "Handling Common Objections",
+        "order": 10,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-3"
+          ],
+          "learningObjectives": [
+            "obj-4"
+          ],
+          "kpis": []
+        }
+      },
+      {
+        "id": "block-12",
+        "type": "interactive",
+        "content": "Role-play scenario: Customer says \"We already have DocuSign, why do we need Doc-O-Matic?\"",
+        "prompt": "Interactive objection handling practice",
+        "order": 11,
+        "alignment": {
+          "personas": [
+            "persona-1"
+          ],
+          "learningObjectives": [
+            "obj-4"
+          ],
+          "kpis": [
+            "technical win rate"
+          ]
+        }
+      },
+      {
+        "id": "block-13",
+        "type": "heading",
+        "content": "Building the Business Case",
+        "order": 12,
+        "alignment": {
+          "personas": [
+            "persona-1",
+            "persona-2"
+          ],
+          "learningObjectives": [
+            "obj-5"
+          ],
+          "kpis": [
+            "average deal size"
+          ]
+        }
+      },
+      {
+        "id": "block-14",
+        "type": "text",
+        "content": "Doc-O-Matic ROI Calculator inputs:\n• Number of documents processed monthly\n• Average time per document (creation + routing + approval)\n• Error rate and rework percentage\n• Average hourly cost of document processors\n• Compliance risk and audit costs\n\nTypical results:\n• 75% reduction in document processing time\n• 90% reduction in errors\n• 50% reduction in compliance audit time\n• ROI achieved in 3-4 months\n• 3-year savings of $500K-$2M for mid-market companies",
+        "order": 13,
+        "alignment": {
+          "personas": [
+            "persona-1"
+          ],
+          "learningObjectives": [
+            "obj-5"
+          ],
+          "kpis": [
+            "average deal size",
+            "Monthly quota attainment"
+          ]
+        }
+      },
+      {
+        "id": "block-15",
+        "type": "knowledgeCheck",
+        "content": "{\"question\":\"A prospect processes 10,000 documents monthly, taking 15 minutes each. With Doc-O-Matic reducing time by 75%, what is the monthly time savings?\",\"options\":[\"625 hours saved per month\",\"1,250 hours saved per month\",\"1,875 hours saved per month\",\"2,500 hours saved per month\"],\"correctAnswer\":2,\"explanation\":\"Current time: 10,000 docs × 15 min = 150,000 min = 2,500 hours. With 75% reduction = 1,875 hours saved monthly. At $50/hour, that's $93,750 in monthly savings!\"}",
+        "prompt": "Knowledge check on ROI calculation",
+        "order": 14,
+        "alignment": {
+          "personas": [
+            "persona-1"
+          ],
+          "learningObjectives": [
+            "obj-5"
+          ],
+          "kpis": []
+        }
+      }
+    ]
+  },
+  "exports": []
+}

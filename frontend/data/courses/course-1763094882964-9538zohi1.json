@@ -1,0 +1,30 @@
+{
+  "id": "course-1763094882964-9538zohi1",
+  "version": 1,
+  "status": "draft",
+  "metadata": {
+    "id": "course-1763094882964-9538zohi1",
+    "version": 1,
+    "status": "draft",
+    "createdAt": "2025-11-14T04:35:48.505Z",
+    "modifiedAt": "2025-11-14T04:35:48.505Z"
+  },
+  "settings": {
+    "title": "Untitled Course",
+    "desiredOutcome": "",
+    "destinationFolder": "",
+    "categoryTags": [],
+    "dataSource": "open-web"
+  },
+  "personas": [],
+  "learningObjectives": [],
+  "assessmentSettings": {
+    "enableEmbeddedKnowledgeChecks": true,
+    "enableFinalExam": true
+  },
+  "content": {
+    "sections": [],
+    "courseBlocks": []
+  },
+  "exports": []
+}
