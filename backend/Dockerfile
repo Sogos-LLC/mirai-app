@@ -20,8 +20,8 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-# Copy the binary from builder
-COPY --from=builder /app/server .
+# Copy the binary from builder with execute permissions
+COPY --from=builder --chmod=755 /app/server .
 
 # Copy migrations
 COPY --from=builder /app/internal/database/migrations ./migrations
