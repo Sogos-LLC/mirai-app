@@ -109,20 +109,15 @@ kratos:
           url: file:///etc/config/identity.schema.json
 
     courier:
-      # Using Mailgun HTTP API for email delivery
-      delivery_strategy: http
-      http:
-        request_config:
-          url: https://api.mailgun.net/v3/sandbox6ade5f2c47a34afe88831b61b113fba5.mailgun.org/messages
-          method: POST
-          headers:
-            Content-Type: application/x-www-form-urlencoded
-          body: base64://ZnVuY3Rpb24oY3R4KSB7CiAgbG9jYWwgc3ViamVjdCA9IAogICAgaWYgY3R4LnRlbXBsYXRlX3R5cGUgPT0gInJlY292ZXJ5X2NvZGVfdmFsaWQiIHRoZW4gIlJlc2V0IHlvdXIgTWlyYWkgcGFzc3dvcmQiCiAgICBlbHNlIGlmIGN0eC50ZW1wbGF0ZV90eXBlID09ICJ2ZXJpZmljYXRpb25fY29kZV92YWxpZCIgdGhlbiAiVmVyaWZ5IHlvdXIgTWlyYWkgZW1haWwiCiAgICBlbHNlIGlmIGN0eC50ZW1wbGF0ZV90eXBlID09ICJyZWNvdmVyeV92YWxpZCIgdGhlbiAiUmVzZXQgeW91ciBNaXJhaSBwYXNzd29yZCIKICAgIGVsc2UgaWYgY3R4LnRlbXBsYXRlX3R5cGUgPT0gInZlcmlmaWNhdGlvbl92YWxpZCIgdGhlbiAiVmVyaWZ5IHlvdXIgTWlyYWkgZW1haWwiCiAgICBlbHNlICJNaXJhaSBOb3RpZmljYXRpb24iOwoKICBsb2NhbCBib2R5ID0gCiAgICBpZiBjdHgudGVtcGxhdGVfdHlwZSA9PSAicmVjb3ZlcnlfY29kZV92YWxpZCIgdGhlbiAiWW91ciByZWNvdmVyeSBjb2RlIGlzOiAiICsgY3R4LnRlbXBsYXRlX2RhdGEucmVjb3ZlcnlfY29kZQogICAgZWxzZSBpZiBjdHgudGVtcGxhdGVfdHlwZSA9PSAidmVyaWZpY2F0aW9uX2NvZGVfdmFsaWQiIHRoZW4gIllvdXIgdmVyaWZpY2F0aW9uIGNvZGUgaXM6ICIgKyBjdHgudGVtcGxhdGVfZGF0YS52ZXJpZmljYXRpb25fY29kZQogICAgZWxzZSBpZiBjdHgudGVtcGxhdGVfdHlwZSA9PSAicmVjb3ZlcnlfdmFsaWQiIHRoZW4gIkNsaWNrIGhlcmUgdG8gcmVzZXQgeW91ciBwYXNzd29yZDogIiArIGN0eC50ZW1wbGF0ZV9kYXRhLnJlY292ZXJ5X3VybAogICAgZWxzZSBpZiBjdHgudGVtcGxhdGVfdHlwZSA9PSAidmVyaWZpY2F0aW9uX3ZhbGlkIiB0aGVuICJDbGljayBoZXJlIHRvIHZlcmlmeSB5b3VyIGVtYWlsOiAiICsgY3R4LnRlbXBsYXRlX2RhdGEudmVyaWZpY2F0aW9uX3VybAogICAgZWxzZSAiTm90aWZpY2F0aW9uIGZyb20gTWlyYWkiOwoKICAiZnJvbT1NaXJhaSA8bm9yZXBseUBzYW5kYm94NmFkZTVmMmM0N2EzNGFmZTg4ODMxYjYxYjExM2ZiYTUubWFpbGd1bi5vcmc+JnRvPSIgKyBjdHgucmVjaXBpZW50ICsgIiZzdWJqZWN0PSIgKyBzdWJqZWN0ICsgIiZ0ZXh0PSIgKyBib2R5Cn0=
-          auth:
-            type: basic_auth
-            config:
-              user: api
-              password: ${MAILGUN_API_KEY}
+      # Development: Mailpit (local, no auth)
+      # Production: Switch to Sendamatic by uncommenting below
+      smtp:
+        # Mailpit (local dev/testing)
+        connection_uri: smtp://mailpit.mailpit.svc.cluster.local:1025/?disable_starttls=true
+        # Sendamatic (production)
+        # connection_uri: smtp://${SENDAMATIC_USER}:${SENDAMATIC_PASS}@in.smtp.sendamatic.net:587/?starttls=true
+        from_address: noreply@mirai.sogos.io
+        from_name: Mirai
 
     session:
       lifespan: 24h
@@ -203,11 +198,17 @@ deployment:
         secretKeyRef:
           name: kratos-secret
           key: secretsDefault
-    - name: MAILGUN_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: kratos-secret
-          key: mailgunApiKey
+    # Sendamatic credentials (uncomment for production)
+    # - name: SENDAMATIC_USER
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: kratos-secret
+    #       key: sendamaticUser
+    # - name: SENDAMATIC_PASS
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: kratos-secret
+    #       key: sendamaticPass
 
   resources:
     requests:
