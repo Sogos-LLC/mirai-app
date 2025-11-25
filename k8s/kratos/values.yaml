@@ -1,0 +1,279 @@
+# Ory Kratos Helm Chart Values
+# Install with: helm install kratos ory/kratos -f values.yaml -n kratos --create-namespace
+
+kratos:
+  development: false
+  automigration:
+    enabled: true
+
+  config:
+    # DSN is loaded from secret via extraEnv below
+    # dsn: set via DSN env var from secret
+
+    serve:
+      public:
+        base_url: https://auth.sogos.io
+        cors:
+          enabled: true
+          allowed_origins:
+            - https://mirai.sogos.io
+            - https://get-mirai.sogos.io
+          allowed_methods:
+            - POST
+            - GET
+            - PUT
+            - PATCH
+            - DELETE
+          allowed_headers:
+            - Authorization
+            - Cookie
+            - Content-Type
+          exposed_headers:
+            - Content-Type
+            - Set-Cookie
+          allow_credentials: true
+      admin:
+        base_url: http://kratos-admin:80
+
+    selfservice:
+      default_browser_return_url: https://mirai.sogos.io/dashboard
+      allowed_return_urls:
+        - https://mirai.sogos.io
+        - https://get-mirai.sogos.io
+
+      methods:
+        password:
+          enabled: true
+        link:
+          enabled: true
+        code:
+          enabled: true
+
+      flows:
+        error:
+          ui_url: https://mirai.sogos.io/auth/error
+
+        settings:
+          ui_url: https://mirai.sogos.io/auth/settings
+          privileged_session_max_age: 15m
+
+        recovery:
+          enabled: true
+          ui_url: https://mirai.sogos.io/auth/recovery
+          use: code
+
+        verification:
+          enabled: true
+          ui_url: https://mirai.sogos.io/auth/verification
+          use: code
+          after:
+            default_browser_return_url: https://mirai.sogos.io/dashboard
+
+        logout:
+          after:
+            default_browser_return_url: https://get-mirai.sogos.io
+
+        login:
+          ui_url: https://mirai.sogos.io/auth/login
+          lifespan: 10m
+
+        registration:
+          ui_url: https://mirai.sogos.io/auth/registration
+          lifespan: 10m
+          after:
+            password:
+              hooks:
+                - hook: session
+            default_browser_return_url: https://mirai.sogos.io/dashboard
+
+    log:
+      level: info
+      format: json
+      leak_sensitive_values: false
+
+    secrets:
+      default:
+        - REPLACE_WITH_SECURE_SECRET_32_CHARS
+
+    hashers:
+      argon2:
+        parallelism: 1
+        memory: 128MB
+        iterations: 2
+        salt_length: 16
+        key_length: 16
+
+    identity:
+      default_schema_id: user
+      schemas:
+        - id: user
+          url: file:///etc/config/identity.schema.json
+
+    courier:
+      # Using Mailgun HTTP API for email delivery
+      delivery_strategy: http
+      http:
+        request_config:
+          url: https://api.mailgun.net/v3/sandbox6ade5f2c47a34afe88831b61b113fba5.mailgun.org/messages
+          method: POST
+          headers:
+            Content-Type: application/x-www-form-urlencoded
+          body: base64://ZnVuY3Rpb24oY3R4KSB7CiAgbG9jYWwgc3ViamVjdCA9IAogICAgaWYgY3R4LnRlbXBsYXRlX3R5cGUgPT0gInJlY292ZXJ5X2NvZGVfdmFsaWQiIHRoZW4gIlJlc2V0IHlvdXIgTWlyYWkgcGFzc3dvcmQiCiAgICBlbHNlIGlmIGN0eC50ZW1wbGF0ZV90eXBlID09ICJ2ZXJpZmljYXRpb25fY29kZV92YWxpZCIgdGhlbiAiVmVyaWZ5IHlvdXIgTWlyYWkgZW1haWwiCiAgICBlbHNlIGlmIGN0eC50ZW1wbGF0ZV90eXBlID09ICJyZWNvdmVyeV92YWxpZCIgdGhlbiAiUmVzZXQgeW91ciBNaXJhaSBwYXNzd29yZCIKICAgIGVsc2UgaWYgY3R4LnRlbXBsYXRlX3R5cGUgPT0gInZlcmlmaWNhdGlvbl92YWxpZCIgdGhlbiAiVmVyaWZ5IHlvdXIgTWlyYWkgZW1haWwiCiAgICBlbHNlICJNaXJhaSBOb3RpZmljYXRpb24iOwoKICBsb2NhbCBib2R5ID0gCiAgICBpZiBjdHgudGVtcGxhdGVfdHlwZSA9PSAicmVjb3ZlcnlfY29kZV92YWxpZCIgdGhlbiAiWW91ciByZWNvdmVyeSBjb2RlIGlzOiAiICsgY3R4LnRlbXBsYXRlX2RhdGEucmVjb3ZlcnlfY29kZQogICAgZWxzZSBpZiBjdHgudGVtcGxhdGVfdHlwZSA9PSAidmVyaWZpY2F0aW9uX2NvZGVfdmFsaWQiIHRoZW4gIllvdXIgdmVyaWZpY2F0aW9uIGNvZGUgaXM6ICIgKyBjdHgudGVtcGxhdGVfZGF0YS52ZXJpZmljYXRpb25fY29kZQogICAgZWxzZSBpZiBjdHgudGVtcGxhdGVfdHlwZSA9PSAicmVjb3ZlcnlfdmFsaWQiIHRoZW4gIkNsaWNrIGhlcmUgdG8gcmVzZXQgeW91ciBwYXNzd29yZDogIiArIGN0eC50ZW1wbGF0ZV9kYXRhLnJlY292ZXJ5X3VybAogICAgZWxzZSBpZiBjdHgudGVtcGxhdGVfdHlwZSA9PSAidmVyaWZpY2F0aW9uX3ZhbGlkIiB0aGVuICJDbGljayBoZXJlIHRvIHZlcmlmeSB5b3VyIGVtYWlsOiAiICsgY3R4LnRlbXBsYXRlX2RhdGEudmVyaWZpY2F0aW9uX3VybAogICAgZWxzZSAiTm90aWZpY2F0aW9uIGZyb20gTWlyYWkiOwoKICAiZnJvbT1NaXJhaSA8bm9yZXBseUBzYW5kYm94NmFkZTVmMmM0N2EzNGFmZTg4ODMxYjYxYjExM2ZiYTUubWFpbGd1bi5vcmc+JnRvPSIgKyBjdHgucmVjaXBpZW50ICsgIiZzdWJqZWN0PSIgKyBzdWJqZWN0ICsgIiZ0ZXh0PSIgKyBib2R5Cn0=
+          auth:
+            type: basic_auth
+            config:
+              user: api
+              password: ${MAILGUN_API_KEY}
+
+    session:
+      lifespan: 24h
+      cookie:
+        domain: sogos.io
+        same_site: Lax
+
+  # Identity schema file
+  identitySchemas:
+    "identity.schema.json": |
+      {
+        "$id": "https://mirai.sogos.io/schemas/user.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "User",
+        "type": "object",
+        "properties": {
+          "traits": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email",
+                "title": "Email",
+                "minLength": 3,
+                "ory.sh/kratos": {
+                  "credentials": {
+                    "password": {
+                      "identifier": true
+                    }
+                  },
+                  "recovery": {
+                    "via": "email"
+                  },
+                  "verification": {
+                    "via": "email"
+                  }
+                }
+              },
+              "name": {
+                "type": "object",
+                "properties": {
+                  "first": {
+                    "type": "string",
+                    "title": "First Name",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "last": {
+                    "type": "string",
+                    "title": "Last Name",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": ["first", "last"]
+              },
+              "company": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "title": "Company Name",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "role": {
+                    "type": "string",
+                    "title": "Role",
+                    "enum": ["owner", "admin", "member"],
+                    "default": "owner"
+                  }
+                },
+                "required": ["name"]
+              }
+            },
+            "required": ["email", "name", "company"],
+            "additionalProperties": false
+          }
+        }
+      }
+
+# Deployment configuration
+deployment:
+  extraEnv:
+    - name: DSN
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: dsn
+    - name: SECRETS_DEFAULT
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: secretsDefault
+    - name: MAILGUN_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: mailgunApiKey
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 10000
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+
+# Job configuration (for migrations)
+job:
+  extraEnv:
+    - name: DSN
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: dsn
+
+# Service configuration
+service:
+  public:
+    enabled: true
+    type: ClusterIP
+    port: 80
+    name: http
+  admin:
+    enabled: true
+    type: ClusterIP
+    port: 80
+    name: http
+
+# Disable ingress (using Cloudflare tunnel instead)
+ingress:
+  public:
+    enabled: false
+  admin:
+    enabled: false
+
+# Pod tolerations for control-plane scheduling
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule

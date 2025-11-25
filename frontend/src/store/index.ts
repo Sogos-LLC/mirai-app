@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import courseReducer from './slices/courseSlice';
 import uiReducer from './slices/uiSlice';
 import aiGenerationReducer from './slices/aiGenerationSlice';
+import authReducer from './slices/authSlice';
 import { persistenceMiddleware, restoreFromLocalStorage } from './middleware/persistenceMiddleware';
 import { api } from './api/apiSlice';
 
@@ -66,6 +67,7 @@ export const store = configureStore({
     course: courseReducer,
     ui: uiReducer,
     aiGeneration: aiGenerationReducer,
+    auth: authReducer,
     [api.reducerPath]: api.reducer, // Add RTK Query reducer
   },
   middleware: (getDefaultMiddleware) =>

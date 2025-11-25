@@ -1,0 +1,147 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import AuthLayout from '@/components/auth/AuthLayout';
+import KratosForm from '@/components/auth/KratosForm';
+import { getSettingsFlow, getKratosBrowserUrl, getSession } from '@/lib/kratos';
+import type { SettingsFlow } from '@/lib/kratos/types';
+import { Loader2, User, Lock, ArrowLeft } from 'lucide-react';
+
+type SettingsTab = 'profile' | 'password';
+
+export default function SettingsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [flow, setFlow] = useState<SettingsFlow | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+
+  useEffect(() => {
+    const flowId = searchParams.get('flow');
+
+    async function initFlow() {
+      try {
+        // Check if user is logged in
+        const session = await getSession();
+        if (!session) {
+          router.push('/auth/login?return_to=/auth/settings');
+          return;
+        }
+
+        if (flowId) {
+          // Get existing flow
+          const existingFlow = await getSettingsFlow(flowId);
+          setFlow(existingFlow);
+        } else {
+          // Create new flow - redirect to Kratos
+          const kratosUrl = getKratosBrowserUrl();
+          window.location.href = `${kratosUrl}/self-service/settings/browser`;
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to initialize settings flow:', err);
+        setError('Failed to load settings. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initFlow();
+  }, [searchParams, router]);
+
+  if (loading) {
+    return (
+      <AuthLayout title="Account Settings" subtitle="Manage your account">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AuthLayout title="Account Settings" subtitle="Manage your account">
+        <div className="text-center py-8">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            Try again
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  if (!flow) {
+    return (
+      <AuthLayout title="Account Settings" subtitle="Manage your account">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  const tabs: { id: SettingsTab; label: string; icon: React.ElementType; groups: string[] }[] = [
+    { id: 'profile', label: 'Profile', icon: User, groups: ['profile', 'default'] },
+    { id: 'password', label: 'Password', icon: Lock, groups: ['password'] },
+  ];
+
+  const activeTabConfig = tabs.find((t) => t.id === activeTab);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Back link */}
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+          {/* Header */}
+          <div className="px-8 py-6 border-b border-slate-200">
+            <h1 className="text-2xl font-bold text-slate-900">Account Settings</h1>
+            <p className="text-slate-600 mt-1">Manage your profile and security settings</p>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-slate-200">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'text-indigo-600 border-b-2 border-indigo-600'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <tab.icon className="h-5 w-5" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div className="p-8">
+            <KratosForm
+              ui={flow.ui}
+              onlyGroups={activeTabConfig?.groups}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
