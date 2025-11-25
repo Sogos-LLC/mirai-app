@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mirai-marketing
+  namespace: mirai
+  labels:
+    app: mirai-marketing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mirai-marketing
+  template:
+    metadata:
+      labels:
+        app: mirai-marketing
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: mirai-marketing
+        image: ghcr.io/sojohnnysaid/mirai-app/mirai-marketing:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        # Ory Kratos authentication configuration (for auth redirects)
+        - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
+          value: "https://mirai-auth.sogos.io"
+        - name: NEXT_PUBLIC_APP_URL
+          value: "https://mirai.sogos.io"
+        - name: NEXT_PUBLIC_LANDING_URL
+          value: "https://get-mirai.sogos.io"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
