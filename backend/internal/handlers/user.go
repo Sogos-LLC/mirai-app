@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/sogos/mirai-backend/internal/middleware"
 	"github.com/sogos/mirai-backend/internal/models"
 	"github.com/sogos/mirai-backend/internal/repository"
