@@ -2,8 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Marketing site middleware - minimal routing
- * Redirects authenticated routes to the main app domain
+ * Marketing site middleware
+ *
+ * The marketing site (get-mirai.sogos.io) should ONLY serve:
+ * - Landing page (/)
+ * - Pricing (/pricing)
+ * - Future: Blog, Docs, Help, etc.
+ *
+ * ALL auth and app routes redirect to the main app domain (mirai.sogos.io)
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,8 +23,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect any protected routes to the main app
-  const protectedPaths = [
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
+
+  // Redirect ALL auth routes to main app domain
+  // Marketing site should never handle authentication
+  if (pathname.startsWith('/auth/')) {
+    const url = new URL(pathname + request.nextUrl.search, appUrl);
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect any app routes to the main app
+  const appPaths = [
     '/dashboard',
     '/settings',
     '/teams',
@@ -32,9 +47,8 @@ export async function middleware(request: NextRequest) {
     '/folder',
   ];
 
-  for (const path of protectedPaths) {
+  for (const path of appPaths) {
     if (pathname === path || pathname.startsWith(`${path}/`)) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
       return NextResponse.redirect(new URL(pathname, appUrl));
     }
   }

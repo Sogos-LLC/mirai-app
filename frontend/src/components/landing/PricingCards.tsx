@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { Check } from 'lucide-react';
+
+// App URL for auth redirects (marketing site should send users to main app for registration)
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
 
 const tiers = [
   {
@@ -18,7 +20,7 @@ const tiers = [
       'Community access',
     ],
     cta: 'Start Free Trial',
-    ctaLink: '/auth/registration?tier=starter',
+    ctaLink: `${APP_URL}/auth/registration?tier=starter`,
     highlighted: false,
   },
   {
@@ -36,7 +38,7 @@ const tiers = [
       'SSO integration',
     ],
     cta: 'Start Free Trial',
-    ctaLink: '/auth/registration?tier=pro',
+    ctaLink: `${APP_URL}/auth/registration?tier=pro`,
     highlighted: true,
   },
   {
@@ -133,7 +135,7 @@ export default function PricingCards() {
                 ))}
               </ul>
 
-              <Link
+              <a
                 href={tier.ctaLink}
                 className={`block w-full text-center py-3 px-4 rounded-lg font-semibold transition-colors ${
                   tier.highlighted
@@ -142,7 +144,7 @@ export default function PricingCards() {
                 }`}
               >
                 {tier.cta}
-              </Link>
+              </a>
             </div>
           ))}
         </div>

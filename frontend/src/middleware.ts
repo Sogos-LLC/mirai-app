@@ -27,6 +27,9 @@ const PUBLIC_ROUTES = [
 // Kratos session check endpoint
 const KRATOS_PUBLIC_URL = process.env.KRATOS_PUBLIC_URL || 'http://kratos-public.kratos.svc.cluster.local:80';
 
+// Marketing site URL for unauthenticated redirects
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://get-mirai.sogos.io';
+
 /**
  * Check if user has valid session with Kratos
  */
@@ -88,8 +91,8 @@ export async function middleware(request: NextRequest) {
     if (hasSession) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
-    // Show landing page for unauthenticated users
-    return NextResponse.next();
+    // Redirect unauthenticated users to marketing site
+    return NextResponse.redirect(LANDING_URL);
   }
 
   // Protected routes - require authentication
