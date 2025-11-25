@@ -1,32 +1,40 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+# ============================================================
+# 1. Build stage
+# ============================================================
+FROM golang:1.22-alpine AS builder
 
-WORKDIR /app
+WORKDIR /src
 
-# Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server ./cmd/server
+# Build static binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
 
-# Final stage
-FROM alpine:latest
+# ============================================================
+# 2. Final minimal image (non-root safe)
+# ============================================================
+FROM alpine:3.20
 
-RUN apk --no-cache add ca-certificates
+# Create application directory
+WORKDIR /app
 
-WORKDIR /root/
-
-# Copy the binary from builder
-COPY --from=builder /app/server .
-RUN chmod +x server
+# Copy binary from builder
+COPY --from=builder /src/server /app/server
 
 # Copy migrations
-COPY --from=builder /app/internal/database/migrations ./migrations
+COPY --from=builder /src/internal/database/migrations /app/migrations
 
-EXPOSE 8080
+# Ensure the binary is executable for all users
+RUN chmod 755 /app/server
 
-CMD ["./server"]
+# Create non-root user with UID 10000
+RUN adduser -D -u 10000 appuser
+
+# Use non-root user
+USER 10000
+
+# Read-only root filesystem friendly
+ENTRYPOINT ["./server"]
