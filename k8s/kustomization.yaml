@@ -7,6 +7,9 @@ resources:
 - redis/redis-deployment.yaml
 
 images:
+- name: ghcr.io/sojohnnysaid/mirai-app/mirai-backend
+  newName: ghcr.io/sojohnnysaid/mirai-app/mirai-backend
+  newTag: 12efde5
 - name: ghcr.io/sojohnnysaid/mirai-app/mirai-frontend
   newName: ghcr.io/sojohnnysaid/mirai-app/mirai-frontend
   newTag: 091db93
