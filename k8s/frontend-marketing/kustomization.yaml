@@ -8,4 +8,4 @@ resources:
 images:
 - name: ghcr.io/sojohnnysaid/mirai-app/mirai-marketing
   newName: ghcr.io/sojohnnysaid/mirai-app/mirai-marketing
-  newTag: 7b33b08
+  newTag: b6a9fab
