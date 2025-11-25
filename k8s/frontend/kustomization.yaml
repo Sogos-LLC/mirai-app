@@ -8,4 +8,4 @@ resources:
 images:
 - name: ghcr.io/sojohnnysaid/mirai-app/mirai-frontend
   newName: ghcr.io/sojohnnysaid/mirai-app/mirai-frontend
-  newTag: 7b33b08
+  newTag: b6a9fab
