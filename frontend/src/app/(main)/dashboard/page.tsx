@@ -92,12 +92,14 @@ export default function Dashboard() {
 
       {/* Your Courses Section */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-gray-900">Your Courses</h3>
-          <div className="flex gap-2">
+        {/* Header with responsive layout */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Your Courses</h3>
+          {/* Tab buttons - horizontal scroll on mobile */}
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
             <button
               onClick={() => setActiveTab('recent')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] ${
                 activeTab === 'recent'
                   ? 'text-primary-600 bg-primary-50 hover:bg-primary-100'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -107,7 +109,7 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setActiveTab('draft')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] ${
                 activeTab === 'draft'
                   ? 'text-primary-600 bg-primary-50 hover:bg-primary-100'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -117,7 +119,7 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setActiveTab('published')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] ${
                 activeTab === 'published'
                   ? 'text-primary-600 bg-primary-50 hover:bg-primary-100'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -143,17 +145,17 @@ export default function Dashboard() {
                   <h4 className="text-base font-medium text-gray-900 line-clamp-2">
                     {course.title || 'Untitled Course'}
                   </h4>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 -mr-2">
                     <button
                       onClick={() => handleEditCourse(course.id)}
-                      className="p-1 text-gray-500 hover:text-primary-600 transition-colors"
+                      className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
                       title="Edit course"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteCourse(course.id)}
-                      className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+                      className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Delete course"
                     >
                       <Trash2 className="w-4 h-4" />

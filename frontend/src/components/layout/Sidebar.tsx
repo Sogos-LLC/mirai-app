@@ -5,8 +5,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
-import { toggleSidebar } from '@/store/slices/uiSlice';
+import { toggleSidebar, closeMobileSidebar } from '@/store/slices/uiSlice';
 import { prefetchFolders, prefetchCourses } from '@/store/slices/courseSlice';
+import { useIsMobile } from '@/hooks/useBreakpoint';
 import {
   LayoutDashboard,
   FileText,
@@ -18,19 +19,20 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-const menuItems = [
+// Export navigation items for reuse in mobile components
+export const menuItems = [
   { icon: LayoutDashboard, label: 'Content Library', path: '/content-library' },
   { icon: FileText, label: 'Templates', path: '/templates' },
   { icon: BookOpen, label: 'Tutorials', path: '/tutorials' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
-const recentItems = [
+export const recentItems = [
   { label: 'Team Folder 1', path: '/folder/team-1' },
   { label: 'Team Folder 2', path: '/folder/team-2' },
 ];
 
-const bottomItems = [
+export const bottomItems = [
   { icon: HelpCircle, label: 'Help and Support', path: '/help' },
   { icon: Bell, label: 'Product Updates', path: '/updates' },
 ];
@@ -39,8 +41,9 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  const { sidebarOpen } = useSelector((state: RootState) => state.ui);
+  const { sidebarOpen, mobileSidebarOpen } = useSelector((state: RootState) => state.ui);
   const [showText, setShowText] = useState(sidebarOpen);
+  const isMobile = useIsMobile();
 
   // Track which paths have already been prefetched
   const prefetchedPaths = useRef<Set<string>>(new Set());
@@ -53,6 +56,14 @@ export default function Sidebar() {
       setShowText(false);
     }
   }, [sidebarOpen]);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    if (isMobile && mobileSidebarOpen) {
+      dispatch(closeMobileSidebar());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Prefetch handler for aggressive hover prefetching
   const handlePrefetch = (path: string) => {
@@ -86,9 +97,30 @@ export default function Sidebar() {
     }
   };
 
+  // Build sidebar classes
+  // device-mobile class triggers mobile-specific styles (drawer behavior)
+  const sidebarClasses = [
+    'sidebar',
+    isMobile && 'device-mobile',
+    !sidebarOpen && !isMobile && 'collapsed',
+    mobileSidebarOpen && 'mobile-open',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <aside className={`sidebar ${!sidebarOpen ? 'collapsed' : ''}`}>
-      <Link
+    <>
+      {/* Mobile device backdrop */}
+      {isMobile && mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 animate-backdrop-in"
+          onClick={() => dispatch(closeMobileSidebar())}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={sidebarClasses}>
+        <Link
         href="/dashboard"
         className="sidebar-header cursor-pointer"
         prefetch={true}
@@ -173,5 +205,6 @@ export default function Sidebar() {
         })}
       </div>
     </aside>
+    </>
   );
 }

@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye, Filter, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useGetFoldersQuery, useGetCoursesQuery, FolderNode, LibraryEntry } from '@/store/api/apiSlice';
+import { useIsMobile } from '@/hooks/useBreakpoint';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 
 export default function ContentLibrary() {
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   // RTK Query - automatically fetches and caches data
   const { data: folders = [], isLoading: foldersLoading } = useGetFoldersQuery(true);
@@ -17,6 +20,7 @@ export default function ContentLibrary() {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
   const [searchQuery, setSearchQuery] = useState('');
   const [folderFilteredCourses, setFolderFilteredCourses] = useState<LibraryEntry[] | null>(null);
+  const [isFolderSheetOpen, setIsFolderSheetOpen] = useState(false);
 
   // Load courses for selected folder
   useEffect(() => {
@@ -50,6 +54,26 @@ export default function ContentLibrary() {
 
   const handleFolderClick = (folderId: string) => {
     setSelectedFolderId(folderId);
+    // Close folder sheet on mobile after selection
+    if (isMobile) {
+      setTimeout(() => setIsFolderSheetOpen(false), 150);
+    }
+  };
+
+  // Get selected folder name for mobile display
+  const getSelectedFolderName = (): string => {
+    if (!selectedFolderId) return 'All Courses';
+    const findFolder = (folderList: FolderNode[]): string | null => {
+      for (const folder of folderList) {
+        if (folder.id === selectedFolderId) return folder.name;
+        if (folder.children) {
+          const found = findFolder(folder.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return findFolder(folders) || 'All Courses';
   };
 
   const handleCourseClick = (courseId: string) => {
@@ -86,7 +110,7 @@ export default function ContentLibrary() {
         >
           {hasChildren && (
             <button
-              className="text-gray-600"
+              className="p-1 -ml-1 text-gray-600 min-w-[32px] min-h-[32px] flex items-center justify-center"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleFolder(folder.id);
@@ -132,32 +156,63 @@ export default function ContentLibrary() {
     return titleMatch || tagMatch;
   });
 
+  // Folder list content (used in both desktop sidebar and mobile sheet)
+  const folderListContent = (
+    <div className="space-y-2">
+      {foldersLoading ? (
+        <div className="text-center text-gray-600 py-4">Loading folders...</div>
+      ) : (
+        folders.map((folder) => renderFolder(folder))
+      )}
+    </div>
+  );
+
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Content Library</h1>
-          <p className="text-gray-600">Browse and organize all your content</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-1 lg:mb-2">Content Library</h1>
+          <p className="text-sm lg:text-base text-gray-600">Browse and organize all your content</p>
         </div>
       </div>
 
-      {/* Two-column layout */}
-      <div className="flex gap-6">
-        {/* Left: Folder Sidebar */}
-        <div className="w-80 bg-primary-50 border border-gray-200 rounded-2xl p-4 h-[calc(100vh-200px)] overflow-y-auto">
-          {foldersLoading ? (
-            <div className="text-center text-gray-600 py-4">Loading folders...</div>
-          ) : (
-            <div className="space-y-2">
-              {folders.map((folder) => renderFolder(folder))}
+      {/* Mobile: Folder filter button */}
+      {isMobile && (
+        <div className="mb-4">
+          <button
+            onClick={() => setIsFolderSheetOpen(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-primary-50 text-primary-700 rounded-lg border border-primary-200 w-full justify-between min-h-[44px]"
+          >
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              <span className="font-medium">{getSelectedFolderName()}</span>
             </div>
-          )}
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Mobile: Folder selection bottom sheet */}
+      <BottomSheet
+        isOpen={isFolderSheetOpen}
+        onClose={() => setIsFolderSheetOpen(false)}
+        title="Select Folder"
+        height="half"
+      >
+        {folderListContent}
+      </BottomSheet>
+
+      {/* Two-column layout - stacked on mobile */}
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Left: Folder Sidebar (hidden on mobile - use sheet instead) */}
+        <div className="hidden lg:block w-80 bg-primary-50 border border-gray-200 rounded-2xl p-4 h-[calc(100vh-200px)] overflow-y-auto">
+          {folderListContent}
         </div>
 
         {/* Right: Main Content */}
-        <div className="flex-1 bg-white border border-gray-200 rounded-2xl p-6">
-          <div className="mb-6">
+        <div className="flex-1 bg-white border border-gray-200 rounded-2xl p-4 lg:p-6">
+          <div className="mb-4 lg:mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -165,7 +220,7 @@ export default function ContentLibrary() {
                 placeholder="Search courses..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full max-w-md pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full lg:max-w-md pl-10 pr-4 py-3 lg:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px]"
               />
             </div>
           </div>
@@ -213,23 +268,23 @@ export default function ContentLibrary() {
 
                   <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
                     <button
-                      className="flex-1 flex items-center justify-center gap-1 py-1.5 text-sm text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-primary-600 hover:bg-primary-50 rounded-lg transition-colors min-h-[44px]"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCourseClick(course.id);
                       }}
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
+                      <Edit2 className="w-4 h-4" />
                       Edit
                     </button>
                     <button
-                      className="flex-1 flex items-center justify-center gap-1 py-1.5 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors min-h-[44px]"
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/course-builder?id=${course.id}&step=5`);
                       }}
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      <Eye className="w-4 h-4" />
                       Preview
                     </button>
                   </div>

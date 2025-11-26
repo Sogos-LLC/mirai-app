@@ -14,7 +14,9 @@ import {
   ArrowLeft,
   Settings,
   Save,
-  Home
+  Home,
+  Menu,
+  X
 } from 'lucide-react';
 import CourseBlock from './CourseBlock';
 import BlockAlignmentPanel from './BlockAlignmentPanel';
@@ -31,10 +33,13 @@ import {
 } from '@/store/slices/courseSlice';
 import { CourseBlock as CourseBlockType, BlockType } from '@/types';
 import { useRouter } from 'next/navigation';
+import { useIsMobile } from '@/hooks/useBreakpoint';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 
 export default function CourseEditor() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const course = useSelector((state: RootState) => state.course.currentCourse);
   const courseBlocks = useSelector((state: RootState) => state.course.courseBlocks);
   const activeBlockId = useSelector((state: RootState) => state.course.activeBlockId);
@@ -43,6 +48,7 @@ export default function CourseEditor() {
   const [selectedSection, setSelectedSection] = useState('section-1');
   const [showAddBlockMenu, setShowAddBlockMenu] = useState(false);
   const [collapsedSummary, setCollapsedSummary] = useState(false);
+  const [showMobileStructure, setShowMobileStructure] = useState(false);
 
   // Initialize course blocks from saved course data
   useEffect(() => {
@@ -117,39 +123,70 @@ export default function CourseEditor() {
 
   const activeBlock = courseBlocks.find(b => b.id === activeBlockId);
 
-  return (
-    <div className="flex h-full">
-      {/* Left Sidebar - Course Structure */}
-      <div className="w-64 bg-gray-50 border-r border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Course Structure</h3>
-        <div className="space-y-2">
-          {docOMaticCourseSections.map((section) => (
-            <div key={section.id}>
-              <button
-                onClick={() => setSelectedSection(section.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedSection === section.id
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'hover:bg-gray-100 text-gray-700'
-                }`}
-              >
-                {section.name}
-              </button>
-              {selectedSection === section.id && (
-                <div className="ml-4 mt-1 space-y-1">
-                  {section.lessons.map((lesson) => (
-                    <div
-                      key={lesson.id}
-                      className="px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 cursor-pointer"
-                    >
-                      {lesson.title}
-                    </div>
-                  ))}
+  // Course structure sidebar content (reused in both desktop sidebar and mobile sheet)
+  const courseStructureContent = (
+    <div className="space-y-2">
+      {docOMaticCourseSections.map((section) => (
+        <div key={section.id}>
+          <button
+            onClick={() => {
+              setSelectedSection(section.id);
+              if (isMobile) setShowMobileStructure(false);
+            }}
+            className={`w-full text-left px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
+              selectedSection === section.id
+                ? 'bg-purple-100 text-purple-700'
+                : 'hover:bg-gray-100 text-gray-700'
+            }`}
+          >
+            {section.name}
+          </button>
+          {selectedSection === section.id && (
+            <div className="ml-4 mt-1 space-y-1">
+              {section.lessons.map((lesson) => (
+                <div
+                  key={lesson.id}
+                  className="px-3 py-2 lg:py-1.5 text-sm lg:text-xs text-gray-600 hover:text-gray-900 cursor-pointer min-h-[44px] lg:min-h-0 flex items-center"
+                >
+                  {lesson.title}
                 </div>
-              )}
+              ))}
             </div>
-          ))}
+          )}
         </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col lg:flex-row h-full">
+      {/* Mobile: Structure toggle button */}
+      {isMobile && (
+        <div className="bg-gray-50 border-b border-gray-200 p-3">
+          <button
+            onClick={() => setShowMobileStructure(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 min-h-[44px]"
+          >
+            <Menu className="w-4 h-4" />
+            Course Structure
+          </button>
+        </div>
+      )}
+
+      {/* Mobile: Structure bottom sheet */}
+      <BottomSheet
+        isOpen={showMobileStructure}
+        onClose={() => setShowMobileStructure(false)}
+        title="Course Structure"
+        height="half"
+      >
+        {courseStructureContent}
+      </BottomSheet>
+
+      {/* Desktop: Left Sidebar - Course Structure */}
+      <div className="hidden lg:block w-64 bg-gray-50 border-r border-gray-200 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-4">Course Structure</h3>
+        {courseStructureContent}
       </div>
 
       {/* Main Content Area */}
@@ -315,8 +352,8 @@ export default function CourseEditor() {
             )}
           </div>
 
-          {/* Alignment Panel */}
-          {showAlignmentPanel && activeBlock && (
+          {/* Desktop: Alignment Panel */}
+          {!isMobile && showAlignmentPanel && activeBlock && (
             <div className="fixed right-4 top-32">
               <BlockAlignmentPanel
                 blockId={activeBlock.id}
@@ -327,7 +364,6 @@ export default function CourseEditor() {
                   dispatch(setActiveBlockId(null));
                 }}
                 onRegenerate={() => {
-                  // Handle regeneration
                   console.log('Regenerating block:', activeBlock.id);
                 }}
               />
@@ -336,9 +372,43 @@ export default function CourseEditor() {
         </div>
       </div>
 
-      {/* Preview Button */}
+      {/* Mobile: Alignment Panel as BottomSheet */}
+      {isMobile && (
+        <BottomSheet
+          isOpen={showAlignmentPanel && !!activeBlock}
+          onClose={() => {
+            setShowAlignmentPanel(false);
+            dispatch(setActiveBlockId(null));
+          }}
+          title="Block Alignment"
+          height="half"
+        >
+          {activeBlock && (
+            <BlockAlignmentPanel
+              blockId={activeBlock.id}
+              alignment={activeBlock.alignment}
+              onUpdate={handleAlignmentUpdate}
+              onClose={() => {
+                setShowAlignmentPanel(false);
+                dispatch(setActiveBlockId(null));
+              }}
+              onRegenerate={() => {
+                console.log('Regenerating block:', activeBlock.id);
+              }}
+            />
+          )}
+        </BottomSheet>
+      )}
+
+      {/* Preview Button - Responsive positioning */}
       <button
-        className="fixed bottom-6 right-6 px-6 py-3 bg-purple-600 text-white font-medium rounded-lg shadow-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+        className={`
+          fixed bg-purple-600 text-white font-medium shadow-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2
+          ${isMobile
+            ? 'bottom-20 left-4 right-4 py-4 rounded-xl'
+            : 'bottom-6 right-6 px-6 py-3 rounded-lg'
+          }
+        `}
         onClick={() => dispatch(setCurrentStep(5))}
       >
         <Eye size={20} />

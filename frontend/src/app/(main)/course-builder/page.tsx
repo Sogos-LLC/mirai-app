@@ -154,21 +154,21 @@ export default function CourseBuilder() {
         return (
           <>
             {/* Course Form */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 lg:p-8 mb-6 lg:mb-8">
               <CourseForm />
             </div>
 
             {/* Personas Section */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-8 mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Target Personas/Roles{' '}
-                  <span className="text-gray-500 font-normal italic">
-                    (Add 1–4 personas who will take this course)
-                  </span>
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 lg:p-8 mb-6 lg:mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <h3 className="text-base lg:text-lg font-semibold text-gray-900">
+                  Target Personas/Roles
                 </h3>
+                <span className="text-sm text-gray-500 italic">
+                  Add 1–4 personas
+                </span>
               </div>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-gray-600 mb-4 lg:mb-6">
                 Define the personas and roles who will be taking this course to ensure the content is tailored and relevant.
               </p>
 
@@ -184,15 +184,15 @@ export default function CourseBuilder() {
               </div>
 
               {(!currentCourse.personas || currentCourse.personas.length < 4) && (
-                <Button variant="outline" onClick={handleAddPersona}>
+                <Button variant="outline" onClick={handleAddPersona} className="w-full sm:w-auto">
                   Add Persona
                 </Button>
               )}
             </div>
 
-            {/* Next Button */}
+            {/* Next Button - Full width on mobile */}
             <div className="flex justify-end">
-              <Button onClick={handleNext}>Next Step</Button>
+              <Button onClick={handleNext} className="w-full sm:w-auto">Next Step</Button>
             </div>
           </>
         );
@@ -201,8 +201,8 @@ export default function CourseBuilder() {
         return (
           <>
             {/* Step Banner */}
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 text-center mb-8">
-              <p className="text-gray-900 font-medium text-lg">
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 lg:p-6 text-center mb-6 lg:mb-8">
+              <p className="text-gray-900 font-medium text-base lg:text-lg">
                 Define your target audience and their learning goals
               </p>
               <p className="text-gray-600 text-sm mt-1">
@@ -211,15 +211,16 @@ export default function CourseBuilder() {
             </div>
 
             {/* Persona Deep Dive with integrated Learning Objectives */}
-            <div className="mb-8">
+            <div className="mb-6 lg:mb-8">
               <PersonaDetailForm />
             </div>
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={handlePrevious}>
+            {/* Navigation buttons - stack on mobile */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between">
+              <Button variant="outline" onClick={handlePrevious} className="w-full sm:w-auto order-2 sm:order-1">
                 Previous
               </Button>
-              <Button onClick={handleNext}>Next</Button>
+              <Button onClick={handleNext} className="w-full sm:w-auto order-1 sm:order-2">Next</Button>
             </div>
           </>
         );
@@ -253,21 +254,25 @@ export default function CourseBuilder() {
 
   return (
     <>
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-8">
+      {/* Page Header - Responsive */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-1 lg:mb-2">
             {currentStep === 1 ? 'Define your learning goal' :
              currentStep === 2 ? 'Personas & Learning Objectives' :
              currentStep === 3 ? 'Review & Validate' : 'Course Builder'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-sm lg:text-base text-gray-600">
             {currentStep === 1 ? 'Your learning goals and the personas/roles who will take the courses generated' :
              currentStep === 2 ? 'Configure each persona deeply and define what learners will achieve' :
              currentStep === 3 ? 'Review all inputs before generating your AI-powered course' : ''}
           </p>
         </div>
-        {currentStep <= 3 && <ProgressIndicator steps={5} currentStep={currentStep} />}
+        {currentStep <= 3 && (
+          <div className="flex-shrink-0">
+            <ProgressIndicator steps={5} currentStep={currentStep} />
+          </div>
+        )}
       </div>
 
       {/* Content Area */}

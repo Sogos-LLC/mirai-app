@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, X, Users, User } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, Users, User } from 'lucide-react';
+import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 
 interface FolderNode {
   id: string;
@@ -53,21 +54,6 @@ export default function FolderSelectionModal({
       loadFolders();
     }
   }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  if (loading) {
-    return (
-      <>
-        <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="text-gray-600">Loading folders...</div>
-          </div>
-        </div>
-      </>
-    );
-  }
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -151,58 +137,50 @@ export default function FolderSelectionModal({
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Choose Destination Folder
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+    <ResponsiveModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Choose Destination Folder"
+      size="lg"
+    >
+      <div className="flex flex-col h-full">
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center py-12">
+            <div className="text-gray-600">Loading folders...</div>
           </div>
-
-          {/* Folder Tree */}
-          <div className="p-6 max-h-[60vh] overflow-y-auto">
-            <div className="space-y-1">
-              {folderStructure.map((node) => renderFolderNode(node))}
+        ) : (
+          <>
+            {/* Folder Tree */}
+            <div className="flex-1 overflow-y-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+              <div className="space-y-1">
+                {folderStructure.map((node) => renderFolderNode(node))}
+              </div>
             </div>
-          </div>
 
-          {/* Footer */}
-          <div className="flex justify-end gap-3 px-6 pb-6 pt-3 border-t border-gray-200">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                if (selectedFolder) {
-                  onClose();
-                }
-              }}
-              disabled={!selectedFolder}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Select Folder
-            </button>
-          </div>
-        </div>
+            {/* Footer */}
+            <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={onClose}
+                className="w-full sm:w-auto px-4 py-3 lg:py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium min-h-[44px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedFolder) {
+                    onClose();
+                  }
+                }}
+                disabled={!selectedFolder}
+                className="w-full sm:w-auto px-4 py-3 lg:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+              >
+                Select Folder
+              </button>
+            </div>
+          </>
+        )}
       </div>
-    </>
+    </ResponsiveModal>
   );
 }
