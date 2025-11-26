@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthLayout from '@/components/auth/AuthLayout';
 import KratosForm from '@/components/auth/KratosForm';
-import { getSettingsFlow, getKratosBrowserUrl, getSession } from '@/lib/kratos';
+import { getSettingsFlow, getKratosBrowserUrl, getSession, isFlowExpiredError } from '@/lib/kratos';
 import type { SettingsFlow } from '@/lib/kratos/types';
 import { Loader2, User, Lock, ArrowLeft } from 'lucide-react';
 
@@ -22,12 +22,20 @@ export default function SettingsPage() {
   useEffect(() => {
     const flowId = searchParams.get('flow');
 
+    // Helper to redirect to Kratos for a fresh flow
+    function redirectToFreshFlow() {
+      const kratosUrl = getKratosBrowserUrl();
+      // Use replace() to avoid adding stale flow URLs to browser history
+      window.location.replace(`${kratosUrl}/self-service/settings/browser`);
+    }
+
     async function initFlow() {
       try {
         // Check if user is logged in
         const session = await getSession();
         if (!session) {
-          router.push('/auth/login?return_to=/auth/settings');
+          // Use replace to not add to history
+          router.replace('/auth/login?return_to=/auth/settings');
           return;
         }
 
@@ -36,13 +44,17 @@ export default function SettingsPage() {
           const existingFlow = await getSettingsFlow(flowId);
           setFlow(existingFlow);
         } else {
-          // Create new flow - redirect to Kratos
-          const kratosUrl = getKratosBrowserUrl();
-          window.location.href = `${kratosUrl}/self-service/settings/browser`;
+          // No flow ID - redirect to Kratos to create new flow
+          redirectToFreshFlow();
           return;
         }
       } catch (err) {
         console.error('Failed to initialize settings flow:', err);
+        // If flow is expired/invalid, create a fresh one instead of showing error
+        if (isFlowExpiredError(err)) {
+          redirectToFreshFlow();
+          return;
+        }
         setError('Failed to load settings. Please try again.');
       } finally {
         setLoading(false);

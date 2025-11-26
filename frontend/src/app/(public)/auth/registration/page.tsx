@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthLayout from '@/components/auth/AuthLayout';
 import KratosForm from '@/components/auth/KratosForm';
-import { getRegistrationFlow, getKratosBrowserUrl } from '@/lib/kratos';
+import { getRegistrationFlow, getKratosBrowserUrl, getSession, isFlowExpiredError } from '@/lib/kratos';
 import type { RegistrationFlow } from '@/lib/kratos/types';
 import { Loader2 } from 'lucide-react';
 
 export default function RegistrationPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [flow, setFlow] = useState<RegistrationFlow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,24 +20,43 @@ export default function RegistrationPage() {
     const flowId = searchParams.get('flow');
     const returnTo = searchParams.get('return_to');
 
+    // Helper to redirect to Kratos for a fresh flow
+    function redirectToFreshFlow() {
+      const kratosUrl = getKratosBrowserUrl();
+      const params = new URLSearchParams();
+      if (returnTo) {
+        params.set('return_to', returnTo);
+      }
+      // Use replace() to avoid adding stale flow URLs to browser history
+      window.location.replace(`${kratosUrl}/self-service/registration/browser?${params.toString()}`);
+    }
+
     async function initFlow() {
       try {
+        // Check if user is already authenticated
+        const session = await getSession();
+        if (session?.active) {
+          // Redirect away from registration page - use replace to not add to history
+          router.replace(returnTo || '/dashboard');
+          return;
+        }
+
         if (flowId) {
           // Get existing flow
           const existingFlow = await getRegistrationFlow(flowId);
           setFlow(existingFlow);
         } else {
-          // Create new flow - redirect to Kratos
-          const kratosUrl = getKratosBrowserUrl();
-          const params = new URLSearchParams();
-          if (returnTo) {
-            params.set('return_to', returnTo);
-          }
-          window.location.href = `${kratosUrl}/self-service/registration/browser?${params.toString()}`;
+          // No flow ID - redirect to Kratos to create new flow
+          redirectToFreshFlow();
           return;
         }
       } catch (err) {
         console.error('Failed to initialize registration flow:', err);
+        // If flow is expired/invalid, create a fresh one instead of showing error
+        if (isFlowExpiredError(err)) {
+          redirectToFreshFlow();
+          return;
+        }
         setError('Failed to initialize registration. Please try again.');
       } finally {
         setLoading(false);
@@ -44,7 +64,7 @@ export default function RegistrationPage() {
     }
 
     initFlow();
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   if (loading) {
     return (

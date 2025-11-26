@@ -261,3 +261,21 @@ export async function performLogout(logoutToken: string): Promise<void> {
 export function getKratosBrowserUrl(): string {
   return KRATOS_BROWSER_URL;
 }
+
+/**
+ * Check if an error indicates an expired or invalid flow
+ * Kratos returns 410 Gone for expired flows, 404 for not found
+ */
+export function isFlowExpiredError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('410') ||
+      message.includes('gone') ||
+      message.includes('expired') ||
+      message.includes('404') ||
+      message.includes('not found')
+    );
+  }
+  return false;
+}

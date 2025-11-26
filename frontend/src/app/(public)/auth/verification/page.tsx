@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthLayout from '@/components/auth/AuthLayout';
 import KratosForm from '@/components/auth/KratosForm';
-import { getVerificationFlow, getKratosBrowserUrl } from '@/lib/kratos';
+import { getVerificationFlow, getKratosBrowserUrl, isFlowExpiredError } from '@/lib/kratos';
 import type { VerificationFlow } from '@/lib/kratos/types';
 import { Loader2, CheckCircle } from 'lucide-react';
 
@@ -18,6 +18,13 @@ export default function VerificationPage() {
   useEffect(() => {
     const flowId = searchParams.get('flow');
 
+    // Helper to redirect to Kratos for a fresh flow
+    function redirectToFreshFlow() {
+      const kratosUrl = getKratosBrowserUrl();
+      // Use replace() to avoid adding stale flow URLs to browser history
+      window.location.replace(`${kratosUrl}/self-service/verification/browser`);
+    }
+
     async function initFlow() {
       try {
         if (flowId) {
@@ -25,13 +32,17 @@ export default function VerificationPage() {
           const existingFlow = await getVerificationFlow(flowId);
           setFlow(existingFlow);
         } else {
-          // Create new flow - redirect to Kratos
-          const kratosUrl = getKratosBrowserUrl();
-          window.location.href = `${kratosUrl}/self-service/verification/browser`;
+          // No flow ID - redirect to Kratos to create new flow
+          redirectToFreshFlow();
           return;
         }
       } catch (err) {
         console.error('Failed to initialize verification flow:', err);
+        // If flow is expired/invalid, create a fresh one instead of showing error
+        if (isFlowExpiredError(err)) {
+          redirectToFreshFlow();
+          return;
+        }
         setError('Failed to initialize email verification. Please try again.');
       } finally {
         setLoading(false);
