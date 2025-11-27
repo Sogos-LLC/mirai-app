@@ -15,6 +15,11 @@ interface KratosFormProps {
  */
 export default function KratosForm({ ui, onlyGroups, hideGroups = [] }: KratosFormProps) {
   const filteredNodes = ui.nodes.filter((node) => {
+    // Always include hidden inputs - they contain CSRF tokens and other
+    // fields required for form submission, regardless of which "tab" is active
+    const isHiddenInput = node.type === 'input' && node.attributes.type === 'hidden';
+    if (isHiddenInput) return true;
+
     if (hideGroups.includes(node.group)) return false;
     if (onlyGroups && !onlyGroups.includes(node.group)) return false;
     return true;

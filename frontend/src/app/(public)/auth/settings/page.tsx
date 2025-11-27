@@ -112,8 +112,8 @@ export default function SettingsPage() {
   }
 
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType; groups: string[] }[] = [
-    { id: 'profile', label: 'Profile', icon: User, groups: ['profile', 'default'] },
-    { id: 'password', label: 'Password', icon: Lock, groups: ['password', 'default'] },
+    { id: 'profile', label: 'Profile', icon: User, groups: ['profile'] },
+    { id: 'password', label: 'Password', icon: Lock, groups: ['password'] },
   ];
 
   const activeTabConfig = tabs.find((t) => t.id === activeTab);
