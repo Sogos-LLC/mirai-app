@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { UiContainer, UiNode, UiText } from '@/lib/kratos/types';
-import { AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { AlertCircle, CheckCircle, Info, Eye, EyeOff } from 'lucide-react';
 
 interface KratosFormProps {
   ui: UiContainer;
@@ -113,6 +113,11 @@ function InputNode({ node }: { node: UiNode }) {
     );
   }
 
+  // Password inputs with visibility toggle
+  if (inputType === 'password') {
+    return <PasswordInputNode node={node} />;
+  }
+
   // Regular inputs
   return (
     <div>
@@ -140,6 +145,70 @@ function InputNode({ node }: { node: UiNode }) {
             : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
         } focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors`}
       />
+      {/* Field messages */}
+      {messages && messages.length > 0 && (
+        <div className="mt-1 space-y-1">
+          {messages.map((message) => (
+            <p
+              key={message.id}
+              className={`text-sm ${
+                message.type === 'error' ? 'text-red-600' : 'text-slate-600'
+              }`}
+            >
+              {message.text}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PasswordInputNode({ node }: { node: UiNode }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const { attributes, messages, meta } = node;
+  const hasError = messages?.some((m) => m.type === 'error');
+
+  return (
+    <div>
+      {meta.label && (
+        <label
+          htmlFor={attributes.name}
+          className="block text-sm font-medium text-slate-700 mb-1"
+        >
+          {meta.label.text}
+          {attributes.required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          id={attributes.name}
+          type={showPassword ? 'text' : 'password'}
+          name={attributes.name}
+          defaultValue={attributes.value as string}
+          required={attributes.required}
+          disabled={attributes.disabled}
+          pattern={attributes.pattern}
+          autoComplete={getAutoComplete(attributes.name)}
+          className={`w-full px-4 py-3 pr-12 rounded-lg border ${
+            hasError
+              ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+              : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+          } focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors`}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+          tabIndex={-1}
+        >
+          {showPassword ? (
+            <EyeOff className="h-5 w-5" />
+          ) : (
+            <Eye className="h-5 w-5" />
+          )}
+        </button>
+      </div>
       {/* Field messages */}
       {messages && messages.length > 0 && (
         <div className="mt-1 space-y-1">
