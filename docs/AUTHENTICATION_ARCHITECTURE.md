@@ -175,7 +175,7 @@ The Mirai SaaS application uses **Ory Kratos** for headless authentication with 
    - Frontend posts to Kratos registration API
 
 5. **Email verification**
-   - Kratos sends verification code to email (via Mailgun)
+   - Kratos sends verification code to email (via Mailpit)
    - User enters code to verify email
 
 6. **Onboarding** (`mirai.sogos.io/onboard`)
@@ -559,18 +559,15 @@ curl "https://mirai-auth.sogos.io/self-service/registration/flows?id=FLOW_ID" \
 
 ## Email Configuration
 
-**Provider**: Mailgun (sandbox mode for dev)
+**Provider**: Mailpit (email testing/catching service)
 
 **Settings**:
-- Domain: `<MAILGUN_SANDBOX_DOMAIN>`
-- Authorized recipient: `user@example.com`
-- Limitation: Only authorized emails can receive in sandbox
+- SMTP: `smtp://mailpit.default.svc.cluster.local:1025`
+- Web UI: `https://mailpit.sogos.io`
+- No authentication required
+- All emails are captured and viewable in web UI
 
-**Production upgrade**:
-1. Verify custom domain in Mailgun
-2. Update DNS records (SPF, DKIM, DMARC)
-3. Update Kratos courier configuration
-4. Remove sandbox limitations
+**Note**: Mailpit catches all outgoing emails for testing purposes. Emails are not delivered to actual recipients.
 
 ## Adding New Domains
 

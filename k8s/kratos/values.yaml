@@ -109,13 +109,8 @@ kratos:
           url: file:///etc/config/identity.schema.json
 
     courier:
-      # Development: Mailpit (local, no auth)
-      # Production: Switch to Sendamatic by uncommenting below
       smtp:
-        # Mailpit (local dev/testing)
-        connection_uri: smtp://mailpit.mailpit.svc.cluster.local:1025/?disable_starttls=true
-        # Sendamatic (production)
-        # connection_uri: smtp://${SENDAMATIC_USER}:${SENDAMATIC_PASS}@in.smtp.sendamatic.net:587/?starttls=true
+        connection_uri: smtp://mailpit.default.svc.cluster.local:1025/?disable_starttls=true
         from_address: noreply@mirai.sogos.io
         from_name: Mirai
 
@@ -198,17 +193,6 @@ deployment:
         secretKeyRef:
           name: kratos-secret
           key: secretsDefault
-    # Sendamatic credentials (uncomment for production)
-    # - name: SENDAMATIC_USER
-    #   valueFrom:
-    #     secretKeyRef:
-    #       name: kratos-secret
-    #       key: sendamaticUser
-    # - name: SENDAMATIC_PASS
-    #   valueFrom:
-    #     secretKeyRef:
-    #       name: kratos-secret
-    #       key: sendamaticPass
 
   resources:
     requests:
