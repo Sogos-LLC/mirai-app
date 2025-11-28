@@ -404,12 +404,7 @@ func (h *AuthHandler) createCheckoutSession(company *models.Company, email strin
 	// Create checkout session
 	// Success URL points to our backend which creates a recovery link to log the user in
 	// {CHECKOUT_SESSION_ID} is replaced by Stripe with the actual session ID
-	backendURL := h.config.FrontendURL
-	// In local dev, backend runs on different port than frontend
-	if h.config.FrontendURL == "http://localhost:3000" {
-		backendURL = "http://localhost:8080"
-	}
-	successURL := backendURL + "/api/v1/auth/complete-checkout?session_id={CHECKOUT_SESSION_ID}"
+	successURL := h.config.BackendURL + "/api/v1/auth/complete-checkout?session_id={CHECKOUT_SESSION_ID}"
 
 	checkoutParams := &stripe.CheckoutSessionParams{
 		Customer: stripe.String(newCustomer.ID),

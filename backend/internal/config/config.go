@@ -17,6 +17,7 @@ type Config struct {
 	StripeStarterPriceID   string
 	StripeProPriceID       string
 	FrontendURL            string
+	BackendURL             string
 }
 
 // Load loads configuration from environment variables
@@ -33,6 +34,7 @@ func Load() (*Config, error) {
 	stripeStarterPriceID := getEnv("STRIPE_STARTER_PRICE_ID", "")
 	stripeProPriceID := getEnv("STRIPE_PRO_PRICE_ID", "")
 	frontendURL := getEnv("FRONTEND_URL", "https://mirai.sogos.io")
+	backendURL := getEnv("BACKEND_URL", "http://localhost:8080")
 
 	if databaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL environment variable is required")
@@ -49,6 +51,7 @@ func Load() (*Config, error) {
 		StripeStarterPriceID:   stripeStarterPriceID,
 		StripeProPriceID:       stripeProPriceID,
 		FrontendURL:            frontendURL,
+		BackendURL:             backendURL,
 	}, nil
 }
 
