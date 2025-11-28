@@ -19,17 +19,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
-  // Auto-select password tab when coming from recovery flow
-  // Kratos message ID 1060001 = "You successfully recovered your account..."
-  useEffect(() => {
-    if (flow?.ui?.messages) {
-      const isRecoveryFlow = flow.ui.messages.some((msg) => msg.id === 1060001);
-      if (isRecoveryFlow) {
-        setActiveTab('password');
-      }
-    }
-  }, [flow]);
-
   useEffect(() => {
     const flowId = searchParams.get('flow');
 
@@ -53,6 +42,32 @@ export default function SettingsPage() {
         if (flowId) {
           // Get existing flow
           const existingFlow = await getSettingsFlow(flowId);
+
+          // If this is from a recovery flow, redirect to dedicated reset-password page
+          // Kratos message ID 1060001 = "You successfully recovered your account..."
+          const isRecoveryFlow = existingFlow.ui?.messages?.some(
+            (msg) => msg.id === 1060001
+          );
+          if (isRecoveryFlow) {
+            // Mark that we're in recovery flow context
+            sessionStorage.setItem('recovery_flow', 'true');
+            router.replace(`/auth/reset-password?flow=${flowId}`);
+            return;
+          }
+
+          // If password was just updated and we came from recovery flow,
+          // redirect to reset-password to show success screen and logout
+          // Kratos message ID 1050001 = "Your changes have been saved!"
+          const passwordUpdated = existingFlow.ui?.messages?.some(
+            (msg) => msg.id === 1050001
+          );
+          const fromRecovery = sessionStorage.getItem('recovery_flow') === 'true';
+          if (passwordUpdated && fromRecovery) {
+            sessionStorage.removeItem('recovery_flow');
+            router.replace(`/auth/reset-password?flow=${flowId}`);
+            return;
+          }
+
           setFlow(existingFlow);
         } else {
           // No flow ID - redirect to Kratos to create new flow
@@ -161,6 +176,7 @@ export default function SettingsPage() {
             <KratosForm
               ui={flow.ui}
               onlyGroups={activeTabConfig?.groups}
+              showPasswordConfirmation={activeTab === 'password'}
             />
           </div>
         </div>

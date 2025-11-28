@@ -104,7 +104,7 @@ export default function RegistrationPage() {
 
   return (
     <AuthLayout title="Create Account" subtitle="Start your free trial">
-      <KratosForm ui={flow.ui} />
+      <KratosForm ui={flow.ui} showPasswordConfirmation />
 
       {/* Links */}
       <div className="mt-6 text-center text-sm">

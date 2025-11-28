@@ -8,12 +8,14 @@ interface KratosFormProps {
   ui: UiContainer;
   onlyGroups?: string[];
   hideGroups?: string[];
+  /** Show password confirmation field for new password entry (registration, settings). Default: false */
+  showPasswordConfirmation?: boolean;
 }
 
 /**
  * Renders Kratos UI nodes as a form
  */
-export default function KratosForm({ ui, onlyGroups, hideGroups = [] }: KratosFormProps) {
+export default function KratosForm({ ui, onlyGroups, hideGroups = [], showPasswordConfirmation = false }: KratosFormProps) {
   const filteredNodes = ui.nodes.filter((node) => {
     // Always include hidden inputs - they contain CSRF tokens and other
     // fields required for form submission, regardless of which "tab" is active
@@ -38,19 +40,19 @@ export default function KratosForm({ ui, onlyGroups, hideGroups = [] }: KratosFo
 
       {/* Form fields */}
       {filteredNodes.map((node, index) => (
-        <Node key={`${node.attributes.name || index}`} node={node} />
+        <Node key={`${node.attributes.name || index}`} node={node} showPasswordConfirmation={showPasswordConfirmation} />
       ))}
     </form>
   );
 }
 
-function Node({ node }: { node: UiNode }) {
+function Node({ node, showPasswordConfirmation }: { node: UiNode; showPasswordConfirmation: boolean }) {
   const { attributes, messages, meta } = node;
 
   // Handle different node types
   switch (node.type) {
     case 'input':
-      return <InputNode node={node} />;
+      return <InputNode node={node} showPasswordConfirmation={showPasswordConfirmation} />;
     case 'text':
       return (
         <div className="text-sm text-slate-600">
@@ -71,7 +73,7 @@ function Node({ node }: { node: UiNode }) {
   }
 }
 
-function InputNode({ node }: { node: UiNode }) {
+function InputNode({ node, showPasswordConfirmation }: { node: UiNode; showPasswordConfirmation: boolean }) {
   const { attributes, messages, meta } = node;
   const hasError = messages?.some((m) => m.type === 'error');
   const inputType = attributes.type || 'text';
@@ -120,7 +122,7 @@ function InputNode({ node }: { node: UiNode }) {
 
   // Password inputs with visibility toggle
   if (inputType === 'password') {
-    return <PasswordInputNode node={node} />;
+    return <PasswordInputNode node={node} showConfirmation={showPasswordConfirmation} />;
   }
 
   // Regular inputs
@@ -169,16 +171,17 @@ function InputNode({ node }: { node: UiNode }) {
   );
 }
 
-function PasswordInputNode({ node }: { node: UiNode }) {
+function PasswordInputNode({ node, showConfirmation }: { node: UiNode; showConfirmation: boolean }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [password, setPassword] = useState((node.attributes.value as string) || '');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
   const { attributes, messages, meta } = node;
   const hasError = messages?.some((m) => m.type === 'error');
 
   const validatePasswords = () => {
+    const password = passwordRef.current?.value || '';
     if (confirmPassword && password !== confirmPassword) {
       setConfirmError('Passwords do not match');
       return false;
@@ -187,10 +190,10 @@ function PasswordInputNode({ node }: { node: UiNode }) {
     return true;
   };
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-    if (confirmPassword) {
-      if (e.target.value !== confirmPassword) {
+  const handlePasswordChange = () => {
+    if (showConfirmation && confirmPassword) {
+      const password = passwordRef.current?.value || '';
+      if (password !== confirmPassword) {
         setConfirmError('Passwords do not match');
       } else {
         setConfirmError(null);
@@ -199,8 +202,10 @@ function PasswordInputNode({ node }: { node: UiNode }) {
   };
 
   const handleConfirmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setConfirmPassword(e.target.value);
-    if (e.target.value && password !== e.target.value) {
+    const newConfirm = e.target.value;
+    setConfirmPassword(newConfirm);
+    const password = passwordRef.current?.value || '';
+    if (newConfirm && password !== newConfirm) {
       setConfirmError('Passwords do not match');
     } else {
       setConfirmError(null);
@@ -222,10 +227,11 @@ function PasswordInputNode({ node }: { node: UiNode }) {
         )}
         <div className="relative">
           <input
+            ref={passwordRef}
             id={attributes.name}
             type={showPassword ? 'text' : 'password'}
             name={attributes.name}
-            value={password}
+            defaultValue={attributes.value as string}
             onChange={handlePasswordChange}
             required={attributes.required}
             disabled={attributes.disabled}
@@ -267,48 +273,50 @@ function PasswordInputNode({ node }: { node: UiNode }) {
         )}
       </div>
 
-      {/* Confirm password field */}
-      <div>
-        <label
-          htmlFor={`${attributes.name}-confirm`}
-          className="block text-sm font-medium text-slate-700 mb-1"
-        >
-          Confirm Password
-          {attributes.required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        <div className="relative">
-          <input
-            id={`${attributes.name}-confirm`}
-            type={showConfirm ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={handleConfirmChange}
-            onBlur={validatePasswords}
-            required={attributes.required}
-            disabled={attributes.disabled}
-            autoComplete="new-password"
-            className={`w-full px-4 py-3 pr-12 rounded-lg border ${
-              confirmError
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
-            } focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors`}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirm(!showConfirm)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-            tabIndex={-1}
+      {/* Confirm password field - only shown for new password entry */}
+      {showConfirmation && (
+        <div>
+          <label
+            htmlFor={`${attributes.name}-confirm`}
+            className="block text-sm font-medium text-slate-700 mb-1"
           >
-            {showConfirm ? (
-              <EyeOff className="h-5 w-5" />
-            ) : (
-              <Eye className="h-5 w-5" />
-            )}
-          </button>
+            Confirm Password
+            {attributes.required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          <div className="relative">
+            <input
+              id={`${attributes.name}-confirm`}
+              type={showConfirm ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={handleConfirmChange}
+              onBlur={validatePasswords}
+              required={attributes.required}
+              disabled={attributes.disabled}
+              autoComplete="new-password"
+              className={`w-full px-4 py-3 pr-12 rounded-lg border ${
+                confirmError
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                  : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+              } focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(!showConfirm)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              tabIndex={-1}
+            >
+              {showConfirm ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+          {confirmError && (
+            <p className="mt-1 text-sm text-red-600">{confirmError}</p>
+          )}
         </div>
-        {confirmError && (
-          <p className="mt-1 text-sm text-red-600">{confirmError}</p>
-        )}
-      </div>
+      )}
     </div>
   );
 }

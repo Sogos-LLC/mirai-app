@@ -108,6 +108,7 @@ courier:
     connection_uri: smtp://mailpit:1025/?disable_starttls=true
     from_address: noreply@localhost
     from_name: Mirai Local
+  template_override_path: /etc/config/kratos/courier-templates
 
 session:
   lifespan: 24h
