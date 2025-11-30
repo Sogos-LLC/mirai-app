@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2, X, PartyPopper } from 'lucide-react';
 import CourseCreationModal from '@/components/dashboard/CourseCreationModal';
-import { useGetCoursesQuery, useDeleteCourseMutation, LibraryEntry } from '@/store/api/apiSlice';
+import { useGetCoursesQuery, useDeleteCourseMutation, type LibraryEntry } from '@/store/api/apiSlice';
 import { useRouter, useSearchParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
+import * as courseClient from '@/lib/courseClient';
 
 export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,7 +76,7 @@ export default function Dashboard() {
   const [deleteCourse] = useDeleteCourseMutation();
 
   // Filter courses based on active tab - handle undefined courses array
-  const filteredCourses = (courses || []).filter(course => {
+  const filteredCourses = (courses || []).filter((course: LibraryEntry) => {
     if (activeTab === 'draft') return course.status === 'draft';
     if (activeTab === 'published') return course.status === 'published';
     // For 'recent', show all courses sorted by date (handled by API)
@@ -83,22 +84,22 @@ export default function Dashboard() {
   });
 
   const handleEditCourse = async (courseId: string) => {
-    // Load the course data to check if it has generated content
-    const response = await fetch(`/api/courses/${courseId}`);
-    if (response.ok) {
-      const result = await response.json();
-      const course = result.data;
+    try {
+      // Load the course data to check if it has generated content
+      const course = await courseClient.getCourse(courseId);
 
       // If course has content (sections or courseBlocks), go directly to editor
       // Otherwise, go to the course builder wizard
-      if (course?.content?.sections?.length > 0 || course?.content?.courseBlocks?.length > 0) {
+      const sections = course?.content?.sections || [];
+      const courseBlocks = course?.content?.courseBlocks || [];
+      if (sections.length > 0 || courseBlocks.length > 0) {
         // Course has been generated, go directly to editor
         router.push(`/course-builder?id=${courseId}&step=4`);
       } else {
         // Course is still in draft/setup phase, go to wizard
         router.push(`/course-builder?id=${courseId}`);
       }
-    } else {
+    } catch (error) {
       // Fallback to wizard if we can't load the course
       router.push(`/course-builder?id=${courseId}`);
     }
@@ -110,8 +111,8 @@ export default function Dashboard() {
 
     if (confirm(confirmMessage)) {
       try {
-        // Delete the course - RTK Query automatically refetches courses and folders!
-        await deleteCourse(courseId).unwrap();
+        // Delete the course - connect-query automatically refetches via query invalidation
+        await deleteCourse(courseId);
       } catch (error) {
         console.error('Failed to delete course:', error);
         alert('Failed to delete course. Please try again.');

@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "mirai/v1/common.proto";
+
+// BillingService handles billing and subscription operations.
+service BillingService {
+  // GetBillingInfo returns the current billing status for the user's company.
+  rpc GetBillingInfo(GetBillingInfoRequest) returns (GetBillingInfoResponse);
+
+  // CreateCheckoutSession creates a Stripe Checkout session for plan upgrade.
+  rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse);
+
+  // CreatePortalSession creates a Stripe Customer Portal session.
+  rpc CreatePortalSession(CreatePortalSessionRequest) returns (CreatePortalSessionResponse);
+}
+
+// GetBillingInfoRequest is empty as company is identified by auth context.
+message GetBillingInfoRequest {}
+
+// GetBillingInfoResponse contains the current billing status.
+message GetBillingInfoResponse {
+  Plan plan = 1;
+  SubscriptionStatus status = 2;
+  int32 seat_count = 3;
+  int32 price_per_seat = 4; // cents
+  optional int64 current_period_end = 5; // unix timestamp
+  bool cancel_at_period_end = 6;
+}
+
+// CreateCheckoutSessionRequest contains the plan to subscribe to.
+message CreateCheckoutSessionRequest {
+  Plan plan = 1;
+}
+
+// CreateCheckoutSessionResponse contains the Stripe Checkout session URL.
+message CreateCheckoutSessionResponse {
+  string url = 1;
+}
+
+// CreatePortalSessionRequest is empty as company is identified by auth context.
+message CreatePortalSessionRequest {}
+
+// CreatePortalSessionResponse contains the Stripe Customer Portal URL.
+message CreatePortalSessionResponse {
+  string url = 1;
+}

@@ -3,6 +3,7 @@
 import './globals.css';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
+import { ConnectProvider } from '@/components/providers';
 import BuildInfo from '@/components/BuildInfo';
 
 export default function RootLayout({
@@ -14,8 +15,10 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Provider store={store}>
-          {children}
-          <BuildInfo />
+          <ConnectProvider>
+            {children}
+            <BuildInfo />
+          </ConnectProvider>
         </Provider>
       </body>
     </html>

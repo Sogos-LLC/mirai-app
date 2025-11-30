@@ -1,214 +1,189 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api/client';
-import WizardProgress from './WizardProgress';
-import EmailStep from './EmailStep';
-import OrgInfoStep from './OrgInfoStep';
-import AccountStep from './AccountStep';
-import PlanStep from './PlanStep';
-import EnterpriseContact from './EnterpriseContact';
+import { useRegistration } from './hooks/useRegistration';
+import { EmailStepV2 } from './steps/EmailStepV2';
+import { OrgStepV2 } from './steps/OrgStepV2';
+import { AccountStepV2 } from './steps/AccountStepV2';
+import { PlanStepV2 } from './steps/PlanStepV2';
+import { EnterpriseContactV2 } from './steps/EnterpriseContactV2';
+import { SuccessStep } from './steps/SuccessStep';
+import { Loader2 } from 'lucide-react';
+import { getStepLabel, STEPS } from '@/machines/registrationMachine';
 
-const STEPS = ['Email', 'Organization', 'Account', 'Plan'];
+/**
+ * SignupWizard - Registration flow using XState
+ *
+ * Architecture:
+ * - State machine controls all flow logic (transitions, validation, side effects)
+ * - This component is purely presentational - renders current step
+ * - Each step component handles its own form with React Hook Form + Zod
+ * - No local state - everything flows through the machine
+ */
+export function SignupWizard() {
+  const registration = useRegistration();
 
-interface SignupWizardProps {
-  preselectedPlan?: 'starter' | 'pro';
-}
+  // Show loading overlay during async operations
+  if (registration.isLoading && !registration.isEmailStep) {
+    return (
+      <div className="w-full max-w-md mx-auto">
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-4" />
+          <p className="text-slate-600">
+            {registration.state === 'submitting'
+              ? 'Creating your account...'
+              : registration.state === 'redirectingToCheckout'
+                ? 'Redirecting to checkout...'
+                : 'Please wait...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-interface WizardData {
-  email: string;
-  companyName: string;
-  industry: string;
-  teamSize: string;
-  firstName: string;
-  lastName: string;
-  password: string;
-  confirmPassword: string;
-  plan: 'starter' | 'pro' | 'enterprise';
-  seatCount: number;
-}
+  // Success states
+  if (registration.isSuccess || registration.isEnterpriseSuccess) {
+    return (
+      <SuccessStep
+        isEnterprise={registration.isEnterpriseSuccess}
+        companyName={registration.data.companyName}
+      />
+    );
+  }
 
-export default function SignupWizard({ preselectedPlan = 'pro' }: SignupWizardProps) {
-  const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [showEnterpriseContact, setShowEnterpriseContact] = useState(false);
-  const [enterpriseSubmitted, setEnterpriseSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Enterprise contact form (side flow)
+  if (registration.isEnterpriseContact) {
+    return (
+      <EnterpriseContactV2
+        data={registration.data}
+        onCancel={registration.cancelEnterprise}
+        onSubmit={registration.submit}
+        isLoading={registration.isLoading}
+        error={registration.error}
+      />
+    );
+  }
 
-  const [data, setData] = useState<WizardData>({
-    email: '',
-    companyName: '',
-    industry: '',
-    teamSize: '',
-    firstName: '',
-    lastName: '',
-    password: '',
-    confirmPassword: '',
-    plan: preselectedPlan,
-    seatCount: 1,
-  });
+  // Main wizard flow
+  return (
+    <div className="w-full max-w-md mx-auto">
+      {/* Progress indicator */}
+      <ProgressBar
+        currentStep={registration.stepIndex}
+        totalSteps={registration.totalSteps}
+      />
 
-  const updateData = useCallback((updates: Partial<WizardData>) => {
-    setData((prev) => ({ ...prev, ...updates }));
-  }, []);
+      {/* Step labels */}
+      <div className="flex justify-between mb-8 px-2">
+        {STEPS.map((step, index) => (
+          <span
+            key={step}
+            className={`text-xs font-medium ${
+              index <= registration.stepIndex
+                ? 'text-indigo-600'
+                : 'text-slate-400'
+            }`}
+          >
+            {getStepLabel(step)}
+          </span>
+        ))}
+      </div>
 
-  const handleNext = () => {
-    setError(null);
-    setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
-  };
+      {/* Error display */}
+      {registration.error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-700 text-sm">{registration.error}</p>
+        </div>
+      )}
 
-  const handleBack = () => {
-    setError(null);
-    if (showEnterpriseContact) {
-      setShowEnterpriseContact(false);
-    } else {
-      setCurrentStep((prev) => Math.max(prev - 1, 0));
-    }
-  };
-
-  // Handle account step completion (just move to next step, no Kratos call)
-  const handleAccountNext = () => {
-    handleNext();
-  };
-
-  // Handle final registration - calls our backend API
-  const handleRegister = async () => {
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const response = await api.register({
-        email: data.email,
-        password: data.password,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        company_name: data.companyName,
-        industry: data.industry || undefined,
-        team_size: data.teamSize || undefined,
-        plan: data.plan,
-        seat_count: data.seatCount,
-      });
-
-      // If checkout URL is provided, redirect to Stripe
-      if (response.checkout_url) {
-        // Set cookie so middleware can skip password reset after checkout
-        document.cookie = 'pending_checkout_login=true; path=/; max-age=3600; SameSite=Lax';
-        window.location.href = response.checkout_url;
-      } else {
-        // Enterprise or no checkout needed - go to dashboard
-        router.push('/dashboard');
-      }
-    } catch (err) {
-      console.error('Registration error:', err);
-      const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
-      setError(message);
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle enterprise contact submission
-  const handleEnterpriseContact = async (message: string) => {
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      await api.enterpriseContact({
-        company_name: data.companyName,
-        industry: data.industry || undefined,
-        team_size: data.teamSize || undefined,
-        name: `${data.firstName} ${data.lastName}`,
-        email: data.email,
-        message: message || undefined,
-      });
-
-      setEnterpriseSubmitted(true);
-    } catch (err) {
-      console.error('Enterprise contact error:', err);
-      setError('Failed to send message. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const renderStep = () => {
-    if (showEnterpriseContact) {
-      return (
-        <EnterpriseContact
-          name={`${data.firstName} ${data.lastName}`}
-          email={data.email}
-          companyName={data.companyName}
-          onSubmit={handleEnterpriseContact}
-          onBack={handleBack}
-          isSubmitting={isSubmitting}
-          isSubmitted={enterpriseSubmitted}
+      {/* Current step */}
+      {registration.isEmailStep && (
+        <EmailStepV2
+          defaultEmail={registration.data.email}
+          onSubmit={(email) => {
+            registration.setEmail(email);
+            registration.next();
+          }}
+          isLoading={registration.state === 'checkingEmail'}
         />
-      );
-    }
+      )}
 
-    switch (currentStep) {
-      case 0:
-        return (
-          <EmailStep
-            email={data.email}
-            onChange={(email) => updateData({ email })}
-            onNext={handleNext}
-          />
-        );
-      case 1:
-        return (
-          <OrgInfoStep
-            companyName={data.companyName}
-            industry={data.industry}
-            teamSize={data.teamSize}
-            onChange={(updates) => updateData(updates)}
-            onNext={handleNext}
-            onBack={handleBack}
-          />
-        );
-      case 2:
-        return (
-          <AccountStep
-            firstName={data.firstName}
-            lastName={data.lastName}
-            password={data.password}
-            confirmPassword={data.confirmPassword}
-            onChange={(updates) => updateData(updates)}
-            onSubmit={handleAccountNext}
-            onBack={handleBack}
-            isSubmitting={false}
-            error={null}
-          />
-        );
-      case 3:
-        return (
-          <PlanStep
-            plan={data.plan}
-            seatCount={data.seatCount}
-            onChange={(updates) => updateData(updates)}
-            onSubmit={handleRegister}
-            onBack={handleBack}
-            onEnterprise={() => setShowEnterpriseContact(true)}
-            isSubmitting={isSubmitting}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+      {registration.isOrgStep && (
+        <OrgStepV2
+          defaultValues={{
+            companyName: registration.data.companyName,
+            industry: registration.data.industry,
+            teamSize: registration.data.teamSize,
+          }}
+          onSubmit={(data) => {
+            registration.setOrg(data.companyName, data.industry, data.teamSize);
+            registration.next();
+          }}
+          onBack={registration.back}
+        />
+      )}
+
+      {registration.isAccountStep && (
+        <AccountStepV2
+          defaultValues={{
+            firstName: registration.data.firstName,
+            lastName: registration.data.lastName,
+            password: registration.data.password,
+          }}
+          onSubmit={(data) => {
+            registration.setAccount(data.firstName, data.lastName, data.password);
+            registration.next();
+          }}
+          onBack={registration.back}
+        />
+      )}
+
+      {registration.isPlanStep && (
+        <PlanStepV2
+          defaultValues={{
+            plan: registration.data.plan,
+            seatCount: registration.data.seatCount,
+          }}
+          onSubmit={(data) => {
+            registration.setPlan(data.plan, data.seatCount);
+            registration.submit();
+          }}
+          onBack={registration.back}
+          onSelectEnterprise={registration.selectEnterprise}
+          isLoading={registration.isLoading}
+        />
+      )}
+
+      {/* Debug info in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-8 p-4 bg-slate-100 rounded text-xs font-mono">
+          <p>State: {registration.state}</p>
+          <p>Step: {registration.currentStep} ({registration.stepIndex + 1}/{registration.totalSteps})</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Progress bar component
+ */
+function ProgressBar({
+  currentStep,
+  totalSteps,
+}: {
+  currentStep: number;
+  totalSteps: number;
+}) {
+  const progress = ((currentStep + 1) / totalSteps) * 100;
 
   return (
-    <div className="space-y-8">
-      {!showEnterpriseContact && !enterpriseSubmitted && (
-        <WizardProgress steps={STEPS} currentStep={currentStep} />
-      )}
-
-      {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">{error}</div>
-      )}
-
-      <div className="animate-fadeIn">{renderStep()}</div>
+    <div className="mb-6">
+      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-indigo-600 transition-all duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
     </div>
   );
 }

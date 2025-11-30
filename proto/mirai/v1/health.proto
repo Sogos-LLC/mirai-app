@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+// HealthService provides health check endpoints.
+service HealthService {
+  // Check returns the health status of the service.
+  rpc Check(CheckRequest) returns (CheckResponse);
+}
+
+// CheckRequest is empty.
+message CheckRequest {}
+
+// CheckResponse contains the service health status.
+message CheckResponse {
+  string status = 1;
+}

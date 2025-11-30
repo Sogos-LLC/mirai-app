@@ -9,6 +9,7 @@ import FolderSelectionModal from './FolderSelectionModal';
 import TagsSelectionModal from './TagsSelectionModal';
 import DataSourceModal from './DataSourceModal';
 import { Folder, Plus, X, Hash, Database, Info } from 'lucide-react';
+import * as courseClient from '@/lib/courseClient';
 
 // Create memoized selectors to prevent unnecessary re-renders
 // Use a constant for empty arrays to maintain referential equality
@@ -87,22 +88,19 @@ const FolderSection = memo(() => {
       if (destinationFolder && destinationFolder.includes('-')) {
         // This looks like a folder ID, fetch the name
         try {
-          const response = await fetch('/api/folders');
-          if (response.ok) {
-            const result = await response.json();
-            const findFolder = (folders: any[], id: string): string | null => {
-              for (const folder of folders) {
-                if (folder.id === id) return folder.name;
-                if (folder.children) {
-                  const found = findFolder(folder.children, id);
-                  if (found) return found;
-                }
+          const folders = await courseClient.getFolderHierarchy(false);
+          const findFolder = (folderList: any[], id: string): string | null => {
+            for (const folder of folderList) {
+              if (folder.id === id) return folder.name;
+              if (folder.children) {
+                const found = findFolder(folder.children, id);
+                if (found) return found;
               }
-              return null;
-            };
-            const name = findFolder(result.data, destinationFolder);
-            if (name) setFolderName(name);
-          }
+            }
+            return null;
+          };
+          const name = findFolder(folders, destinationFolder);
+          if (name) setFolderName(name);
         } catch (error) {
           console.error('Failed to load folder name:', error);
         }

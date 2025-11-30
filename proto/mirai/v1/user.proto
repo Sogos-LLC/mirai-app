@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "mirai/v1/common.proto";
+
+// UserService handles user-related operations.
+service UserService {
+  // GetMe returns the currently authenticated user with their company.
+  rpc GetMe(GetMeRequest) returns (GetMeResponse);
+
+  // GetUser returns a specific user by ID.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // UpdateUser updates user information.
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+}
+
+// GetMeRequest is empty as user is identified by auth context.
+message GetMeRequest {}
+
+// GetMeResponse contains the current user and their company.
+message GetMeResponse {
+  User user = 1;
+  optional Company company = 2;
+}
+
+// GetUserRequest contains the user ID to fetch.
+message GetUserRequest {
+  string user_id = 1;
+}
+
+// GetUserResponse contains the requested user.
+message GetUserResponse {
+  User user = 1;
+}
+
+// UpdateUserRequest contains fields to update on a user.
+message UpdateUserRequest {
+  string user_id = 1;
+  optional Role role = 2;
+}
+
+// UpdateUserResponse contains the updated user.
+message UpdateUserResponse {
+  User user = 1;
+}

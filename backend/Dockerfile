@@ -24,9 +24,6 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /src/server /app/server
 
-# Copy migrations
-COPY --from=builder /src/internal/database/migrations /app/migrations
-
 # Ensure the binary is executable for all users
 RUN chmod 755 /app/server
 

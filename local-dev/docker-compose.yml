@@ -22,7 +22,7 @@ services:
 
   # Ory Kratos - Authentication (migration)
   kratos-migrate:
-    image: oryd/kratos:v1.1.0
+    image: oryd/kratos:v1.3.0
     container_name: mirai-kratos-migrate
     depends_on:
       postgres:
@@ -36,7 +36,7 @@ services:
 
   # Ory Kratos - Authentication
   kratos:
-    image: oryd/kratos:v1.1.0
+    image: oryd/kratos:v1.3.0
     container_name: mirai-kratos
     depends_on:
       kratos-migrate:

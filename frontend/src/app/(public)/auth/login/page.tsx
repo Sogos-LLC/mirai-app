@@ -1,72 +1,37 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthLayout from '@/components/auth/AuthLayout';
 import KratosForm from '@/components/auth/KratosForm';
-import { getLoginFlow, getKratosBrowserUrl, getSession, isFlowExpiredError } from '@/lib/kratos';
-import type { LoginFlow } from '@/lib/kratos/types';
-import { Loader2 } from 'lucide-react';
+import { useLogin } from '@/hooks/useLogin';
+import { Loader2, CheckCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const [flow, setFlow] = useState<LoginFlow | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    isLoading,
+    isReady,
+    isError,
+    flow,
+    error,
+    checkoutSuccess,
+    start,
+    retry,
+  } = useLogin();
 
+  // Start the login flow on mount
   useEffect(() => {
-    const flowId = searchParams.get('flow');
-    const returnTo = searchParams.get('return_to');
+    const flowId = searchParams.get('flow') || undefined;
+    const returnTo = searchParams.get('return_to') || undefined;
+    const checkout = searchParams.get('checkout') === 'success';
 
-    // Helper to redirect to Kratos for a fresh flow
-    function redirectToFreshFlow() {
-      const kratosUrl = getKratosBrowserUrl();
-      const params = new URLSearchParams();
-      if (returnTo) {
-        params.set('return_to', returnTo);
-      }
-      // Use replace() to avoid adding stale flow URLs to browser history
-      window.location.replace(`${kratosUrl}/self-service/login/browser?${params.toString()}`);
-    }
+    start({ flowId, returnTo, checkoutSuccess: checkout });
+  }, [searchParams, start]);
 
-    async function initFlow() {
-      try {
-        // Check if user is already authenticated
-        const session = await getSession();
-        if (session?.active) {
-          // Redirect away from login page - use replace to not add to history
-          router.replace(returnTo || '/dashboard');
-          return;
-        }
-
-        if (flowId) {
-          // Get existing flow
-          const existingFlow = await getLoginFlow(flowId);
-          setFlow(existingFlow);
-        } else {
-          // No flow ID - redirect to Kratos to create new flow
-          redirectToFreshFlow();
-          return;
-        }
-      } catch (err) {
-        console.error('Failed to initialize login flow:', err);
-        // If flow is expired/invalid, create a fresh one instead of showing error
-        if (isFlowExpiredError(err)) {
-          redirectToFreshFlow();
-          return;
-        }
-        setError('Failed to initialize login. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    initFlow();
-  }, [searchParams, router]);
-
-  if (loading) {
+  // Loading state
+  if (isLoading) {
     return (
       <AuthLayout title="Sign In" subtitle="Welcome back">
         <div className="flex items-center justify-center py-8">
@@ -76,13 +41,14 @@ export default function LoginPage() {
     );
   }
 
-  if (error) {
+  // Error state
+  if (isError && error) {
     return (
       <AuthLayout title="Sign In" subtitle="Welcome back">
         <div className="text-center py-8">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4">{error.message}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={retry}
             className="text-indigo-600 hover:text-indigo-700 font-medium"
           >
             Try again
@@ -92,7 +58,8 @@ export default function LoginPage() {
     );
   }
 
-  if (!flow) {
+  // Waiting for flow (redirecting to Kratos or loading)
+  if (!isReady || !flow) {
     return (
       <AuthLayout title="Sign In" subtitle="Welcome back">
         <div className="flex items-center justify-center py-8">
@@ -102,8 +69,20 @@ export default function LoginPage() {
     );
   }
 
+  // Ready - show login form
   return (
     <AuthLayout title="Sign In" subtitle="Welcome back">
+      {/* Checkout success message */}
+      {checkoutSuccess && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-green-800 font-medium">Payment successful!</p>
+            <p className="text-green-700 text-sm">Sign in with your credentials to access your account.</p>
+          </div>
+        </div>
+      )}
+
       <KratosForm ui={flow.ui} />
 
       {/* Links */}

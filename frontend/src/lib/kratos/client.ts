@@ -11,6 +11,7 @@ import type {
   SettingsFlow,
   LogoutFlow,
 } from './types';
+import { AUTH_COOKIES, getSessionTokenFromCookies } from '@/lib/auth.config';
 
 // Kratos URLs - use browser URL for redirects, internal URL for server-side
 const KRATOS_BROWSER_URL = process.env.NEXT_PUBLIC_KRATOS_BROWSER_URL || 'https://mirai-auth.sogos.io';
@@ -23,8 +24,11 @@ function getKratosUrl(forBrowser: boolean = true): string {
   return forBrowser ? KRATOS_BROWSER_URL : KRATOS_PUBLIC_URL;
 }
 
+// Default timeout for Kratos requests (5 seconds)
+const KRATOS_REQUEST_TIMEOUT_MS = 5000;
+
 /**
- * Fetch with credentials (cookies) included
+ * Fetch with credentials (cookies) included and timeout
  */
 async function kratosRequest<T>(
   endpoint: string,
@@ -34,31 +38,61 @@ async function kratosRequest<T>(
   const baseUrl = getKratosUrl(forBrowser);
   const url = `${baseUrl}${endpoint}`;
 
-  const response = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-      ...options.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), KRATOS_REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error?.message || error.message || `HTTP ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error?.message || error.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Request to ${endpoint} timed out after ${KRATOS_REQUEST_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return response.json();
 }
 
 /**
  * Check current session (whoami)
+ *
+ * For API flow (our primary flow): reads ory_session_token cookie and sends
+ * as Authorization: Bearer header, since Kratos expects tokens this way.
+ *
+ * For browser flow: forwards cookies as-is (Kratos reads ory_kratos_session).
  */
 export async function getSession(cookie?: string): Promise<KratosSession | null> {
   try {
     const headers: HeadersInit = {};
+
     if (cookie) {
+      // Server-side: cookie string provided directly
       headers.Cookie = cookie;
+    } else {
+      // Client-side: check for API flow session token in cookies
+      // Our registration flow stores the token in ory_session_token cookie
+      // Kratos expects API tokens as Authorization: Bearer header
+      const sessionToken = getSessionTokenFromCookies();
+      if (sessionToken) {
+        headers.Authorization = `Bearer ${sessionToken}`;
+      }
+      // If no API token, credentials: 'include' will send ory_kratos_session
+      // cookie for browser flow (handled by kratosRequest)
     }
 
     const session = await kratosRequest<KratosSession>(
@@ -68,7 +102,12 @@ export async function getSession(cookie?: string): Promise<KratosSession | null>
     );
 
     return session;
-  } catch {
+  } catch (error) {
+    // Log error for debugging - session check failures are expected for unauthenticated users
+    // but network/timeout errors should be visible
+    if (error instanceof Error && !error.message.includes('401')) {
+      console.error('[getSession] Failed to check session:', error.message);
+    }
     return null;
   }
 }

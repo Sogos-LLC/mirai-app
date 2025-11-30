@@ -3,16 +3,18 @@
 import React from 'react';
 import { CreditCard, ExternalLink, AlertCircle, Check, Users, Mail } from 'lucide-react';
 import {
-  useGetBillingQuery,
-  useCreateCheckoutSessionMutation,
-  useCreatePortalSessionMutation,
-  BillingInfo
-} from '@/store/api/apiSlice';
+  useGetBillingInfo,
+  useCreateCheckoutSession,
+  useCreatePortalSession,
+  Plan,
+  SubscriptionStatus,
+} from '@/hooks/useBilling';
+import { planToDisplayString } from '@/lib/proto';
 
-// Plan configuration
+// Plan configuration using proto enums
 const plans = [
   {
-    id: 'starter' as const,
+    id: Plan.STARTER,
     name: 'Starter',
     pricePerSeat: 8,
     description: 'For small teams getting started',
@@ -20,11 +22,11 @@ const plans = [
       'Up to 10 team members',
       'Basic course builder',
       'Email support',
-      '5GB storage'
-    ]
+      '5GB storage',
+    ],
   },
   {
-    id: 'pro' as const,
+    id: Plan.PRO,
     name: 'Pro',
     pricePerSeat: 12,
     description: 'For growing organizations',
@@ -34,12 +36,12 @@ const plans = [
       'Priority support',
       '50GB storage',
       'Custom branding',
-      'Analytics dashboard'
+      'Analytics dashboard',
     ],
-    popular: true
+    popular: true,
   },
   {
-    id: 'enterprise' as const,
+    id: Plan.ENTERPRISE,
     name: 'Enterprise',
     pricePerSeat: null, // Contact us
     description: 'For large organizations',
@@ -49,9 +51,9 @@ const plans = [
       'Unlimited storage',
       'SSO/SAML',
       'Custom integrations',
-      'SLA guarantee'
-    ]
-  }
+      'SLA guarantee',
+    ],
+  },
 ];
 
 function formatCurrency(cents: number): string {
@@ -66,15 +68,16 @@ function formatDate(timestamp: number): string {
   });
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const statusConfig: Record<string, { color: string; label: string }> = {
-    active: { color: 'bg-green-100 text-green-700', label: 'Active' },
-    past_due: { color: 'bg-yellow-100 text-yellow-700', label: 'Past Due' },
-    canceled: { color: 'bg-red-100 text-red-700', label: 'Canceled' },
-    none: { color: 'bg-gray-100 text-gray-700', label: 'No Subscription' }
+function StatusBadge({ status }: { status: SubscriptionStatus }) {
+  const statusConfig: Record<SubscriptionStatus, { color: string; label: string }> = {
+    [SubscriptionStatus.UNSPECIFIED]: { color: 'bg-gray-100 text-gray-700', label: 'Unknown' },
+    [SubscriptionStatus.NONE]: { color: 'bg-gray-100 text-gray-700', label: 'No Subscription' },
+    [SubscriptionStatus.ACTIVE]: { color: 'bg-green-100 text-green-700', label: 'Active' },
+    [SubscriptionStatus.PAST_DUE]: { color: 'bg-yellow-100 text-yellow-700', label: 'Past Due' },
+    [SubscriptionStatus.CANCELED]: { color: 'bg-red-100 text-red-700', label: 'Canceled' },
   };
 
-  const config = statusConfig[status] || statusConfig.none;
+  const config = statusConfig[status] || statusConfig[SubscriptionStatus.NONE];
 
   return (
     <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
@@ -84,13 +87,13 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function BillingSettings() {
-  const { data: billing, isLoading, error } = useGetBillingQuery();
-  const [createCheckout, { isLoading: isCheckoutLoading }] = useCreateCheckoutSessionMutation();
-  const [createPortal, { isLoading: isPortalLoading }] = useCreatePortalSessionMutation();
+  const { data: billing, isLoading, error } = useGetBillingInfo();
+  const { mutate: createCheckout, isLoading: isCheckoutLoading } = useCreateCheckoutSession();
+  const { mutate: createPortal, isLoading: isPortalLoading } = useCreatePortalSession();
 
-  const handleSubscribe = async (plan: 'starter' | 'pro') => {
+  const handleSubscribe = async (plan: Plan.STARTER | Plan.PRO) => {
     try {
-      const result = await createCheckout({ plan }).unwrap();
+      const result = await createCheckout(plan);
       window.location.href = result.url;
     } catch (err) {
       console.error('Failed to create checkout session:', err);
@@ -99,7 +102,7 @@ export default function BillingSettings() {
 
   const handleManageSubscription = async () => {
     try {
-      const result = await createPortal().unwrap();
+      const result = await createPortal();
       window.location.href = result.url;
     } catch (err) {
       console.error('Failed to create portal session:', err);
@@ -126,9 +129,9 @@ export default function BillingSettings() {
     );
   }
 
-  const currentPlan = plans.find(p => p.id === billing?.plan) || plans[0];
-  const hasActiveSubscription = billing?.status === 'active';
-  const monthlyTotal = billing ? (billing.seat_count * billing.price_per_seat) : 0;
+  const currentPlan = plans.find((p) => p.id === billing?.plan) || plans[0];
+  const hasActiveSubscription = billing?.status === SubscriptionStatus.ACTIVE;
+  const monthlyTotal = billing ? billing.seatCount * billing.pricePerSeat : 0;
 
   return (
     <div>
@@ -142,7 +145,7 @@ export default function BillingSettings() {
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h3 className="text-lg font-semibold text-gray-900">{currentPlan.name} Plan</h3>
-              <StatusBadge status={billing?.status || 'none'} />
+              <StatusBadge status={billing?.status ?? SubscriptionStatus.NONE} />
             </div>
             <p className="text-gray-600">{currentPlan.description}</p>
           </div>
@@ -154,15 +157,15 @@ export default function BillingSettings() {
             <div className="flex items-center gap-2 text-gray-700 mb-2">
               <Users className="w-4 h-4" />
               <span>
-                {billing.seat_count} {billing.seat_count === 1 ? 'seat' : 'seats'} × {formatCurrency(billing.price_per_seat)}/seat = <strong>{formatCurrency(monthlyTotal)}/month</strong>
+                {billing.seatCount} {billing.seatCount === 1 ? 'seat' : 'seats'} × {formatCurrency(billing.pricePerSeat)}/seat = <strong>{formatCurrency(monthlyTotal)}/month</strong>
               </span>
             </div>
 
-            {billing.current_period_end && (
+            {billing.currentPeriodEnd && (
               <p className="text-sm text-gray-600 mb-4">
-                {billing.cancel_at_period_end
-                  ? `Subscription ends on ${formatDate(billing.current_period_end)}`
-                  : `Next billing date: ${formatDate(billing.current_period_end)}`
+                {billing.cancelAtPeriodEnd
+                  ? `Subscription ends on ${formatDate(billing.currentPeriodEnd)}`
+                  : `Next billing date: ${formatDate(billing.currentPeriodEnd)}`
                 }
               </p>
             )}
@@ -193,7 +196,7 @@ export default function BillingSettings() {
       <div className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => {
           const isCurrentPlan = plan.id === billing?.plan && hasActiveSubscription;
-          const isEnterprise = plan.id === 'enterprise';
+          const isEnterprise = plan.id === Plan.ENTERPRISE;
 
           return (
             <div
@@ -251,7 +254,7 @@ export default function BillingSettings() {
                 </a>
               ) : (
                 <button
-                  onClick={() => handleSubscribe(plan.id as 'starter' | 'pro')}
+                  onClick={() => handleSubscribe(plan.id as Plan.STARTER | Plan.PRO)}
                   disabled={isCheckoutLoading}
                   className={`w-full py-2.5 px-4 rounded-lg font-medium transition-colors ${
                     plan.popular

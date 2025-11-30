@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Bell, Lock, Palette, Globe, CreditCard, ChevronRight } from 'lucide-react';
+import { User, Bell, Lock, Palette, Globe, CreditCard, Users, ChevronRight } from 'lucide-react';
 import BillingSettings from '@/components/settings/BillingSettings';
+import TeamSettings from '@/components/settings/TeamSettings';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User, description: 'Name, email, and bio' },
+    { id: 'team', label: 'Team', icon: Users, description: 'Manage members and invitations' },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Email and push settings' },
     { id: 'security', label: 'Security', icon: Lock, description: 'Password and 2FA' },
     { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme settings' },
@@ -165,6 +167,9 @@ export default function SettingsPage() {
             </div>
           </div>
         );
+
+      case 'team':
+        return <TeamSettings />;
 
       case 'notifications':
         return (

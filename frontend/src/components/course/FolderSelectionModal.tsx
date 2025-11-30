@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Folder, FolderOpen, ChevronRight, ChevronDown, Users, User } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
+import * as courseClient from '@/lib/courseClient';
 
 interface FolderNode {
   id: string;
@@ -31,18 +32,24 @@ export default function FolderSelectionModal({
     new Set(['library', 'team', 'personal'])
   );
 
-  // Load folder structure from API
+  // Load folder structure from connect-rpc API
   useEffect(() => {
     const loadFolders = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/folders');
-        if (response.ok) {
-          const result = await response.json();
-          setFolderStructure(result.data);
-        } else {
-          console.error('Failed to load folders');
-        }
+        const folders = await courseClient.getFolderHierarchy(false);
+        // Convert proto folders to local format
+        setFolderStructure(folders.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          type: f.type === 1 ? 'library' : f.type === 2 ? 'team' : f.type === 3 ? 'personal' : 'folder',
+          children: f.children?.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            type: c.type === 1 ? 'library' : c.type === 2 ? 'team' : c.type === 3 ? 'personal' : 'folder',
+            children: c.children,
+          })),
+        })));
       } catch (error) {
         console.error('Error loading folders:', error);
       } finally {

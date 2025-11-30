@@ -72,21 +72,23 @@ export default function CourseBuilder() {
       const initializeCourse = async () => {
         try {
           const result = await createCourse({
-            title: '',
-            desiredOutcome: '',
-            destinationFolder: '',
-            categoryTags: [],
-            dataSource: 'open-web',
+            settings: {
+              title: '',
+              desiredOutcome: '',
+              destinationFolder: '',
+              categoryTags: [],
+              dataSource: 'open-web',
+            },
             personas: [],
             learningObjectives: [],
             assessmentSettings: {
               enableEmbeddedKnowledgeChecks: true,
               enableFinalExam: true,
             },
-          }).unwrap();
+          });
 
           // Update Redux with the created course
-          dispatch(loadCourse(result.id));
+          dispatch(loadCourse(result.course?.id || ''));
         } finally {
           isCreatingCourse.current = false;
         }
@@ -127,13 +129,22 @@ export default function CourseBuilder() {
         await updateCourse({
           id: currentCourse.id,
           data: {
-            ...currentCourse,
+            settings: {
+              title: currentCourse.title || '',
+              desiredOutcome: currentCourse.desiredOutcome || '',
+              destinationFolder: currentCourse.destinationFolder || '',
+              categoryTags: currentCourse.categoryTags || [],
+              dataSource: currentCourse.dataSource || '',
+            },
+            personas: currentCourse.personas || [],
+            learningObjectives: currentCourse.learningObjectives || [],
+            assessmentSettings: currentCourse.assessmentSettings,
             content: {
               sections: currentCourse.sections || [],
               courseBlocks: courseBlocks || []
             },
           },
-        }).unwrap();
+        });
       } catch (error) {
         console.error('Failed to save course:', error);
       }

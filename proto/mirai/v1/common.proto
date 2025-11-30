@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Plan represents the subscription tier for a company.
+enum Plan {
+  PLAN_UNSPECIFIED = 0;
+  PLAN_STARTER = 1;
+  PLAN_PRO = 2;
+  PLAN_ENTERPRISE = 3;
+}
+
+// Role represents a user's role within a company.
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_OWNER = 1;
+  ROLE_ADMIN = 2;
+  ROLE_MEMBER = 3;
+}
+
+// TeamRole represents a user's role within a team.
+enum TeamRole {
+  TEAM_ROLE_UNSPECIFIED = 0;
+  TEAM_ROLE_LEAD = 1;
+  TEAM_ROLE_MEMBER = 2;
+}
+
+// SubscriptionStatus represents the status of a company's subscription.
+enum SubscriptionStatus {
+  SUBSCRIPTION_STATUS_UNSPECIFIED = 0;
+  SUBSCRIPTION_STATUS_NONE = 1;
+  SUBSCRIPTION_STATUS_ACTIVE = 2;
+  SUBSCRIPTION_STATUS_PAST_DUE = 3;
+  SUBSCRIPTION_STATUS_CANCELED = 4;
+}
+
+// User represents a user in the system.
+message User {
+  string id = 1;
+  string kratos_id = 2;
+  optional string company_id = 3;
+  Role role = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// Company represents a company/organization.
+message Company {
+  string id = 1;
+  string name = 2;
+  optional string industry = 3;
+  optional string team_size = 4;
+  Plan plan = 5;
+  SubscriptionStatus subscription_status = 6;
+  optional string stripe_customer_id = 7;
+  optional string stripe_subscription_id = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// Team represents a team within a company.
+message Team {
+  string id = 1;
+  string company_id = 2;
+  string name = 3;
+  optional string description = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// TeamMember represents a user's membership in a team.
+message TeamMember {
+  string id = 1;
+  string team_id = 2;
+  string user_id = 3;
+  TeamRole role = 4;
+  google.protobuf.Timestamp created_at = 5;
+}

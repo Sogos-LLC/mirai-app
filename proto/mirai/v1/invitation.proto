@@ -1,0 +1,155 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+import "mirai/v1/common.proto";
+
+// InvitationStatus represents the status of an invitation.
+enum InvitationStatus {
+  INVITATION_STATUS_UNSPECIFIED = 0;
+  INVITATION_STATUS_PENDING = 1;
+  INVITATION_STATUS_ACCEPTED = 2;
+  INVITATION_STATUS_EXPIRED = 3;
+  INVITATION_STATUS_REVOKED = 4;
+}
+
+// Invitation represents an invitation to join a company.
+message Invitation {
+  string id = 1;
+  string company_id = 2;
+  string email = 3;
+  Role role = 4;
+  InvitationStatus status = 5;
+  string invited_by_user_id = 6;
+  optional string accepted_by_user_id = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// SeatInfo contains information about seat usage for a company.
+message SeatInfo {
+  int32 total_seats = 1;
+  int32 used_seats = 2;
+  int32 pending_invitations = 3;
+  int32 available_seats = 4;
+}
+
+// InvitationService handles invitation-related operations.
+service InvitationService {
+  // CreateInvitation creates a new invitation and sends email.
+  // Requires ADMIN or OWNER role.
+  rpc CreateInvitation(CreateInvitationRequest) returns (CreateInvitationResponse);
+
+  // ListInvitations returns all invitations for the user's company.
+  // Requires ADMIN or OWNER role.
+  rpc ListInvitations(ListInvitationsRequest) returns (ListInvitationsResponse);
+
+  // GetInvitation returns a specific invitation by ID or token.
+  // Public for accept flow, authenticated for management.
+  rpc GetInvitation(GetInvitationRequest) returns (GetInvitationResponse);
+
+  // GetInvitationByToken returns invitation details for the accept flow.
+  // Public endpoint - used before user registration.
+  rpc GetInvitationByToken(GetInvitationByTokenRequest) returns (GetInvitationByTokenResponse);
+
+  // RevokeInvitation revokes a pending invitation.
+  // Requires ADMIN or OWNER role.
+  rpc RevokeInvitation(RevokeInvitationRequest) returns (RevokeInvitationResponse);
+
+  // AcceptInvitation accepts an invitation after user registration.
+  // Called by authenticated user with matching email.
+  rpc AcceptInvitation(AcceptInvitationRequest) returns (AcceptInvitationResponse);
+
+  // ResendInvitation resends the invitation email.
+  // Requires ADMIN or OWNER role.
+  rpc ResendInvitation(ResendInvitationRequest) returns (ResendInvitationResponse);
+
+  // GetSeatInfo returns seat usage information for the user's company.
+  // Requires ADMIN or OWNER role.
+  rpc GetSeatInfo(GetSeatInfoRequest) returns (GetSeatInfoResponse);
+}
+
+// CreateInvitationRequest contains the invitation details.
+message CreateInvitationRequest {
+  string email = 1;
+  Role role = 2;
+}
+
+// CreateInvitationResponse contains the created invitation.
+message CreateInvitationResponse {
+  Invitation invitation = 1;
+}
+
+// ListInvitationsRequest contains optional filters for listing.
+message ListInvitationsRequest {
+  // Filter by status. If empty, returns all.
+  repeated InvitationStatus status_filter = 1;
+}
+
+// ListInvitationsResponse contains the list of invitations.
+message ListInvitationsResponse {
+  repeated Invitation invitations = 1;
+}
+
+// GetInvitationRequest contains the invitation ID.
+message GetInvitationRequest {
+  string invitation_id = 1;
+}
+
+// GetInvitationResponse contains the requested invitation.
+message GetInvitationResponse {
+  Invitation invitation = 1;
+}
+
+// GetInvitationByTokenRequest contains the invitation token from email link.
+message GetInvitationByTokenRequest {
+  string token = 1;
+}
+
+// GetInvitationByTokenResponse contains invitation details for accept flow.
+message GetInvitationByTokenResponse {
+  Invitation invitation = 1;
+  Company company = 2;
+}
+
+// RevokeInvitationRequest contains the invitation ID to revoke.
+message RevokeInvitationRequest {
+  string invitation_id = 1;
+}
+
+// RevokeInvitationResponse contains the revoked invitation.
+message RevokeInvitationResponse {
+  Invitation invitation = 1;
+}
+
+// AcceptInvitationRequest contains the invitation token.
+message AcceptInvitationRequest {
+  string token = 1;
+}
+
+// AcceptInvitationResponse contains the accepted invitation and user.
+message AcceptInvitationResponse {
+  Invitation invitation = 1;
+  User user = 2;
+  Company company = 3;
+}
+
+// ResendInvitationRequest contains the invitation ID.
+message ResendInvitationRequest {
+  string invitation_id = 1;
+}
+
+// ResendInvitationResponse contains the updated invitation.
+message ResendInvitationResponse {
+  Invitation invitation = 1;
+}
+
+// GetSeatInfoRequest is empty as company is identified by auth context.
+message GetSeatInfoRequest {}
+
+// GetSeatInfoResponse contains the seat information.
+message GetSeatInfoResponse {
+  SeatInfo seat_info = 1;
+}

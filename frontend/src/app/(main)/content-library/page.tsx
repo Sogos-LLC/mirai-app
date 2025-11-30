@@ -3,15 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye, Filter, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useGetFoldersQuery, useGetCoursesQuery, FolderNode, LibraryEntry } from '@/store/api/apiSlice';
+import { useGetFoldersQuery, useGetCoursesQuery, type LibraryEntry, type FolderNode } from '@/store/api/apiSlice';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import * as courseClient from '@/lib/courseClient';
 
 export default function ContentLibrary() {
   const router = useRouter();
   const isMobile = useIsMobile();
 
-  // RTK Query - automatically fetches and caches data
+  // Connect-query based hooks (wrapped in apiSlice)
   const { data: folders = [], isLoading: foldersLoading } = useGetFoldersQuery(true);
   const { data: courses = [], isLoading: coursesLoading } = useGetCoursesQuery();
 
@@ -22,7 +23,7 @@ export default function ContentLibrary() {
   const [folderFilteredCourses, setFolderFilteredCourses] = useState<LibraryEntry[] | null>(null);
   const [isFolderSheetOpen, setIsFolderSheetOpen] = useState(false);
 
-  // Load courses for selected folder
+  // Load courses for selected folder using connect-rpc
   useEffect(() => {
     const loadFolderCourses = async () => {
       if (!selectedFolderId) {
@@ -31,11 +32,23 @@ export default function ContentLibrary() {
       }
 
       try {
-        const response = await fetch(`/api/library?folder=${selectedFolderId}&includeSubfolders=true`);
-        if (response.ok) {
-          const result = await response.json();
-          setFolderFilteredCourses(result.data.courses);
-        }
+        // Use listCourses with folder filter
+        const result = await courseClient.listCourses({ folder: selectedFolderId });
+        // Convert proto response to frontend LibraryEntry type
+        const statusMap: Record<number, 'draft' | 'published'> = {
+          0: 'draft', 1: 'draft', 2: 'published', 3: 'draft',
+        };
+        setFolderFilteredCourses(result.map((entry: any): LibraryEntry => ({
+          id: entry.id,
+          title: entry.title || '',
+          status: statusMap[entry.status as number] || 'draft',
+          folder: entry.folder || '',
+          tags: entry.tags || [],
+          createdAt: entry.createdAt || new Date().toISOString(),
+          modifiedAt: entry.modifiedAt || new Date().toISOString(),
+          createdBy: entry.createdBy,
+          thumbnailPath: entry.thumbnailPath,
+        })));
       } catch (error) {
         console.error('Failed to load folder courses:', error);
       }

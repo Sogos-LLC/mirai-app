@@ -1,3 +1,5 @@
+import * as courseClient from '@/lib/courseClient';
+
 // Utility to clear corrupted localStorage data
 export const clearCorruptedStorage = () => {
   if (typeof window !== 'undefined') {
@@ -27,8 +29,8 @@ export const clearCorruptedStorage = () => {
 // Function to validate course exists on server
 export const validateCourseExists = async (courseId: string): Promise<boolean> => {
   try {
-    const response = await fetch(`/api/courses/${courseId}`);
-    return response.ok;
+    const course = await courseClient.getCourse(courseId);
+    return !!course;
   } catch {
     return false;
   }

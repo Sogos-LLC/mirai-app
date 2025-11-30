@@ -1,77 +1,207 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { Course, Persona, LearningObjective, CourseBlock, CourseSection, CourseAssessmentSettings } from '@/types';
-import { api } from '../api/apiSlice';
+import * as courseClient from '@/lib/courseClient';
+import type {
+  Course,
+  Persona,
+  LearningObjective,
+  CourseBlock,
+  CourseAssessmentSettings,
+  LibraryEntry,
+  FolderNode,
+} from '@/schemas';
 
-// LibraryEntry type for course listings (matches backend LibraryEntry)
-export interface LibraryEntry {
-  id: string;
-  title: string;
-  status: 'draft' | 'published';
-  folder: string;
-  tags: string[];
-  createdAt: string;
-  modifiedAt: string;
-  createdBy?: string;
-  thumbnailPath?: string;
+// Helper to convert proto course to frontend format
+function protoToFrontendCourse(protoCourse: any): any {
+  if (!protoCourse) return null;
+  return {
+    id: protoCourse.id,
+    version: protoCourse.version,
+    status: protoCourse.status,
+    settings: protoCourse.settings ? {
+      title: protoCourse.settings.title,
+      desiredOutcome: protoCourse.settings.desiredOutcome,
+      destinationFolder: protoCourse.settings.destinationFolder,
+      categoryTags: protoCourse.settings.categoryTags || [],
+      dataSource: protoCourse.settings.dataSource,
+    } : undefined,
+    title: protoCourse.settings?.title,
+    desiredOutcome: protoCourse.settings?.desiredOutcome,
+    destinationFolder: protoCourse.settings?.destinationFolder,
+    categoryTags: protoCourse.settings?.categoryTags || [],
+    dataSource: protoCourse.settings?.dataSource,
+    personas: protoCourse.personas || [],
+    learningObjectives: protoCourse.learningObjectives || [],
+    assessmentSettings: protoCourse.assessmentSettings ? {
+      enableEmbeddedKnowledgeChecks: protoCourse.assessmentSettings.enableEmbeddedKnowledgeChecks,
+      enableFinalExam: protoCourse.assessmentSettings.enableFinalExam,
+    } : undefined,
+    content: protoCourse.content ? {
+      sections: protoCourse.content.sections || [],
+      courseBlocks: protoCourse.content.courseBlocks || [],
+    } : undefined,
+    metadata: protoCourse.metadata,
+  };
 }
 
-// Async thunks for API operations
+// Helper to convert frontend course to proto format
+function frontendToProtoCourse(courseData: any): any {
+  return {
+    id: courseData.id,
+    settings: {
+      title: courseData.title || courseData.settings?.title || '',
+      desiredOutcome: courseData.desiredOutcome || courseData.settings?.desiredOutcome || '',
+      destinationFolder: courseData.destinationFolder || courseData.settings?.destinationFolder || '',
+      categoryTags: courseData.categoryTags || courseData.settings?.categoryTags || [],
+      dataSource: courseData.dataSource || courseData.settings?.dataSource || '',
+    },
+    personas: (courseData.personas || []).map((p: any) => ({
+      id: p.id,
+      name: p.name || '',
+      role: p.role || '',
+      kpis: p.kpis || '',
+      responsibilities: p.responsibilities || '',
+      challenges: p.challenges,
+      concerns: p.concerns,
+      knowledge: p.knowledge,
+      learningObjectives: p.learningObjectives || [],
+    })),
+    learningObjectives: (courseData.learningObjectives || []).map((lo: any) => ({
+      id: lo.id,
+      text: lo.text || '',
+    })),
+    assessmentSettings: courseData.assessmentSettings ? {
+      enableEmbeddedKnowledgeChecks: courseData.assessmentSettings.enableEmbeddedKnowledgeChecks ?? true,
+      enableFinalExam: courseData.assessmentSettings.enableFinalExam ?? true,
+    } : undefined,
+    content: courseData.content ? {
+      sections: (courseData.content.sections || courseData.sections || []).map((s: any) => ({
+        id: s.id,
+        name: s.name || '',
+        lessons: (s.lessons || []).map((l: any) => ({
+          id: l.id,
+          title: l.title || '',
+          content: l.content,
+          blocks: (l.blocks || []).map((b: any) => ({
+            id: b.id,
+            type: b.type || 0,
+            content: b.content || '',
+            prompt: b.prompt,
+            order: b.order || 0,
+          })),
+        })),
+      })),
+      courseBlocks: (courseData.content.courseBlocks || courseData.courseBlocks || []).map((b: any) => ({
+        id: b.id,
+        type: b.type || 0,
+        content: b.content || '',
+        prompt: b.prompt,
+        order: b.order || 0,
+      })),
+    } : undefined,
+  };
+}
+
+// Helper to convert protobuf Timestamp to ISO string
+function timestampToISOString(ts: unknown): string {
+  if (!ts) return new Date().toISOString();
+  // protobuf-es Timestamp has toDate() method
+  if (typeof (ts as any).toDate === 'function') {
+    return (ts as any).toDate().toISOString();
+  }
+  // Fallback for plain objects with seconds/nanos
+  if (typeof ts === 'object' && 'seconds' in (ts as any)) {
+    const seconds = Number((ts as any).seconds) || 0;
+    return new Date(seconds * 1000).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+// Convert proto LibraryEntry to frontend format
+function protoToFrontendLibraryEntry(entry: any): LibraryEntry {
+  // Map CourseStatus enum to string
+  // Proto enum values: UNSPECIFIED=0, DRAFT=1, PUBLISHED=2, GENERATED=3
+  const statusMap: Record<number, 'draft' | 'published'> = {
+    0: 'draft', // UNSPECIFIED -> draft
+    1: 'draft', // DRAFT
+    2: 'published', // PUBLISHED
+    3: 'draft', // GENERATED -> draft
+  };
+
+  const statusValue = typeof entry.status === 'number' ? entry.status : 0;
+
+  return {
+    id: entry.id,
+    title: entry.title || '',
+    status: statusMap[statusValue] || 'draft',
+    folder: entry.folder || '',
+    tags: entry.tags || [],
+    createdAt: timestampToISOString(entry.createdAt),
+    modifiedAt: timestampToISOString(entry.modifiedAt),
+    createdBy: entry.createdBy,
+    thumbnailPath: entry.thumbnailPath,
+  };
+}
+
+// Convert proto Folder to frontend FolderNode format
+function protoToFrontendFolder(folder: any): FolderNode {
+  // Map FolderType enum to string
+  // Proto enum values: UNSPECIFIED=0, LIBRARY=1, TEAM=2, PERSONAL=3, FOLDER=4
+  const typeMap: Record<number, 'library' | 'team' | 'personal' | 'folder'> = {
+    0: 'folder', // UNSPECIFIED
+    1: 'library', // LIBRARY
+    2: 'team', // TEAM
+    3: 'personal', // PERSONAL
+    4: 'folder', // FOLDER
+  };
+
+  const typeValue = typeof folder.type === 'number' ? folder.type : 0;
+
+  return {
+    id: folder.id,
+    name: folder.name || '',
+    parentId: folder.parentId,
+    type: typeMap[typeValue] || 'folder',
+    children: folder.children?.map(protoToFrontendFolder),
+    courseCount: folder.courseCount,
+  };
+}
+
+// Async thunks for API operations using connect-rpc client
 export const createNewCourse = createAsyncThunk(
   'course/createNew',
   async (courseData: Partial<Course>) => {
-    const response = await fetch('/api/courses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...courseData,
-        // Ensure we have an ID for the course
-        id: courseData.id || `course-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      }),
-    });
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to create course: ${error}`);
-    }
-    const result = await response.json();
-    return result.data;
+    const id = courseData.id || `course-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const protoData = frontendToProtoCourse({ ...courseData, id });
+    const result = await courseClient.createCourse(protoData);
+    return protoToFrontendCourse(result);
   }
 );
 
 export const saveCourse = createAsyncThunk(
   'course/save',
   async ({ id, courseData }: { id: string; courseData: Partial<Course> }) => {
-    const response = await fetch(`/api/courses/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(courseData),
-    });
-    if (!response.ok) throw new Error('Failed to save course');
-    const result = await response.json();
-    return result.data;
+    const protoData = frontendToProtoCourse(courseData);
+    const result = await courseClient.updateCourse(id, protoData);
+    return protoToFrontendCourse(result);
   }
 );
 
 export const loadCourse = createAsyncThunk(
   'course/load',
   async (courseId: string) => {
-    const response = await fetch(`/api/courses/${courseId}`);
-    if (!response.ok) throw new Error('Failed to load course');
-    const result = await response.json();
-    return result.data;
+    const result = await courseClient.getCourse(courseId);
+    return protoToFrontendCourse(result);
   }
 );
 
 export const loadCourseLibrary = createAsyncThunk(
   'course/loadLibrary',
   async (filters?: { status?: string; folder?: string }) => {
-    const params = new URLSearchParams();
-    if (filters?.status) params.append('status', filters.status);
-    if (filters?.folder) params.append('folder', filters.folder);
-
-    const response = await fetch(`/api/courses?${params}`);
-    if (!response.ok) throw new Error('Failed to load courses');
-    const result = await response.json();
-    return result.data;
+    // Note: status filter would need to be converted to CourseStatus enum if used
+    const result = await courseClient.listCourses({
+      folder: filters?.folder,
+    });
+    return result.map(protoToFrontendLibraryEntry);
   }
 );
 
@@ -79,10 +209,8 @@ export const loadCourseLibrary = createAsyncThunk(
 export const prefetchFolders = createAsyncThunk(
   'course/prefetchFolders',
   async (includeCourseCount: boolean = true) => {
-    const response = await fetch(`/api/folders?includeCourseCount=${includeCourseCount}`);
-    if (!response.ok) throw new Error('Failed to prefetch folders');
-    const result = await response.json();
-    return result.data;
+    const result = await courseClient.getFolderHierarchy(includeCourseCount);
+    return result.map(protoToFrontendFolder);
   }
 );
 
@@ -90,20 +218,15 @@ export const prefetchFolders = createAsyncThunk(
 export const prefetchCourses = createAsyncThunk(
   'course/prefetchCourses',
   async () => {
-    const response = await fetch('/api/courses');
-    if (!response.ok) throw new Error('Failed to prefetch courses');
-    const result = await response.json();
-    return result.data;
+    const result = await courseClient.listCourses();
+    return result.map(protoToFrontendLibraryEntry);
   }
 );
 
 export const deleteCourse = createAsyncThunk(
   'course/delete',
   async (courseId: string) => {
-    const response = await fetch(`/api/courses/${courseId}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to delete course');
+    await courseClient.deleteCourseById(courseId);
     return courseId;
   }
 );
@@ -111,7 +234,7 @@ export const deleteCourse = createAsyncThunk(
 interface CourseState {
   currentCourse: Partial<Course>;
   courses: LibraryEntry[]; // Course listings from library (with tags, folder, etc.)
-  folders: any[];
+  folders: FolderNode[];
   currentStep: number;
   isGenerating: boolean;
   generatedContent: any;

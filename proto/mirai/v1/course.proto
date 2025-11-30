@@ -1,0 +1,275 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// CourseStatus represents the publication state of a course.
+enum CourseStatus {
+  COURSE_STATUS_UNSPECIFIED = 0;
+  COURSE_STATUS_DRAFT = 1;
+  COURSE_STATUS_PUBLISHED = 2;
+  COURSE_STATUS_GENERATED = 3;
+}
+
+// BlockType represents the type of content block in the course editor.
+enum BlockType {
+  BLOCK_TYPE_UNSPECIFIED = 0;
+  BLOCK_TYPE_HEADING = 1;
+  BLOCK_TYPE_TEXT = 2;
+  BLOCK_TYPE_INTERACTIVE = 3;
+  BLOCK_TYPE_KNOWLEDGE_CHECK = 4;
+}
+
+// FolderType represents the type of folder in the library.
+enum FolderType {
+  FOLDER_TYPE_UNSPECIFIED = 0;
+  FOLDER_TYPE_LIBRARY = 1;
+  FOLDER_TYPE_TEAM = 2;
+  FOLDER_TYPE_PERSONAL = 3;
+  FOLDER_TYPE_FOLDER = 4;
+}
+
+// LearningObjective represents a specific learning goal for the course.
+message LearningObjective {
+  string id = 1;
+  string text = 2;
+}
+
+// Persona represents a target learner profile.
+message Persona {
+  string id = 1;
+  string name = 2;
+  string role = 3;
+  string kpis = 4;
+  string responsibilities = 5;
+  optional string challenges = 6;
+  optional string concerns = 7;
+  optional string knowledge = 8;
+  repeated LearningObjective learning_objectives = 9;
+}
+
+// BlockAlignment links block content to personas, objectives, and KPIs.
+message BlockAlignment {
+  repeated string personas = 1;
+  repeated string learning_objectives = 2;
+  repeated string kpis = 3;
+}
+
+// CourseBlock represents a unit of content in the course editor.
+message CourseBlock {
+  string id = 1;
+  BlockType type = 2;
+  string content = 3;
+  optional string prompt = 4;
+  optional BlockAlignment alignment = 5;
+  int32 order = 6;
+}
+
+// Lesson represents a collection of blocks within a section.
+message Lesson {
+  string id = 1;
+  string title = 2;
+  optional string content = 3;
+  repeated CourseBlock blocks = 4;
+}
+
+// CourseSection represents a grouping of lessons.
+message CourseSection {
+  string id = 1;
+  string name = 2;
+  repeated Lesson lessons = 3;
+}
+
+// AssessmentSettings contains assessment configuration for the course.
+message AssessmentSettings {
+  bool enable_embedded_knowledge_checks = 1;
+  bool enable_final_exam = 2;
+}
+
+// CourseContent contains the structured content of the course.
+message CourseContent {
+  repeated CourseSection sections = 1;
+  repeated CourseBlock course_blocks = 2;
+}
+
+// CourseExport represents an export record for the course.
+message CourseExport {
+  string id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string format = 3;
+  int32 version = 4;
+  string file_path = 5;
+}
+
+// CourseSettings contains the configurable settings for a course.
+message CourseSettings {
+  string title = 1;
+  string desired_outcome = 2;
+  string destination_folder = 3;
+  repeated string category_tags = 4;
+  string data_source = 5;
+}
+
+// CourseMetadata contains metadata about the course.
+message CourseMetadata {
+  string id = 1;
+  int32 version = 2;
+  CourseStatus status = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp modified_at = 5;
+  optional string created_by = 6;
+}
+
+// Course represents the full course entity.
+message Course {
+  string id = 1;
+  int32 version = 2;
+  CourseStatus status = 3;
+  CourseMetadata metadata = 4;
+  CourseSettings settings = 5;
+  repeated Persona personas = 6;
+  repeated LearningObjective learning_objectives = 7;
+  AssessmentSettings assessment_settings = 8;
+  CourseContent content = 9;
+  repeated CourseExport exports = 10;
+}
+
+// LibraryEntry represents a course listing in the content library.
+message LibraryEntry {
+  string id = 1;
+  string title = 2;
+  CourseStatus status = 3;
+  string folder = 4;
+  repeated string tags = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp modified_at = 7;
+  optional string created_by = 8;
+  optional string thumbnail_path = 9;
+}
+
+// Folder represents a folder in the library hierarchy.
+message Folder {
+  string id = 1;
+  string name = 2;
+  optional string parent_id = 3;
+  FolderType type = 4;
+  repeated Folder children = 5;
+  optional int32 course_count = 6;
+}
+
+// Library represents the full library structure.
+message Library {
+  string version = 1;
+  google.protobuf.Timestamp last_updated = 2;
+  repeated LibraryEntry courses = 3;
+  repeated Folder folders = 4;
+}
+
+// CourseService handles course and library operations.
+service CourseService {
+  // ListCourses returns a filtered list of courses.
+  rpc ListCourses(ListCoursesRequest) returns (ListCoursesResponse);
+
+  // GetCourse returns a specific course by ID.
+  rpc GetCourse(GetCourseRequest) returns (GetCourseResponse);
+
+  // CreateCourse creates a new course.
+  rpc CreateCourse(CreateCourseRequest) returns (CreateCourseResponse);
+
+  // UpdateCourse updates an existing course.
+  rpc UpdateCourse(UpdateCourseRequest) returns (UpdateCourseResponse);
+
+  // DeleteCourse deletes a course by ID.
+  rpc DeleteCourse(DeleteCourseRequest) returns (DeleteCourseResponse);
+
+  // GetFolderHierarchy returns the folder structure with optional course counts.
+  rpc GetFolderHierarchy(GetFolderHierarchyRequest) returns (GetFolderHierarchyResponse);
+
+  // GetLibrary returns the full library with courses and folders.
+  rpc GetLibrary(GetLibraryRequest) returns (GetLibraryResponse);
+}
+
+// ListCoursesRequest contains optional filters for listing courses.
+message ListCoursesRequest {
+  optional CourseStatus status = 1;
+  optional string folder = 2;
+  repeated string tags = 3;
+}
+
+// ListCoursesResponse contains the list of matching courses.
+message ListCoursesResponse {
+  repeated LibraryEntry courses = 1;
+}
+
+// GetCourseRequest contains the course ID to retrieve.
+message GetCourseRequest {
+  string id = 1;
+}
+
+// GetCourseResponse contains the requested course.
+message GetCourseResponse {
+  Course course = 1;
+}
+
+// CreateCourseRequest contains the data for creating a new course.
+message CreateCourseRequest {
+  optional string id = 1;
+  optional CourseSettings settings = 2;
+  repeated Persona personas = 3;
+  repeated LearningObjective learning_objectives = 4;
+  optional AssessmentSettings assessment_settings = 5;
+  optional CourseContent content = 6;
+}
+
+// CreateCourseResponse contains the newly created course.
+message CreateCourseResponse {
+  Course course = 1;
+}
+
+// UpdateCourseRequest contains the course ID and fields to update.
+message UpdateCourseRequest {
+  string id = 1;
+  optional CourseSettings settings = 2;
+  repeated Persona personas = 3;
+  repeated LearningObjective learning_objectives = 4;
+  optional AssessmentSettings assessment_settings = 5;
+  optional CourseContent content = 6;
+  optional CourseStatus status = 7;
+  optional CourseMetadata metadata = 8;
+}
+
+// UpdateCourseResponse contains the updated course.
+message UpdateCourseResponse {
+  Course course = 1;
+}
+
+// DeleteCourseRequest contains the course ID to delete.
+message DeleteCourseRequest {
+  string id = 1;
+}
+
+// DeleteCourseResponse confirms deletion.
+message DeleteCourseResponse {
+  bool success = 1;
+}
+
+// GetFolderHierarchyRequest contains options for retrieving folders.
+message GetFolderHierarchyRequest {
+  bool include_course_counts = 1;
+}
+
+// GetFolderHierarchyResponse contains the folder hierarchy.
+message GetFolderHierarchyResponse {
+  repeated Folder folders = 1;
+}
+
+// GetLibraryRequest contains options for retrieving the library.
+message GetLibraryRequest {
+  bool include_course_counts = 1;
+}
+
+// GetLibraryResponse contains the full library.
+message GetLibraryResponse {
+  Library library = 1;
+}

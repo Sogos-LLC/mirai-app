@@ -1,6 +1,17 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+/**
+ * API Slice - Course Operations
+ *
+ * This file re-exports connect-query hooks for course operations.
+ * Previously used RTK Query, now migrated to connect-query for proto-first gRPC.
+ *
+ * Note: The underlying hooks now call the Go backend's CourseService
+ * via Connect-RPC instead of Next.js API routes.
+ */
 
-// LibraryEntry type for course listings
+import { useListCourses, useGetCourse, useGetFolderHierarchy, useCreateCourse, useUpdateCourse, useDeleteCourse } from '@/hooks/useCourses';
+import type { LibraryEntry as ProtoLibraryEntry, Folder as ProtoFolder } from '@/hooks/useCourses';
+
+// Frontend type definitions (matching existing schemas)
 export interface LibraryEntry {
   id: string;
   title: string;
@@ -13,16 +24,15 @@ export interface LibraryEntry {
   thumbnailPath?: string;
 }
 
-// Folder structure
 export interface FolderNode {
   id: string;
   name: string;
+  parentId?: string;
   type?: 'library' | 'team' | 'personal' | 'folder';
   children?: FolderNode[];
   courseCount?: number;
 }
 
-// Course data for mutations
 export interface CourseData {
   id?: string;
   title?: string;
@@ -34,207 +44,153 @@ export interface CourseData {
   learningObjectives?: any[];
   assessmentSettings?: any;
   content?: any;
-  status?: 'draft' | 'published' | 'generated';
-  metadata?: any;
-  settings?: any;
-  sections?: any[];
-  [key: string]: any; // Allow additional properties
 }
 
-// Billing types
-export interface BillingInfo {
-  plan: 'starter' | 'pro' | 'enterprise';
-  status: 'active' | 'past_due' | 'canceled' | 'none';
-  seat_count: number;
-  price_per_seat: number; // cents
-  current_period_end?: number; // unix timestamp
-  cancel_at_period_end: boolean;
+// Helper to convert protobuf Timestamp to ISO string
+function timestampToISOString(ts: unknown): string {
+  if (!ts) return new Date().toISOString();
+  // protobuf-es Timestamp has toDate() method
+  if (typeof (ts as any).toDate === 'function') {
+    return (ts as any).toDate().toISOString();
+  }
+  // Fallback for plain objects with seconds/nanos
+  if (typeof ts === 'object' && 'seconds' in (ts as any)) {
+    const seconds = Number((ts as any).seconds) || 0;
+    return new Date(seconds * 1000).toISOString();
+  }
+  return new Date().toISOString();
 }
 
-export interface CheckoutResponse {
-  url: string;
+// Conversion helpers
+function convertProtoLibraryEntry(entry: ProtoLibraryEntry): LibraryEntry {
+  // Map CourseStatus enum to string
+  // Proto enum values: UNSPECIFIED=0, DRAFT=1, PUBLISHED=2, GENERATED=3
+  const statusMap: Record<number, 'draft' | 'published'> = {
+    0: 'draft', // UNSPECIFIED -> draft
+    1: 'draft', // DRAFT
+    2: 'published', // PUBLISHED
+    3: 'draft', // GENERATED -> draft
+  };
+
+  // CourseStatus is an enum - get numeric value safely
+  const statusValue = typeof entry.status === 'number' ? entry.status : 0;
+
+  return {
+    id: entry.id,
+    title: entry.title || '',
+    status: statusMap[statusValue] || 'draft',
+    folder: entry.folder || '',
+    tags: entry.tags || [],
+    createdAt: timestampToISOString(entry.createdAt),
+    modifiedAt: timestampToISOString(entry.modifiedAt),
+    createdBy: entry.createdBy,
+    thumbnailPath: entry.thumbnailPath,
+  };
 }
 
-export interface PortalResponse {
-  url: string;
-}
+function convertProtoFolder(folder: ProtoFolder): FolderNode {
+  // Map FolderType enum to string
+  // Proto enum values: UNSPECIFIED=0, LIBRARY=1, TEAM=2, PERSONAL=3, FOLDER=4
+  const typeMap: Record<number, 'library' | 'team' | 'personal' | 'folder'> = {
+    0: 'folder', // UNSPECIFIED
+    1: 'library', // LIBRARY
+    2: 'team', // TEAM
+    3: 'personal', // PERSONAL
+    4: 'folder', // FOLDER
+  };
 
-// Backend API base URL - billing endpoints go to the Go backend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+  // FolderType is an enum - get numeric value safely
+  const typeValue = typeof folder.type === 'number' ? folder.type : 0;
+
+  return {
+    id: folder.id,
+    name: folder.name || '',
+    parentId: folder.parentId,
+    type: typeMap[typeValue] || 'folder',
+    children: folder.children?.map(convertProtoFolder),
+    courseCount: folder.courseCount,
+  };
+}
 
 /**
- * RTK Query API slice for all server communication
- *
- * Tag System:
- * - 'Course' tag: Invalidated when courses are created/updated/deleted
- * - 'Folder' tag: Invalidated when courses are created/updated/deleted (counts change)
- *
- * This eliminates manual cache invalidation - mutations automatically
- * refetch any queries that use the invalidated tags.
+ * Wrapper hook for getFolders - maintains RTK Query-like interface
  */
-export const api = createApi({
-  reducerPath: 'api',
-  baseQuery: fetchBaseQuery({
-    baseUrl: '/api',
-    // For billing endpoints that need the backend, we override in each endpoint
-  }),
-  tagTypes: ['Course', 'Folder', 'Billing'],
-  endpoints: (builder) => ({
-    // ============ QUERIES ============
+export function useGetFoldersQuery(includeCourseCount: boolean = true) {
+  const result = useGetFolderHierarchy(includeCourseCount);
+  return {
+    data: result.data?.map(convertProtoFolder) || [],
+    isLoading: result.isLoading,
+    error: result.error,
+    refetch: result.refetch,
+  };
+}
 
-    /**
-     * Get folder hierarchy with optional course counts
-     * Provides: ['Folder'] tag
-     */
-    getFolders: builder.query<FolderNode[], boolean>({
-      query: (includeCourseCount = true) => `/folders?includeCourseCount=${includeCourseCount}`,
-      transformResponse: (response: { success: boolean; data: FolderNode[] }) => response.data,
-      providesTags: ['Folder']
-    }),
+/**
+ * Wrapper hook for getCourses - maintains RTK Query-like interface
+ */
+export function useGetCoursesQuery() {
+  const result = useListCourses();
+  return {
+    data: result.data?.map(convertProtoLibraryEntry) || [],
+    isLoading: result.isLoading,
+    error: result.error,
+    refetch: result.refetch,
+  };
+}
 
-    /**
-     * Get all courses (library entries)
-     * Provides: ['Course'] tag
-     */
-    getCourses: builder.query<LibraryEntry[], void>({
-      query: () => '/courses',
-      transformResponse: (response: { success: boolean; data: LibraryEntry[] }) => response.data,
-      providesTags: ['Course']
-    }),
+/**
+ * Wrapper hook for getCourse - maintains RTK Query-like interface
+ */
+export function useGetCourseQuery(courseId: string | undefined) {
+  const result = useGetCourse(courseId);
+  return {
+    data: result.data,
+    isLoading: result.isLoading,
+    error: result.error,
+    refetch: result.refetch,
+  };
+}
 
-    /**
-     * Get a specific course by ID
-     * Provides: ['Course'] tag with ID
-     */
-    getCourse: builder.query<any, string>({
-      query: (id) => `/courses/${id}`,
-      transformResponse: (response: { success: boolean; data: any }) => response.data,
-      providesTags: (result, error, id) => [{ type: 'Course', id }]
-    }),
+/**
+ * Wrapper hook for createCourse mutation - maintains RTK Query-like interface
+ */
+export function useCreateCourseMutation() {
+  const { mutate, isLoading, error } = useCreateCourse();
 
-    // ============ MUTATIONS ============
+  return [
+    mutate,
+    { isLoading, error },
+  ] as const;
+}
 
-    /**
-     * Create a new course
-     * Invalidates: ['Course', 'Folder'] - refetches course lists and folder counts
-     */
-    createCourse: builder.mutation<any, CourseData>({
-      query: (courseData) => ({
-        url: '/courses',
-        method: 'POST',
-        body: {
-          ...courseData,
-          // Ensure we have an ID for the course
-          id: courseData.id || `course-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        }
-      }),
-      transformResponse: (response: { success: boolean; data: any }) => response.data,
-      invalidatesTags: ['Course', 'Folder']
-    }),
+/**
+ * Wrapper hook for updateCourse mutation - maintains RTK Query-like interface
+ */
+export function useUpdateCourseMutation() {
+  const { mutate, isLoading, error } = useUpdateCourse();
 
-    /**
-     * Update an existing course
-     * Invalidates: ['Course', 'Folder'] - refetches course lists and folder counts
-     */
-    updateCourse: builder.mutation<any, { id: string; data: CourseData }>({
-      query: ({ id, data }) => ({
-        url: `/courses/${id}`,
-        method: 'PUT',
-        body: data
-      }),
-      transformResponse: (response: { success: boolean; data: any }) => response.data,
-      invalidatesTags: (result, error, { id }) => [
-        'Course',
-        'Folder',
-        { type: 'Course', id }
-      ]
-    }),
+  return [
+    (args: { id: string; data: any }) => mutate(args.id, args.data),
+    { isLoading, error },
+  ] as const;
+}
 
-    /**
-     * Delete a course
-     * Invalidates: ['Course', 'Folder'] - refetches course lists and folder counts
-     */
-    deleteCourse: builder.mutation<void, string>({
-      query: (id) => ({
-        url: `/courses/${id}`,
-        method: 'DELETE'
-      }),
-      invalidatesTags: ['Course', 'Folder']
-    }),
+/**
+ * Wrapper hook for deleteCourse mutation - maintains RTK Query-like interface
+ */
+export function useDeleteCourseMutation() {
+  const { mutate, isLoading, error } = useDeleteCourse();
 
-    // ============ BILLING ============
-    // Billing endpoints go to the Go backend (different from course endpoints)
+  return [
+    mutate,
+    { isLoading, error },
+  ] as const;
+}
 
-    /**
-     * Get current billing info
-     * Provides: ['Billing'] tag
-     */
-    getBilling: builder.query<BillingInfo, void>({
-      queryFn: async (_, _queryApi, _extraOptions, baseQuery) => {
-        const result = await fetch(`${API_BASE_URL}/api/v1/billing`, {
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (!result.ok) {
-          return { error: { status: result.status, data: 'Failed to fetch billing' } };
-        }
-        const json = await result.json();
-        return { data: json.data };
-      },
-      providesTags: ['Billing']
-    }),
-
-    /**
-     * Create Stripe checkout session
-     * Returns URL to redirect user to Stripe Checkout
-     */
-    createCheckoutSession: builder.mutation<CheckoutResponse, { plan: 'starter' | 'pro' }>({
-      queryFn: async (body) => {
-        const result = await fetch(`${API_BASE_URL}/api/v1/billing/checkout`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        if (!result.ok) {
-          return { error: { status: result.status, data: 'Failed to create checkout session' } };
-        }
-        const json = await result.json();
-        return { data: json.data };
-      }
-    }),
-
-    /**
-     * Create Stripe customer portal session
-     * Returns URL to redirect user to Stripe Customer Portal
-     */
-    createPortalSession: builder.mutation<PortalResponse, void>({
-      queryFn: async () => {
-        const result = await fetch(`${API_BASE_URL}/api/v1/billing/portal`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (!result.ok) {
-          return { error: { status: result.status, data: 'Failed to create portal session' } };
-        }
-        const json = await result.json();
-        return { data: json.data };
-      }
-    })
-  })
-});
-
-// Export hooks for usage in components
-export const {
-  useGetFoldersQuery,
-  useGetCoursesQuery,
-  useGetCourseQuery,
-  useCreateCourseMutation,
-  useUpdateCourseMutation,
-  useDeleteCourseMutation,
-  // Billing hooks
-  useGetBillingQuery,
-  useCreateCheckoutSessionMutation,
-  useCreatePortalSessionMutation,
-} = api;
+// Legacy RTK Query API object - kept for backward compatibility but empty
+// Components should use the exported hooks above instead
+export const api = {
+  reducerPath: 'api' as const,
+  reducer: (state = {}) => state,
+  middleware: () => (next: any) => (action: any) => next(action),
+};

@@ -1,0 +1,31 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/sogos/mirai-backend/gen
+plugins:
+  # Go protobuf types
+  - remote: buf.build/protocolbuffers/go
+    out: ../backend/gen
+    opt: paths=source_relative
+
+  # Connect-Go services
+  - remote: buf.build/connectrpc/go
+    out: ../backend/gen
+    opt: paths=source_relative
+
+  # TypeScript/ES protobuf types
+  - remote: buf.build/bufbuild/es
+    out: ../frontend/src/gen
+    opt: target=ts
+
+  # Connect-ES clients
+  - remote: buf.build/connectrpc/es
+    out: ../frontend/src/gen
+    opt: target=ts
+
+  # Connect-Query for TanStack Query integration
+  - remote: buf.build/connectrpc/query-es
+    out: ../frontend/src/gen
+    opt: target=ts

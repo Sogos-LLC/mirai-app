@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "mirai/v1/common.proto";
+
+// AuthService handles authentication and registration operations.
+service AuthService {
+  // CheckEmail checks if an email address is already registered.
+  rpc CheckEmail(CheckEmailRequest) returns (CheckEmailResponse);
+
+  // Register creates a new user account with company.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Onboard completes onboarding for an authenticated user without a company.
+  rpc Onboard(OnboardRequest) returns (OnboardResponse);
+
+  // EnterpriseContact submits an enterprise sales inquiry.
+  rpc EnterpriseContact(EnterpriseContactRequest) returns (EnterpriseContactResponse);
+}
+
+// CheckEmailRequest contains the email to check.
+message CheckEmailRequest {
+  string email = 1;
+}
+
+// CheckEmailResponse indicates if the email exists.
+message CheckEmailResponse {
+  bool exists = 1;
+}
+
+// RegisterRequest contains all data needed to register a new user and company.
+message RegisterRequest {
+  // User credentials
+  string email = 1;
+  string password = 2;
+  string first_name = 3;
+  string last_name = 4;
+
+  // Company info
+  string company_name = 5;
+  optional string industry = 6;
+  optional string team_size = 7;
+
+  // Plan selection
+  Plan plan = 8;
+  optional int32 seat_count = 9;
+}
+
+// RegisterResponse contains the result of registration.
+message RegisterResponse {
+  User user = 1;
+  optional Company company = 2;
+  // Stripe Checkout URL if payment is required
+  optional string checkout_url = 3;
+  // Session token to set as cookie before redirecting to checkout.
+  // This allows the user to maintain their session through the Stripe redirect.
+  optional string session_token = 4;
+}
+
+// OnboardRequest represents the onboarding payload for existing users.
+message OnboardRequest {
+  string company_name = 1;
+  optional string industry = 2;
+  optional string team_size = 3;
+  Plan plan = 4;
+  optional int32 seat_count = 5;
+}
+
+// OnboardResponse contains the onboarding result.
+message OnboardResponse {
+  User user = 1;
+  optional Company company = 2;
+  // Stripe Checkout URL if payment is required
+  optional string checkout_url = 3;
+}
+
+// EnterpriseContactRequest represents an enterprise sales inquiry.
+message EnterpriseContactRequest {
+  string company_name = 1;
+  optional string industry = 2;
+  optional string team_size = 3;
+  string name = 4;
+  string email = 5;
+  optional string phone = 6;
+  optional string message = 7;
+}
+
+// EnterpriseContactResponse confirms the inquiry was received.
+message EnterpriseContactResponse {
+  bool success = 1;
+}

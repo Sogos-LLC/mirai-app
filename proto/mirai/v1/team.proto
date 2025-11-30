@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "mirai/v1/common.proto";
+
+// TeamService handles team-related operations.
+service TeamService {
+  // ListTeams returns all teams for the current user's company.
+  rpc ListTeams(ListTeamsRequest) returns (ListTeamsResponse);
+
+  // GetTeam returns a specific team by ID.
+  rpc GetTeam(GetTeamRequest) returns (GetTeamResponse);
+
+  // CreateTeam creates a new team.
+  rpc CreateTeam(CreateTeamRequest) returns (CreateTeamResponse);
+
+  // UpdateTeam updates team information.
+  rpc UpdateTeam(UpdateTeamRequest) returns (UpdateTeamResponse);
+
+  // DeleteTeam deletes a team.
+  rpc DeleteTeam(DeleteTeamRequest) returns (DeleteTeamResponse);
+
+  // ListTeamMembers returns all members of a team.
+  rpc ListTeamMembers(ListTeamMembersRequest) returns (ListTeamMembersResponse);
+
+  // AddTeamMember adds a user to a team.
+  rpc AddTeamMember(AddTeamMemberRequest) returns (AddTeamMemberResponse);
+
+  // RemoveTeamMember removes a user from a team.
+  rpc RemoveTeamMember(RemoveTeamMemberRequest) returns (RemoveTeamMemberResponse);
+}
+
+// ListTeamsRequest is empty as company is identified by auth context.
+message ListTeamsRequest {}
+
+// ListTeamsResponse contains all teams for the company.
+message ListTeamsResponse {
+  repeated Team teams = 1;
+}
+
+// GetTeamRequest contains the team ID to fetch.
+message GetTeamRequest {
+  string team_id = 1;
+}
+
+// GetTeamResponse contains the requested team.
+message GetTeamResponse {
+  Team team = 1;
+}
+
+// CreateTeamRequest contains the data for a new team.
+message CreateTeamRequest {
+  string name = 1;
+  optional string description = 2;
+}
+
+// CreateTeamResponse contains the created team.
+message CreateTeamResponse {
+  Team team = 1;
+}
+
+// UpdateTeamRequest contains fields to update on a team.
+message UpdateTeamRequest {
+  string team_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+}
+
+// UpdateTeamResponse contains the updated team.
+message UpdateTeamResponse {
+  Team team = 1;
+}
+
+// DeleteTeamRequest contains the team ID to delete.
+message DeleteTeamRequest {
+  string team_id = 1;
+}
+
+// DeleteTeamResponse confirms deletion.
+message DeleteTeamResponse {}
+
+// ListTeamMembersRequest contains the team ID.
+message ListTeamMembersRequest {
+  string team_id = 1;
+}
+
+// ListTeamMembersResponse contains all members of the team.
+message ListTeamMembersResponse {
+  repeated TeamMember members = 1;
+}
+
+// AddTeamMemberRequest contains the member to add.
+message AddTeamMemberRequest {
+  string team_id = 1;
+  string user_id = 2;
+  TeamRole role = 3;
+}
+
+// AddTeamMemberResponse contains the created team member.
+message AddTeamMemberResponse {
+  TeamMember member = 1;
+}
+
+// RemoveTeamMemberRequest contains the member to remove.
+message RemoveTeamMemberRequest {
+  string team_id = 1;
+  string user_id = 2;
+}
+
+// RemoveTeamMemberResponse confirms removal.
+message RemoveTeamMemberResponse {}

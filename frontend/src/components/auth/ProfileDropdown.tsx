@@ -2,15 +2,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useDispatch, useSelector } from 'react-redux';
-import { User, Settings, LogOut, ChevronDown } from 'lucide-react';
-import { logout, selectUser, selectIsAuthenticated } from '@/store/slices/authSlice';
-import type { AppDispatch } from '@/store';
+import { useSelector } from 'react-redux';
+import { User, Settings, LogOut, ChevronDown, Loader2 } from 'lucide-react';
+import { selectUser, selectIsAuthenticated } from '@/store/slices/authSlice';
+import { useLogout } from '@/hooks/useLogout';
 
 export default function ProfileDropdown() {
-  const dispatch = useDispatch<AppDispatch>();
   const user = useSelector(selectUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const { startLogout, isLoggingOut } = useLogout();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,12 +26,10 @@ export default function ProfileDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle logout
-  const handleLogout = async () => {
+  // Handle logout using state machine
+  const handleLogout = () => {
     setIsOpen(false);
-    await dispatch(logout());
-    // Redirect to landing page after logout
-    window.location.href = '/';
+    startLogout();
   };
 
   if (!isAuthenticated || !user) {
@@ -115,10 +113,15 @@ export default function ProfileDropdown() {
           <div className="border-t border-slate-100 py-1">
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+              disabled={isLoggingOut}
+              className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <LogOut className="h-4 w-4" />
-              Sign Out
+              {isLoggingOut ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LogOut className="h-4 w-4" />
+              )}
+              {isLoggingOut ? 'Signing out...' : 'Sign Out'}
             </button>
           </div>
         </div>

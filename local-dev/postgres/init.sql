@@ -61,12 +61,33 @@ CREATE TABLE IF NOT EXISTS team_members (
     CONSTRAINT team_role_check CHECK (role IN ('lead', 'member'))
 );
 
+-- Invitations (to join a company)
+CREATE TABLE IF NOT EXISTS invitations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'member',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    token VARCHAR(255) NOT NULL UNIQUE,
+    invited_by_user_id UUID REFERENCES users(id) NOT NULL,
+    accepted_by_user_id UUID REFERENCES users(id),
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT invitation_role_check CHECK (role IN ('owner', 'admin', 'member')),
+    CONSTRAINT invitation_status_check CHECK (status IN ('pending', 'accepted', 'expired', 'revoked'))
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_kratos_id ON users(kratos_id);
 CREATE INDEX IF NOT EXISTS idx_users_company_id ON users(company_id);
 CREATE INDEX IF NOT EXISTS idx_teams_company_id ON teams(company_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_invitations_company_id ON invitations(company_id);
+CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email);
+CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);
+CREATE INDEX IF NOT EXISTS idx_invitations_status ON invitations(status);
 
 -- Grant privileges to mirai user
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO mirai;
