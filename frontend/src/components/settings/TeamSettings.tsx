@@ -128,11 +128,12 @@ export default function TeamSettings() {
           <h3 className="font-semibold text-gray-900 mb-3">
             Pending Invitations ({pendingInvitations.length})
           </h3>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 rounded-xl">
             {pendingInvitations.map((invitation, idx) => (
               <InvitationRow
                 key={invitation.id}
                 invitation={invitation}
+                isFirst={idx === 0}
                 isLast={idx === pendingInvitations.length - 1}
               />
             ))}
@@ -146,13 +147,14 @@ export default function TeamSettings() {
           <h3 className="font-semibold text-gray-900 mb-3">
             Invitation History
           </h3>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 rounded-xl">
             {invitations
               .filter((inv) => inv.status !== InvitationStatus.PENDING)
               .map((invitation, idx, arr) => (
                 <InvitationRow
                   key={invitation.id}
                   invitation={invitation}
+                  isFirst={idx === 0}
                   isLast={idx === arr.length - 1}
                   showActions={false}
                 />
@@ -331,11 +333,12 @@ function InviteForm({ onClose, onSuccess }: InviteFormProps) {
 
 interface InvitationRowProps {
   invitation: Invitation;
+  isFirst?: boolean;
   isLast: boolean;
   showActions?: boolean;
 }
 
-function InvitationRow({ invitation, isLast, showActions = true }: InvitationRowProps) {
+function InvitationRow({ invitation, isFirst, isLast, showActions = true }: InvitationRowProps) {
   const [showMenu, setShowMenu] = useState(false);
 
   const { mutateAsync: revokeInvitation, isPending: isRevoking } = useRevokeInvitation();
@@ -368,9 +371,17 @@ function InvitationRow({ invitation, isLast, showActions = true }: InvitationRow
     : null;
   const isExpiringSoon = expiresAt && expiresAt.getTime() - Date.now() < 24 * 60 * 60 * 1000;
 
+  const roundedClasses = isFirst && isLast
+    ? 'rounded-xl'
+    : isFirst
+      ? 'rounded-t-xl'
+      : isLast
+        ? 'rounded-b-xl'
+        : '';
+
   return (
     <div
-      className={`flex items-center gap-4 px-4 py-3 bg-white ${
+      className={`flex items-center gap-4 px-4 py-3 bg-white ${roundedClasses} ${
         !isLast ? 'border-b border-gray-100' : ''
       }`}
     >
