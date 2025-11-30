@@ -6,6 +6,7 @@ resources:
 - service.yaml
 - pdb.yaml
 - migration-job.yaml
+- networkpolicy-allow-smtp.yaml
 # stripe-secret.yaml is gitignored - manage manually with kubectl apply
 
 images:
