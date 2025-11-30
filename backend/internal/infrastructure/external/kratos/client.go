@@ -284,10 +284,17 @@ func (c *Client) PerformLogin(ctx context.Context, email, password string) (*ser
 // CreateSessionForIdentity creates a session for an identity using the Kratos admin API.
 // This is useful for issuing a session token without the user's password (e.g., after checkout).
 func (c *Client) CreateSessionForIdentity(ctx context.Context, identityID string) (*service.SessionToken, error) {
-	url := fmt.Sprintf("%s/admin/identities/%s/sessions", c.adminURL, identityID)
+	url := fmt.Sprintf("%s/admin/sessions", c.adminURL)
 	fmt.Printf("[Kratos] CreateSessionForIdentity: creating session for identity %s at %s\n", identityID, url)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+	// Kratos v25+ requires identity_id in the request body
+	reqBody := map[string]string{"identity_id": identityID}
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
