@@ -109,13 +109,14 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		seatCount = 1
 	}
 
-	log.Info("creating checkout session", "plan", req.Plan, "seats", seatCount)
+	successURL := s.marketingURL + "/?checkout=success"
+	log.Info("creating checkout session", "plan", req.Plan, "seats", seatCount, "successURL", successURL, "marketingURL", s.marketingURL)
 	checkoutSession, err := s.payments.CreateCheckoutSession(ctx, service.CheckoutRequest{
 		CompanyID:  uuid.Nil, // No company yet - will be created after payment
 		Email:      req.Email,
 		Plan:       req.Plan,
 		SeatCount:  seatCount,
-		SuccessURL: s.marketingURL + "/?checkout=success",
+		SuccessURL: successURL,
 		CancelURL:  s.frontendURL + "/auth/registration?checkout=canceled",
 	})
 	if err != nil {
