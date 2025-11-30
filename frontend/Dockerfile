@@ -20,6 +20,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG BUILD_TIME
 ENV NEXT_PUBLIC_BUILD_TIME=${BUILD_TIME}
 
+# Set public environment variables at build time (Next.js inlines NEXT_PUBLIC_* at build)
+ARG NEXT_PUBLIC_API_URL=https://mirai-api.sogos.io
+ARG NEXT_PUBLIC_KRATOS_BROWSER_URL=https://mirai-auth.sogos.io
+ARG NEXT_PUBLIC_APP_URL=https://mirai.sogos.io
+ARG NEXT_PUBLIC_LANDING_URL=https://get-mirai.sogos.io
+
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_KRATOS_BROWSER_URL=${NEXT_PUBLIC_KRATOS_BROWSER_URL}
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV NEXT_PUBLIC_LANDING_URL=${NEXT_PUBLIC_LANDING_URL}
+
 RUN npm run build
 
 # Production image, copy all the files and run next
