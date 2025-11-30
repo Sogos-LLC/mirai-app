@@ -24,17 +24,23 @@ func NewCompanyRepository(db *sql.DB) repository.CompanyRepository {
 // Create creates a new company.
 func (r *CompanyRepository) Create(ctx context.Context, company *entity.Company) error {
 	query := `
-		INSERT INTO companies (name, industry, team_size, plan, subscription_status)
-		VALUES ($1, $2, $3, $4, 'none')
-		RETURNING id, subscription_status, created_at, updated_at
+		INSERT INTO companies (name, industry, team_size, plan, subscription_status, stripe_customer_id, stripe_subscription_id, seat_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, created_at, updated_at
 	`
-	var statusStr string
-	err := r.db.QueryRowContext(ctx, query, company.Name, company.Industry, company.TeamSize, company.Plan.String()).
-		Scan(&company.ID, &statusStr, &company.CreatedAt, &company.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, query,
+		company.Name,
+		company.Industry,
+		company.TeamSize,
+		company.Plan.String(),
+		company.SubscriptionStatus.String(),
+		company.StripeCustomerID,
+		company.StripeSubscriptionID,
+		company.SeatCount,
+	).Scan(&company.ID, &company.CreatedAt, &company.UpdatedAt)
 	if err != nil {
 		return err
 	}
-	company.SubscriptionStatus = valueobject.SubscriptionStatus(statusStr)
 	return nil
 }
 
