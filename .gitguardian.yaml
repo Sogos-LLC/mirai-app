@@ -1,0 +1,7 @@
+# GitGuardian configuration
+# Ignore local development files with intentional non-production credentials
+
+paths-ignore:
+  - local-dev/**
+  - "**/*.example"
+  - "**/init.sql"
