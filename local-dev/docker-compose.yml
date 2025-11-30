@@ -34,6 +34,23 @@ services:
     networks:
       - mirai-local
 
+  # Mirai Backend - Database migrations
+  mirai-migrate:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: mirai-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://mirai:${MIRAI_DB_PASSWORD:-mirailocal}@postgres:5432/mirai?sslmode=disable
+      MIGRATIONS_PATH: file:///app/migrations
+    entrypoint: ["./migrate", "-direction", "up"]
+    restart: on-failure
+    networks:
+      - mirai-local
+
   # Ory Kratos - Authentication
   kratos:
     image: oryd/kratos:v1.3.0

@@ -10,8 +10,9 @@ RUN go mod download
 
 COPY . .
 
-# Build static binary
+# Build static binaries
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o migrate ./cmd/migrate
 
 # ============================================================
 # 2. Final minimal image (non-root safe)
@@ -21,11 +22,15 @@ FROM alpine:3.20
 # Create application directory
 WORKDIR /app
 
-# Copy binary from builder
+# Copy binaries from builder
 COPY --from=builder /src/server /app/server
+COPY --from=builder /src/migrate /app/migrate
 
-# Ensure the binary is executable for all users
-RUN chmod 755 /app/server
+# Copy migrations directory
+COPY --from=builder /src/migrations /app/migrations
+
+# Ensure binaries are executable for all users
+RUN chmod 755 /app/server /app/migrate
 
 # Create non-root user with UID 10000
 RUN adduser -D -u 10000 appuser

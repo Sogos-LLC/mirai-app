@@ -5,6 +5,7 @@ resources:
 - deployment.yaml
 - service.yaml
 - pdb.yaml
+- migration-job.yaml
 # stripe-secret.yaml is gitignored - manage manually with kubectl apply
 
 images:
