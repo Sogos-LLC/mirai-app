@@ -4,8 +4,7 @@ metadata:
   name: mirai-db-migrate
   namespace: mirai
   labels:
-    app: mirai-backend
-    component: migration
+    app: mirai-migrate
   annotations:
     argocd.argoproj.io/hook: PreSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
@@ -15,8 +14,7 @@ spec:
   template:
     metadata:
       labels:
-        app: mirai-backend
-        component: migration
+        app: mirai-migrate
     spec:
       restartPolicy: OnFailure
       tolerations:
