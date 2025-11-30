@@ -1,10 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 
 export default function Footer() {
+  const [year, setYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
+
   return (
     <footer className="bg-slate-900 text-slate-400 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -89,7 +95,7 @@ export default function Footer() {
 
         {/* Bottom */}
         <div className="border-t border-slate-800 pt-8 text-sm text-center">
-          <p>&copy; {new Date().getFullYear()} Mirai. All rights reserved.</p>
+          <p>&copy; {year ?? ''} Mirai. All rights reserved.</p>
         </div>
       </div>
     </footer>

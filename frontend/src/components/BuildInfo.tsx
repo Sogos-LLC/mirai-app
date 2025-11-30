@@ -1,9 +1,16 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 export default function BuildInfo() {
+  const [mounted, setMounted] = useState(false);
   const buildTime = process.env.NEXT_PUBLIC_BUILD_TIME;
 
-  if (!buildTime) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!buildTime || !mounted) return null;
 
   const formatDate = (isoString: string) => {
     try {
