@@ -28,6 +28,7 @@ type Config struct {
 
 	// URLs
 	FrontendURL  string
+	MarketingURL string // Marketing site URL for checkout success redirects
 	BackendURL   string
 	CookieDomain string // Domain for session cookies (e.g., ".sogos.io" for cross-subdomain)
 	CookieSecure bool   // Set to true for HTTPS (production), false for HTTP (local dev)
@@ -70,6 +71,7 @@ func Load() (*Config, error) {
 		StripeStarterPriceID: getEnv("STRIPE_STARTER_PRICE_ID", ""),
 		StripeProPriceID:     getEnv("STRIPE_PRO_PRICE_ID", ""),
 		FrontendURL:  getEnv("FRONTEND_URL", "https://mirai.sogos.io"),
+		MarketingURL: getEnv("MARKETING_URL", getEnv("FRONTEND_URL", "https://get-mirai.sogos.io")), // Falls back to FRONTEND_URL for local-dev
 		BackendURL:   getEnv("BACKEND_URL", "http://localhost:8080"),
 		CookieDomain: getEnv("COOKIE_DOMAIN", ""),                       // Empty uses request domain; set to ".sogos.io" for cross-subdomain
 		CookieSecure: getEnv("COOKIE_SECURE", "true") == "true",         // false for local HTTP dev

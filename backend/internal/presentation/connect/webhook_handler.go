@@ -78,8 +78,10 @@ func (h *WebhookHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Requ
 			subscriptionID = checkoutSession.Subscription.ID
 		}
 
-		// Check if this is a new registration (no company_id means pending registration flow)
-		if companyID == "" {
+		// Check if this is a new registration (no company_id or nil UUID means pending registration flow)
+		// The checkout session metadata may have empty string or "00000000-0000-0000-0000-000000000000" (nil UUID)
+		isNewRegistration := companyID == "" || companyID == "00000000-0000-0000-0000-000000000000"
+		if isNewRegistration {
 			h.handlePendingRegistrationPayment(ctx, checkoutSession.ID, customerID, subscriptionID)
 		} else {
 			// Existing company flow (e.g., onboarding or plan upgrade)

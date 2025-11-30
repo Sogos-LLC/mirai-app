@@ -56,6 +56,8 @@ spec:
           value: "https://mirai.sogos.io"
         - name: FRONTEND_URL
           value: "https://mirai.sogos.io"
+        - name: MARKETING_URL
+          value: "https://get-mirai.sogos.io"
         - name: BACKEND_URL
           value: "https://mirai-api.sogos.io"
         - name: STRIPE_SECRET_KEY

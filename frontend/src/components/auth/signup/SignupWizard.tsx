@@ -30,9 +30,9 @@ export function SignupWizard() {
           <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-4" />
           <p className="text-slate-600">
             {registration.state === 'submitting'
-              ? 'Creating your account...'
+              ? 'Processing registration...'
               : registration.state === 'redirectingToCheckout'
-                ? 'Redirecting to checkout...'
+                ? 'Redirecting to payment...'
                 : 'Please wait...'}
           </p>
         </div>

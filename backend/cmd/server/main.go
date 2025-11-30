@@ -107,7 +107,7 @@ func main() {
 	courseCache := cache.NewNoOpCache() // Use NoOpCache for local dev (Redis in production)
 
 	// Initialize application services
-	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, pendingRegRepo, kratosClient, stripeClient, logger, cfg.FrontendURL, cfg.BackendURL)
+	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, pendingRegRepo, kratosClient, stripeClient, logger, cfg.FrontendURL, cfg.MarketingURL, cfg.BackendURL)
 	billingService := service.NewBillingService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
 	userService := service.NewUserService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
 	companyService := service.NewCompanyService(userRepo, companyRepo, logger)

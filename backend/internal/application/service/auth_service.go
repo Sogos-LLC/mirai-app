@@ -25,6 +25,7 @@ type AuthService struct {
 	payments              service.PaymentProvider
 	logger                service.Logger
 	frontendURL           string
+	marketingURL          string // Marketing site URL for checkout success redirects
 	backendURL            string
 }
 
@@ -37,7 +38,7 @@ func NewAuthService(
 	identity service.IdentityProvider,
 	payments service.PaymentProvider,
 	logger service.Logger,
-	frontendURL, backendURL string,
+	frontendURL, marketingURL, backendURL string,
 ) *AuthService {
 	return &AuthService{
 		userRepo:       userRepo,
@@ -48,6 +49,7 @@ func NewAuthService(
 		payments:       payments,
 		logger:         logger,
 		frontendURL:    frontendURL,
+		marketingURL:   marketingURL,
 		backendURL:     backendURL,
 	}
 }
@@ -113,7 +115,7 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		Email:      req.Email,
 		Plan:       req.Plan,
 		SeatCount:  seatCount,
-		SuccessURL: s.frontendURL + "/?checkout=success",
+		SuccessURL: s.marketingURL + "/?checkout=success",
 		CancelURL:  s.frontendURL + "/auth/registration?checkout=canceled",
 	})
 	if err != nil {
