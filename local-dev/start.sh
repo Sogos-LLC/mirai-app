@@ -129,7 +129,9 @@ fi
 
 # Load environment variables
 echo -e "${BLUE}Loading environment from .env...${NC}"
-export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+set -a
+source "$SCRIPT_DIR/.env"
+set +a
 
 # Start Docker services
 echo -e "${BLUE}Starting Docker services...${NC}"
