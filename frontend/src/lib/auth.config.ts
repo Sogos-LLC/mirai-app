@@ -46,8 +46,12 @@ export const AUTH_COOKIES = {
 export const SESSION_COOKIE_ATTRIBUTES = {
   path: '/',
   sameSite: 'Lax' as const,
-  // In production, set secure: true and proper domain
-  // secure: process.env.NODE_ENV === 'production',
+  // Domain allows cookie to be sent to all subdomains (mirai.sogos.io, mirai-api.sogos.io)
+  // In local dev (localhost), we don't set domain so it works on localhost
+  domain: typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
+    ? '.sogos.io'
+    : undefined,
+  secure: typeof window !== 'undefined' && window.location.protocol === 'https:',
 } as const;
 
 // =============================================================================
@@ -155,8 +159,15 @@ export const KRATOS_ENDPOINTS = {
  * Used after API-based login/registration
  */
 export function setSessionTokenCookie(token: string): void {
-  const { path, sameSite } = SESSION_COOKIE_ATTRIBUTES;
-  document.cookie = `${AUTH_COOKIES.SESSION_TOKEN}=${token}; path=${path}; SameSite=${sameSite}`;
+  const { path, sameSite, domain, secure } = SESSION_COOKIE_ATTRIBUTES;
+  let cookie = `${AUTH_COOKIES.SESSION_TOKEN}=${token}; path=${path}; SameSite=${sameSite}`;
+  if (domain) {
+    cookie += `; domain=${domain}`;
+  }
+  if (secure) {
+    cookie += '; Secure';
+  }
+  document.cookie = cookie;
 }
 
 /**
@@ -164,7 +175,12 @@ export function setSessionTokenCookie(token: string): void {
  * Used during logout
  */
 export function clearSessionTokenCookie(): void {
-  document.cookie = `${AUTH_COOKIES.SESSION_TOKEN}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  const { domain } = SESSION_COOKIE_ATTRIBUTES;
+  let cookie = `${AUTH_COOKIES.SESSION_TOKEN}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  if (domain) {
+    cookie += `; domain=${domain}`;
+  }
+  document.cookie = cookie;
 }
 
 /**
