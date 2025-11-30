@@ -1,6 +1,7 @@
 import { createMachine, assign, fromPromise } from 'xstate';
 import { checkEmail, register, submitEnterpriseContact } from '@/lib/authClient';
 import { Plan } from '@/gen/mirai/v1/common_pb';
+import { setSessionTokenCookie } from '@/lib/auth.config';
 import {
   type AuthError,
   createAuthError,
@@ -387,6 +388,12 @@ export const registrationMachine = createMachine({
       // This is a transient state - the redirect happens via effect
       entry: [
         ({ context }) => {
+          // Set session cookie BEFORE redirecting to Stripe
+          // This ensures user has a valid session when they return from checkout
+          if (context.sessionToken) {
+            console.log('[Registration] Setting session token cookie before checkout redirect');
+            setSessionTokenCookie(context.sessionToken);
+          }
           if (context.checkoutUrl) {
             // Redirect will be handled by the React component
             console.log('[Registration] Redirecting to checkout:', context.checkoutUrl);

@@ -10,9 +10,12 @@ import (
 
 // Common errors
 var (
-	errEmailRequired   = errors.New("email is required")
-	errUnauthenticated = errors.New("authentication required")
-	errForbidden       = errors.New("permission denied")
+	errEmailRequired    = errors.New("email is required")
+	errPasswordRequired = errors.New("password is required")
+	errNameRequired     = errors.New("first name and last name are required")
+	errMissingToken     = errors.New("token is required")
+	errUnauthenticated  = errors.New("authentication required")
+	errForbidden        = errors.New("permission denied")
 )
 
 // toConnectError converts domain errors to Connect errors with appropriate codes.

@@ -27,6 +27,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG BUILD_TIME
 ENV NEXT_PUBLIC_BUILD_TIME=${BUILD_TIME}
 
+# App URL for cross-domain links (marketing site links to main app)
+ARG NEXT_PUBLIC_APP_URL=https://mirai.sogos.io
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+
 RUN npm run build
 
 # Production image, copy all the files and run next

@@ -281,6 +281,60 @@ func (c *Client) PerformLogin(ctx context.Context, email, password string) (*ser
 	}, nil
 }
 
+// CreateSessionForIdentity creates a session for an identity using the Kratos admin API.
+// This is useful for issuing a session token without the user's password (e.g., after checkout).
+func (c *Client) CreateSessionForIdentity(ctx context.Context, identityID string) (*service.SessionToken, error) {
+	url := fmt.Sprintf("%s/admin/identities/%s/sessions", c.adminURL, identityID)
+	fmt.Printf("[Kratos] CreateSessionForIdentity: creating session for identity %s at %s\n", identityID, url)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		fmt.Printf("[Kratos] CreateSessionForIdentity: network error: %v\n", err)
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Printf("[Kratos] CreateSessionForIdentity: response status=%d bodyLen=%d\n", resp.StatusCode, len(body))
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to create session: status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		SessionToken string `json:"session_token"`
+		Session      struct {
+			ID        string `json:"id"`
+			ExpiresAt string `json:"expires_at"`
+		} `json:"session"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		fmt.Printf("[Kratos] CreateSessionForIdentity: parse error: %v body=%s\n", err, string(body))
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	var expiresAt int64
+	if result.Session.ExpiresAt != "" {
+		if t, err := time.Parse(time.RFC3339, result.Session.ExpiresAt); err == nil {
+			expiresAt = t.Unix()
+		}
+	}
+
+	fmt.Printf("[Kratos] CreateSessionForIdentity: success sessionID=%s tokenLength=%d\n",
+		result.Session.ID, len(result.SessionToken))
+
+	return &service.SessionToken{
+		Token:     result.SessionToken,
+		ExpiresAt: expiresAt,
+	}, nil
+}
+
 // ValidateSession validates a session and returns the session info.
 // Supports both:
 // - Browser flow: ory_kratos_session cookie (passed directly to Kratos)

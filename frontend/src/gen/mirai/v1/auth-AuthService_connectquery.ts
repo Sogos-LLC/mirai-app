@@ -19,6 +19,15 @@ export const checkEmail = AuthService.method.checkEmail;
 export const register = AuthService.method.register;
 
 /**
+ * RegisterWithInvitation creates a new user account for an invited user.
+ * This is a simplified registration flow that skips company/plan selection.
+ * The user joins the inviting company with the role specified in the invitation.
+ *
+ * @generated from rpc mirai.v1.AuthService.RegisterWithInvitation
+ */
+export const registerWithInvitation = AuthService.method.registerWithInvitation;
+
+/**
  * Onboard completes onboarding for an authenticated user without a company.
  *
  * @generated from rpc mirai.v1.AuthService.Onboard

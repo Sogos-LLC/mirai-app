@@ -1,58 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React from 'react';
 import Link from 'next/link';
-import { BookOpen, Loader2, AlertCircle } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { SignupWizard } from '@/components/auth/signup';
-import { getSession } from '@/lib/kratos';
+
+// Note: Auth redirects for logged-in users are handled by middleware (server-side).
+// No need for client-side session check here.
 
 export default function SignupPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function checkSession() {
-      try {
-        const session = await getSession();
-        if (session?.active) {
-          // Already logged in - go to dashboard
-          router.replace('/dashboard');
-          return;
-        }
-      } catch (err) {
-        console.error('[SignupPage] Session check failed:', err);
-        setError('Unable to verify session. Please try again.');
-      }
-      setLoading(false);
-    }
-    checkSession();
-  }, []); // Run only once on mount
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <p className="text-red-600 mb-4 text-center">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       {/* Logo */}

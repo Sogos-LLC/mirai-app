@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/auth.proto.
  */
 export const file_mirai_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChNtaXJhaS92MS9hdXRoLnByb3RvEghtaXJhaS52MSIiChFDaGVja0VtYWlsUmVxdWVzdBINCgVlbWFpbBgBIAEoCSIkChJDaGVja0VtYWlsUmVzcG9uc2USDgoGZXhpc3RzGAEgASgIIv8BCg9SZWdpc3RlclJlcXVlc3QSDQoFZW1haWwYASABKAkSEAoIcGFzc3dvcmQYAiABKAkSEgoKZmlyc3RfbmFtZRgDIAEoCRIRCglsYXN0X25hbWUYBCABKAkSFAoMY29tcGFueV9uYW1lGAUgASgJEhUKCGluZHVzdHJ5GAYgASgJSACIAQESFgoJdGVhbV9zaXplGAcgASgJSAGIAQESHAoEcGxhbhgIIAEoDjIOLm1pcmFpLnYxLlBsYW4SFwoKc2VhdF9jb3VudBgJIAEoBUgCiAEBQgsKCV9pbmR1c3RyeUIMCgpfdGVhbV9zaXplQg0KC19zZWF0X2NvdW50Ir8BChBSZWdpc3RlclJlc3BvbnNlEhwKBHVzZXIYASABKAsyDi5taXJhaS52MS5Vc2VyEicKB2NvbXBhbnkYAiABKAsyES5taXJhaS52MS5Db21wYW55SACIAQESGQoMY2hlY2tvdXRfdXJsGAMgASgJSAGIAQESGgoNc2Vzc2lvbl90b2tlbhgEIAEoCUgCiAEBQgoKCF9jb21wYW55Qg8KDV9jaGVja291dF91cmxCEAoOX3Nlc3Npb25fdG9rZW4itgEKDk9uYm9hcmRSZXF1ZXN0EhQKDGNvbXBhbnlfbmFtZRgBIAEoCRIVCghpbmR1c3RyeRgCIAEoCUgAiAEBEhYKCXRlYW1fc2l6ZRgDIAEoCUgBiAEBEhwKBHBsYW4YBCABKA4yDi5taXJhaS52MS5QbGFuEhcKCnNlYXRfY291bnQYBSABKAVIAogBAUILCglfaW5kdXN0cnlCDAoKX3RlYW1fc2l6ZUINCgtfc2VhdF9jb3VudCKQAQoPT25ib2FyZFJlc3BvbnNlEhwKBHVzZXIYASABKAsyDi5taXJhaS52MS5Vc2VyEicKB2NvbXBhbnkYAiABKAsyES5taXJhaS52MS5Db21wYW55SACIAQESGQoMY2hlY2tvdXRfdXJsGAMgASgJSAGIAQFCCgoIX2NvbXBhbnlCDwoNX2NoZWNrb3V0X3VybCLXAQoYRW50ZXJwcmlzZUNvbnRhY3RSZXF1ZXN0EhQKDGNvbXBhbnlfbmFtZRgBIAEoCRIVCghpbmR1c3RyeRgCIAEoCUgAiAEBEhYKCXRlYW1fc2l6ZRgDIAEoCUgBiAEBEgwKBG5hbWUYBCABKAkSDQoFZW1haWwYBSABKAkSEgoFcGhvbmUYBiABKAlIAogBARIUCgdtZXNzYWdlGAcgASgJSAOIAQFCCwoJX2luZHVzdHJ5QgwKCl90ZWFtX3NpemVCCAoGX3Bob25lQgoKCF9tZXNzYWdlIiwKGUVudGVycHJpc2VDb250YWN0UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCDK3AgoLQXV0aFNlcnZpY2USRwoKQ2hlY2tFbWFpbBIbLm1pcmFpLnYxLkNoZWNrRW1haWxSZXF1ZXN0GhwubWlyYWkudjEuQ2hlY2tFbWFpbFJlc3BvbnNlEkEKCFJlZ2lzdGVyEhkubWlyYWkudjEuUmVnaXN0ZXJSZXF1ZXN0GhoubWlyYWkudjEuUmVnaXN0ZXJSZXNwb25zZRI+CgdPbmJvYXJkEhgubWlyYWkudjEuT25ib2FyZFJlcXVlc3QaGS5taXJhaS52MS5PbmJvYXJkUmVzcG9uc2USXAoRRW50ZXJwcmlzZUNvbnRhY3QSIi5taXJhaS52MS5FbnRlcnByaXNlQ29udGFjdFJlcXVlc3QaIy5taXJhaS52MS5FbnRlcnByaXNlQ29udGFjdFJlc3BvbnNlQo8BCgxjb20ubWlyYWkudjFCCUF1dGhQcm90b1ABWjNnaXRodWIuY29tL3NvZ29zL21pcmFpLWJhY2tlbmQvZ2VuL21pcmFpL3YxO21pcmFpdjGiAgNNWFiqAghNaXJhaS5WMcoCCE1pcmFpXFYx4gIUTWlyYWlcVjFcR1BCTWV0YWRhdGHqAglNaXJhaTo6VjFiBnByb3RvMw", [file_mirai_v1_common]);
+  fileDesc("ChNtaXJhaS92MS9hdXRoLnByb3RvEghtaXJhaS52MSIiChFDaGVja0VtYWlsUmVxdWVzdBINCgVlbWFpbBgBIAEoCSIkChJDaGVja0VtYWlsUmVzcG9uc2USDgoGZXhpc3RzGAEgASgIIv8BCg9SZWdpc3RlclJlcXVlc3QSDQoFZW1haWwYASABKAkSEAoIcGFzc3dvcmQYAiABKAkSEgoKZmlyc3RfbmFtZRgDIAEoCRIRCglsYXN0X25hbWUYBCABKAkSFAoMY29tcGFueV9uYW1lGAUgASgJEhUKCGluZHVzdHJ5GAYgASgJSACIAQESFgoJdGVhbV9zaXplGAcgASgJSAGIAQESHAoEcGxhbhgIIAEoDjIOLm1pcmFpLnYxLlBsYW4SFwoKc2VhdF9jb3VudBgJIAEoBUgCiAEBQgsKCV9pbmR1c3RyeUIMCgpfdGVhbV9zaXplQg0KC19zZWF0X2NvdW50Ir8BChBSZWdpc3RlclJlc3BvbnNlEhwKBHVzZXIYASABKAsyDi5taXJhaS52MS5Vc2VyEicKB2NvbXBhbnkYAiABKAsyES5taXJhaS52MS5Db21wYW55SACIAQESGQoMY2hlY2tvdXRfdXJsGAMgASgJSAGIAQESGgoNc2Vzc2lvbl90b2tlbhgEIAEoCUgCiAEBQgoKCF9jb21wYW55Qg8KDV9jaGVja291dF91cmxCEAoOX3Nlc3Npb25fdG9rZW4itgEKDk9uYm9hcmRSZXF1ZXN0EhQKDGNvbXBhbnlfbmFtZRgBIAEoCRIVCghpbmR1c3RyeRgCIAEoCUgAiAEBEhYKCXRlYW1fc2l6ZRgDIAEoCUgBiAEBEhwKBHBsYW4YBCABKA4yDi5taXJhaS52MS5QbGFuEhcKCnNlYXRfY291bnQYBSABKAVIAogBAUILCglfaW5kdXN0cnlCDAoKX3RlYW1fc2l6ZUINCgtfc2VhdF9jb3VudCKQAQoPT25ib2FyZFJlc3BvbnNlEhwKBHVzZXIYASABKAsyDi5taXJhaS52MS5Vc2VyEicKB2NvbXBhbnkYAiABKAsyES5taXJhaS52MS5Db21wYW55SACIAQESGQoMY2hlY2tvdXRfdXJsGAMgASgJSAGIAQFCCgoIX2NvbXBhbnlCDwoNX2NoZWNrb3V0X3VybCLXAQoYRW50ZXJwcmlzZUNvbnRhY3RSZXF1ZXN0EhQKDGNvbXBhbnlfbmFtZRgBIAEoCRIVCghpbmR1c3RyeRgCIAEoCUgAiAEBEhYKCXRlYW1fc2l6ZRgDIAEoCUgBiAEBEgwKBG5hbWUYBCABKAkSDQoFZW1haWwYBSABKAkSEgoFcGhvbmUYBiABKAlIAogBARIUCgdtZXNzYWdlGAcgASgJSAOIAQFCCwoJX2luZHVzdHJ5QgwKCl90ZWFtX3NpemVCCAoGX3Bob25lQgoKCF9tZXNzYWdlIiwKGUVudGVycHJpc2VDb250YWN0UmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJnCh1SZWdpc3RlcldpdGhJbnZpdGF0aW9uUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRISCgpmaXJzdF9uYW1lGAMgASgJEhEKCWxhc3RfbmFtZRgEIAEoCSJ5Ch5SZWdpc3RlcldpdGhJbnZpdGF0aW9uUmVzcG9uc2USHAoEdXNlchgBIAEoCzIOLm1pcmFpLnYxLlVzZXISIgoHY29tcGFueRgCIAEoCzIRLm1pcmFpLnYxLkNvbXBhbnkSFQoNc2Vzc2lvbl90b2tlbhgDIAEoCTKkAwoLQXV0aFNlcnZpY2USRwoKQ2hlY2tFbWFpbBIbLm1pcmFpLnYxLkNoZWNrRW1haWxSZXF1ZXN0GhwubWlyYWkudjEuQ2hlY2tFbWFpbFJlc3BvbnNlEkEKCFJlZ2lzdGVyEhkubWlyYWkudjEuUmVnaXN0ZXJSZXF1ZXN0GhoubWlyYWkudjEuUmVnaXN0ZXJSZXNwb25zZRJrChZSZWdpc3RlcldpdGhJbnZpdGF0aW9uEicubWlyYWkudjEuUmVnaXN0ZXJXaXRoSW52aXRhdGlvblJlcXVlc3QaKC5taXJhaS52MS5SZWdpc3RlcldpdGhJbnZpdGF0aW9uUmVzcG9uc2USPgoHT25ib2FyZBIYLm1pcmFpLnYxLk9uYm9hcmRSZXF1ZXN0GhkubWlyYWkudjEuT25ib2FyZFJlc3BvbnNlElwKEUVudGVycHJpc2VDb250YWN0EiIubWlyYWkudjEuRW50ZXJwcmlzZUNvbnRhY3RSZXF1ZXN0GiMubWlyYWkudjEuRW50ZXJwcmlzZUNvbnRhY3RSZXNwb25zZUKPAQoMY29tLm1pcmFpLnYxQglBdXRoUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_mirai_v1_common]);
 
 /**
  * CheckEmailRequest contains the email to check.
@@ -295,6 +295,76 @@ export const EnterpriseContactResponseSchema: GenMessage<EnterpriseContactRespon
   messageDesc(file_mirai_v1_auth, 7);
 
 /**
+ * RegisterWithInvitationRequest contains data for invited user registration.
+ * Email is taken from the invitation token.
+ *
+ * @generated from message mirai.v1.RegisterWithInvitationRequest
+ */
+export type RegisterWithInvitationRequest = Message<"mirai.v1.RegisterWithInvitationRequest"> & {
+  /**
+   * Invitation token from the email link
+   *
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * User credentials
+   *
+   * @generated from field: string password = 2;
+   */
+  password: string;
+
+  /**
+   * @generated from field: string first_name = 3;
+   */
+  firstName: string;
+
+  /**
+   * @generated from field: string last_name = 4;
+   */
+  lastName: string;
+};
+
+/**
+ * Describes the message mirai.v1.RegisterWithInvitationRequest.
+ * Use `create(RegisterWithInvitationRequestSchema)` to create a new message.
+ */
+export const RegisterWithInvitationRequestSchema: GenMessage<RegisterWithInvitationRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_auth, 8);
+
+/**
+ * RegisterWithInvitationResponse contains the result of invited user registration.
+ *
+ * @generated from message mirai.v1.RegisterWithInvitationResponse
+ */
+export type RegisterWithInvitationResponse = Message<"mirai.v1.RegisterWithInvitationResponse"> & {
+  /**
+   * @generated from field: mirai.v1.User user = 1;
+   */
+  user?: User;
+
+  /**
+   * @generated from field: mirai.v1.Company company = 2;
+   */
+  company?: Company;
+
+  /**
+   * Session token to set as cookie for authentication
+   *
+   * @generated from field: string session_token = 3;
+   */
+  sessionToken: string;
+};
+
+/**
+ * Describes the message mirai.v1.RegisterWithInvitationResponse.
+ * Use `create(RegisterWithInvitationResponseSchema)` to create a new message.
+ */
+export const RegisterWithInvitationResponseSchema: GenMessage<RegisterWithInvitationResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_auth, 9);
+
+/**
  * AuthService handles authentication and registration operations.
  *
  * @generated from service mirai.v1.AuthService
@@ -319,6 +389,18 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof RegisterRequestSchema;
     output: typeof RegisterResponseSchema;
+  },
+  /**
+   * RegisterWithInvitation creates a new user account for an invited user.
+   * This is a simplified registration flow that skips company/plan selection.
+   * The user joins the inviting company with the role specified in the invitation.
+   *
+   * @generated from rpc mirai.v1.AuthService.RegisterWithInvitation
+   */
+  registerWithInvitation: {
+    methodKind: "unary";
+    input: typeof RegisterWithInvitationRequestSchema;
+    output: typeof RegisterWithInvitationResponseSchema;
   },
   /**
    * Onboard completes onboarding for an authenticated user without a company.

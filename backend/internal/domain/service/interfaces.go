@@ -21,6 +21,10 @@ type IdentityProvider interface {
 	// This uses the Kratos API flow (not browser flow) to get a session token.
 	PerformLogin(ctx context.Context, email, password string) (*SessionToken, error)
 
+	// CreateSessionForIdentity creates a session for an identity using Kratos admin API.
+	// This is useful when we need to issue a session token without the user's password.
+	CreateSessionForIdentity(ctx context.Context, identityID string) (*SessionToken, error)
+
 	// ValidateSession validates a session and returns the session info.
 	ValidateSession(ctx context.Context, cookies []*http.Cookie) (*Session, error)
 }

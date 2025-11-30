@@ -572,6 +572,140 @@ func (x *EnterpriseContactResponse) GetSuccess() bool {
 	return false
 }
 
+// RegisterWithInvitationRequest contains data for invited user registration.
+// Email is taken from the invitation token.
+type RegisterWithInvitationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Invitation token from the email link
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// User credentials
+	Password      string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	FirstName     string `protobuf:"bytes,3,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
+	LastName      string `protobuf:"bytes,4,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterWithInvitationRequest) Reset() {
+	*x = RegisterWithInvitationRequest{}
+	mi := &file_mirai_v1_auth_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterWithInvitationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterWithInvitationRequest) ProtoMessage() {}
+
+func (x *RegisterWithInvitationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_auth_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterWithInvitationRequest.ProtoReflect.Descriptor instead.
+func (*RegisterWithInvitationRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_auth_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *RegisterWithInvitationRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *RegisterWithInvitationRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *RegisterWithInvitationRequest) GetFirstName() string {
+	if x != nil {
+		return x.FirstName
+	}
+	return ""
+}
+
+func (x *RegisterWithInvitationRequest) GetLastName() string {
+	if x != nil {
+		return x.LastName
+	}
+	return ""
+}
+
+// RegisterWithInvitationResponse contains the result of invited user registration.
+type RegisterWithInvitationResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	User    *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	Company *Company               `protobuf:"bytes,2,opt,name=company,proto3" json:"company,omitempty"`
+	// Session token to set as cookie for authentication
+	SessionToken  string `protobuf:"bytes,3,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterWithInvitationResponse) Reset() {
+	*x = RegisterWithInvitationResponse{}
+	mi := &file_mirai_v1_auth_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterWithInvitationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterWithInvitationResponse) ProtoMessage() {}
+
+func (x *RegisterWithInvitationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_auth_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterWithInvitationResponse.ProtoReflect.Descriptor instead.
+func (*RegisterWithInvitationResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_auth_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *RegisterWithInvitationResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *RegisterWithInvitationResponse) GetCompany() *Company {
+	if x != nil {
+		return x.Company
+	}
+	return nil
+}
+
+func (x *RegisterWithInvitationResponse) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
+}
+
 var File_mirai_v1_auth_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_auth_proto_rawDesc = "" +
@@ -639,11 +773,22 @@ const file_mirai_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"\b_message\"5\n" +
 	"\x19EnterpriseContactResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xb7\x02\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x8d\x01\n" +
+	"\x1dRegisterWithInvitationRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1d\n" +
+	"\n" +
+	"first_name\x18\x03 \x01(\tR\tfirstName\x12\x1b\n" +
+	"\tlast_name\x18\x04 \x01(\tR\blastName\"\x96\x01\n" +
+	"\x1eRegisterWithInvitationResponse\x12\"\n" +
+	"\x04user\x18\x01 \x01(\v2\x0e.mirai.v1.UserR\x04user\x12+\n" +
+	"\acompany\x18\x02 \x01(\v2\x11.mirai.v1.CompanyR\acompany\x12#\n" +
+	"\rsession_token\x18\x03 \x01(\tR\fsessionToken2\xa4\x03\n" +
 	"\vAuthService\x12G\n" +
 	"\n" +
 	"CheckEmail\x12\x1b.mirai.v1.CheckEmailRequest\x1a\x1c.mirai.v1.CheckEmailResponse\x12A\n" +
-	"\bRegister\x12\x19.mirai.v1.RegisterRequest\x1a\x1a.mirai.v1.RegisterResponse\x12>\n" +
+	"\bRegister\x12\x19.mirai.v1.RegisterRequest\x1a\x1a.mirai.v1.RegisterResponse\x12k\n" +
+	"\x16RegisterWithInvitation\x12'.mirai.v1.RegisterWithInvitationRequest\x1a(.mirai.v1.RegisterWithInvitationResponse\x12>\n" +
 	"\aOnboard\x12\x18.mirai.v1.OnboardRequest\x1a\x19.mirai.v1.OnboardResponse\x12\\\n" +
 	"\x11EnterpriseContact\x12\".mirai.v1.EnterpriseContactRequest\x1a#.mirai.v1.EnterpriseContactResponseB\x8f\x01\n" +
 	"\fcom.mirai.v1B\tAuthProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
@@ -660,40 +805,46 @@ func file_mirai_v1_auth_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_auth_proto_rawDescData
 }
 
-var file_mirai_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_mirai_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_mirai_v1_auth_proto_goTypes = []any{
-	(*CheckEmailRequest)(nil),         // 0: mirai.v1.CheckEmailRequest
-	(*CheckEmailResponse)(nil),        // 1: mirai.v1.CheckEmailResponse
-	(*RegisterRequest)(nil),           // 2: mirai.v1.RegisterRequest
-	(*RegisterResponse)(nil),          // 3: mirai.v1.RegisterResponse
-	(*OnboardRequest)(nil),            // 4: mirai.v1.OnboardRequest
-	(*OnboardResponse)(nil),           // 5: mirai.v1.OnboardResponse
-	(*EnterpriseContactRequest)(nil),  // 6: mirai.v1.EnterpriseContactRequest
-	(*EnterpriseContactResponse)(nil), // 7: mirai.v1.EnterpriseContactResponse
-	(Plan)(0),                         // 8: mirai.v1.Plan
-	(*User)(nil),                      // 9: mirai.v1.User
-	(*Company)(nil),                   // 10: mirai.v1.Company
+	(*CheckEmailRequest)(nil),              // 0: mirai.v1.CheckEmailRequest
+	(*CheckEmailResponse)(nil),             // 1: mirai.v1.CheckEmailResponse
+	(*RegisterRequest)(nil),                // 2: mirai.v1.RegisterRequest
+	(*RegisterResponse)(nil),               // 3: mirai.v1.RegisterResponse
+	(*OnboardRequest)(nil),                 // 4: mirai.v1.OnboardRequest
+	(*OnboardResponse)(nil),                // 5: mirai.v1.OnboardResponse
+	(*EnterpriseContactRequest)(nil),       // 6: mirai.v1.EnterpriseContactRequest
+	(*EnterpriseContactResponse)(nil),      // 7: mirai.v1.EnterpriseContactResponse
+	(*RegisterWithInvitationRequest)(nil),  // 8: mirai.v1.RegisterWithInvitationRequest
+	(*RegisterWithInvitationResponse)(nil), // 9: mirai.v1.RegisterWithInvitationResponse
+	(Plan)(0),                              // 10: mirai.v1.Plan
+	(*User)(nil),                           // 11: mirai.v1.User
+	(*Company)(nil),                        // 12: mirai.v1.Company
 }
 var file_mirai_v1_auth_proto_depIdxs = []int32{
-	8,  // 0: mirai.v1.RegisterRequest.plan:type_name -> mirai.v1.Plan
-	9,  // 1: mirai.v1.RegisterResponse.user:type_name -> mirai.v1.User
-	10, // 2: mirai.v1.RegisterResponse.company:type_name -> mirai.v1.Company
-	8,  // 3: mirai.v1.OnboardRequest.plan:type_name -> mirai.v1.Plan
-	9,  // 4: mirai.v1.OnboardResponse.user:type_name -> mirai.v1.User
-	10, // 5: mirai.v1.OnboardResponse.company:type_name -> mirai.v1.Company
-	0,  // 6: mirai.v1.AuthService.CheckEmail:input_type -> mirai.v1.CheckEmailRequest
-	2,  // 7: mirai.v1.AuthService.Register:input_type -> mirai.v1.RegisterRequest
-	4,  // 8: mirai.v1.AuthService.Onboard:input_type -> mirai.v1.OnboardRequest
-	6,  // 9: mirai.v1.AuthService.EnterpriseContact:input_type -> mirai.v1.EnterpriseContactRequest
-	1,  // 10: mirai.v1.AuthService.CheckEmail:output_type -> mirai.v1.CheckEmailResponse
-	3,  // 11: mirai.v1.AuthService.Register:output_type -> mirai.v1.RegisterResponse
-	5,  // 12: mirai.v1.AuthService.Onboard:output_type -> mirai.v1.OnboardResponse
-	7,  // 13: mirai.v1.AuthService.EnterpriseContact:output_type -> mirai.v1.EnterpriseContactResponse
-	10, // [10:14] is the sub-list for method output_type
-	6,  // [6:10] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	10, // 0: mirai.v1.RegisterRequest.plan:type_name -> mirai.v1.Plan
+	11, // 1: mirai.v1.RegisterResponse.user:type_name -> mirai.v1.User
+	12, // 2: mirai.v1.RegisterResponse.company:type_name -> mirai.v1.Company
+	10, // 3: mirai.v1.OnboardRequest.plan:type_name -> mirai.v1.Plan
+	11, // 4: mirai.v1.OnboardResponse.user:type_name -> mirai.v1.User
+	12, // 5: mirai.v1.OnboardResponse.company:type_name -> mirai.v1.Company
+	11, // 6: mirai.v1.RegisterWithInvitationResponse.user:type_name -> mirai.v1.User
+	12, // 7: mirai.v1.RegisterWithInvitationResponse.company:type_name -> mirai.v1.Company
+	0,  // 8: mirai.v1.AuthService.CheckEmail:input_type -> mirai.v1.CheckEmailRequest
+	2,  // 9: mirai.v1.AuthService.Register:input_type -> mirai.v1.RegisterRequest
+	8,  // 10: mirai.v1.AuthService.RegisterWithInvitation:input_type -> mirai.v1.RegisterWithInvitationRequest
+	4,  // 11: mirai.v1.AuthService.Onboard:input_type -> mirai.v1.OnboardRequest
+	6,  // 12: mirai.v1.AuthService.EnterpriseContact:input_type -> mirai.v1.EnterpriseContactRequest
+	1,  // 13: mirai.v1.AuthService.CheckEmail:output_type -> mirai.v1.CheckEmailResponse
+	3,  // 14: mirai.v1.AuthService.Register:output_type -> mirai.v1.RegisterResponse
+	9,  // 15: mirai.v1.AuthService.RegisterWithInvitation:output_type -> mirai.v1.RegisterWithInvitationResponse
+	5,  // 16: mirai.v1.AuthService.Onboard:output_type -> mirai.v1.OnboardResponse
+	7,  // 17: mirai.v1.AuthService.EnterpriseContact:output_type -> mirai.v1.EnterpriseContactResponse
+	13, // [13:18] is the sub-list for method output_type
+	8,  // [8:13] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_auth_proto_init() }
@@ -713,7 +864,7 @@ func file_mirai_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_auth_proto_rawDesc), len(file_mirai_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -1,11 +1,16 @@
 'use client';
 
-import React from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
-import Sidebar from '@/components/layout/Sidebar';
+import React, { useEffect, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { RootState, AppDispatch } from '@/store';
+import { checkSession, selectIsAuthInitialized } from '@/store/slices/authSlice';
+import { prefetchFolders, prefetchCourses } from '@/store/slices/courseSlice';
+import { setSessionTokenCookie } from '@/lib/auth.config';
+import Sidebar, { menuItems, recentItems, bottomItems } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomTabNav from '@/components/layout/BottomTabNav';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 
 /**
@@ -21,8 +26,54 @@ export default function Layout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const dispatch = useDispatch<AppDispatch>();
   const { sidebarOpen } = useSelector((state: RootState) => state.ui);
+  const isAuthInitialized = useSelector(selectIsAuthInitialized);
   const isMobile = useIsMobile();
+  const [tokenProcessed, setTokenProcessed] = useState(false);
+
+  // Handle auth_token from URL (e.g., Stripe checkout redirect) BEFORE checking session
+  useEffect(() => {
+    const authToken = searchParams.get('auth_token');
+    if (authToken) {
+      console.log('[Layout] Setting session token from URL param');
+      setSessionTokenCookie(authToken);
+    }
+    setTokenProcessed(true);
+  }, [searchParams]);
+
+  // Initialize auth and prefetch all routes/data AFTER token is processed
+  useEffect(() => {
+    if (!tokenProcessed) return;
+
+    // Check auth session
+    if (!isAuthInitialized) {
+      dispatch(checkSession());
+    }
+
+    // Prefetch all sidebar routes for instant navigation
+    const allPaths = [
+      '/dashboard',
+      ...menuItems.map((item) => item.path),
+      ...recentItems.map((item) => item.path),
+      ...bottomItems.map((item) => item.path),
+    ];
+
+    // In development, fetch pages to trigger compilation
+    // In production, router.prefetch is sufficient
+    if (process.env.NODE_ENV === 'development') {
+      allPaths.forEach((path) => {
+        fetch(path, { priority: 'low' } as RequestInit).catch(() => {});
+      });
+    }
+    allPaths.forEach((path) => router.prefetch(path));
+
+    // Prefetch API data
+    dispatch(prefetchFolders(true));
+    dispatch(prefetchCourses());
+  }, [router, dispatch, isAuthInitialized, tokenProcessed]);
 
   // Desktop: sidebar margin based on collapsed/expanded state
   // Mobile: no margin (sidebar is a drawer overlay)
@@ -37,6 +88,11 @@ export default function Layout({
   const paddingClass = isMobile
     ? 'p-4 pb-24'
     : 'p-6 lg:p-8';
+
+  // Show loading screen while processing token or auth initializes
+  if (!tokenProcessed || !isAuthInitialized) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="flex min-h-screen">

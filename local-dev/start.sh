@@ -15,6 +15,17 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # PID file for cleanup
 PID_FILE="$SCRIPT_DIR/.dev-pids"
 
+# Parse arguments
+REBUILD=false
+for arg in "$@"; do
+    case $arg in
+        --rebuild)
+            REBUILD=true
+            shift
+            ;;
+    esac
+done
+
 # Cleanup function
 cleanup() {
     echo -e "\n${YELLOW}Shutting down...${NC}"
@@ -120,16 +131,15 @@ fi
 echo -e "${BLUE}Loading environment from .env...${NC}"
 export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
 
-# Build marketing image if it doesn't exist
-if ! docker image inspect local-dev-marketing:latest >/dev/null 2>&1; then
-    echo -e "${YELLOW}Building marketing site image (first run only)...${NC}"
-    docker compose build marketing
-fi
-
 # Start Docker services
 echo -e "${BLUE}Starting Docker services...${NC}"
 cd "$SCRIPT_DIR"
-docker compose up -d
+if [ "$REBUILD" = true ]; then
+    echo -e "${YELLOW}Rebuilding containers (--rebuild flag set)...${NC}"
+    docker compose up -d --build
+else
+    docker compose up -d
+fi
 
 # Wait for services
 echo ""
@@ -183,6 +193,9 @@ STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-}" \
 STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-}" \
 STRIPE_STARTER_PRICE_ID="${STRIPE_STARTER_PRICE_ID:-}" \
 STRIPE_PRO_PRICE_ID="${STRIPE_PRO_PRICE_ID:-}" \
+SMTP_HOST="localhost" \
+SMTP_PORT="1025" \
+SMTP_FROM="noreply@mirai.local" \
 go run ./cmd/server/main.go &
 BACKEND_PID=$!
 echo $BACKEND_PID >> "$PID_FILE"
@@ -212,6 +225,8 @@ echo -e "  ${BLUE}Mailpit:${NC}       http://localhost:8025"
 echo -e "  ${BLUE}MinIO Console:${NC} http://localhost:9001"
 echo ""
 echo -e "  Press ${YELLOW}Ctrl+C${NC} to stop all services"
+echo ""
+echo -e "  ${YELLOW}Tip:${NC} Use ${BLUE}./start.sh --rebuild${NC} to rebuild Docker images"
 echo ""
 
 # Wait for processes

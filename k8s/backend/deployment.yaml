@@ -78,6 +78,12 @@ spec:
             secretKeyRef:
               name: mirai-stripe-secret
               key: pro-price-id
+        - name: SMTP_HOST
+          value: "mailpit.mailpit.svc.cluster.local"
+        - name: SMTP_PORT
+          value: "1025"
+        - name: SMTP_FROM
+          value: "noreply@mirai.sogos.io"
         - name: GIN_MODE
           value: "release"
         resources:

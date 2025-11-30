@@ -15,3 +15,4 @@ Redirects as Transitions: Track navigation like /dashboard, /auth/login inside m
 Telemetry Hooks: Emit analytics events (FLOW_STARTED, FLOW_FAILED, SESSION_ESTABLISHED) from specific state transitions, not ad hoc in the UI.
 
 Testability: Export state machines separately from components. Cover all transitions and side effects in unit tests using @xstate/test.
+- everything needs to go through proto and we should try to be using a proto contract always whenever possible

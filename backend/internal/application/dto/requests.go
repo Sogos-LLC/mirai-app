@@ -88,3 +88,11 @@ type AcceptInvitationRequest struct {
 type ListInvitationsRequest struct {
 	StatusFilters []valueobject.InvitationStatus `json:"status_filters,omitempty"`
 }
+
+// RegisterWithInvitationRequest contains data for invited user registration.
+type RegisterWithInvitationRequest struct {
+	Token     string `json:"token" binding:"required"`
+	Password  string `json:"password" binding:"required,min=8"`
+	FirstName string `json:"first_name" binding:"required,min=1"`
+	LastName  string `json:"last_name" binding:"required,min=1"`
+}

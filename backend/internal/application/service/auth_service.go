@@ -14,32 +14,35 @@ import (
 
 // AuthService handles authentication and registration business logic.
 type AuthService struct {
-	userRepo    repository.UserRepository
-	companyRepo repository.CompanyRepository
-	identity    service.IdentityProvider
-	payments    service.PaymentProvider
-	logger      service.Logger
-	frontendURL string
-	backendURL  string
+	userRepo       repository.UserRepository
+	companyRepo    repository.CompanyRepository
+	invitationRepo repository.InvitationRepository
+	identity       service.IdentityProvider
+	payments       service.PaymentProvider
+	logger         service.Logger
+	frontendURL    string
+	backendURL     string
 }
 
 // NewAuthService creates a new auth service.
 func NewAuthService(
 	userRepo repository.UserRepository,
 	companyRepo repository.CompanyRepository,
+	invitationRepo repository.InvitationRepository,
 	identity service.IdentityProvider,
 	payments service.PaymentProvider,
 	logger service.Logger,
 	frontendURL, backendURL string,
 ) *AuthService {
 	return &AuthService{
-		userRepo:    userRepo,
-		companyRepo: companyRepo,
-		identity:    identity,
-		payments:    payments,
-		logger:      logger,
-		frontendURL: frontendURL,
-		backendURL:  backendURL,
+		userRepo:       userRepo,
+		companyRepo:    companyRepo,
+		invitationRepo: invitationRepo,
+		identity:       identity,
+		payments:       payments,
+		logger:         logger,
+		frontendURL:    frontendURL,
+		backendURL:     backendURL,
 	}
 }
 
@@ -169,9 +172,8 @@ type CompleteCheckoutResult struct {
 }
 
 // CompleteCheckout handles post-checkout processing.
-// Validates the Stripe session and redirects to dashboard.
-// Note: User session is created during registration (via PerformLogin), so the cookie
-// should already be set in the browser before the Stripe redirect.
+// Validates the Stripe session and redirects to the dashboard.
+// The user should already have a valid session from registration (session token set as cookie before Stripe redirect).
 func (s *AuthService) CompleteCheckout(ctx context.Context, sessionID string) (*CompleteCheckoutResult, error) {
 	log := s.logger.With("sessionID", sessionID)
 
@@ -208,17 +210,30 @@ func (s *AuthService) CompleteCheckout(ctx context.Context, sessionID string) (*
 		}, nil
 	}
 
-	log.Info("checkout completed, redirecting to dashboard",
+	log.Info("checkout completed, creating session for redirect",
 		"userID", user.ID,
 		"companyID", sess.CompanyID,
 		"kratosID", user.KratosID,
 	)
 
-	// User's session was created during registration.
-	// The frontend sets the session_token as a cookie before redirecting to Stripe.
-	// That cookie should still be valid, so just redirect to dashboard.
+	// Create a fresh session token for the user.
+	// The original session token from registration may not persist through Stripe's redirect,
+	// so we create a new one using the Kratos admin API.
+	sessionToken, err := s.identity.CreateSessionForIdentity(ctx, user.KratosID.String())
+	if err != nil {
+		log.Warn("failed to create session for checkout completion", "error", err)
+		// Fall back to redirect without token - user can log in manually
+		return &CompleteCheckoutResult{
+			RedirectURL: s.frontendURL + "/dashboard?checkout=success",
+		}, nil
+	}
+
+	log.Info("session created, redirecting to dashboard with auth token",
+		"tokenLength", len(sessionToken.Token),
+	)
+
 	return &CompleteCheckoutResult{
-		RedirectURL: s.frontendURL + "/dashboard?checkout=success",
+		RedirectURL: s.frontendURL + "/dashboard?checkout=success&auth_token=" + sessionToken.Token,
 	}, nil
 }
 
@@ -313,4 +328,99 @@ func (s *AuthService) SubmitEnterpriseContact(ctx context.Context, req dto.Enter
 	// TODO: Store in database
 	// TODO: Send notification to sales team
 	return nil
+}
+
+// RegisterWithInvitation creates a new user account for an invited user.
+// This is a simplified registration flow that skips company/plan selection.
+// The user joins the inviting company with the role specified in the invitation.
+func (s *AuthService) RegisterWithInvitation(ctx context.Context, req dto.RegisterWithInvitationRequest) (*dto.RegisterWithInvitationResponse, error) {
+	log := s.logger.With("token", req.Token[:8]+"...")
+
+	// Step 1: Get and validate invitation
+	invitation, err := s.invitationRepo.GetByToken(ctx, req.Token)
+	if err != nil {
+		log.Error("failed to get invitation", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	if invitation == nil {
+		return nil, domainerrors.ErrInvitationNotFound
+	}
+
+	// Step 2: Check invitation status
+	if !invitation.CanBeAccepted() {
+		if invitation.IsExpired() {
+			return nil, domainerrors.ErrInvitationExpired
+		}
+		if invitation.Status == valueobject.InvitationStatusRevoked {
+			return nil, domainerrors.ErrInvitationRevoked
+		}
+		if invitation.Status == valueobject.InvitationStatusAccepted {
+			return nil, domainerrors.ErrInvitationAlreadyAccepted
+		}
+		return nil, domainerrors.ErrInvitationInvalid
+	}
+
+	log = log.With("email", invitation.Email)
+
+	// Step 3: Create identity in Kratos
+	identity, err := s.identity.CreateIdentity(ctx, service.CreateIdentityRequest{
+		Email:     invitation.Email,
+		Password:  req.Password,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+	})
+	if err != nil {
+		log.Error("failed to create Kratos identity", "error", err)
+		if err.Error() == "an account with this email already exists" {
+			return nil, domainerrors.ErrEmailAlreadyExists
+		}
+		return nil, domainerrors.ErrExternalService.WithMessage(err.Error())
+	}
+
+	kratosID, err := uuid.Parse(identity.ID)
+	if err != nil {
+		log.Error("failed to parse Kratos ID", "kratosID", identity.ID, "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Step 4: Create user with company and role from invitation
+	user := &entity.User{
+		KratosID:  kratosID,
+		CompanyID: &invitation.CompanyID,
+		Role:      invitation.Role,
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		log.Error("failed to create user", "error", err)
+		return nil, domainerrors.ErrInternal.WithMessage("failed to create user")
+	}
+
+	// Step 5: Mark invitation as accepted
+	invitation.Accept(user.ID)
+	if err := s.invitationRepo.Update(ctx, invitation); err != nil {
+		log.Error("failed to update invitation", "error", err)
+		// Don't fail - user is created, just log the error
+	}
+
+	// Step 6: Get company details
+	company, err := s.companyRepo.GetByID(ctx, invitation.CompanyID)
+	if err != nil {
+		log.Error("failed to get company", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Step 7: Perform login to get a session token
+	log.Info("performing login to create session")
+	sessionToken, err := s.identity.PerformLogin(ctx, invitation.Email, req.Password)
+	if err != nil {
+		log.Error("failed to create session after registration", "error", err)
+		return nil, domainerrors.ErrExternalService.WithMessage("registration succeeded but login failed")
+	}
+
+	log.Info("invited user registered successfully", "userID", user.ID, "companyID", invitation.CompanyID)
+	return &dto.RegisterWithInvitationResponse{
+		User:         dto.FromUser(user),
+		Company:      dto.FromCompany(company),
+		SessionToken: sessionToken.Token,
+	}, nil
 }

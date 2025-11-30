@@ -4,12 +4,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
 import { User, Settings, LogOut, ChevronDown, Loader2 } from 'lucide-react';
-import { selectUser, selectIsAuthenticated } from '@/store/slices/authSlice';
+import { selectUser, selectIsAuthenticated, selectIsAuthInitialized } from '@/store/slices/authSlice';
 import { useLogout } from '@/hooks/useLogout';
 
-export default function ProfileDropdown() {
+interface ProfileDropdownProps {
+  /** When true, never shows Sign In link - for protected pages */
+  isProtectedPage?: boolean;
+}
+
+export default function ProfileDropdown({ isProtectedPage = false }: ProfileDropdownProps) {
   const user = useSelector(selectUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isInitialized = useSelector(selectIsAuthInitialized);
   const { startLogout, isLoggingOut } = useLogout();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -32,7 +38,18 @@ export default function ProfileDropdown() {
     startLogout();
   };
 
-  if (!isAuthenticated || !user) {
+  // On protected pages, show loading skeleton while auth initializes
+  if (isProtectedPage) {
+    if (!isInitialized || !user) {
+      return (
+        <div className="flex items-center gap-2 px-3 py-2">
+          <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+          <div className="hidden sm:block w-20 h-4 bg-slate-200 rounded animate-pulse" />
+        </div>
+      );
+    }
+  } else if (!isAuthenticated || !user) {
+    // On public pages, show Sign In link
     return (
       <Link
         href="/auth/login"

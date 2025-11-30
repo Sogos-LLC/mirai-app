@@ -12,6 +12,7 @@ export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -50,11 +51,20 @@ export default function Dashboard() {
     }, 200);
   }, []);
 
-  // Check for checkout success
+  // Handle checkout success and welcome banners (auth_token handled by layout)
   useEffect(() => {
-    if (searchParams.get('checkout') === 'success') {
+    const isCheckoutSuccess = searchParams.get('checkout') === 'success';
+    const isWelcome = searchParams.get('welcome') === 'true';
+
+    if (isCheckoutSuccess) {
       setShowSuccessBanner(true);
-      // Fire confetti celebration
+      fireConfetti();
+      // Clean up URL
+      router.replace('/dashboard', { scroll: false });
+    }
+
+    if (isWelcome) {
+      setShowWelcomeModal(true);
       fireConfetti();
       // Clean up URL
       router.replace('/dashboard', { scroll: false });
@@ -122,6 +132,34 @@ export default function Dashboard() {
 
   return (
     <>
+      {/* Welcome Modal for Invited Users */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowWelcomeModal(false)}
+          />
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center">
+            <div className="bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+              <PartyPopper className="w-10 h-10 text-indigo-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to the Team!</h2>
+            <p className="text-gray-600 mb-6">
+              Your account has been created and you&apos;re now part of the team.
+              Let&apos;s get started!
+            </p>
+            <button
+              onClick={() => setShowWelcomeModal(false)}
+              className="w-full py-3 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Checkout Success Banner */}
       {showSuccessBanner && (
         <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl p-6 mb-8 relative overflow-hidden">

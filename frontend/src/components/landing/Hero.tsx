@@ -4,6 +4,9 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
+// App URL for auth redirects (marketing site should send users to main app for registration)
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
+
 export default function Hero() {
   return (
     <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
@@ -29,13 +32,13 @@ export default function Hero() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/auth/registration"
+          <a
+            href={`${APP_URL}/auth/registration`}
             className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:shadow-lg hover:shadow-indigo-500/25 flex items-center justify-center gap-2"
           >
             Get Started
             <ArrowRight className="h-5 w-5" />
-          </Link>
+          </a>
           <Link
             href="/pricing"
             className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-900 px-8 py-4 rounded-xl font-semibold text-lg border border-slate-200 transition-colors"

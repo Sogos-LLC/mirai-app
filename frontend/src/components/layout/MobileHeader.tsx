@@ -43,7 +43,7 @@ export function MobileHeader({ title }: MobileHeaderProps) {
 
         {/* Profile Dropdown */}
         <div className="-mr-2">
-          <ProfileDropdown />
+          <ProfileDropdown isProtectedPage />
         </div>
       </div>
     </header>

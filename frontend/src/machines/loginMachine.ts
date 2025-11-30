@@ -14,9 +14,9 @@
  */
 
 import { createMachine, assign, fromPromise } from 'xstate';
-import { getSession, getLoginFlow, getKratosBrowserUrl } from '@/lib/kratos/client';
+import { getLoginFlow, getKratosBrowserUrl } from '@/lib/kratos/client';
 import { REDIRECT_URLS } from '@/lib/auth.config';
-import type { LoginFlow, KratosSession } from '@/lib/kratos/types';
+import type { LoginFlow } from '@/lib/kratos/types';
 import {
   type AuthError,
   FlowExpiredError,
@@ -38,9 +38,6 @@ export interface LoginContext {
 
   // URL parameters
   returnTo: string | null;
-
-  // Session state (for already-authenticated redirect)
-  session: KratosSession | null;
 
   // Error handling
   error: AuthError | null;
@@ -67,7 +64,6 @@ const initialContext: LoginContext = {
   flow: null,
   flowId: null,
   returnTo: null,
-  session: null,
   error: null,
   retryCount: 0,
   flowStartedAt: null,
@@ -77,13 +73,6 @@ const initialContext: LoginContext = {
 // =============================================================================
 // Actors
 // =============================================================================
-
-/**
- * Check if user already has an active session
- */
-const checkSessionActor = fromPromise<KratosSession | null, void>(async () => {
-  return getSession();
-});
 
 /**
  * Fetch existing login flow by ID
@@ -124,62 +113,25 @@ export const loginMachine = createMachine({
   states: {
     // --------------------------------------------------------
     // Idle - waiting to start
+    // Note: Session check is handled by middleware, which redirects
+    // authenticated users away from login page. No need to check here.
     // --------------------------------------------------------
     idle: {
       on: {
         START: {
-          target: 'checkingSession',
-          actions: assign({
-            flowId: ({ event }) => event.flowId || null,
-            returnTo: ({ event }) => event.returnTo || null,
-            checkoutSuccess: ({ event }) => event.checkoutSuccess || false,
-            flowStartedAt: () => Date.now(),
-            error: null,
-            retryCount: 0,
-          }),
-        },
-      },
-    },
-
-    // --------------------------------------------------------
-    // Check if user is already authenticated
-    // --------------------------------------------------------
-    checkingSession: {
-      entry: loginTelemetry.started,
-      invoke: {
-        id: 'checkSession',
-        src: checkSessionActor,
-        onDone: [
-          {
-            // User is authenticated - should redirect to dashboard
-            target: 'alreadyAuthenticated',
-            guard: ({ event }) => event.output?.active === true,
-            actions: assign({
-              session: ({ event }) => event.output,
-            }),
-          },
-          {
-            // No active session - continue to get flow
-            target: 'checkingFlow',
-          },
-        ],
-        onError: {
-          // Session check failed - continue anyway, might just be unauthenticated
           target: 'checkingFlow',
+          actions: [
+            loginTelemetry.started,
+            assign({
+              flowId: ({ event }) => event.flowId || null,
+              returnTo: ({ event }) => event.returnTo || null,
+              checkoutSuccess: ({ event }) => event.checkoutSuccess || false,
+              flowStartedAt: () => Date.now(),
+              error: null,
+              retryCount: 0,
+            }),
+          ],
         },
-      },
-    },
-
-    // --------------------------------------------------------
-    // Already authenticated - redirect to dashboard
-    // --------------------------------------------------------
-    alreadyAuthenticated: {
-      type: 'final',
-      entry: ({ context }) => {
-        emitTelemetry(AUTH_TELEMETRY.SESSION_VALIDATED, {
-          machineId: 'login',
-          metadata: { alreadyAuthenticated: true },
-        });
       },
     },
 
@@ -286,7 +238,7 @@ export const loginMachine = createMachine({
       entry: loginTelemetry.failed,
       on: {
         RETRY: {
-          target: 'checkingSession',
+          target: 'checkingFlow',
           guard: canRetry,
           actions: assign({
             retryCount: ({ context }) => context.retryCount + 1,

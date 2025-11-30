@@ -136,6 +136,42 @@ func (s *AuthServiceServer) EnterpriseContact(
 	}), nil
 }
 
+// RegisterWithInvitation creates a new user account for an invited user.
+// This is a public endpoint - no authentication required.
+func (s *AuthServiceServer) RegisterWithInvitation(
+	ctx context.Context,
+	req *connect.Request[v1.RegisterWithInvitationRequest],
+) (*connect.Response[v1.RegisterWithInvitationResponse], error) {
+	// Validate request
+	if req.Msg.Token == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errMissingToken)
+	}
+	if req.Msg.Password == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errPasswordRequired)
+	}
+	if req.Msg.FirstName == "" || req.Msg.LastName == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errNameRequired)
+	}
+
+	dtoReq := dto.RegisterWithInvitationRequest{
+		Token:     req.Msg.Token,
+		Password:  req.Msg.Password,
+		FirstName: req.Msg.FirstName,
+		LastName:  req.Msg.LastName,
+	}
+
+	result, err := s.authService.RegisterWithInvitation(ctx, dtoReq)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.RegisterWithInvitationResponse{
+		User:         userToProto(result.User),
+		Company:      companyToProto(result.Company),
+		SessionToken: result.SessionToken,
+	}), nil
+}
+
 // Helper functions for proto conversion
 
 func userToProto(u *dto.UserResponse) *v1.User {

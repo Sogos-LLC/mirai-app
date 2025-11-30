@@ -23,11 +23,12 @@ func NewAuthInterceptor(identity service.IdentityProvider, logger service.Logger
 		identity: identity,
 		logger:   logger,
 		publicProcedures: map[string]bool{
-			"/mirai.v1.AuthService/CheckEmail":                true,
-			"/mirai.v1.AuthService/Register":                  true,
-			"/mirai.v1.AuthService/EnterpriseContact":         true,
-			"/mirai.v1.HealthService/Check":                   true,
-			"/mirai.v1.InvitationService/GetInvitationByToken": true, // Public for accept invite flow
+			"/mirai.v1.AuthService/CheckEmail":                  true,
+			"/mirai.v1.AuthService/Register":                    true,
+			"/mirai.v1.AuthService/RegisterWithInvitation":      true, // Public for invited user registration
+			"/mirai.v1.AuthService/EnterpriseContact":           true,
+			"/mirai.v1.HealthService/Check":                     true,
+			"/mirai.v1.InvitationService/GetInvitationByToken":  true, // Public for accept invite flow
 		},
 	}
 }

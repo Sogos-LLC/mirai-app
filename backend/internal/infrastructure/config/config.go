@@ -43,6 +43,13 @@ type Config struct {
 	// Cache
 	EnableRedisCache bool
 	RedisURL         string
+
+	// SMTP/Email
+	SMTPHost     string
+	SMTPPort     string
+	SMTPFrom     string
+	SMTPUsername string
+	SMTPPassword string
 }
 
 // Load loads configuration from environment variables.
@@ -76,6 +83,12 @@ func Load() (*Config, error) {
 		// Cache
 		EnableRedisCache: getEnv("ENABLE_REDIS_CACHE", "true") != "false",
 		RedisURL:         getEnv("REDIS_URL", "redis://redis.redis.svc.cluster.local:6379"),
+		// SMTP/Email
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     getEnv("SMTP_PORT", "1025"),
+		SMTPFrom:     getEnv("SMTP_FROM", "noreply@mirai.sogos.io"),
+		SMTPUsername: getEnv("SMTP_USERNAME", ""),
+		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
 	}, nil
 }
 

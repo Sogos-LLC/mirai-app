@@ -10,7 +10,7 @@
 import { useCallback, useEffect } from 'react';
 import { useMachine } from '@xstate/react';
 import { useRouter } from 'next/navigation';
-import { loginMachine, buildKratosLoginUrl, getLoginRedirectUrl } from '@/machines/loginMachine';
+import { loginMachine, buildKratosLoginUrl } from '@/machines/loginMachine';
 import type { LoginFlow } from '@/lib/kratos/types';
 
 // =============================================================================
@@ -20,13 +20,11 @@ import type { LoginFlow } from '@/lib/kratos/types';
 export interface UseLoginReturn {
   // Current state
   isIdle: boolean;
-  isCheckingSession: boolean;
   isCheckingFlow: boolean;
   isFetchingFlow: boolean;
   isReady: boolean;
   isError: boolean;
   isFlowExpired: boolean;
-  isAlreadyAuthenticated: boolean;
   needsKratosRedirect: boolean;
   isLoading: boolean;
 
@@ -58,28 +56,19 @@ export function useLogin(): UseLoginReturn {
   const stateValue = typeof state.value === 'string' ? state.value : Object.keys(state.value)[0];
 
   const isIdle = state.matches('idle');
-  const isCheckingSession = state.matches('checkingSession');
   const isCheckingFlow = state.matches('checkingFlow');
   const isFetchingFlow = state.matches('fetchingFlow');
   const isReady = state.matches('ready');
   const isError = state.matches('error');
   const isFlowExpired = state.matches('flowExpired');
-  const isAlreadyAuthenticated = state.matches('alreadyAuthenticated');
   const needsKratosRedirect = state.matches('needsKratosRedirect');
 
-  const isLoading = isCheckingSession || isCheckingFlow || isFetchingFlow;
+  const isLoading = isCheckingFlow || isFetchingFlow;
 
   // --------------------------------------------------------
   // Handle redirects based on state
+  // Note: Session check (redirect if already authenticated) is handled by middleware
   // --------------------------------------------------------
-
-  useEffect(() => {
-    // User is already authenticated - redirect to dashboard
-    if (isAlreadyAuthenticated) {
-      const destination = getLoginRedirectUrl(context.returnTo);
-      router.replace(destination);
-    }
-  }, [isAlreadyAuthenticated, context.returnTo, router]);
 
   useEffect(() => {
     // Need to redirect to Kratos for fresh flow
@@ -129,13 +118,11 @@ export function useLogin(): UseLoginReturn {
   return {
     // Current state
     isIdle,
-    isCheckingSession,
     isCheckingFlow,
     isFetchingFlow,
     isReady,
     isError,
     isFlowExpired,
-    isAlreadyAuthenticated,
     needsKratosRedirect,
     isLoading,
 

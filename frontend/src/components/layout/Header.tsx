@@ -1,29 +1,19 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React from 'react';
+import { useDispatch } from 'react-redux';
 import { BookOpen, Menu } from 'lucide-react';
 import ProfileDropdown from '@/components/auth/ProfileDropdown';
-import { checkSession, selectIsAuthInitialized } from '@/store/slices/authSlice';
 import { toggleMobileSidebar } from '@/store/slices/uiSlice';
 import { useIsMobile } from '@/hooks/useBreakpoint';
-import type { AppDispatch } from '@/store';
 
 interface HeaderProps {
   title?: string;
 }
 
 export default function Header({ title }: HeaderProps) {
-  const dispatch = useDispatch<AppDispatch>();
-  const isAuthInitialized = useSelector(selectIsAuthInitialized);
+  const dispatch = useDispatch();
   const isMobile = useIsMobile();
-
-  // Check session on mount
-  useEffect(() => {
-    if (!isAuthInitialized) {
-      dispatch(checkSession());
-    }
-  }, [dispatch, isAuthInitialized]);
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
@@ -48,7 +38,7 @@ export default function Header({ title }: HeaderProps) {
         </div>
 
         {/* Profile Dropdown */}
-        <ProfileDropdown />
+        <ProfileDropdown isProtectedPage />
       </div>
     </header>
   );

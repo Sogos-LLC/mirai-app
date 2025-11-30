@@ -37,6 +37,9 @@ const (
 	AuthServiceCheckEmailProcedure = "/mirai.v1.AuthService/CheckEmail"
 	// AuthServiceRegisterProcedure is the fully-qualified name of the AuthService's Register RPC.
 	AuthServiceRegisterProcedure = "/mirai.v1.AuthService/Register"
+	// AuthServiceRegisterWithInvitationProcedure is the fully-qualified name of the AuthService's
+	// RegisterWithInvitation RPC.
+	AuthServiceRegisterWithInvitationProcedure = "/mirai.v1.AuthService/RegisterWithInvitation"
 	// AuthServiceOnboardProcedure is the fully-qualified name of the AuthService's Onboard RPC.
 	AuthServiceOnboardProcedure = "/mirai.v1.AuthService/Onboard"
 	// AuthServiceEnterpriseContactProcedure is the fully-qualified name of the AuthService's
@@ -50,6 +53,10 @@ type AuthServiceClient interface {
 	CheckEmail(context.Context, *connect.Request[v1.CheckEmailRequest]) (*connect.Response[v1.CheckEmailResponse], error)
 	// Register creates a new user account with company.
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
+	// RegisterWithInvitation creates a new user account for an invited user.
+	// This is a simplified registration flow that skips company/plan selection.
+	// The user joins the inviting company with the role specified in the invitation.
+	RegisterWithInvitation(context.Context, *connect.Request[v1.RegisterWithInvitationRequest]) (*connect.Response[v1.RegisterWithInvitationResponse], error)
 	// Onboard completes onboarding for an authenticated user without a company.
 	Onboard(context.Context, *connect.Request[v1.OnboardRequest]) (*connect.Response[v1.OnboardResponse], error)
 	// EnterpriseContact submits an enterprise sales inquiry.
@@ -79,6 +86,12 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("Register")),
 			connect.WithClientOptions(opts...),
 		),
+		registerWithInvitation: connect.NewClient[v1.RegisterWithInvitationRequest, v1.RegisterWithInvitationResponse](
+			httpClient,
+			baseURL+AuthServiceRegisterWithInvitationProcedure,
+			connect.WithSchema(authServiceMethods.ByName("RegisterWithInvitation")),
+			connect.WithClientOptions(opts...),
+		),
 		onboard: connect.NewClient[v1.OnboardRequest, v1.OnboardResponse](
 			httpClient,
 			baseURL+AuthServiceOnboardProcedure,
@@ -96,10 +109,11 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	checkEmail        *connect.Client[v1.CheckEmailRequest, v1.CheckEmailResponse]
-	register          *connect.Client[v1.RegisterRequest, v1.RegisterResponse]
-	onboard           *connect.Client[v1.OnboardRequest, v1.OnboardResponse]
-	enterpriseContact *connect.Client[v1.EnterpriseContactRequest, v1.EnterpriseContactResponse]
+	checkEmail             *connect.Client[v1.CheckEmailRequest, v1.CheckEmailResponse]
+	register               *connect.Client[v1.RegisterRequest, v1.RegisterResponse]
+	registerWithInvitation *connect.Client[v1.RegisterWithInvitationRequest, v1.RegisterWithInvitationResponse]
+	onboard                *connect.Client[v1.OnboardRequest, v1.OnboardResponse]
+	enterpriseContact      *connect.Client[v1.EnterpriseContactRequest, v1.EnterpriseContactResponse]
 }
 
 // CheckEmail calls mirai.v1.AuthService.CheckEmail.
@@ -110,6 +124,11 @@ func (c *authServiceClient) CheckEmail(ctx context.Context, req *connect.Request
 // Register calls mirai.v1.AuthService.Register.
 func (c *authServiceClient) Register(ctx context.Context, req *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error) {
 	return c.register.CallUnary(ctx, req)
+}
+
+// RegisterWithInvitation calls mirai.v1.AuthService.RegisterWithInvitation.
+func (c *authServiceClient) RegisterWithInvitation(ctx context.Context, req *connect.Request[v1.RegisterWithInvitationRequest]) (*connect.Response[v1.RegisterWithInvitationResponse], error) {
+	return c.registerWithInvitation.CallUnary(ctx, req)
 }
 
 // Onboard calls mirai.v1.AuthService.Onboard.
@@ -128,6 +147,10 @@ type AuthServiceHandler interface {
 	CheckEmail(context.Context, *connect.Request[v1.CheckEmailRequest]) (*connect.Response[v1.CheckEmailResponse], error)
 	// Register creates a new user account with company.
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
+	// RegisterWithInvitation creates a new user account for an invited user.
+	// This is a simplified registration flow that skips company/plan selection.
+	// The user joins the inviting company with the role specified in the invitation.
+	RegisterWithInvitation(context.Context, *connect.Request[v1.RegisterWithInvitationRequest]) (*connect.Response[v1.RegisterWithInvitationResponse], error)
 	// Onboard completes onboarding for an authenticated user without a company.
 	Onboard(context.Context, *connect.Request[v1.OnboardRequest]) (*connect.Response[v1.OnboardResponse], error)
 	// EnterpriseContact submits an enterprise sales inquiry.
@@ -153,6 +176,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("Register")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceRegisterWithInvitationHandler := connect.NewUnaryHandler(
+		AuthServiceRegisterWithInvitationProcedure,
+		svc.RegisterWithInvitation,
+		connect.WithSchema(authServiceMethods.ByName("RegisterWithInvitation")),
+		connect.WithHandlerOptions(opts...),
+	)
 	authServiceOnboardHandler := connect.NewUnaryHandler(
 		AuthServiceOnboardProcedure,
 		svc.Onboard,
@@ -171,6 +200,8 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceCheckEmailHandler.ServeHTTP(w, r)
 		case AuthServiceRegisterProcedure:
 			authServiceRegisterHandler.ServeHTTP(w, r)
+		case AuthServiceRegisterWithInvitationProcedure:
+			authServiceRegisterWithInvitationHandler.ServeHTTP(w, r)
 		case AuthServiceOnboardProcedure:
 			authServiceOnboardHandler.ServeHTTP(w, r)
 		case AuthServiceEnterpriseContactProcedure:
@@ -190,6 +221,10 @@ func (UnimplementedAuthServiceHandler) CheckEmail(context.Context, *connect.Requ
 
 func (UnimplementedAuthServiceHandler) Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AuthService.Register is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) RegisterWithInvitation(context.Context, *connect.Request[v1.RegisterWithInvitationRequest]) (*connect.Response[v1.RegisterWithInvitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AuthService.RegisterWithInvitation is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) Onboard(context.Context, *connect.Request[v1.OnboardRequest]) (*connect.Response[v1.OnboardResponse], error) {

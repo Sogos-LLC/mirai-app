@@ -12,6 +12,11 @@ service AuthService {
   // Register creates a new user account with company.
   rpc Register(RegisterRequest) returns (RegisterResponse);
 
+  // RegisterWithInvitation creates a new user account for an invited user.
+  // This is a simplified registration flow that skips company/plan selection.
+  // The user joins the inviting company with the role specified in the invitation.
+  rpc RegisterWithInvitation(RegisterWithInvitationRequest) returns (RegisterWithInvitationResponse);
+
   // Onboard completes onboarding for an authenticated user without a company.
   rpc Onboard(OnboardRequest) returns (OnboardResponse);
 
@@ -89,4 +94,23 @@ message EnterpriseContactRequest {
 // EnterpriseContactResponse confirms the inquiry was received.
 message EnterpriseContactResponse {
   bool success = 1;
+}
+
+// RegisterWithInvitationRequest contains data for invited user registration.
+// Email is taken from the invitation token.
+message RegisterWithInvitationRequest {
+  // Invitation token from the email link
+  string token = 1;
+  // User credentials
+  string password = 2;
+  string first_name = 3;
+  string last_name = 4;
+}
+
+// RegisterWithInvitationResponse contains the result of invited user registration.
+message RegisterWithInvitationResponse {
+  User user = 1;
+  Company company = 2;
+  // Session token to set as cookie for authentication
+  string session_token = 3;
 }

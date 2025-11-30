@@ -25,6 +25,7 @@ type InvitationService struct {
 	userRepo       repository.UserRepository
 	companyRepo    repository.CompanyRepository
 	invitationRepo repository.InvitationRepository
+	payments       service.PaymentProvider
 	email          service.EmailProvider
 	logger         service.Logger
 	frontendURL    string
@@ -35,6 +36,7 @@ func NewInvitationService(
 	userRepo repository.UserRepository,
 	companyRepo repository.CompanyRepository,
 	invitationRepo repository.InvitationRepository,
+	payments service.PaymentProvider,
 	email service.EmailProvider,
 	logger service.Logger,
 	frontendURL string,
@@ -43,6 +45,7 @@ func NewInvitationService(
 		userRepo:       userRepo,
 		companyRepo:    companyRepo,
 		invitationRepo: invitationRepo,
+		payments:       payments,
 		email:          email,
 		logger:         logger,
 		frontendURL:    frontendURL,
@@ -88,7 +91,7 @@ func (s *InvitationService) CreateInvitation(
 	}
 
 	// 3. Check seat availability
-	seatInfo, err := s.getSeatInfo(ctx, companyID, company.Plan)
+	seatInfo, err := s.getSeatInfo(ctx, company)
 	if err != nil {
 		log.Error("failed to get seat info", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
@@ -455,28 +458,36 @@ func (s *InvitationService) GetSeatInfo(
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	return s.getSeatInfo(ctx, *user.CompanyID, company.Plan)
+	return s.getSeatInfo(ctx, company)
 }
 
 // getSeatInfo calculates seat usage for a company.
 func (s *InvitationService) getSeatInfo(
 	ctx context.Context,
-	companyID uuid.UUID,
-	plan valueobject.Plan,
+	company *entity.Company,
 ) (*dto.SeatInfoResponse, error) {
 	// Count active users
-	users, err := s.userRepo.ListByCompanyID(ctx, companyID)
+	users, err := s.userRepo.ListByCompanyID(ctx, company.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Count pending invitations
-	pendingCount, err := s.invitationRepo.CountPendingByCompanyID(ctx, companyID)
+	pendingCount, err := s.invitationRepo.CountPendingByCompanyID(ctx, company.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	totalSeats := plan.DefaultSeatLimit()
+	// Get total seats from Stripe subscription if available
+	totalSeats := company.Plan.DefaultSeatLimit()
+	if company.StripeSubscriptionID != nil && *company.StripeSubscriptionID != "" && s.payments != nil {
+		sub, err := s.payments.GetSubscription(ctx, *company.StripeSubscriptionID)
+		if err == nil && sub.SeatCount > 0 {
+			totalSeats = sub.SeatCount
+		}
+		// If Stripe lookup fails, fall back to plan default (already set)
+	}
+
 	usedSeats := len(users)
 	availableSeats := totalSeats - usedSeats - pendingCount
 	if availableSeats < 0 {

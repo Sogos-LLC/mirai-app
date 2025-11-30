@@ -223,6 +223,12 @@ var (
 		Message:    "your email does not match the invitation",
 		HTTPStatus: http.StatusForbidden,
 	}
+
+	ErrInvitationInvalid = &DomainError{
+		Code:       "INVITATION_INVALID",
+		Message:    "invitation is not valid",
+		HTTPStatus: http.StatusBadRequest,
+	}
 )
 
 // Validation errors

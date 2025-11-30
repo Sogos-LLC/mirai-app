@@ -54,7 +54,8 @@ async function kratosRequest<T>(
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error?.message || error.message || `HTTP ${response.status}`);
+      const message = error.error?.message || error.message || 'Unknown error';
+      throw new Error(`HTTP ${response.status}: ${message}`);
     }
 
     return response.json();

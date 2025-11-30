@@ -9,12 +9,18 @@ import (
 	"time"
 
 	// Infrastructure
+	"github.com/sogos/mirai-backend/internal/infrastructure/cache"
 	"github.com/sogos/mirai-backend/internal/infrastructure/config"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/kratos"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/smtp"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/stripe"
 	"github.com/sogos/mirai-backend/internal/infrastructure/logging"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/postgres"
+	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 	"github.com/sogos/mirai-backend/pkg/httputil"
+
+	// Domain
+	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
 
 	// Application services
 	"github.com/sogos/mirai-backend/internal/application/service"
@@ -64,13 +70,28 @@ func main() {
 		cfg.BackendURL,
 	)
 
+	// Initialize SMTP email client (only if configured)
+	var emailClient domainservice.EmailProvider
+	if cfg.SMTPHost != "" {
+		emailClient = smtp.NewClient(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPFrom, cfg.SMTPUsername, cfg.SMTPPassword)
+		logger.Info("email provider configured", "host", cfg.SMTPHost)
+	} else {
+		logger.Warn("email provider not configured, invitations will not send emails")
+	}
+
+	// Initialize storage and cache for CourseService
+	// Use local filesystem storage for development (S3 in production)
+	courseStorage := storage.NewLocalStorage("./data")
+	courseCache := cache.NewNoOpCache() // Use NoOpCache for local dev (Redis in production)
+
 	// Initialize application services
-	authService := service.NewAuthService(userRepo, companyRepo, kratosClient, stripeClient, logger, cfg.FrontendURL, cfg.BackendURL)
+	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, kratosClient, stripeClient, logger, cfg.FrontendURL, cfg.BackendURL)
 	billingService := service.NewBillingService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
 	userService := service.NewUserService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
 	companyService := service.NewCompanyService(userRepo, companyRepo, logger)
 	teamService := service.NewTeamService(userRepo, companyRepo, teamRepo, logger)
-	invitationService := service.NewInvitationService(userRepo, companyRepo, invitationRepo, nil, logger, cfg.FrontendURL) // nil for email provider (to be added)
+	invitationService := service.NewInvitationService(userRepo, companyRepo, invitationRepo, stripeClient, emailClient, logger, cfg.FrontendURL)
+	courseService := service.NewCourseService(courseStorage, courseCache)
 
 	// Create Connect server mux
 	mux := connectserver.NewServeMux(connectserver.ServerConfig{
@@ -80,6 +101,7 @@ func main() {
 		TeamService:       teamService,
 		BillingService:    billingService,
 		InvitationService: invitationService,
+		CourseService:     courseService,
 		Identity:          kratosClient,
 		Payments:          stripeClient,
 		Logger:            logger,

@@ -213,3 +213,10 @@ type AcceptInvitationResponse struct {
 	User       *UserResponse       `json:"user"`
 	Company    *CompanyResponse    `json:"company"`
 }
+
+// RegisterWithInvitationResponse contains the result of invited user registration.
+type RegisterWithInvitationResponse struct {
+	User         *UserResponse    `json:"user"`
+	Company      *CompanyResponse `json:"company"`
+	SessionToken string           `json:"session_token"`
+}

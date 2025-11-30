@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CheckEmailRequest, CheckEmailResponse, EnterpriseContactRequest, EnterpriseContactResponse, OnboardRequest, OnboardResponse, RegisterRequest, RegisterResponse } from "./auth_pb.js";
+import { CheckEmailRequest, CheckEmailResponse, EnterpriseContactRequest, EnterpriseContactResponse, OnboardRequest, OnboardResponse, RegisterRequest, RegisterResponse, RegisterWithInvitationRequest, RegisterWithInvitationResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -34,6 +34,19 @@ export const AuthService = {
       name: "Register",
       I: RegisterRequest,
       O: RegisterResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * RegisterWithInvitation creates a new user account for an invited user.
+     * This is a simplified registration flow that skips company/plan selection.
+     * The user joins the inviting company with the role specified in the invitation.
+     *
+     * @generated from rpc mirai.v1.AuthService.RegisterWithInvitation
+     */
+    registerWithInvitation: {
+      name: "RegisterWithInvitation",
+      I: RegisterWithInvitationRequest,
+      O: RegisterWithInvitationResponse,
       kind: MethodKind.Unary,
     },
     /**
