@@ -204,6 +204,21 @@ type EmailProvider interface {
 
 	// SendWelcome sends a welcome email after account provisioning.
 	SendWelcome(ctx context.Context, req SendWelcomeRequest) error
+
+	// SendTaskAssignment sends a task assignment notification email.
+	SendTaskAssignment(ctx context.Context, req SendTaskAssignmentRequest) error
+
+	// SendIngestionComplete sends an ingestion completion notification email.
+	SendIngestionComplete(ctx context.Context, req SendIngestionCompleteRequest) error
+
+	// SendIngestionFailed sends an ingestion failure notification email.
+	SendIngestionFailed(ctx context.Context, req SendIngestionFailedRequest) error
+
+	// SendGenerationComplete sends a generation completion notification email.
+	SendGenerationComplete(ctx context.Context, req SendGenerationCompleteRequest) error
+
+	// SendGenerationFailed sends a generation failure notification email.
+	SendGenerationFailed(ctx context.Context, req SendGenerationFailedRequest) error
 }
 
 // SendInvitationRequest contains data for sending an invitation email.
@@ -221,4 +236,192 @@ type SendWelcomeRequest struct {
 	FirstName   string
 	CompanyName string
 	LoginURL    string
+}
+
+// SendTaskAssignmentRequest contains data for task assignment email.
+type SendTaskAssignmentRequest struct {
+	To           string
+	AssigneeName string
+	AssignerName string
+	TaskTitle    string
+	SMEName      string
+	TaskURL      string
+	DueDate      string
+}
+
+// SendIngestionCompleteRequest contains data for ingestion complete email.
+type SendIngestionCompleteRequest struct {
+	To        string
+	UserName  string
+	SMEName   string
+	TaskTitle string
+	SMEURL    string
+}
+
+// SendIngestionFailedRequest contains data for ingestion failed email.
+type SendIngestionFailedRequest struct {
+	To           string
+	UserName     string
+	SMEName      string
+	TaskTitle    string
+	ErrorMessage string
+	TaskURL      string
+}
+
+// SendGenerationCompleteRequest contains data for generation complete email.
+type SendGenerationCompleteRequest struct {
+	To          string
+	UserName    string
+	CourseTitle string
+	ContentType string // "outline" or "lesson"
+	CourseURL   string
+}
+
+// SendGenerationFailedRequest contains data for generation failed email.
+type SendGenerationFailedRequest struct {
+	To           string
+	UserName     string
+	CourseTitle  string
+	ContentType  string // "outline" or "lesson"
+	ErrorMessage string
+	CourseURL    string
+}
+
+// AIProvider abstracts AI generation operations (Gemini, OpenAI, etc.).
+type AIProvider interface {
+	// GenerateCourseOutline generates a course outline from SME knowledge.
+	GenerateCourseOutline(ctx context.Context, req GenerateOutlineRequest) (*GenerateOutlineResult, error)
+
+	// GenerateLessonContent generates content for a single lesson.
+	GenerateLessonContent(ctx context.Context, req GenerateLessonRequest) (*GenerateLessonResult, error)
+
+	// RegenerateComponent regenerates a single component with modifications.
+	RegenerateComponent(ctx context.Context, req RegenerateComponentRequest) (*RegenerateComponentResult, error)
+
+	// ProcessSMEContent processes and distills knowledge from SME submission.
+	ProcessSMEContent(ctx context.Context, req ProcessSMEContentRequest) (*ProcessSMEContentResult, error)
+
+	// TestConnection tests if the API key is valid.
+	TestConnection(ctx context.Context) error
+}
+
+// GenerateOutlineRequest contains inputs for outline generation.
+type GenerateOutlineRequest struct {
+	CourseTitle       string
+	DesiredOutcome    string
+	SMEKnowledge      []SMEKnowledgeInput // Knowledge from selected SMEs
+	TargetAudience    TargetAudienceInput // Target audience profile
+	AdditionalContext string
+}
+
+// SMEKnowledgeInput represents knowledge from an SME.
+type SMEKnowledgeInput struct {
+	SMEName    string
+	Domain     string
+	Summary    string
+	Chunks     []string // Knowledge chunks
+	Keywords   []string // Combined keywords
+}
+
+// TargetAudienceInput represents the target audience profile.
+type TargetAudienceInput struct {
+	Role              string
+	ExperienceLevel   string
+	LearningGoals     []string
+	Prerequisites     []string
+	Challenges        []string
+	Motivations       []string
+	IndustryContext   string
+	TypicalBackground string
+}
+
+// GenerateOutlineResult contains the generated outline.
+type GenerateOutlineResult struct {
+	Sections    []OutlineSectionResult
+	TokensUsed  int64
+}
+
+// OutlineSectionResult represents a generated section.
+type OutlineSectionResult struct {
+	Title       string
+	Description string
+	Order       int
+	Lessons     []OutlineLessonResult
+}
+
+// OutlineLessonResult represents a generated lesson in the outline.
+type OutlineLessonResult struct {
+	Title                    string
+	Description              string
+	Order                    int
+	EstimatedDurationMinutes int
+	LearningObjectives       []string
+	IsLastInSection          bool
+	IsLastInCourse           bool
+}
+
+// GenerateLessonRequest contains inputs for lesson content generation.
+type GenerateLessonRequest struct {
+	CourseTitle        string
+	SectionTitle       string
+	LessonTitle        string
+	LessonDescription  string
+	LearningObjectives []string
+	SMEKnowledge       []SMEKnowledgeInput
+	TargetAudience     TargetAudienceInput
+	PreviousLessonTitle string // For continuity
+	NextLessonTitle    string  // For segue
+	IsLastInSection    bool
+	IsLastInCourse     bool
+}
+
+// GenerateLessonResult contains the generated lesson content.
+type GenerateLessonResult struct {
+	Components []LessonComponentResult
+	SegueText  string // Transition to next lesson
+	TokensUsed int64
+}
+
+// LessonComponentResult represents a generated component.
+type LessonComponentResult struct {
+	Type        string // text, heading, image, quiz
+	Order       int
+	ContentJSON string // JSON-encoded content based on type
+}
+
+// RegenerateComponentRequest contains inputs for component regeneration.
+type RegenerateComponentRequest struct {
+	ComponentType       string
+	CurrentContentJSON  string
+	ModificationPrompt  string
+	LessonContext       string
+	TargetAudience      TargetAudienceInput
+}
+
+// RegenerateComponentResult contains the regenerated component.
+type RegenerateComponentResult struct {
+	ContentJSON string
+	TokensUsed  int64
+}
+
+// ProcessSMEContentRequest contains inputs for SME content processing.
+type ProcessSMEContentRequest struct {
+	SMEName       string
+	SMEDomain     string
+	ExtractedText string // Raw text from uploaded document
+}
+
+// ProcessSMEContentResult contains the processed SME knowledge.
+type ProcessSMEContentResult struct {
+	Summary    string
+	Chunks     []SMEChunkResult
+	TokensUsed int64
+}
+
+// SMEChunkResult represents a distilled knowledge chunk.
+type SMEChunkResult struct {
+	Content        string
+	Topic          string
+	Keywords       []string
+	RelevanceScore float32
 }

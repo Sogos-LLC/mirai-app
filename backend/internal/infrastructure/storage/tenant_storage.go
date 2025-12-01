@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"path"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -76,4 +77,16 @@ func (s *TenantAwareStorage) DeleteExport(ctx context.Context, tenantID, exportI
 // direct access is needed (e.g., binary file uploads).
 func (s *TenantAwareStorage) Inner() StorageAdapter {
 	return s.inner
+}
+
+// GenerateUploadURL generates a presigned URL for tenant-scoped uploads.
+func (s *TenantAwareStorage) GenerateUploadURL(ctx context.Context, tenantID uuid.UUID, subpath string, expiry time.Duration) (string, error) {
+	fullPath := s.BuildPath(tenantID, subpath)
+	return s.inner.GenerateUploadURL(ctx, fullPath, expiry)
+}
+
+// GenerateDownloadURL generates a presigned URL for tenant-scoped downloads.
+func (s *TenantAwareStorage) GenerateDownloadURL(ctx context.Context, tenantID uuid.UUID, subpath string, expiry time.Duration) (string, error) {
+	fullPath := s.BuildPath(tenantID, subpath)
+	return s.inner.GenerateDownloadURL(ctx, fullPath, expiry)
 }

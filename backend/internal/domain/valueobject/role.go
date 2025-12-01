@@ -69,6 +69,17 @@ func (r Role) CanInviteUsers() bool {
 	return r.Normalize() == RoleAdmin
 }
 
+// CanManageSettings returns true if this role can manage tenant settings (AI config, etc.).
+func (r Role) CanManageSettings() bool {
+	return r.Normalize() == RoleAdmin
+}
+
+// CanManageSME returns true if this role can manage SME entities.
+func (r Role) CanManageSME() bool {
+	normalized := r.Normalize()
+	return normalized == RoleAdmin || normalized == RoleInstructor
+}
+
 // CanCreateCourses returns true if this role can create courses.
 func (r Role) CanCreateCourses() bool {
 	normalized := r.Normalize()

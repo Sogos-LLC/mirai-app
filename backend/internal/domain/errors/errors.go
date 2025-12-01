@@ -276,6 +276,105 @@ var (
 	}
 )
 
+// SME errors
+var (
+	ErrSMENotFound = &DomainError{
+		Code:       "SME_NOT_FOUND",
+		Message:    "subject matter expert not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+
+	ErrSMETaskNotFound = &DomainError{
+		Code:       "SME_TASK_NOT_FOUND",
+		Message:    "SME task not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+
+	ErrSMESubmissionNotFound = &DomainError{
+		Code:       "SME_SUBMISSION_NOT_FOUND",
+		Message:    "SME submission not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+
+	ErrSMENoAccess = &DomainError{
+		Code:       "SME_NO_ACCESS",
+		Message:    "no access to this SME",
+		HTTPStatus: http.StatusForbidden,
+	}
+)
+
+// Target Audience errors
+var (
+	ErrTargetAudienceNotFound = &DomainError{
+		Code:       "TARGET_AUDIENCE_NOT_FOUND",
+		Message:    "target audience not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+)
+
+// AI Generation errors
+var (
+	ErrAIKeyNotConfigured = &DomainError{
+		Code:       "AI_KEY_NOT_CONFIGURED",
+		Message:    "AI API key not configured for this tenant",
+		HTTPStatus: http.StatusBadRequest,
+	}
+
+	ErrAIKeyInvalid = &DomainError{
+		Code:       "AI_KEY_INVALID",
+		Message:    "AI API key is invalid",
+		HTTPStatus: http.StatusBadRequest,
+	}
+
+	ErrGenerationJobNotFound = &DomainError{
+		Code:       "GENERATION_JOB_NOT_FOUND",
+		Message:    "generation job not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+
+	ErrCourseOutlineNotFound = &DomainError{
+		Code:       "COURSE_OUTLINE_NOT_FOUND",
+		Message:    "course outline not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+
+	ErrLessonNotFound = &DomainError{
+		Code:       "LESSON_NOT_FOUND",
+		Message:    "lesson not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+
+	ErrTokenLimitExceeded = &DomainError{
+		Code:       "AI_TOKEN_LIMIT_EXCEEDED",
+		Message:    "monthly token limit exceeded",
+		HTTPStatus: http.StatusForbidden,
+	}
+)
+
+// Notification errors
+var (
+	ErrNotificationNotFound = &DomainError{
+		Code:       "NOTIFICATION_NOT_FOUND",
+		Message:    "notification not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+)
+
+// Course errors
+var (
+	ErrCourseNotFound = &DomainError{
+		Code:       "COURSE_NOT_FOUND",
+		Message:    "course not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+
+	ErrFolderNotFound = &DomainError{
+		Code:       "FOLDER_NOT_FOUND",
+		Message:    "folder not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+)
+
 // IsDomainError checks if an error is a DomainError.
 func IsDomainError(err error) bool {
 	var domainErr *DomainError

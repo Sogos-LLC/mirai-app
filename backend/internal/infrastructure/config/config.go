@@ -51,6 +51,9 @@ type Config struct {
 	SMTPFrom     string
 	SMTPUsername string
 	SMTPPassword string
+
+	// Encryption
+	EncryptionKey string // 32-byte hex-encoded key for AES-256-GCM (API keys, etc.)
 }
 
 // Load loads configuration from environment variables.
@@ -91,6 +94,8 @@ func Load() (*Config, error) {
 		SMTPFrom:     getEnv("SMTP_FROM", "noreply@mirai.sogos.io"),
 		SMTPUsername: getEnv("SMTP_USERNAME", ""),
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+		// Encryption
+		EncryptionKey: getEnv("ENCRYPTION_KEY", ""),
 	}, nil
 }
 

@@ -69,6 +69,16 @@ func (u *User) CanInviteUsers() bool {
 	return u.Role.CanInviteUsers()
 }
 
+// CanManageSettings returns true if the user can manage tenant settings.
+func (u *User) CanManageSettings() bool {
+	return u.Role.CanManageSettings()
+}
+
+// CanManageSME returns true if the user can manage SME entities.
+func (u *User) CanManageSME() bool {
+	return u.Role.CanManageSME()
+}
+
 // CanCreateCourses returns true if the user can create courses.
 func (u *User) CanCreateCourses() bool {
 	return u.Role.CanCreateCourses()

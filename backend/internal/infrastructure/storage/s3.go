@@ -8,6 +8,7 @@ import (
 	"io"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -19,9 +20,10 @@ import (
 // S3Storage implements StorageAdapter using S3-compatible object storage.
 // Works with MinIO locally and AWS S3 in production - same API.
 type S3Storage struct {
-	client   *s3.Client
-	bucket   string
-	basePath string
+	client        *s3.Client
+	presignClient *s3.PresignClient
+	bucket        string
+	basePath      string
 }
 
 // S3Config holds S3/MinIO configuration.
@@ -84,10 +86,13 @@ func NewS3Storage(ctx context.Context, cfg S3Config) (*S3Storage, error) {
 		}
 	})
 
+	presignClient := s3.NewPresignClient(client)
+
 	return &S3Storage{
-		client:   client,
-		bucket:   cfg.Bucket,
-		basePath: cfg.BasePath,
+		client:        client,
+		presignClient: presignClient,
+		bucket:        cfg.Bucket,
+		basePath:      cfg.BasePath,
 	}, nil
 }
 
@@ -189,4 +194,28 @@ func (s *S3Storage) Exists(ctx context.Context, p string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// GenerateUploadURL generates a presigned URL for uploading a file.
+func (s *S3Storage) GenerateUploadURL(ctx context.Context, p string, expiry time.Duration) (string, error) {
+	request, err := s.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(s.fullKey(p)),
+	}, s3.WithPresignExpires(expiry))
+	if err != nil {
+		return "", err
+	}
+	return request.URL, nil
+}
+
+// GenerateDownloadURL generates a presigned URL for downloading a file.
+func (s *S3Storage) GenerateDownloadURL(ctx context.Context, p string, expiry time.Duration) (string, error) {
+	request, err := s.presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(s.fullKey(p)),
+	}, s3.WithPresignExpires(expiry))
+	if err != nil {
+		return "", err
+	}
+	return request.URL, nil
 }

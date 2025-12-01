@@ -12,13 +12,18 @@ import (
 
 // ServerConfig contains all dependencies needed for the Connect server.
 type ServerConfig struct {
-	AuthService       *service.AuthService
-	UserService       *service.UserService
-	CompanyService    *service.CompanyService
-	TeamService       *service.TeamService
-	BillingService    *service.BillingService
-	InvitationService *service.InvitationService
-	CourseService     *service.CourseService
+	AuthService           *service.AuthService
+	UserService           *service.UserService
+	CompanyService        *service.CompanyService
+	TeamService           *service.TeamService
+	BillingService        *service.BillingService
+	InvitationService     *service.InvitationService
+	CourseService         *service.CourseService
+	SMEService            *service.SMEService
+	TargetAudienceService *service.TargetAudienceService
+	TenantSettingsService *service.TenantSettingsService
+	NotificationService   *service.NotificationService
+	AIGenerationService   *service.AIGenerationService
 
 	PendingRegRepo repository.PendingRegistrationRepository
 	UserRepo       repository.UserRepository // For tenant context in auth interceptor
@@ -89,6 +94,51 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	if cfg.CourseService != nil {
 		path, handler = miraiv1connect.NewCourseServiceHandler(
 			NewCourseServiceServer(cfg.CourseService),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// SMEService - subject matter expert management
+	if cfg.SMEService != nil {
+		path, handler = miraiv1connect.NewSMEServiceHandler(
+			NewSMEServiceServer(cfg.SMEService),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// TargetAudienceService - target audience templates
+	if cfg.TargetAudienceService != nil {
+		path, handler = miraiv1connect.NewTargetAudienceServiceHandler(
+			NewTargetAudienceServiceServer(cfg.TargetAudienceService),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// TenantSettingsService - tenant configuration (AI keys, etc.)
+	if cfg.TenantSettingsService != nil {
+		path, handler = miraiv1connect.NewTenantSettingsServiceHandler(
+			NewTenantSettingsServiceServer(cfg.TenantSettingsService),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// NotificationService - user notifications
+	if cfg.NotificationService != nil {
+		path, handler = miraiv1connect.NewNotificationServiceHandler(
+			NewNotificationServiceServer(cfg.NotificationService),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// AIGenerationService - AI course/lesson generation
+	if cfg.AIGenerationService != nil {
+		path, handler = miraiv1connect.NewAIGenerationServiceHandler(
+			NewAIGenerationServiceServer(cfg.AIGenerationService),
 			interceptors,
 		)
 		mux.Handle(path, handler)

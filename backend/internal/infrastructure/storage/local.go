@@ -3,9 +3,11 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // LocalStorage implements StorageAdapter using the local filesystem.
@@ -85,4 +87,14 @@ func (s *LocalStorage) Exists(ctx context.Context, path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// GenerateUploadURL is not supported for local storage.
+func (s *LocalStorage) GenerateUploadURL(ctx context.Context, path string, expiry time.Duration) (string, error) {
+	return "", errors.New("presigned URLs not supported for local storage")
+}
+
+// GenerateDownloadURL is not supported for local storage.
+func (s *LocalStorage) GenerateDownloadURL(ctx context.Context, path string, expiry time.Duration) (string, error) {
+	return "", errors.New("presigned URLs not supported for local storage")
 }
