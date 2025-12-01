@@ -25,11 +25,12 @@ func NewInvitationRepository(db *sql.DB) repository.InvitationRepository {
 // Create creates a new invitation.
 func (r *InvitationRepository) Create(ctx context.Context, inv *entity.Invitation) error {
 	query := `
-		INSERT INTO invitations (company_id, email, role, status, token, invited_by_user_id, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO invitations (tenant_id, company_id, email, role, status, token, invited_by_user_id, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRowContext(ctx, query,
+		inv.TenantID,
 		inv.CompanyID,
 		inv.Email,
 		inv.Role.String(),
@@ -43,7 +44,7 @@ func (r *InvitationRepository) Create(ctx context.Context, inv *entity.Invitatio
 // GetByID retrieves an invitation by its ID.
 func (r *InvitationRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Invitation, error) {
 	query := `
-		SELECT id, company_id, email, role, status, token, invited_by_user_id,
+		SELECT id, tenant_id, company_id, email, role, status, token, invited_by_user_id,
 		       accepted_by_user_id, expires_at, created_at, updated_at
 		FROM invitations
 		WHERE id = $1
@@ -54,7 +55,7 @@ func (r *InvitationRepository) GetByID(ctx context.Context, id uuid.UUID) (*enti
 // GetByToken retrieves an invitation by its token.
 func (r *InvitationRepository) GetByToken(ctx context.Context, token string) (*entity.Invitation, error) {
 	query := `
-		SELECT id, company_id, email, role, status, token, invited_by_user_id,
+		SELECT id, tenant_id, company_id, email, role, status, token, invited_by_user_id,
 		       accepted_by_user_id, expires_at, created_at, updated_at
 		FROM invitations
 		WHERE token = $1
@@ -65,7 +66,7 @@ func (r *InvitationRepository) GetByToken(ctx context.Context, token string) (*e
 // GetByEmailAndCompanyID retrieves a pending invitation by email and company.
 func (r *InvitationRepository) GetByEmailAndCompanyID(ctx context.Context, email string, companyID uuid.UUID) (*entity.Invitation, error) {
 	query := `
-		SELECT id, company_id, email, role, status, token, invited_by_user_id,
+		SELECT id, tenant_id, company_id, email, role, status, token, invited_by_user_id,
 		       accepted_by_user_id, expires_at, created_at, updated_at
 		FROM invitations
 		WHERE email = $1 AND company_id = $2 AND status = 'pending' AND expires_at > NOW()
@@ -77,7 +78,7 @@ func (r *InvitationRepository) GetByEmailAndCompanyID(ctx context.Context, email
 // ListByCompanyID retrieves all invitations for a company with optional status filters.
 func (r *InvitationRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUID, statusFilters ...valueobject.InvitationStatus) ([]*entity.Invitation, error) {
 	query := `
-		SELECT id, company_id, email, role, status, token, invited_by_user_id,
+		SELECT id, tenant_id, company_id, email, role, status, token, invited_by_user_id,
 		       accepted_by_user_id, expires_at, created_at, updated_at
 		FROM invitations
 		WHERE company_id = $1
@@ -149,6 +150,7 @@ func (r *InvitationRepository) scanInvitation(row *sql.Row) (*entity.Invitation,
 
 	err := row.Scan(
 		&inv.ID,
+		&inv.TenantID,
 		&inv.CompanyID,
 		&inv.Email,
 		&roleStr,
@@ -179,6 +181,7 @@ func (r *InvitationRepository) scanInvitationFromRows(rows *sql.Rows) (*entity.I
 
 	err := rows.Scan(
 		&inv.ID,
+		&inv.TenantID,
 		&inv.CompanyID,
 		&inv.Email,
 		&roleStr,

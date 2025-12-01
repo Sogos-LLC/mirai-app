@@ -24,11 +24,12 @@ func NewCompanyRepository(db *sql.DB) repository.CompanyRepository {
 // Create creates a new company.
 func (r *CompanyRepository) Create(ctx context.Context, company *entity.Company) error {
 	query := `
-		INSERT INTO companies (name, industry, team_size, plan, subscription_status, stripe_customer_id, stripe_subscription_id, seat_count)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO companies (tenant_id, name, industry, team_size, plan, subscription_status, stripe_customer_id, stripe_subscription_id, seat_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at, updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
+		company.TenantID,
 		company.Name,
 		company.Industry,
 		company.TeamSize,
@@ -47,7 +48,7 @@ func (r *CompanyRepository) Create(ctx context.Context, company *entity.Company)
 // GetByID retrieves a company by its ID.
 func (r *CompanyRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Company, error) {
 	query := `
-		SELECT id, name, industry, team_size, plan, stripe_customer_id, stripe_subscription_id, subscription_status, seat_count, created_at, updated_at
+		SELECT id, tenant_id, name, industry, team_size, plan, stripe_customer_id, stripe_subscription_id, subscription_status, seat_count, created_at, updated_at
 		FROM companies
 		WHERE id = $1
 	`
@@ -55,6 +56,7 @@ func (r *CompanyRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.
 	var planStr, statusStr string
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&company.ID,
+		&company.TenantID,
 		&company.Name,
 		&company.Industry,
 		&company.TeamSize,
@@ -80,7 +82,7 @@ func (r *CompanyRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.
 // GetByStripeCustomerID retrieves a company by its Stripe customer ID.
 func (r *CompanyRepository) GetByStripeCustomerID(ctx context.Context, stripeCustomerID string) (*entity.Company, error) {
 	query := `
-		SELECT id, name, industry, team_size, plan, stripe_customer_id, stripe_subscription_id, subscription_status, seat_count, created_at, updated_at
+		SELECT id, tenant_id, name, industry, team_size, plan, stripe_customer_id, stripe_subscription_id, subscription_status, seat_count, created_at, updated_at
 		FROM companies
 		WHERE stripe_customer_id = $1
 	`
@@ -88,6 +90,7 @@ func (r *CompanyRepository) GetByStripeCustomerID(ctx context.Context, stripeCus
 	var planStr, statusStr string
 	err := r.db.QueryRowContext(ctx, query, stripeCustomerID).Scan(
 		&company.ID,
+		&company.TenantID,
 		&company.Name,
 		&company.Industry,
 		&company.TeamSize,

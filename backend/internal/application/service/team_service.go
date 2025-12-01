@@ -81,7 +81,13 @@ func (s *TeamService) CreateTeam(ctx context.Context, kratosID uuid.UUID, req dt
 		description = &req.Description
 	}
 
+	// Get tenant ID from user (required for RLS)
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrInternal.WithMessage("user has no tenant")
+	}
+
 	team := &entity.Team{
+		TenantID:    *user.TenantID,
 		CompanyID:   *user.CompanyID,
 		Name:        req.Name,
 		Description: description,
@@ -268,9 +274,10 @@ func (s *TeamService) AddMember(ctx context.Context, kratosID uuid.UUID, teamID 
 	}
 
 	member := &entity.TeamMember{
-		TeamID: teamID,
-		UserID: req.UserID,
-		Role:   req.Role,
+		TenantID: team.TenantID, // Use team's tenant for RLS
+		TeamID:   teamID,
+		UserID:   req.UserID,
+		Role:     req.Role,
 	}
 
 	if err := s.teamRepo.AddMember(ctx, member); err != nil {

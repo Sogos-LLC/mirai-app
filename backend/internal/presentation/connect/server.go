@@ -21,6 +21,7 @@ type ServerConfig struct {
 	CourseService     *service.CourseService
 
 	PendingRegRepo repository.PendingRegistrationRepository
+	UserRepo       repository.UserRepository // For tenant context in auth interceptor
 	Identity       domainservice.IdentityProvider
 	Payments       domainservice.PaymentProvider
 	Logger         domainservice.Logger
@@ -33,7 +34,7 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	// Create interceptors
 	interceptors := connect.WithInterceptors(
 		NewLoggingInterceptor(cfg.Logger),
-		NewAuthInterceptor(cfg.Identity, cfg.Logger),
+		NewAuthInterceptor(cfg.Identity, cfg.UserRepo, cfg.Logger),
 	)
 
 	mux := http.NewServeMux()

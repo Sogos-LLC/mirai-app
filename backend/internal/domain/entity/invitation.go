@@ -10,6 +10,7 @@ import (
 // Invitation represents an invitation to join a company.
 type Invitation struct {
 	ID               uuid.UUID
+	TenantID         uuid.UUID // Tenant for RLS isolation
 	CompanyID        uuid.UUID
 	Email            string
 	Role             valueobject.Role
@@ -63,6 +64,7 @@ func (i *Invitation) MarkExpired() {
 
 // NewInvitation creates a new invitation with default values.
 func NewInvitation(
+	tenantID uuid.UUID,
 	companyID uuid.UUID,
 	email string,
 	role valueobject.Role,
@@ -72,6 +74,7 @@ func NewInvitation(
 ) *Invitation {
 	now := time.Now()
 	return &Invitation{
+		TenantID:        tenantID,
 		CompanyID:       companyID,
 		Email:           email,
 		Role:            role,

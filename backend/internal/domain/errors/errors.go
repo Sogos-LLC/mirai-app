@@ -246,6 +246,21 @@ var (
 	}
 )
 
+// Generic errors
+var (
+	ErrNotFound = &DomainError{
+		Code:       "NOT_FOUND",
+		Message:    "resource not found",
+		HTTPStatus: http.StatusNotFound,
+	}
+
+	ErrBadRequest = &DomainError{
+		Code:       "BAD_REQUEST",
+		Message:    "bad request",
+		HTTPStatus: http.StatusBadRequest,
+	}
+)
+
 // Internal errors
 var (
 	ErrInternal = &DomainError{

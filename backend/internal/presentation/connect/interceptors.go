@@ -6,29 +6,33 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
+	"github.com/sogos/mirai-backend/internal/domain/tenant"
 )
 
 // AuthInterceptor provides authentication for Connect handlers.
 type AuthInterceptor struct {
 	identity service.IdentityProvider
+	userRepo repository.UserRepository
 	logger   service.Logger
 	// Procedures that don't require authentication
 	publicProcedures map[string]bool
 }
 
 // NewAuthInterceptor creates a new auth interceptor.
-func NewAuthInterceptor(identity service.IdentityProvider, logger service.Logger) *AuthInterceptor {
+func NewAuthInterceptor(identity service.IdentityProvider, userRepo repository.UserRepository, logger service.Logger) *AuthInterceptor {
 	return &AuthInterceptor{
 		identity: identity,
+		userRepo: userRepo,
 		logger:   logger,
 		publicProcedures: map[string]bool{
-			"/mirai.v1.AuthService/CheckEmail":                  true,
-			"/mirai.v1.AuthService/Register":                    true,
-			"/mirai.v1.AuthService/RegisterWithInvitation":      true, // Public for invited user registration
-			"/mirai.v1.AuthService/EnterpriseContact":           true,
-			"/mirai.v1.HealthService/Check":                     true,
-			"/mirai.v1.InvitationService/GetInvitationByToken":  true, // Public for accept invite flow
+			"/mirai.v1.AuthService/CheckEmail":                 true,
+			"/mirai.v1.AuthService/Register":                   true,
+			"/mirai.v1.AuthService/RegisterWithInvitation":     true, // Public for invited user registration
+			"/mirai.v1.AuthService/EnterpriseContact":          true,
+			"/mirai.v1.HealthService/Check":                    true,
+			"/mirai.v1.InvitationService/GetInvitationByToken": true, // Public for accept invite flow
 		},
 	}
 }
@@ -74,6 +78,18 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		// Add auth info to context
 		ctx = context.WithValue(ctx, kratosIDKey{}, kratosID)
 		ctx = context.WithValue(ctx, emailKey{}, email)
+
+		// Look up user to get tenant ID for RLS
+		// Use superadmin context to bypass RLS for this lookup
+		if i.userRepo != nil {
+			adminCtx := tenant.WithSuperAdmin(ctx, true)
+			user, err := i.userRepo.GetByKratosID(adminCtx, session.IdentityID)
+			if err != nil {
+				i.logger.Debug("failed to lookup user for tenant context", "error", err)
+			} else if user != nil && user.TenantID != nil {
+				ctx = tenant.WithTenantID(ctx, *user.TenantID)
+			}
+		}
 
 		return next(ctx, req)
 	}

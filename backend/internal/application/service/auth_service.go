@@ -379,8 +379,9 @@ func (s *AuthService) RegisterWithInvitation(ctx context.Context, req dto.Regist
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Step 4: Create user with company and role from invitation
+	// Step 4: Create user with company, tenant, and role from invitation
 	user := &entity.User{
+		TenantID:  &invitation.TenantID,
 		KratosID:  kratosID,
 		CompanyID: &invitation.CompanyID,
 		Role:      invitation.Role,

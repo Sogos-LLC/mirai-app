@@ -24,18 +24,18 @@ func NewUserRepository(db *sql.DB) repository.UserRepository {
 // Create creates a new user.
 func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 	query := `
-		INSERT INTO users (kratos_id, company_id, role)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (tenant_id, kratos_id, company_id, role)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at, updated_at
 	`
-	return r.db.QueryRowContext(ctx, query, user.KratosID, user.CompanyID, user.Role.String()).
+	return r.db.QueryRowContext(ctx, query, user.TenantID, user.KratosID, user.CompanyID, user.Role.String()).
 		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 }
 
 // GetByID retrieves a user by their ID.
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	query := `
-		SELECT id, kratos_id, company_id, role, created_at, updated_at
+		SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -43,6 +43,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 	var roleStr string
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID,
+		&user.TenantID,
 		&user.KratosID,
 		&user.CompanyID,
 		&roleStr,
@@ -62,7 +63,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 // GetByKratosID retrieves a user by their Kratos identity ID.
 func (r *UserRepository) GetByKratosID(ctx context.Context, kratosID uuid.UUID) (*entity.User, error) {
 	query := `
-		SELECT id, kratos_id, company_id, role, created_at, updated_at
+		SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
 		FROM users
 		WHERE kratos_id = $1
 	`
@@ -70,6 +71,7 @@ func (r *UserRepository) GetByKratosID(ctx context.Context, kratosID uuid.UUID) 
 	var roleStr string
 	err := r.db.QueryRowContext(ctx, query, kratosID).Scan(
 		&user.ID,
+		&user.TenantID,
 		&user.KratosID,
 		&user.CompanyID,
 		&roleStr,
@@ -86,18 +88,20 @@ func (r *UserRepository) GetByKratosID(ctx context.Context, kratosID uuid.UUID) 
 	return user, nil
 }
 
-// GetOwnerByCompanyID retrieves the owner user of a company.
+// GetOwnerByCompanyID retrieves the admin user of a company.
+// Note: This now looks for 'admin' role instead of deprecated 'owner'.
 func (r *UserRepository) GetOwnerByCompanyID(ctx context.Context, companyID uuid.UUID) (*entity.User, error) {
 	query := `
-		SELECT id, kratos_id, company_id, role, created_at, updated_at
+		SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
 		FROM users
-		WHERE company_id = $1 AND role = 'owner'
+		WHERE company_id = $1 AND role = 'admin'
 		LIMIT 1
 	`
 	user := &entity.User{}
 	var roleStr string
 	err := r.db.QueryRowContext(ctx, query, companyID).Scan(
 		&user.ID,
+		&user.TenantID,
 		&user.KratosID,
 		&user.CompanyID,
 		&roleStr,
@@ -117,7 +121,7 @@ func (r *UserRepository) GetOwnerByCompanyID(ctx context.Context, companyID uuid
 // ListByCompanyID retrieves all users in a company.
 func (r *UserRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUID) ([]*entity.User, error) {
 	query := `
-		SELECT id, kratos_id, company_id, role, created_at, updated_at
+		SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
 		FROM users
 		WHERE company_id = $1
 		ORDER BY created_at DESC
@@ -134,6 +138,7 @@ func (r *UserRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUI
 		var roleStr string
 		if err := rows.Scan(
 			&user.ID,
+			&user.TenantID,
 			&user.KratosID,
 			&user.CompanyID,
 			&roleStr,

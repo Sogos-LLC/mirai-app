@@ -3,34 +3,46 @@ package service
 import (
 	"context"
 	"fmt"
-	"path"
-	"sort"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sogos/mirai-backend/internal/domain/entity"
+	domainerrors "github.com/sogos/mirai-backend/internal/domain/errors"
+	"github.com/sogos/mirai-backend/internal/domain/repository"
+	"github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/infrastructure/cache"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
 
 // CourseService handles course and library operations.
+// Uses a hybrid model: metadata in PostgreSQL, content in S3.
 type CourseService struct {
-	storage storage.StorageAdapter
-	cache   cache.Cache
+	courseRepo repository.CourseRepository
+	folderRepo repository.FolderRepository
+	userRepo   repository.UserRepository
+	storage    *storage.TenantAwareStorage
+	cache      cache.Cache
+	logger     service.Logger
 }
 
 // NewCourseService creates a new course service.
-func NewCourseService(storage storage.StorageAdapter, cache cache.Cache) *CourseService {
+func NewCourseService(
+	courseRepo repository.CourseRepository,
+	folderRepo repository.FolderRepository,
+	userRepo repository.UserRepository,
+	storage *storage.TenantAwareStorage,
+	cache cache.Cache,
+	logger service.Logger,
+) *CourseService {
 	return &CourseService{
-		storage: storage,
-		cache:   cache,
+		courseRepo: courseRepo,
+		folderRepo: folderRepo,
+		userRepo:   userRepo,
+		storage:    storage,
+		cache:      cache,
+		logger:     logger,
 	}
 }
-
-// Storage paths
-const (
-	coursesDir  = "courses"
-	libraryFile = "library.json"
-)
 
 // CourseStatus represents the publication state.
 type CourseStatus string
@@ -41,7 +53,8 @@ const (
 	CourseStatusGenerated CourseStatus = "generated"
 )
 
-// StoredCourse represents the full course data.
+// StoredCourse represents the full course data returned to clients.
+// Combines metadata from PostgreSQL and content from S3.
 type StoredCourse struct {
 	ID                 string                 `json:"id"`
 	Version            int                    `json:"version"`
@@ -80,7 +93,17 @@ type CourseContent struct {
 	CourseBlocks []map[string]any `json:"courseBlocks"`
 }
 
-// LibraryEntry represents a course listing.
+// S3CourseContent is stored in S3 - the heavy content payload.
+type S3CourseContent struct {
+	Settings           CourseSettings   `json:"settings"`
+	Personas           []map[string]any `json:"personas"`
+	LearningObjectives []map[string]any `json:"learningObjectives"`
+	AssessmentSettings map[string]any   `json:"assessmentSettings"`
+	Content            CourseContent    `json:"content"`
+	Exports            []map[string]any `json:"exports,omitempty"`
+}
+
+// LibraryEntry represents a course listing (metadata only).
 type LibraryEntry struct {
 	ID            string       `json:"id"`
 	Title         string       `json:"title"`
@@ -93,7 +116,7 @@ type LibraryEntry struct {
 	ThumbnailPath string       `json:"thumbnailPath,omitempty"`
 }
 
-// Library represents the library index.
+// Library represents the library response.
 type Library struct {
 	Version     string         `json:"version"`
 	LastUpdated time.Time      `json:"lastUpdated"`
@@ -118,229 +141,410 @@ type ListCoursesFilter struct {
 }
 
 // ListCourses returns courses matching the filter.
-func (s *CourseService) ListCourses(ctx context.Context, filter ListCoursesFilter) ([]LibraryEntry, error) {
-	library, err := s.loadLibrary(ctx)
-	if err != nil {
-		return nil, err
+func (s *CourseService) ListCourses(ctx context.Context, kratosID uuid.UUID, filter ListCoursesFilter) ([]LibraryEntry, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
 	}
 
-	courses := library.Courses
+	opts := entity.CourseListOptions{
+		Limit: 100, // Default limit
+	}
 
-	// Apply filters
 	if filter.Status != nil {
-		var filtered []LibraryEntry
-		for _, c := range courses {
-			if c.Status == *filter.Status {
-				filtered = append(filtered, c)
-			}
-		}
-		courses = filtered
+		status := entity.ParseCourseStatus(string(*filter.Status))
+		opts.Status = &status
 	}
 
 	if filter.Folder != nil && *filter.Folder != "" {
-		var filtered []LibraryEntry
-		for _, c := range courses {
-			if c.Folder == *filter.Folder {
-				filtered = append(filtered, c)
-			}
+		folderID, err := uuid.Parse(*filter.Folder)
+		if err == nil {
+			opts.FolderID = &folderID
 		}
-		courses = filtered
 	}
 
 	if len(filter.Tags) > 0 {
-		var filtered []LibraryEntry
-		for _, c := range courses {
-			for _, tag := range filter.Tags {
-				if contains(c.Tags, tag) {
-					filtered = append(filtered, c)
-					break
-				}
-			}
-		}
-		courses = filtered
+		opts.Tags = filter.Tags
 	}
 
-	// Sort by modified date (newest first)
-	sort.Slice(courses, func(i, j int) bool {
-		return courses[i].ModifiedAt.After(courses[j].ModifiedAt)
-	})
+	courses, err := s.courseRepo.List(ctx, opts)
+	if err != nil {
+		s.logger.Error("failed to list courses", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
 
-	return courses, nil
+	entries := make([]LibraryEntry, 0, len(courses))
+	for _, c := range courses {
+		var folderStr string
+		if c.FolderID != nil {
+			folderStr = c.FolderID.String()
+		}
+		var thumbPath string
+		if c.ThumbnailPath != nil {
+			thumbPath = *c.ThumbnailPath
+		}
+
+		entries = append(entries, LibraryEntry{
+			ID:            c.ID.String(),
+			Title:         c.Title,
+			Status:        CourseStatus(c.Status.String()),
+			Folder:        folderStr,
+			Tags:          c.CategoryTags,
+			CreatedAt:     c.CreatedAt,
+			ModifiedAt:    c.UpdatedAt,
+			CreatedBy:     c.CreatedByUserID.String(),
+			ThumbnailPath: thumbPath,
+		})
+	}
+
+	return entries, nil
 }
 
 // GetCourse retrieves a course by ID.
-func (s *CourseService) GetCourse(ctx context.Context, id string) (*StoredCourse, error) {
-	coursePath := path.Join(coursesDir, id+".json")
-
-	var course StoredCourse
-	if err := s.storage.ReadJSON(ctx, coursePath, &course); err != nil {
-		return nil, fmt.Errorf("course not found: %s", id)
+func (s *CourseService) GetCourse(ctx context.Context, kratosID uuid.UUID, id string) (*StoredCourse, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
 	}
 
-	return &course, nil
+	courseID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, domainerrors.ErrInvalidInput.WithMessage("invalid course ID")
+	}
+
+	// Get metadata from PostgreSQL
+	course, err := s.courseRepo.GetByID(ctx, courseID)
+	if err != nil {
+		s.logger.Error("failed to get course", "courseID", id, "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	if course == nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("course not found")
+	}
+
+	// Get content from S3
+	var s3Content S3CourseContent
+	if err := s.storage.ReadCourseContent(ctx, course.TenantID, course.ID, &s3Content); err != nil {
+		s.logger.Error("failed to read course content from S3", "courseID", id, "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Combine metadata and content
+	var folderStr string
+	if course.FolderID != nil {
+		folderStr = course.FolderID.String()
+	}
+
+	return &StoredCourse{
+		ID:      course.ID.String(),
+		Version: int(course.Version),
+		Status:  CourseStatus(course.Status.String()),
+		Metadata: CourseMetadata{
+			ID:         course.ID.String(),
+			Version:    int(course.Version),
+			Status:     course.Status.String(),
+			CreatedAt:  course.CreatedAt,
+			ModifiedAt: course.UpdatedAt,
+			CreatedBy:  course.CreatedByUserID.String(),
+		},
+		Settings: CourseSettings{
+			Title:             course.Title,
+			DesiredOutcome:    s3Content.Settings.DesiredOutcome,
+			DestinationFolder: folderStr,
+			CategoryTags:      course.CategoryTags,
+			DataSource:        s3Content.Settings.DataSource,
+		},
+		Personas:           s3Content.Personas,
+		LearningObjectives: s3Content.LearningObjectives,
+		AssessmentSettings: s3Content.AssessmentSettings,
+		Content:            s3Content.Content,
+		Exports:            s3Content.Exports,
+	}, nil
 }
 
 // CreateCourse creates a new course.
-func (s *CourseService) CreateCourse(ctx context.Context, input *StoredCourse) (*StoredCourse, error) {
-	now := time.Now()
+func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, input *StoredCourse) (*StoredCourse, error) {
+	log := s.logger.With("kratosID", kratosID)
 
-	// Generate ID if not provided
-	if input.ID == "" {
-		input.ID = "course-" + uuid.New().String()
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrInternal.WithMessage("user has no tenant")
+	}
+	if user.CompanyID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	now := time.Now()
+	courseID := uuid.New()
+
+	// Parse folder ID if provided
+	var folderID *uuid.UUID
+	if input.Settings.DestinationFolder != "" {
+		fID, err := uuid.Parse(input.Settings.DestinationFolder)
+		if err == nil {
+			folderID = &fID
+		}
+	}
+
+	// Create course entity for PostgreSQL
+	course := &entity.Course{
+		ID:              courseID,
+		TenantID:        *user.TenantID,
+		CompanyID:       *user.CompanyID,
+		CreatedByUserID: user.ID,
+		Title:           input.Settings.Title,
+		Status:          entity.CourseStatusDraft,
+		Version:         1,
+		FolderID:        folderID,
+		CategoryTags:    input.Settings.CategoryTags,
+		ContentPath:     s.storage.CoursePath(*user.TenantID, courseID),
+	}
+
+	if course.Title == "" {
+		course.Title = "Untitled Course"
+	}
+	if course.CategoryTags == nil {
+		course.CategoryTags = []string{}
+	}
+
+	// Create S3 content
+	s3Content := S3CourseContent{
+		Settings: CourseSettings{
+			Title:             course.Title,
+			DesiredOutcome:    input.Settings.DesiredOutcome,
+			DestinationFolder: input.Settings.DestinationFolder,
+			CategoryTags:      course.CategoryTags,
+			DataSource:        input.Settings.DataSource,
+		},
+		Personas:           input.Personas,
+		LearningObjectives: input.LearningObjectives,
+		AssessmentSettings: input.AssessmentSettings,
+		Content:            input.Content,
+		Exports:            []map[string]any{},
 	}
 
 	// Initialize defaults
-	course := &StoredCourse{
-		ID:      input.ID,
-		Version: 1,
-		Status:  CourseStatusDraft,
-		Metadata: CourseMetadata{
-			ID:         input.ID,
-			Version:    1,
-			Status:     string(CourseStatusDraft),
-			CreatedAt:  now,
-			ModifiedAt: now,
-		},
-		Settings: CourseSettings{
-			Title:             "Untitled Course",
-			DesiredOutcome:    "",
-			DestinationFolder: "",
-			CategoryTags:      []string{},
-			DataSource:        "open-web",
-		},
-		Personas:           []map[string]any{},
-		LearningObjectives: []map[string]any{},
-		AssessmentSettings: map[string]any{
+	if s3Content.Personas == nil {
+		s3Content.Personas = []map[string]any{}
+	}
+	if s3Content.LearningObjectives == nil {
+		s3Content.LearningObjectives = []map[string]any{}
+	}
+	if s3Content.AssessmentSettings == nil {
+		s3Content.AssessmentSettings = map[string]any{
 			"enableEmbeddedKnowledgeChecks": false,
 			"enableFinalExam":               false,
-		},
-		Content: CourseContent{
-			Sections:     []map[string]any{},
-			CourseBlocks: []map[string]any{},
-		},
-		Exports: []map[string]any{},
+		}
+	}
+	if s3Content.Content.Sections == nil {
+		s3Content.Content.Sections = []map[string]any{}
+	}
+	if s3Content.Content.CourseBlocks == nil {
+		s3Content.Content.CourseBlocks = []map[string]any{}
+	}
+	if s3Content.Settings.DataSource == "" {
+		s3Content.Settings.DataSource = "open-web"
 	}
 
-	// Apply provided values
-	if input.Settings.Title != "" {
-		course.Settings.Title = input.Settings.Title
-	}
-	if input.Settings.DesiredOutcome != "" {
-		course.Settings.DesiredOutcome = input.Settings.DesiredOutcome
-	}
-	if input.Settings.DestinationFolder != "" {
-		course.Settings.DestinationFolder = input.Settings.DestinationFolder
-	}
-	if len(input.Settings.CategoryTags) > 0 {
-		course.Settings.CategoryTags = input.Settings.CategoryTags
-	}
-	if input.Settings.DataSource != "" {
-		course.Settings.DataSource = input.Settings.DataSource
-	}
-	if len(input.Personas) > 0 {
-		course.Personas = input.Personas
-	}
-	if len(input.LearningObjectives) > 0 {
-		course.LearningObjectives = input.LearningObjectives
-	}
-	if input.AssessmentSettings != nil {
-		course.AssessmentSettings = input.AssessmentSettings
-	}
-	if input.Content.Sections != nil || input.Content.CourseBlocks != nil {
-		course.Content = input.Content
+	// Write content to S3 first
+	if err := s.storage.WriteCourseContent(ctx, *user.TenantID, courseID, &s3Content); err != nil {
+		log.Error("failed to write course content to S3", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Save course file
-	coursePath := path.Join(coursesDir, course.ID+".json")
-	if err := s.storage.WriteJSON(ctx, coursePath, course); err != nil {
-		return nil, fmt.Errorf("failed to save course: %w", err)
-	}
-
-	// Update library index
-	if err := s.addToLibrary(ctx, course); err != nil {
-		return nil, fmt.Errorf("failed to update library: %w", err)
+	// Insert metadata into PostgreSQL
+	if err := s.courseRepo.Create(ctx, course); err != nil {
+		// Attempt to clean up S3 content
+		_ = s.storage.DeleteCourseContent(ctx, *user.TenantID, courseID)
+		log.Error("failed to create course in database", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
 	// Invalidate cache
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
 
-	return course, nil
+	log.Info("course created", "courseID", course.ID)
+
+	return &StoredCourse{
+		ID:      course.ID.String(),
+		Version: int(course.Version),
+		Status:  CourseStatusDraft,
+		Metadata: CourseMetadata{
+			ID:         course.ID.String(),
+			Version:    int(course.Version),
+			Status:     string(CourseStatusDraft),
+			CreatedAt:  now,
+			ModifiedAt: now,
+			CreatedBy:  user.ID.String(),
+		},
+		Settings:           s3Content.Settings,
+		Personas:           s3Content.Personas,
+		LearningObjectives: s3Content.LearningObjectives,
+		AssessmentSettings: s3Content.AssessmentSettings,
+		Content:            s3Content.Content,
+		Exports:            s3Content.Exports,
+	}, nil
 }
 
 // UpdateCourse updates an existing course.
-func (s *CourseService) UpdateCourse(ctx context.Context, id string, updates *StoredCourse) (*StoredCourse, error) {
-	course, err := s.GetCourse(ctx, id)
-	if err != nil {
-		return nil, err
+func (s *CourseService) UpdateCourse(ctx context.Context, kratosID uuid.UUID, id string, updates *StoredCourse) (*StoredCourse, error) {
+	log := s.logger.With("kratosID", kratosID, "courseID", id)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
 	}
 
-	now := time.Now()
-	course.Version++
-	course.Metadata.Version = course.Version
-	course.Metadata.ModifiedAt = now
+	courseID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, domainerrors.ErrInvalidInput.WithMessage("invalid course ID")
+	}
 
-	// Apply updates
+	// Get existing course
+	course, err := s.courseRepo.GetByID(ctx, courseID)
+	if err != nil {
+		log.Error("failed to get course", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	if course == nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("course not found")
+	}
+
+	// Load existing S3 content
+	var s3Content S3CourseContent
+	if err := s.storage.ReadCourseContent(ctx, course.TenantID, course.ID, &s3Content); err != nil {
+		log.Error("failed to read course content from S3", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Apply updates to metadata
 	if updates.Settings.Title != "" {
-		course.Settings.Title = updates.Settings.Title
+		course.Title = updates.Settings.Title
+		s3Content.Settings.Title = updates.Settings.Title
 	}
 	if updates.Settings.DesiredOutcome != "" {
-		course.Settings.DesiredOutcome = updates.Settings.DesiredOutcome
+		s3Content.Settings.DesiredOutcome = updates.Settings.DesiredOutcome
 	}
 	if updates.Settings.DestinationFolder != "" {
-		course.Settings.DestinationFolder = updates.Settings.DestinationFolder
+		folderID, err := uuid.Parse(updates.Settings.DestinationFolder)
+		if err == nil {
+			course.FolderID = &folderID
+		}
+		s3Content.Settings.DestinationFolder = updates.Settings.DestinationFolder
 	}
 	if len(updates.Settings.CategoryTags) > 0 {
-		course.Settings.CategoryTags = updates.Settings.CategoryTags
+		course.CategoryTags = updates.Settings.CategoryTags
+		s3Content.Settings.CategoryTags = updates.Settings.CategoryTags
 	}
 	if updates.Settings.DataSource != "" {
-		course.Settings.DataSource = updates.Settings.DataSource
+		s3Content.Settings.DataSource = updates.Settings.DataSource
 	}
 	if len(updates.Personas) > 0 {
-		course.Personas = updates.Personas
+		s3Content.Personas = updates.Personas
 	}
 	if len(updates.LearningObjectives) > 0 {
-		course.LearningObjectives = updates.LearningObjectives
+		s3Content.LearningObjectives = updates.LearningObjectives
 	}
 	if updates.AssessmentSettings != nil {
-		course.AssessmentSettings = updates.AssessmentSettings
+		s3Content.AssessmentSettings = updates.AssessmentSettings
 	}
 	if updates.Content.Sections != nil || updates.Content.CourseBlocks != nil {
-		course.Content = updates.Content
+		s3Content.Content = updates.Content
 	}
 	if updates.Status != "" {
-		course.Status = updates.Status
-		course.Metadata.Status = string(updates.Status)
+		course.Status = entity.ParseCourseStatus(string(updates.Status))
 	}
 
-	// Save updated course
-	coursePath := path.Join(coursesDir, course.ID+".json")
-	if err := s.storage.WriteJSON(ctx, coursePath, course); err != nil {
-		return nil, fmt.Errorf("failed to save course: %w", err)
+	course.Version++
+
+	// Update S3 content
+	if err := s.storage.WriteCourseContent(ctx, course.TenantID, course.ID, &s3Content); err != nil {
+		log.Error("failed to update course content in S3", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Update library index
-	if err := s.updateLibraryEntry(ctx, course); err != nil {
-		return nil, fmt.Errorf("failed to update library: %w", err)
+	// Update PostgreSQL metadata
+	if err := s.courseRepo.Update(ctx, course); err != nil {
+		log.Error("failed to update course in database", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
 	// Invalidate cache
 	_ = s.cache.Delete(ctx, cache.CacheKeys.Course(id))
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
 
-	return course, nil
+	log.Info("course updated")
+
+	var folderStr string
+	if course.FolderID != nil {
+		folderStr = course.FolderID.String()
+	}
+
+	return &StoredCourse{
+		ID:      course.ID.String(),
+		Version: int(course.Version),
+		Status:  CourseStatus(course.Status.String()),
+		Metadata: CourseMetadata{
+			ID:         course.ID.String(),
+			Version:    int(course.Version),
+			Status:     course.Status.String(),
+			CreatedAt:  course.CreatedAt,
+			ModifiedAt: course.UpdatedAt,
+			CreatedBy:  course.CreatedByUserID.String(),
+		},
+		Settings: CourseSettings{
+			Title:             course.Title,
+			DesiredOutcome:    s3Content.Settings.DesiredOutcome,
+			DestinationFolder: folderStr,
+			CategoryTags:      course.CategoryTags,
+			DataSource:        s3Content.Settings.DataSource,
+		},
+		Personas:           s3Content.Personas,
+		LearningObjectives: s3Content.LearningObjectives,
+		AssessmentSettings: s3Content.AssessmentSettings,
+		Content:            s3Content.Content,
+		Exports:            s3Content.Exports,
+	}, nil
 }
 
 // DeleteCourse deletes a course.
-func (s *CourseService) DeleteCourse(ctx context.Context, id string) error {
-	coursePath := path.Join(coursesDir, id+".json")
+func (s *CourseService) DeleteCourse(ctx context.Context, kratosID uuid.UUID, id string) error {
+	log := s.logger.With("kratosID", kratosID, "courseID", id)
 
-	if err := s.storage.Delete(ctx, coursePath); err != nil {
-		return fmt.Errorf("failed to delete course: %w", err)
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return domainerrors.ErrUserNotFound
 	}
 
-	// Remove from library index
-	if err := s.removeFromLibrary(ctx, id); err != nil {
-		return fmt.Errorf("failed to update library: %w", err)
+	courseID, err := uuid.Parse(id)
+	if err != nil {
+		return domainerrors.ErrInvalidInput.WithMessage("invalid course ID")
+	}
+
+	// Get course to get tenant ID for S3 path
+	course, err := s.courseRepo.GetByID(ctx, courseID)
+	if err != nil {
+		log.Error("failed to get course", "error", err)
+		return domainerrors.ErrInternal.WithCause(err)
+	}
+	if course == nil {
+		return domainerrors.ErrNotFound.WithMessage("course not found")
+	}
+
+	// Delete from PostgreSQL
+	if err := s.courseRepo.Delete(ctx, courseID); err != nil {
+		log.Error("failed to delete course from database", "error", err)
+		return domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Delete from S3
+	if err := s.storage.DeleteCourseContent(ctx, course.TenantID, course.ID); err != nil {
+		log.Error("failed to delete course content from S3", "error", err)
+		// Don't fail the operation - the DB record is already deleted
 	}
 
 	// Invalidate cache
@@ -348,148 +552,205 @@ func (s *CourseService) DeleteCourse(ctx context.Context, id string) error {
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
 	_ = s.cache.InvalidatePattern(ctx, "folder:*")
 
+	log.Info("course deleted")
 	return nil
 }
 
 // GetFolderHierarchy returns the folder structure.
-func (s *CourseService) GetFolderHierarchy(ctx context.Context, includeCounts bool) ([]Folder, error) {
-	library, err := s.loadLibrary(ctx)
-	if err != nil {
-		return nil, err
+func (s *CourseService) GetFolderHierarchy(ctx context.Context, kratosID uuid.UUID, includeCounts bool) ([]Folder, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
 	}
 
-	return library.Folders, nil
+	folders, err := s.folderRepo.GetHierarchy(ctx)
+	if err != nil {
+		s.logger.Error("failed to get folder hierarchy", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Build parent-child map
+	childrenMap := make(map[string][]string)
+	for _, f := range folders {
+		if f.ParentID != nil {
+			parentStr := f.ParentID.String()
+			childrenMap[parentStr] = append(childrenMap[parentStr], f.ID.String())
+		}
+	}
+
+	result := make([]Folder, 0, len(folders))
+	for _, f := range folders {
+		var parentStr string
+		if f.ParentID != nil {
+			parentStr = f.ParentID.String()
+		}
+
+		result = append(result, Folder{
+			ID:       f.ID.String(),
+			Name:     f.Name,
+			Parent:   parentStr,
+			Type:     f.Type.String(),
+			Children: childrenMap[f.ID.String()],
+		})
+	}
+
+	return result, nil
 }
 
 // GetLibrary returns the full library.
-func (s *CourseService) GetLibrary(ctx context.Context, includeCounts bool) (*Library, error) {
-	return s.loadLibrary(ctx)
-}
+func (s *CourseService) GetLibrary(ctx context.Context, kratosID uuid.UUID, includeCounts bool) (*Library, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
 
-// loadLibrary loads the library index, creating it if needed.
-func (s *CourseService) loadLibrary(ctx context.Context) (*Library, error) {
-	var library Library
-
-	err := s.storage.ReadJSON(ctx, libraryFile, &library)
+	// Get courses
+	courses, err := s.courseRepo.List(ctx, entity.CourseListOptions{Limit: 1000})
 	if err != nil {
-		// Initialize default library
-		library = s.defaultLibrary()
-		if err := s.storage.WriteJSON(ctx, libraryFile, &library); err != nil {
-			return nil, err
+		s.logger.Error("failed to list courses", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Get folders
+	folders, err := s.folderRepo.GetHierarchy(ctx)
+	if err != nil {
+		s.logger.Error("failed to get folder hierarchy", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Convert courses to library entries
+	entries := make([]LibraryEntry, 0, len(courses))
+	for _, c := range courses {
+		var folderStr string
+		if c.FolderID != nil {
+			folderStr = c.FolderID.String()
+		}
+		var thumbPath string
+		if c.ThumbnailPath != nil {
+			thumbPath = *c.ThumbnailPath
+		}
+
+		entries = append(entries, LibraryEntry{
+			ID:            c.ID.String(),
+			Title:         c.Title,
+			Status:        CourseStatus(c.Status.String()),
+			Folder:        folderStr,
+			Tags:          c.CategoryTags,
+			CreatedAt:     c.CreatedAt,
+			ModifiedAt:    c.UpdatedAt,
+			CreatedBy:     c.CreatedByUserID.String(),
+			ThumbnailPath: thumbPath,
+		})
+	}
+
+	// Build parent-child map for folders
+	childrenMap := make(map[string][]string)
+	for _, f := range folders {
+		if f.ParentID != nil {
+			parentStr := f.ParentID.String()
+			childrenMap[parentStr] = append(childrenMap[parentStr], f.ID.String())
 		}
 	}
 
-	return &library, nil
-}
-
-// saveLibrary saves the library index.
-func (s *CourseService) saveLibrary(ctx context.Context, library *Library) error {
-	library.LastUpdated = time.Now()
-	return s.storage.WriteJSON(ctx, libraryFile, library)
-}
-
-// addToLibrary adds a course to the library index.
-func (s *CourseService) addToLibrary(ctx context.Context, course *StoredCourse) error {
-	library, err := s.loadLibrary(ctx)
-	if err != nil {
-		return err
-	}
-
-	entry := LibraryEntry{
-		ID:         course.ID,
-		Title:      course.Settings.Title,
-		Status:     course.Status,
-		Folder:     course.Settings.DestinationFolder,
-		Tags:       course.Settings.CategoryTags,
-		CreatedAt:  course.Metadata.CreatedAt,
-		ModifiedAt: course.Metadata.ModifiedAt,
-	}
-
-	library.Courses = append(library.Courses, entry)
-	return s.saveLibrary(ctx, library)
-}
-
-// updateLibraryEntry updates a course entry in the library.
-func (s *CourseService) updateLibraryEntry(ctx context.Context, course *StoredCourse) error {
-	library, err := s.loadLibrary(ctx)
-	if err != nil {
-		return err
-	}
-
-	for i, entry := range library.Courses {
-		if entry.ID == course.ID {
-			library.Courses[i] = LibraryEntry{
-				ID:         course.ID,
-				Title:      course.Settings.Title,
-				Status:     course.Status,
-				Folder:     course.Settings.DestinationFolder,
-				Tags:       course.Settings.CategoryTags,
-				CreatedAt:  entry.CreatedAt,
-				ModifiedAt: course.Metadata.ModifiedAt,
-			}
-			break
+	// Convert folders
+	folderList := make([]Folder, 0, len(folders))
+	for _, f := range folders {
+		var parentStr string
+		if f.ParentID != nil {
+			parentStr = f.ParentID.String()
 		}
+
+		folderList = append(folderList, Folder{
+			ID:       f.ID.String(),
+			Name:     f.Name,
+			Parent:   parentStr,
+			Type:     f.Type.String(),
+			Children: childrenMap[f.ID.String()],
+		})
 	}
 
-	return s.saveLibrary(ctx, library)
-}
-
-// removeFromLibrary removes a course from the library index.
-func (s *CourseService) removeFromLibrary(ctx context.Context, id string) error {
-	library, err := s.loadLibrary(ctx)
-	if err != nil {
-		return err
-	}
-
-	var filtered []LibraryEntry
-	for _, entry := range library.Courses {
-		if entry.ID != id {
-			filtered = append(filtered, entry)
-		}
-	}
-	library.Courses = filtered
-
-	return s.saveLibrary(ctx, library)
-}
-
-// defaultLibrary creates the default library structure.
-func (s *CourseService) defaultLibrary() Library {
-	return Library{
+	return &Library{
 		Version:     "1.0",
 		LastUpdated: time.Now(),
-		Courses:     []LibraryEntry{},
-		Folders: []Folder{
-			{ID: "library", Name: "Library", Type: "library", Children: []string{"team", "personal"}},
-			{ID: "team", Name: "Team-Name", Parent: "library", Type: "team", Children: []string{"hr", "sales", "product", "engineering"}},
-			{ID: "hr", Name: "Human Resources", Parent: "team", Type: "folder", Children: []string{"onboarding", "training", "compliance"}},
-			{ID: "onboarding", Name: "Onboarding", Parent: "hr", Type: "folder"},
-			{ID: "training", Name: "Training", Parent: "hr", Type: "folder"},
-			{ID: "compliance", Name: "Compliance", Parent: "hr", Type: "folder"},
-			{ID: "sales", Name: "Sales Enablement", Parent: "team", Type: "folder", Children: []string{"sales-product-knowledge", "sales-skills", "sales-tools"}},
-			{ID: "sales-product-knowledge", Name: "Product Knowledge", Parent: "sales", Type: "folder"},
-			{ID: "sales-skills", Name: "Sales Skills", Parent: "sales", Type: "folder"},
-			{ID: "sales-tools", Name: "Tools & Systems", Parent: "sales", Type: "folder"},
-			{ID: "product", Name: "Product", Parent: "team", Type: "folder", Children: []string{"product-features", "product-roadmap"}},
-			{ID: "product-features", Name: "Feature Training", Parent: "product", Type: "folder"},
-			{ID: "product-roadmap", Name: "Roadmap", Parent: "product", Type: "folder"},
-			{ID: "engineering", Name: "Engineering", Parent: "team", Type: "folder", Children: []string{"eng-backend", "eng-frontend", "eng-devops"}},
-			{ID: "eng-backend", Name: "Backend Development", Parent: "engineering", Type: "folder"},
-			{ID: "eng-frontend", Name: "Frontend Development", Parent: "engineering", Type: "folder"},
-			{ID: "eng-devops", Name: "DevOps", Parent: "engineering", Type: "folder"},
-			{ID: "personal", Name: "Personal", Parent: "library", Type: "personal", Children: []string{"my-drafts", "completed-courses", "shared-with-me"}},
-			{ID: "my-drafts", Name: "My Drafts", Parent: "personal", Type: "folder"},
-			{ID: "completed-courses", Name: "Completed Courses", Parent: "personal", Type: "folder"},
-			{ID: "shared-with-me", Name: "Shared with Me", Parent: "personal", Type: "folder"},
-		},
-	}
+		Courses:     entries,
+		Folders:     folderList,
+	}, nil
 }
 
-// contains checks if a slice contains a string.
-func contains(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
+// CreateFolder creates a new folder.
+func (s *CourseService) CreateFolder(ctx context.Context, kratosID uuid.UUID, name string, parentID *string, folderType string) (*entity.Folder, error) {
+	log := s.logger.With("kratosID", kratosID, "folderName", name)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrInternal.WithMessage("user has no tenant")
+	}
+
+	folder := &entity.Folder{
+		TenantID: *user.TenantID,
+		Name:     name,
+		Type:     entity.ParseFolderType(folderType),
+	}
+
+	if parentID != nil && *parentID != "" {
+		pID, err := uuid.Parse(*parentID)
+		if err == nil {
+			folder.ParentID = &pID
 		}
 	}
-	return false
+
+	if err := s.folderRepo.Create(ctx, folder); err != nil {
+		log.Error("failed to create folder", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	log.Info("folder created", "folderID", folder.ID)
+	return folder, nil
+}
+
+// DeleteFolder deletes a folder.
+func (s *CourseService) DeleteFolder(ctx context.Context, kratosID uuid.UUID, id string) error {
+	log := s.logger.With("kratosID", kratosID, "folderID", id)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return domainerrors.ErrUserNotFound
+	}
+
+	folderID, err := uuid.Parse(id)
+	if err != nil {
+		return domainerrors.ErrInvalidInput.WithMessage("invalid folder ID")
+	}
+
+	// Check if folder has courses
+	count, err := s.courseRepo.CountByFolder(ctx, folderID)
+	if err != nil {
+		log.Error("failed to count courses in folder", "error", err)
+		return domainerrors.ErrInternal.WithCause(err)
+	}
+	if count > 0 {
+		return domainerrors.ErrBadRequest.WithMessage(fmt.Sprintf("folder contains %d courses, move or delete them first", count))
+	}
+
+	// Check if folder has child folders
+	children, err := s.folderRepo.ListByParent(ctx, &folderID)
+	if err != nil {
+		log.Error("failed to list child folders", "error", err)
+		return domainerrors.ErrInternal.WithCause(err)
+	}
+	if len(children) > 0 {
+		return domainerrors.ErrBadRequest.WithMessage("folder contains subfolders, delete them first")
+	}
+
+	if err := s.folderRepo.Delete(ctx, folderID); err != nil {
+		log.Error("failed to delete folder", "error", err)
+		return domainerrors.ErrInternal.WithCause(err)
+	}
+
+	log.Info("folder deleted")
+	return nil
 }

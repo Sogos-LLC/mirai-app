@@ -27,6 +27,16 @@ func (s *CourseServiceServer) ListCourses(
 	ctx context.Context,
 	req *connect.Request[v1.ListCoursesRequest],
 ) (*connect.Response[v1.ListCoursesResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
 	filter := service.ListCoursesFilter{}
 
 	if req.Msg.Status != nil && *req.Msg.Status != v1.CourseStatus_COURSE_STATUS_UNSPECIFIED {
@@ -40,7 +50,7 @@ func (s *CourseServiceServer) ListCourses(
 		filter.Tags = req.Msg.Tags
 	}
 
-	courses, err := s.courseService.ListCourses(ctx, filter)
+	courses, err := s.courseService.ListCourses(ctx, kratosID, filter)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -60,9 +70,19 @@ func (s *CourseServiceServer) GetCourse(
 	ctx context.Context,
 	req *connect.Request[v1.GetCourseRequest],
 ) (*connect.Response[v1.GetCourseResponse], error) {
-	course, err := s.courseService.GetCourse(ctx, req.Msg.Id)
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	course, err := s.courseService.GetCourse(ctx, kratosID, req.Msg.Id)
+	if err != nil {
+		return nil, toConnectError(err)
 	}
 
 	return connect.NewResponse(&v1.GetCourseResponse{
@@ -75,6 +95,16 @@ func (s *CourseServiceServer) CreateCourse(
 	ctx context.Context,
 	req *connect.Request[v1.CreateCourseRequest],
 ) (*connect.Response[v1.CreateCourseResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
 	input := &service.StoredCourse{}
 
 	if req.Msg.Id != nil {
@@ -88,7 +118,7 @@ func (s *CourseServiceServer) CreateCourse(
 	}
 	// Personas and LearningObjectives would need conversion too
 
-	course, err := s.courseService.CreateCourse(ctx, input)
+	course, err := s.courseService.CreateCourse(ctx, kratosID, input)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -103,6 +133,16 @@ func (s *CourseServiceServer) UpdateCourse(
 	ctx context.Context,
 	req *connect.Request[v1.UpdateCourseRequest],
 ) (*connect.Response[v1.UpdateCourseResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
 	updates := &service.StoredCourse{}
 
 	if req.Msg.Settings != nil {
@@ -115,7 +155,7 @@ func (s *CourseServiceServer) UpdateCourse(
 		updates.AssessmentSettings = assessmentSettingsFromProto(req.Msg.AssessmentSettings)
 	}
 
-	course, err := s.courseService.UpdateCourse(ctx, req.Msg.Id, updates)
+	course, err := s.courseService.UpdateCourse(ctx, kratosID, req.Msg.Id, updates)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -130,8 +170,17 @@ func (s *CourseServiceServer) DeleteCourse(
 	ctx context.Context,
 	req *connect.Request[v1.DeleteCourseRequest],
 ) (*connect.Response[v1.DeleteCourseResponse], error) {
-	err := s.courseService.DeleteCourse(ctx, req.Msg.Id)
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
 	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if err := s.courseService.DeleteCourse(ctx, kratosID, req.Msg.Id); err != nil {
 		return nil, toConnectError(err)
 	}
 
@@ -145,7 +194,17 @@ func (s *CourseServiceServer) GetFolderHierarchy(
 	ctx context.Context,
 	req *connect.Request[v1.GetFolderHierarchyRequest],
 ) (*connect.Response[v1.GetFolderHierarchyResponse], error) {
-	folders, err := s.courseService.GetFolderHierarchy(ctx, req.Msg.IncludeCourseCounts)
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	folders, err := s.courseService.GetFolderHierarchy(ctx, kratosID, req.Msg.IncludeCourseCounts)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -163,7 +222,17 @@ func (s *CourseServiceServer) GetLibrary(
 	ctx context.Context,
 	req *connect.Request[v1.GetLibraryRequest],
 ) (*connect.Response[v1.GetLibraryResponse], error) {
-	library, err := s.courseService.GetLibrary(ctx, req.Msg.IncludeCourseCounts)
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	library, err := s.courseService.GetLibrary(ctx, kratosID, req.Msg.IncludeCourseCounts)
 	if err != nil {
 		return nil, toConnectError(err)
 	}

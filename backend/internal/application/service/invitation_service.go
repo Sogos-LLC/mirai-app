@@ -121,6 +121,7 @@ func (s *InvitationService) CreateInvitation(
 
 	// 7. Create invitation
 	invitation := entity.NewInvitation(
+		company.TenantID,
 		companyID,
 		req.Email,
 		req.Role,

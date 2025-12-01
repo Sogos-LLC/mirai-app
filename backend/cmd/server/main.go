@@ -51,11 +51,14 @@ func main() {
 	logger.Info("connected to database")
 
 	// Initialize repositories (pass the embedded *sql.DB)
+	tenantRepo := postgres.NewTenantRepository(db.DB)
 	userRepo := postgres.NewUserRepository(db.DB)
 	companyRepo := postgres.NewCompanyRepository(db.DB)
 	teamRepo := postgres.NewTeamRepository(db.DB)
 	invitationRepo := postgres.NewInvitationRepository(db.DB)
 	pendingRegRepo := postgres.NewPendingRegistrationRepository(db.DB)
+	courseRepo := postgres.NewCourseRepository(db.DB)
+	folderRepo := postgres.NewFolderRepository(db.DB)
 
 	// Initialize shared HTTP client
 	httpClient := httputil.NewClient()
@@ -82,7 +85,7 @@ func main() {
 
 	// Initialize storage for CourseService
 	// Use S3/MinIO in production, local filesystem for development
-	var courseStorage storage.StorageAdapter
+	var baseStorage storage.StorageAdapter
 	if cfg.S3AccessKey != "" && cfg.S3SecretKey != "" {
 		s3Storage, err := storage.NewS3Storage(context.Background(), storage.S3Config{
 			Endpoint:        cfg.S3Endpoint,
@@ -96,12 +99,15 @@ func main() {
 			logger.Error("failed to initialize S3 storage", "error", err)
 			os.Exit(1)
 		}
-		courseStorage = s3Storage
+		baseStorage = s3Storage
 		logger.Info("using S3/MinIO storage", "endpoint", cfg.S3Endpoint, "bucket", cfg.S3Bucket)
 	} else {
-		courseStorage = storage.NewLocalStorage("./data")
+		baseStorage = storage.NewLocalStorage("./data")
 		logger.Warn("S3 credentials not configured, using local storage (not recommended for production)")
 	}
+
+	// Wrap storage with tenant-aware path prefixing
+	tenantStorage := storage.NewTenantAwareStorage(baseStorage)
 
 	// Initialize cache for CourseService
 	courseCache := cache.NewNoOpCache() // Use NoOpCache for local dev (Redis in production)
@@ -113,10 +119,10 @@ func main() {
 	companyService := service.NewCompanyService(userRepo, companyRepo, logger)
 	teamService := service.NewTeamService(userRepo, companyRepo, teamRepo, logger)
 	invitationService := service.NewInvitationService(userRepo, companyRepo, invitationRepo, stripeClient, emailClient, logger, cfg.FrontendURL)
-	courseService := service.NewCourseService(courseStorage, courseCache)
+	courseService := service.NewCourseService(courseRepo, folderRepo, userRepo, tenantStorage, courseCache, logger)
 
 	// Background services for deferred account provisioning
-	provisioningService := service.NewProvisioningService(pendingRegRepo, userRepo, companyRepo, kratosClient, emailClient, logger, cfg.FrontendURL)
+	provisioningService := service.NewProvisioningService(pendingRegRepo, tenantRepo, userRepo, companyRepo, kratosClient, emailClient, logger, cfg.FrontendURL)
 	cleanupService := service.NewCleanupService(pendingRegRepo, logger)
 
 	// Create Connect server mux
@@ -129,6 +135,7 @@ func main() {
 		InvitationService: invitationService,
 		CourseService:     courseService,
 		PendingRegRepo:    pendingRegRepo,
+		UserRepo:          userRepo, // For tenant context in auth interceptor
 		Identity:          kratosClient,
 		Payments:          stripeClient,
 		Logger:            logger,

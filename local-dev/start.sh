@@ -223,6 +223,12 @@ STRIPE_PRO_PRICE_ID="${STRIPE_PRO_PRICE_ID:-}" \
 SMTP_HOST="localhost" \
 SMTP_PORT="1025" \
 SMTP_FROM="noreply@mirai.local" \
+S3_ENDPOINT="http://localhost:9000" \
+S3_REGION="us-east-1" \
+S3_BUCKET="mirai" \
+S3_BASE_PATH="data" \
+S3_ACCESS_KEY="${MINIO_ACCESS_KEY:-minioadmin}" \
+S3_SECRET_KEY="${MINIO_SECRET_KEY:-minioadmin}" \
 go run ./cmd/server/main.go &
 BACKEND_PID=$!
 echo $BACKEND_PID >> "$PID_FILE"

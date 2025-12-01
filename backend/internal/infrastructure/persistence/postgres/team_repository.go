@@ -24,24 +24,25 @@ func NewTeamRepository(db *sql.DB) repository.TeamRepository {
 // Create creates a new team.
 func (r *TeamRepository) Create(ctx context.Context, team *entity.Team) error {
 	query := `
-		INSERT INTO teams (company_id, name, description)
-		VALUES ($1, $2, $3)
+		INSERT INTO teams (tenant_id, company_id, name, description)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at, updated_at
 	`
-	return r.db.QueryRowContext(ctx, query, team.CompanyID, team.Name, team.Description).
+	return r.db.QueryRowContext(ctx, query, team.TenantID, team.CompanyID, team.Name, team.Description).
 		Scan(&team.ID, &team.CreatedAt, &team.UpdatedAt)
 }
 
 // GetByID retrieves a team by its ID.
 func (r *TeamRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Team, error) {
 	query := `
-		SELECT id, company_id, name, description, created_at, updated_at
+		SELECT id, tenant_id, company_id, name, description, created_at, updated_at
 		FROM teams
 		WHERE id = $1
 	`
 	team := &entity.Team{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&team.ID,
+		&team.TenantID,
 		&team.CompanyID,
 		&team.Name,
 		&team.Description,
@@ -60,7 +61,7 @@ func (r *TeamRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Tea
 // ListByCompanyID retrieves all teams in a company.
 func (r *TeamRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUID) ([]*entity.Team, error) {
 	query := `
-		SELECT id, company_id, name, description, created_at, updated_at
+		SELECT id, tenant_id, company_id, name, description, created_at, updated_at
 		FROM teams
 		WHERE company_id = $1
 		ORDER BY created_at DESC
@@ -76,6 +77,7 @@ func (r *TeamRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUI
 		team := &entity.Team{}
 		if err := rows.Scan(
 			&team.ID,
+			&team.TenantID,
 			&team.CompanyID,
 			&team.Name,
 			&team.Description,
@@ -121,11 +123,11 @@ func (r *TeamRepository) Delete(ctx context.Context, id uuid.UUID) error {
 // AddMember adds a member to a team.
 func (r *TeamRepository) AddMember(ctx context.Context, member *entity.TeamMember) error {
 	query := `
-		INSERT INTO team_members (team_id, user_id, role)
-		VALUES ($1, $2, $3)
+		INSERT INTO team_members (tenant_id, team_id, user_id, role)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at
 	`
-	return r.db.QueryRowContext(ctx, query, member.TeamID, member.UserID, member.Role.String()).
+	return r.db.QueryRowContext(ctx, query, member.TenantID, member.TeamID, member.UserID, member.Role.String()).
 		Scan(&member.ID, &member.CreatedAt)
 }
 
@@ -149,7 +151,7 @@ func (r *TeamRepository) RemoveMember(ctx context.Context, teamID, userID uuid.U
 // ListMembers retrieves all members of a team.
 func (r *TeamRepository) ListMembers(ctx context.Context, teamID uuid.UUID) ([]*entity.TeamMember, error) {
 	query := `
-		SELECT id, team_id, user_id, role, created_at
+		SELECT id, tenant_id, team_id, user_id, role, created_at
 		FROM team_members
 		WHERE team_id = $1
 		ORDER BY created_at DESC
@@ -166,6 +168,7 @@ func (r *TeamRepository) ListMembers(ctx context.Context, teamID uuid.UUID) ([]*
 		var roleStr string
 		if err := rows.Scan(
 			&member.ID,
+			&member.TenantID,
 			&member.TeamID,
 			&member.UserID,
 			&roleStr,
@@ -182,7 +185,7 @@ func (r *TeamRepository) ListMembers(ctx context.Context, teamID uuid.UUID) ([]*
 // GetMember retrieves a specific team member.
 func (r *TeamRepository) GetMember(ctx context.Context, teamID, userID uuid.UUID) (*entity.TeamMember, error) {
 	query := `
-		SELECT id, team_id, user_id, role, created_at
+		SELECT id, tenant_id, team_id, user_id, role, created_at
 		FROM team_members
 		WHERE team_id = $1 AND user_id = $2
 	`
@@ -190,6 +193,7 @@ func (r *TeamRepository) GetMember(ctx context.Context, teamID, userID uuid.UUID
 	var roleStr string
 	err := r.db.QueryRowContext(ctx, query, teamID, userID).Scan(
 		&member.ID,
+		&member.TenantID,
 		&member.TeamID,
 		&member.UserID,
 		&roleStr,

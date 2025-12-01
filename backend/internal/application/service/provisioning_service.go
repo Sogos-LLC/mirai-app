@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +17,7 @@ import (
 // ProvisioningService handles background provisioning of paid registrations.
 type ProvisioningService struct {
 	pendingRegRepo repository.PendingRegistrationRepository
+	tenantRepo     repository.TenantRepository
 	userRepo       repository.UserRepository
 	companyRepo    repository.CompanyRepository
 	identity       service.IdentityProvider
@@ -26,6 +29,7 @@ type ProvisioningService struct {
 // NewProvisioningService creates a new provisioning service.
 func NewProvisioningService(
 	pendingRegRepo repository.PendingRegistrationRepository,
+	tenantRepo repository.TenantRepository,
 	userRepo repository.UserRepository,
 	companyRepo repository.CompanyRepository,
 	identity service.IdentityProvider,
@@ -35,6 +39,7 @@ func NewProvisioningService(
 ) *ProvisioningService {
 	return &ProvisioningService{
 		pendingRegRepo: pendingRegRepo,
+		tenantRepo:     tenantRepo,
 		userRepo:       userRepo,
 		companyRepo:    companyRepo,
 		identity:       identity,
@@ -117,8 +122,23 @@ func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.
 
 	log.Info("created Kratos identity", "kratosID", kratosID)
 
-	// Step 2: Create company with subscription details
+	// Step 2: Create tenant for this organization
+	tenant := &entity.Tenant{
+		Name:   reg.CompanyName,
+		Slug:   generateTenantSlug(reg.CompanyName),
+		Status: entity.TenantStatusActive,
+	}
+
+	if err := s.tenantRepo.Create(ctx, tenant); err != nil {
+		log.Error("failed to create tenant", "error", err)
+		return err
+	}
+
+	log.Info("created tenant", "tenantID", tenant.ID, "slug", tenant.Slug)
+
+	// Step 3: Create company with subscription details and tenant reference
 	company := &entity.Company{
+		TenantID:             tenant.ID,
 		Name:                 reg.CompanyName,
 		Industry:             reg.Industry,
 		TeamSize:             reg.TeamSize,
@@ -136,11 +156,12 @@ func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.
 
 	log.Info("created company", "companyID", company.ID, "seatCount", company.SeatCount)
 
-	// Step 3: Create user with owner role
+	// Step 4: Create user with admin role (owner of the organization)
 	user := &entity.User{
+		TenantID:  &tenant.ID,
 		KratosID:  kratosID,
 		CompanyID: &company.ID,
-		Role:      valueobject.RoleOwner,
+		Role:      valueobject.RoleAdmin,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -150,13 +171,13 @@ func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.
 
 	log.Info("created user", "userID", user.ID)
 
-	// Step 4: Delete the pending registration (successful provisioning)
+	// Step 5: Delete the pending registration (successful provisioning)
 	if err := s.pendingRegRepo.Delete(ctx, reg.ID); err != nil {
 		log.Warn("failed to delete pending registration", "error", err)
 		// Don't fail - account is created successfully
 	}
 
-	// Step 5: Send welcome email (async, don't fail if email fails)
+	// Step 6: Send welcome email (async, don't fail if email fails)
 	if s.email != nil {
 		go s.sendWelcomeEmail(reg.Email, reg.FirstName, reg.CompanyName)
 	}
@@ -212,4 +233,27 @@ func (s *ProvisioningService) RunBackground(ctx context.Context, interval time.D
 			}
 		}
 	}
+}
+
+// generateTenantSlug creates a URL-safe slug from a company name.
+// Includes a short UUID suffix to ensure uniqueness.
+func generateTenantSlug(companyName string) string {
+	// Convert to lowercase
+	slug := strings.ToLower(companyName)
+
+	// Replace non-alphanumeric characters with hyphens
+	reg := regexp.MustCompile(`[^a-z0-9]+`)
+	slug = reg.ReplaceAllString(slug, "-")
+
+	// Trim leading/trailing hyphens
+	slug = strings.Trim(slug, "-")
+
+	// Truncate if too long (max 50 chars for slug part)
+	if len(slug) > 50 {
+		slug = slug[:50]
+	}
+
+	// Add short UUID suffix for uniqueness
+	shortID := uuid.New().String()[:8]
+	return slug + "-" + shortID
 }

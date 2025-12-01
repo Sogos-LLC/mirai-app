@@ -10,6 +10,7 @@ import (
 // Team represents a team within a company.
 type Team struct {
 	ID          uuid.UUID
+	TenantID    uuid.UUID // Tenant for RLS isolation
 	CompanyID   uuid.UUID
 	Name        string
 	Description *string
@@ -20,6 +21,7 @@ type Team struct {
 // TeamMember represents a user's membership in a team.
 type TeamMember struct {
 	ID        uuid.UUID
+	TenantID  uuid.UUID // Tenant for RLS isolation
 	TeamID    uuid.UUID
 	UserID    uuid.UUID
 	Role      valueobject.TeamRole
