@@ -187,6 +187,118 @@ func (FolderType) EnumDescriptor() ([]byte, []int) {
 	return file_mirai_v1_course_proto_rawDescGZIP(), []int{2}
 }
 
+// ExportFormat defines supported export formats for courses.
+type ExportFormat int32
+
+const (
+	ExportFormat_EXPORT_FORMAT_UNSPECIFIED ExportFormat = 0
+	ExportFormat_EXPORT_FORMAT_SCORM_12    ExportFormat = 1
+	ExportFormat_EXPORT_FORMAT_SCORM_2004  ExportFormat = 2
+	ExportFormat_EXPORT_FORMAT_XAPI        ExportFormat = 3
+	ExportFormat_EXPORT_FORMAT_PDF         ExportFormat = 4
+)
+
+// Enum value maps for ExportFormat.
+var (
+	ExportFormat_name = map[int32]string{
+		0: "EXPORT_FORMAT_UNSPECIFIED",
+		1: "EXPORT_FORMAT_SCORM_12",
+		2: "EXPORT_FORMAT_SCORM_2004",
+		3: "EXPORT_FORMAT_XAPI",
+		4: "EXPORT_FORMAT_PDF",
+	}
+	ExportFormat_value = map[string]int32{
+		"EXPORT_FORMAT_UNSPECIFIED": 0,
+		"EXPORT_FORMAT_SCORM_12":    1,
+		"EXPORT_FORMAT_SCORM_2004":  2,
+		"EXPORT_FORMAT_XAPI":        3,
+		"EXPORT_FORMAT_PDF":         4,
+	}
+)
+
+func (x ExportFormat) Enum() *ExportFormat {
+	p := new(ExportFormat)
+	*p = x
+	return p
+}
+
+func (x ExportFormat) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ExportFormat) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_course_proto_enumTypes[3].Descriptor()
+}
+
+func (ExportFormat) Type() protoreflect.EnumType {
+	return &file_mirai_v1_course_proto_enumTypes[3]
+}
+
+func (x ExportFormat) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ExportFormat.Descriptor instead.
+func (ExportFormat) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{3}
+}
+
+// ExportStatus tracks the export job state.
+type ExportStatus int32
+
+const (
+	ExportStatus_EXPORT_STATUS_UNSPECIFIED ExportStatus = 0
+	ExportStatus_EXPORT_STATUS_PENDING     ExportStatus = 1
+	ExportStatus_EXPORT_STATUS_PROCESSING  ExportStatus = 2
+	ExportStatus_EXPORT_STATUS_COMPLETED   ExportStatus = 3
+	ExportStatus_EXPORT_STATUS_FAILED      ExportStatus = 4
+)
+
+// Enum value maps for ExportStatus.
+var (
+	ExportStatus_name = map[int32]string{
+		0: "EXPORT_STATUS_UNSPECIFIED",
+		1: "EXPORT_STATUS_PENDING",
+		2: "EXPORT_STATUS_PROCESSING",
+		3: "EXPORT_STATUS_COMPLETED",
+		4: "EXPORT_STATUS_FAILED",
+	}
+	ExportStatus_value = map[string]int32{
+		"EXPORT_STATUS_UNSPECIFIED": 0,
+		"EXPORT_STATUS_PENDING":     1,
+		"EXPORT_STATUS_PROCESSING":  2,
+		"EXPORT_STATUS_COMPLETED":   3,
+		"EXPORT_STATUS_FAILED":      4,
+	}
+)
+
+func (x ExportStatus) Enum() *ExportStatus {
+	p := new(ExportStatus)
+	*p = x
+	return p
+}
+
+func (x ExportStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ExportStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_course_proto_enumTypes[4].Descriptor()
+}
+
+func (ExportStatus) Type() protoreflect.EnumType {
+	return &file_mirai_v1_course_proto_enumTypes[4]
+}
+
+func (x ExportStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ExportStatus.Descriptor instead.
+func (ExportStatus) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{4}
+}
+
 // LearningObjective represents a specific learning goal for the course.
 type LearningObjective struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -736,9 +848,11 @@ type CourseExport struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Format        string                 `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
+	Format        ExportFormat           `protobuf:"varint,3,opt,name=format,proto3,enum=mirai.v1.ExportFormat" json:"format,omitempty"`
 	Version       int32                  `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
 	FilePath      string                 `protobuf:"bytes,5,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
+	Status        ExportStatus           `protobuf:"varint,6,opt,name=status,proto3,enum=mirai.v1.ExportStatus" json:"status,omitempty"`
+	ErrorMessage  *string                `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -787,11 +901,11 @@ func (x *CourseExport) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *CourseExport) GetFormat() string {
+func (x *CourseExport) GetFormat() ExportFormat {
 	if x != nil {
 		return x.Format
 	}
-	return ""
+	return ExportFormat_EXPORT_FORMAT_UNSPECIFIED
 }
 
 func (x *CourseExport) GetVersion() int32 {
@@ -804,6 +918,20 @@ func (x *CourseExport) GetVersion() int32 {
 func (x *CourseExport) GetFilePath() string {
 	if x != nil {
 		return x.FilePath
+	}
+	return ""
+}
+
+func (x *CourseExport) GetStatus() ExportStatus {
+	if x != nil {
+		return x.Status
+	}
+	return ExportStatus_EXPORT_STATUS_UNSPECIFIED
+}
+
+func (x *CourseExport) GetErrorMessage() string {
+	if x != nil && x.ErrorMessage != nil {
+		return *x.ErrorMessage
 	}
 	return ""
 }
@@ -983,8 +1111,13 @@ type Course struct {
 	AssessmentSettings *AssessmentSettings    `protobuf:"bytes,8,opt,name=assessment_settings,json=assessmentSettings,proto3" json:"assessment_settings,omitempty"`
 	Content            *CourseContent         `protobuf:"bytes,9,opt,name=content,proto3" json:"content,omitempty"`
 	Exports            []*CourseExport        `protobuf:"bytes,10,rep,name=exports,proto3" json:"exports,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Ownership fields for multi-tenancy
+	CompanyId       *string `protobuf:"bytes,11,opt,name=company_id,json=companyId,proto3,oneof" json:"company_id,omitempty"`
+	TenantId        *string `protobuf:"bytes,12,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"`
+	CreatedByUserId *string `protobuf:"bytes,13,opt,name=created_by_user_id,json=createdByUserId,proto3,oneof" json:"created_by_user_id,omitempty"`
+	TeamId          *string `protobuf:"bytes,14,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Course) Reset() {
@@ -1087,6 +1220,34 @@ func (x *Course) GetExports() []*CourseExport {
 	return nil
 }
 
+func (x *Course) GetCompanyId() string {
+	if x != nil && x.CompanyId != nil {
+		return *x.CompanyId
+	}
+	return ""
+}
+
+func (x *Course) GetTenantId() string {
+	if x != nil && x.TenantId != nil {
+		return *x.TenantId
+	}
+	return ""
+}
+
+func (x *Course) GetCreatedByUserId() string {
+	if x != nil && x.CreatedByUserId != nil {
+		return *x.CreatedByUserId
+	}
+	return ""
+}
+
+func (x *Course) GetTeamId() string {
+	if x != nil && x.TeamId != nil {
+		return *x.TeamId
+	}
+	return ""
+}
+
 // LibraryEntry represents a course listing in the content library.
 type LibraryEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1099,6 +1260,10 @@ type LibraryEntry struct {
 	ModifiedAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=modified_at,json=modifiedAt,proto3" json:"modified_at,omitempty"`
 	CreatedBy     *string                `protobuf:"bytes,8,opt,name=created_by,json=createdBy,proto3,oneof" json:"created_by,omitempty"`
 	ThumbnailPath *string                `protobuf:"bytes,9,opt,name=thumbnail_path,json=thumbnailPath,proto3,oneof" json:"thumbnail_path,omitempty"`
+	// Ownership fields for multi-tenancy
+	CompanyId     *string `protobuf:"bytes,10,opt,name=company_id,json=companyId,proto3,oneof" json:"company_id,omitempty"`
+	TenantId      *string `protobuf:"bytes,11,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"`
+	TeamId        *string `protobuf:"bytes,12,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1192,6 +1357,27 @@ func (x *LibraryEntry) GetCreatedBy() string {
 func (x *LibraryEntry) GetThumbnailPath() string {
 	if x != nil && x.ThumbnailPath != nil {
 		return *x.ThumbnailPath
+	}
+	return ""
+}
+
+func (x *LibraryEntry) GetCompanyId() string {
+	if x != nil && x.CompanyId != nil {
+		return *x.CompanyId
+	}
+	return ""
+}
+
+func (x *LibraryEntry) GetTenantId() string {
+	if x != nil && x.TenantId != nil {
+		return *x.TenantId
+	}
+	return ""
+}
+
+func (x *LibraryEntry) GetTeamId() string {
+	if x != nil && x.TeamId != nil {
+		return *x.TeamId
 	}
 	return ""
 }
@@ -2092,6 +2278,382 @@ func (x *GetLibraryResponse) GetLibrary() *Library {
 	return nil
 }
 
+// ExportCourseRequest contains the course ID and export format.
+type ExportCourseRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CourseId      string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
+	Format        ExportFormat           `protobuf:"varint,2,opt,name=format,proto3,enum=mirai.v1.ExportFormat" json:"format,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportCourseRequest) Reset() {
+	*x = ExportCourseRequest{}
+	mi := &file_mirai_v1_course_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportCourseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportCourseRequest) ProtoMessage() {}
+
+func (x *ExportCourseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportCourseRequest.ProtoReflect.Descriptor instead.
+func (*ExportCourseRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ExportCourseRequest) GetCourseId() string {
+	if x != nil {
+		return x.CourseId
+	}
+	return ""
+}
+
+func (x *ExportCourseRequest) GetFormat() ExportFormat {
+	if x != nil {
+		return x.Format
+	}
+	return ExportFormat_EXPORT_FORMAT_UNSPECIFIED
+}
+
+// ExportCourseResponse contains the export job details.
+type ExportCourseResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Export        *CourseExport          `protobuf:"bytes,1,opt,name=export,proto3" json:"export,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportCourseResponse) Reset() {
+	*x = ExportCourseResponse{}
+	mi := &file_mirai_v1_course_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportCourseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportCourseResponse) ProtoMessage() {}
+
+func (x *ExportCourseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportCourseResponse.ProtoReflect.Descriptor instead.
+func (*ExportCourseResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ExportCourseResponse) GetExport() *CourseExport {
+	if x != nil {
+		return x.Export
+	}
+	return nil
+}
+
+// GetExportStatusRequest contains the export ID.
+type GetExportStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExportId      string                 `protobuf:"bytes,1,opt,name=export_id,json=exportId,proto3" json:"export_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetExportStatusRequest) Reset() {
+	*x = GetExportStatusRequest{}
+	mi := &file_mirai_v1_course_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetExportStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetExportStatusRequest) ProtoMessage() {}
+
+func (x *GetExportStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetExportStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetExportStatusRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetExportStatusRequest) GetExportId() string {
+	if x != nil {
+		return x.ExportId
+	}
+	return ""
+}
+
+// GetExportStatusResponse contains the export status.
+type GetExportStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Export        *CourseExport          `protobuf:"bytes,1,opt,name=export,proto3" json:"export,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetExportStatusResponse) Reset() {
+	*x = GetExportStatusResponse{}
+	mi := &file_mirai_v1_course_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetExportStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetExportStatusResponse) ProtoMessage() {}
+
+func (x *GetExportStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetExportStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetExportStatusResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *GetExportStatusResponse) GetExport() *CourseExport {
+	if x != nil {
+		return x.Export
+	}
+	return nil
+}
+
+// DownloadExportRequest contains the export ID.
+type DownloadExportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExportId      string                 `protobuf:"bytes,1,opt,name=export_id,json=exportId,proto3" json:"export_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadExportRequest) Reset() {
+	*x = DownloadExportRequest{}
+	mi := &file_mirai_v1_course_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadExportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadExportRequest) ProtoMessage() {}
+
+func (x *DownloadExportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadExportRequest.ProtoReflect.Descriptor instead.
+func (*DownloadExportRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *DownloadExportRequest) GetExportId() string {
+	if x != nil {
+		return x.ExportId
+	}
+	return ""
+}
+
+// DownloadExportResponse contains the presigned download URL.
+type DownloadExportResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DownloadUrl   string                 `protobuf:"bytes,1,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadExportResponse) Reset() {
+	*x = DownloadExportResponse{}
+	mi := &file_mirai_v1_course_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadExportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadExportResponse) ProtoMessage() {}
+
+func (x *DownloadExportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadExportResponse.ProtoReflect.Descriptor instead.
+func (*DownloadExportResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *DownloadExportResponse) GetDownloadUrl() string {
+	if x != nil {
+		return x.DownloadUrl
+	}
+	return ""
+}
+
+func (x *DownloadExportResponse) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+// ListExportsRequest contains the course ID.
+type ListExportsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CourseId      string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExportsRequest) Reset() {
+	*x = ListExportsRequest{}
+	mi := &file_mirai_v1_course_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExportsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExportsRequest) ProtoMessage() {}
+
+func (x *ListExportsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExportsRequest.ProtoReflect.Descriptor instead.
+func (*ListExportsRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ListExportsRequest) GetCourseId() string {
+	if x != nil {
+		return x.CourseId
+	}
+	return ""
+}
+
+// ListExportsResponse contains the list of exports.
+type ListExportsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Exports       []*CourseExport        `protobuf:"bytes,1,rep,name=exports,proto3" json:"exports,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExportsResponse) Reset() {
+	*x = ListExportsResponse{}
+	mi := &file_mirai_v1_course_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExportsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExportsResponse) ProtoMessage() {}
+
+func (x *ListExportsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExportsResponse.ProtoReflect.Descriptor instead.
+func (*ListExportsResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ListExportsResponse) GetExports() []*CourseExport {
+	if x != nil {
+		return x.Exports
+	}
+	return nil
+}
+
 var File_mirai_v1_course_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_course_proto_rawDesc = "" +
@@ -2146,13 +2708,16 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x11enable_final_exam\x18\x02 \x01(\bR\x0fenableFinalExam\"\x80\x01\n" +
 	"\rCourseContent\x123\n" +
 	"\bsections\x18\x01 \x03(\v2\x17.mirai.v1.CourseSectionR\bsections\x12:\n" +
-	"\rcourse_blocks\x18\x02 \x03(\v2\x15.mirai.v1.CourseBlockR\fcourseBlocks\"\xa7\x01\n" +
+	"\rcourse_blocks\x18\x02 \x03(\v2\x15.mirai.v1.CourseBlockR\fcourseBlocks\"\xab\x02\n" +
 	"\fCourseExport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x128\n" +
-	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x16\n" +
-	"\x06format\x18\x03 \x01(\tR\x06format\x12\x18\n" +
+	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12.\n" +
+	"\x06format\x18\x03 \x01(\x0e2\x16.mirai.v1.ExportFormatR\x06format\x12\x18\n" +
 	"\aversion\x18\x04 \x01(\x05R\aversion\x12\x1b\n" +
-	"\tfile_path\x18\x05 \x01(\tR\bfilePath\"\xc4\x01\n" +
+	"\tfile_path\x18\x05 \x01(\tR\bfilePath\x12.\n" +
+	"\x06status\x18\x06 \x01(\x0e2\x16.mirai.v1.ExportStatusR\x06status\x12(\n" +
+	"\rerror_message\x18\a \x01(\tH\x00R\ferrorMessage\x88\x01\x01B\x10\n" +
+	"\x0e_error_message\"\xc4\x01\n" +
 	"\x0eCourseSettings\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12'\n" +
 	"\x0fdesired_outcome\x18\x02 \x01(\tR\x0edesiredOutcome\x12-\n" +
@@ -2170,7 +2735,7 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"modifiedAt\x12\"\n" +
 	"\n" +
 	"created_by\x18\x06 \x01(\tH\x00R\tcreatedBy\x88\x01\x01B\r\n" +
-	"\v_created_by\"\xff\x03\n" +
+	"\v_created_by\"\xd5\x05\n" +
 	"\x06Course\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x05R\aversion\x12.\n" +
@@ -2182,7 +2747,18 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x13assessment_settings\x18\b \x01(\v2\x1c.mirai.v1.AssessmentSettingsR\x12assessmentSettings\x121\n" +
 	"\acontent\x18\t \x01(\v2\x17.mirai.v1.CourseContentR\acontent\x120\n" +
 	"\aexports\x18\n" +
-	" \x03(\v2\x16.mirai.v1.CourseExportR\aexports\"\xfa\x02\n" +
+	" \x03(\v2\x16.mirai.v1.CourseExportR\aexports\x12\"\n" +
+	"\n" +
+	"company_id\x18\v \x01(\tH\x00R\tcompanyId\x88\x01\x01\x12 \n" +
+	"\ttenant_id\x18\f \x01(\tH\x01R\btenantId\x88\x01\x01\x120\n" +
+	"\x12created_by_user_id\x18\r \x01(\tH\x02R\x0fcreatedByUserId\x88\x01\x01\x12\x1c\n" +
+	"\ateam_id\x18\x0e \x01(\tH\x03R\x06teamId\x88\x01\x01B\r\n" +
+	"\v_company_idB\f\n" +
+	"\n" +
+	"_tenant_idB\x15\n" +
+	"\x13_created_by_user_idB\n" +
+	"\n" +
+	"\b_team_id\"\x87\x04\n" +
 	"\fLibraryEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12.\n" +
@@ -2195,9 +2771,19 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"modifiedAt\x12\"\n" +
 	"\n" +
 	"created_by\x18\b \x01(\tH\x00R\tcreatedBy\x88\x01\x01\x12*\n" +
-	"\x0ethumbnail_path\x18\t \x01(\tH\x01R\rthumbnailPath\x88\x01\x01B\r\n" +
+	"\x0ethumbnail_path\x18\t \x01(\tH\x01R\rthumbnailPath\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"company_id\x18\n" +
+	" \x01(\tH\x02R\tcompanyId\x88\x01\x01\x12 \n" +
+	"\ttenant_id\x18\v \x01(\tH\x03R\btenantId\x88\x01\x01\x12\x1c\n" +
+	"\ateam_id\x18\f \x01(\tH\x04R\x06teamId\x88\x01\x01B\r\n" +
 	"\v_created_byB\x11\n" +
-	"\x0f_thumbnail_path\"\xed\x01\n" +
+	"\x0f_thumbnail_pathB\r\n" +
+	"\v_company_idB\f\n" +
+	"\n" +
+	"_tenant_idB\n" +
+	"\n" +
+	"\b_team_id\"\xed\x01\n" +
 	"\x06Folder\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -2267,7 +2853,26 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x11GetLibraryRequest\x122\n" +
 	"\x15include_course_counts\x18\x01 \x01(\bR\x13includeCourseCounts\"A\n" +
 	"\x12GetLibraryResponse\x12+\n" +
-	"\alibrary\x18\x01 \x01(\v2\x11.mirai.v1.LibraryR\alibrary*\x80\x01\n" +
+	"\alibrary\x18\x01 \x01(\v2\x11.mirai.v1.LibraryR\alibrary\"b\n" +
+	"\x13ExportCourseRequest\x12\x1b\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12.\n" +
+	"\x06format\x18\x02 \x01(\x0e2\x16.mirai.v1.ExportFormatR\x06format\"F\n" +
+	"\x14ExportCourseResponse\x12.\n" +
+	"\x06export\x18\x01 \x01(\v2\x16.mirai.v1.CourseExportR\x06export\"5\n" +
+	"\x16GetExportStatusRequest\x12\x1b\n" +
+	"\texport_id\x18\x01 \x01(\tR\bexportId\"I\n" +
+	"\x17GetExportStatusResponse\x12.\n" +
+	"\x06export\x18\x01 \x01(\v2\x16.mirai.v1.CourseExportR\x06export\"4\n" +
+	"\x15DownloadExportRequest\x12\x1b\n" +
+	"\texport_id\x18\x01 \x01(\tR\bexportId\"v\n" +
+	"\x16DownloadExportResponse\x12!\n" +
+	"\fdownload_url\x18\x01 \x01(\tR\vdownloadUrl\x129\n" +
+	"\n" +
+	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"1\n" +
+	"\x12ListExportsRequest\x12\x1b\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"G\n" +
+	"\x13ListExportsResponse\x120\n" +
+	"\aexports\x18\x01 \x03(\v2\x16.mirai.v1.CourseExportR\aexports*\x80\x01\n" +
 	"\fCourseStatus\x12\x1d\n" +
 	"\x19COURSE_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13COURSE_STATUS_DRAFT\x10\x01\x12\x1b\n" +
@@ -2285,7 +2890,19 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x13FOLDER_TYPE_LIBRARY\x10\x01\x12\x14\n" +
 	"\x10FOLDER_TYPE_TEAM\x10\x02\x12\x18\n" +
 	"\x14FOLDER_TYPE_PERSONAL\x10\x03\x12\x16\n" +
-	"\x12FOLDER_TYPE_FOLDER\x10\x042\xb8\x04\n" +
+	"\x12FOLDER_TYPE_FOLDER\x10\x04*\x96\x01\n" +
+	"\fExportFormat\x12\x1d\n" +
+	"\x19EXPORT_FORMAT_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16EXPORT_FORMAT_SCORM_12\x10\x01\x12\x1c\n" +
+	"\x18EXPORT_FORMAT_SCORM_2004\x10\x02\x12\x16\n" +
+	"\x12EXPORT_FORMAT_XAPI\x10\x03\x12\x15\n" +
+	"\x11EXPORT_FORMAT_PDF\x10\x04*\x9d\x01\n" +
+	"\fExportStatus\x12\x1d\n" +
+	"\x19EXPORT_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15EXPORT_STATUS_PENDING\x10\x01\x12\x1c\n" +
+	"\x18EXPORT_STATUS_PROCESSING\x10\x02\x12\x1b\n" +
+	"\x17EXPORT_STATUS_COMPLETED\x10\x03\x12\x18\n" +
+	"\x14EXPORT_STATUS_FAILED\x10\x042\x80\a\n" +
 	"\rCourseService\x12J\n" +
 	"\vListCourses\x12\x1c.mirai.v1.ListCoursesRequest\x1a\x1d.mirai.v1.ListCoursesResponse\x12D\n" +
 	"\tGetCourse\x12\x1a.mirai.v1.GetCourseRequest\x1a\x1b.mirai.v1.GetCourseResponse\x12M\n" +
@@ -2294,7 +2911,11 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\fDeleteCourse\x12\x1d.mirai.v1.DeleteCourseRequest\x1a\x1e.mirai.v1.DeleteCourseResponse\x12_\n" +
 	"\x12GetFolderHierarchy\x12#.mirai.v1.GetFolderHierarchyRequest\x1a$.mirai.v1.GetFolderHierarchyResponse\x12G\n" +
 	"\n" +
-	"GetLibrary\x12\x1b.mirai.v1.GetLibraryRequest\x1a\x1c.mirai.v1.GetLibraryResponseB\x91\x01\n" +
+	"GetLibrary\x12\x1b.mirai.v1.GetLibraryRequest\x1a\x1c.mirai.v1.GetLibraryResponse\x12M\n" +
+	"\fExportCourse\x12\x1d.mirai.v1.ExportCourseRequest\x1a\x1e.mirai.v1.ExportCourseResponse\x12V\n" +
+	"\x0fGetExportStatus\x12 .mirai.v1.GetExportStatusRequest\x1a!.mirai.v1.GetExportStatusResponse\x12S\n" +
+	"\x0eDownloadExport\x12\x1f.mirai.v1.DownloadExportRequest\x1a .mirai.v1.DownloadExportResponse\x12J\n" +
+	"\vListExports\x12\x1c.mirai.v1.ListExportsRequest\x1a\x1d.mirai.v1.ListExportsResponseB\x91\x01\n" +
 	"\fcom.mirai.v1B\vCourseProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -2309,109 +2930,134 @@ func file_mirai_v1_course_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_course_proto_rawDescData
 }
 
-var file_mirai_v1_course_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_mirai_v1_course_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_mirai_v1_course_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_mirai_v1_course_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_mirai_v1_course_proto_goTypes = []any{
 	(CourseStatus)(0),                  // 0: mirai.v1.CourseStatus
 	(BlockType)(0),                     // 1: mirai.v1.BlockType
 	(FolderType)(0),                    // 2: mirai.v1.FolderType
-	(*LearningObjective)(nil),          // 3: mirai.v1.LearningObjective
-	(*Persona)(nil),                    // 4: mirai.v1.Persona
-	(*BlockAlignment)(nil),             // 5: mirai.v1.BlockAlignment
-	(*CourseBlock)(nil),                // 6: mirai.v1.CourseBlock
-	(*Lesson)(nil),                     // 7: mirai.v1.Lesson
-	(*CourseSection)(nil),              // 8: mirai.v1.CourseSection
-	(*AssessmentSettings)(nil),         // 9: mirai.v1.AssessmentSettings
-	(*CourseContent)(nil),              // 10: mirai.v1.CourseContent
-	(*CourseExport)(nil),               // 11: mirai.v1.CourseExport
-	(*CourseSettings)(nil),             // 12: mirai.v1.CourseSettings
-	(*CourseMetadata)(nil),             // 13: mirai.v1.CourseMetadata
-	(*Course)(nil),                     // 14: mirai.v1.Course
-	(*LibraryEntry)(nil),               // 15: mirai.v1.LibraryEntry
-	(*Folder)(nil),                     // 16: mirai.v1.Folder
-	(*Library)(nil),                    // 17: mirai.v1.Library
-	(*ListCoursesRequest)(nil),         // 18: mirai.v1.ListCoursesRequest
-	(*ListCoursesResponse)(nil),        // 19: mirai.v1.ListCoursesResponse
-	(*GetCourseRequest)(nil),           // 20: mirai.v1.GetCourseRequest
-	(*GetCourseResponse)(nil),          // 21: mirai.v1.GetCourseResponse
-	(*CreateCourseRequest)(nil),        // 22: mirai.v1.CreateCourseRequest
-	(*CreateCourseResponse)(nil),       // 23: mirai.v1.CreateCourseResponse
-	(*UpdateCourseRequest)(nil),        // 24: mirai.v1.UpdateCourseRequest
-	(*UpdateCourseResponse)(nil),       // 25: mirai.v1.UpdateCourseResponse
-	(*DeleteCourseRequest)(nil),        // 26: mirai.v1.DeleteCourseRequest
-	(*DeleteCourseResponse)(nil),       // 27: mirai.v1.DeleteCourseResponse
-	(*GetFolderHierarchyRequest)(nil),  // 28: mirai.v1.GetFolderHierarchyRequest
-	(*GetFolderHierarchyResponse)(nil), // 29: mirai.v1.GetFolderHierarchyResponse
-	(*GetLibraryRequest)(nil),          // 30: mirai.v1.GetLibraryRequest
-	(*GetLibraryResponse)(nil),         // 31: mirai.v1.GetLibraryResponse
-	(*timestamppb.Timestamp)(nil),      // 32: google.protobuf.Timestamp
+	(ExportFormat)(0),                  // 3: mirai.v1.ExportFormat
+	(ExportStatus)(0),                  // 4: mirai.v1.ExportStatus
+	(*LearningObjective)(nil),          // 5: mirai.v1.LearningObjective
+	(*Persona)(nil),                    // 6: mirai.v1.Persona
+	(*BlockAlignment)(nil),             // 7: mirai.v1.BlockAlignment
+	(*CourseBlock)(nil),                // 8: mirai.v1.CourseBlock
+	(*Lesson)(nil),                     // 9: mirai.v1.Lesson
+	(*CourseSection)(nil),              // 10: mirai.v1.CourseSection
+	(*AssessmentSettings)(nil),         // 11: mirai.v1.AssessmentSettings
+	(*CourseContent)(nil),              // 12: mirai.v1.CourseContent
+	(*CourseExport)(nil),               // 13: mirai.v1.CourseExport
+	(*CourseSettings)(nil),             // 14: mirai.v1.CourseSettings
+	(*CourseMetadata)(nil),             // 15: mirai.v1.CourseMetadata
+	(*Course)(nil),                     // 16: mirai.v1.Course
+	(*LibraryEntry)(nil),               // 17: mirai.v1.LibraryEntry
+	(*Folder)(nil),                     // 18: mirai.v1.Folder
+	(*Library)(nil),                    // 19: mirai.v1.Library
+	(*ListCoursesRequest)(nil),         // 20: mirai.v1.ListCoursesRequest
+	(*ListCoursesResponse)(nil),        // 21: mirai.v1.ListCoursesResponse
+	(*GetCourseRequest)(nil),           // 22: mirai.v1.GetCourseRequest
+	(*GetCourseResponse)(nil),          // 23: mirai.v1.GetCourseResponse
+	(*CreateCourseRequest)(nil),        // 24: mirai.v1.CreateCourseRequest
+	(*CreateCourseResponse)(nil),       // 25: mirai.v1.CreateCourseResponse
+	(*UpdateCourseRequest)(nil),        // 26: mirai.v1.UpdateCourseRequest
+	(*UpdateCourseResponse)(nil),       // 27: mirai.v1.UpdateCourseResponse
+	(*DeleteCourseRequest)(nil),        // 28: mirai.v1.DeleteCourseRequest
+	(*DeleteCourseResponse)(nil),       // 29: mirai.v1.DeleteCourseResponse
+	(*GetFolderHierarchyRequest)(nil),  // 30: mirai.v1.GetFolderHierarchyRequest
+	(*GetFolderHierarchyResponse)(nil), // 31: mirai.v1.GetFolderHierarchyResponse
+	(*GetLibraryRequest)(nil),          // 32: mirai.v1.GetLibraryRequest
+	(*GetLibraryResponse)(nil),         // 33: mirai.v1.GetLibraryResponse
+	(*ExportCourseRequest)(nil),        // 34: mirai.v1.ExportCourseRequest
+	(*ExportCourseResponse)(nil),       // 35: mirai.v1.ExportCourseResponse
+	(*GetExportStatusRequest)(nil),     // 36: mirai.v1.GetExportStatusRequest
+	(*GetExportStatusResponse)(nil),    // 37: mirai.v1.GetExportStatusResponse
+	(*DownloadExportRequest)(nil),      // 38: mirai.v1.DownloadExportRequest
+	(*DownloadExportResponse)(nil),     // 39: mirai.v1.DownloadExportResponse
+	(*ListExportsRequest)(nil),         // 40: mirai.v1.ListExportsRequest
+	(*ListExportsResponse)(nil),        // 41: mirai.v1.ListExportsResponse
+	(*timestamppb.Timestamp)(nil),      // 42: google.protobuf.Timestamp
 }
 var file_mirai_v1_course_proto_depIdxs = []int32{
-	3,  // 0: mirai.v1.Persona.learning_objectives:type_name -> mirai.v1.LearningObjective
+	5,  // 0: mirai.v1.Persona.learning_objectives:type_name -> mirai.v1.LearningObjective
 	1,  // 1: mirai.v1.CourseBlock.type:type_name -> mirai.v1.BlockType
-	5,  // 2: mirai.v1.CourseBlock.alignment:type_name -> mirai.v1.BlockAlignment
-	6,  // 3: mirai.v1.Lesson.blocks:type_name -> mirai.v1.CourseBlock
-	7,  // 4: mirai.v1.CourseSection.lessons:type_name -> mirai.v1.Lesson
-	8,  // 5: mirai.v1.CourseContent.sections:type_name -> mirai.v1.CourseSection
-	6,  // 6: mirai.v1.CourseContent.course_blocks:type_name -> mirai.v1.CourseBlock
-	32, // 7: mirai.v1.CourseExport.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 8: mirai.v1.CourseMetadata.status:type_name -> mirai.v1.CourseStatus
-	32, // 9: mirai.v1.CourseMetadata.created_at:type_name -> google.protobuf.Timestamp
-	32, // 10: mirai.v1.CourseMetadata.modified_at:type_name -> google.protobuf.Timestamp
-	0,  // 11: mirai.v1.Course.status:type_name -> mirai.v1.CourseStatus
-	13, // 12: mirai.v1.Course.metadata:type_name -> mirai.v1.CourseMetadata
-	12, // 13: mirai.v1.Course.settings:type_name -> mirai.v1.CourseSettings
-	4,  // 14: mirai.v1.Course.personas:type_name -> mirai.v1.Persona
-	3,  // 15: mirai.v1.Course.learning_objectives:type_name -> mirai.v1.LearningObjective
-	9,  // 16: mirai.v1.Course.assessment_settings:type_name -> mirai.v1.AssessmentSettings
-	10, // 17: mirai.v1.Course.content:type_name -> mirai.v1.CourseContent
-	11, // 18: mirai.v1.Course.exports:type_name -> mirai.v1.CourseExport
-	0,  // 19: mirai.v1.LibraryEntry.status:type_name -> mirai.v1.CourseStatus
-	32, // 20: mirai.v1.LibraryEntry.created_at:type_name -> google.protobuf.Timestamp
-	32, // 21: mirai.v1.LibraryEntry.modified_at:type_name -> google.protobuf.Timestamp
-	2,  // 22: mirai.v1.Folder.type:type_name -> mirai.v1.FolderType
-	16, // 23: mirai.v1.Folder.children:type_name -> mirai.v1.Folder
-	32, // 24: mirai.v1.Library.last_updated:type_name -> google.protobuf.Timestamp
-	15, // 25: mirai.v1.Library.courses:type_name -> mirai.v1.LibraryEntry
-	16, // 26: mirai.v1.Library.folders:type_name -> mirai.v1.Folder
-	0,  // 27: mirai.v1.ListCoursesRequest.status:type_name -> mirai.v1.CourseStatus
-	15, // 28: mirai.v1.ListCoursesResponse.courses:type_name -> mirai.v1.LibraryEntry
-	14, // 29: mirai.v1.GetCourseResponse.course:type_name -> mirai.v1.Course
-	12, // 30: mirai.v1.CreateCourseRequest.settings:type_name -> mirai.v1.CourseSettings
-	4,  // 31: mirai.v1.CreateCourseRequest.personas:type_name -> mirai.v1.Persona
-	3,  // 32: mirai.v1.CreateCourseRequest.learning_objectives:type_name -> mirai.v1.LearningObjective
-	9,  // 33: mirai.v1.CreateCourseRequest.assessment_settings:type_name -> mirai.v1.AssessmentSettings
-	10, // 34: mirai.v1.CreateCourseRequest.content:type_name -> mirai.v1.CourseContent
-	14, // 35: mirai.v1.CreateCourseResponse.course:type_name -> mirai.v1.Course
-	12, // 36: mirai.v1.UpdateCourseRequest.settings:type_name -> mirai.v1.CourseSettings
-	4,  // 37: mirai.v1.UpdateCourseRequest.personas:type_name -> mirai.v1.Persona
-	3,  // 38: mirai.v1.UpdateCourseRequest.learning_objectives:type_name -> mirai.v1.LearningObjective
-	9,  // 39: mirai.v1.UpdateCourseRequest.assessment_settings:type_name -> mirai.v1.AssessmentSettings
-	10, // 40: mirai.v1.UpdateCourseRequest.content:type_name -> mirai.v1.CourseContent
-	0,  // 41: mirai.v1.UpdateCourseRequest.status:type_name -> mirai.v1.CourseStatus
-	13, // 42: mirai.v1.UpdateCourseRequest.metadata:type_name -> mirai.v1.CourseMetadata
-	14, // 43: mirai.v1.UpdateCourseResponse.course:type_name -> mirai.v1.Course
-	16, // 44: mirai.v1.GetFolderHierarchyResponse.folders:type_name -> mirai.v1.Folder
-	17, // 45: mirai.v1.GetLibraryResponse.library:type_name -> mirai.v1.Library
-	18, // 46: mirai.v1.CourseService.ListCourses:input_type -> mirai.v1.ListCoursesRequest
-	20, // 47: mirai.v1.CourseService.GetCourse:input_type -> mirai.v1.GetCourseRequest
-	22, // 48: mirai.v1.CourseService.CreateCourse:input_type -> mirai.v1.CreateCourseRequest
-	24, // 49: mirai.v1.CourseService.UpdateCourse:input_type -> mirai.v1.UpdateCourseRequest
-	26, // 50: mirai.v1.CourseService.DeleteCourse:input_type -> mirai.v1.DeleteCourseRequest
-	28, // 51: mirai.v1.CourseService.GetFolderHierarchy:input_type -> mirai.v1.GetFolderHierarchyRequest
-	30, // 52: mirai.v1.CourseService.GetLibrary:input_type -> mirai.v1.GetLibraryRequest
-	19, // 53: mirai.v1.CourseService.ListCourses:output_type -> mirai.v1.ListCoursesResponse
-	21, // 54: mirai.v1.CourseService.GetCourse:output_type -> mirai.v1.GetCourseResponse
-	23, // 55: mirai.v1.CourseService.CreateCourse:output_type -> mirai.v1.CreateCourseResponse
-	25, // 56: mirai.v1.CourseService.UpdateCourse:output_type -> mirai.v1.UpdateCourseResponse
-	27, // 57: mirai.v1.CourseService.DeleteCourse:output_type -> mirai.v1.DeleteCourseResponse
-	29, // 58: mirai.v1.CourseService.GetFolderHierarchy:output_type -> mirai.v1.GetFolderHierarchyResponse
-	31, // 59: mirai.v1.CourseService.GetLibrary:output_type -> mirai.v1.GetLibraryResponse
-	53, // [53:60] is the sub-list for method output_type
-	46, // [46:53] is the sub-list for method input_type
-	46, // [46:46] is the sub-list for extension type_name
-	46, // [46:46] is the sub-list for extension extendee
-	0,  // [0:46] is the sub-list for field type_name
+	7,  // 2: mirai.v1.CourseBlock.alignment:type_name -> mirai.v1.BlockAlignment
+	8,  // 3: mirai.v1.Lesson.blocks:type_name -> mirai.v1.CourseBlock
+	9,  // 4: mirai.v1.CourseSection.lessons:type_name -> mirai.v1.Lesson
+	10, // 5: mirai.v1.CourseContent.sections:type_name -> mirai.v1.CourseSection
+	8,  // 6: mirai.v1.CourseContent.course_blocks:type_name -> mirai.v1.CourseBlock
+	42, // 7: mirai.v1.CourseExport.timestamp:type_name -> google.protobuf.Timestamp
+	3,  // 8: mirai.v1.CourseExport.format:type_name -> mirai.v1.ExportFormat
+	4,  // 9: mirai.v1.CourseExport.status:type_name -> mirai.v1.ExportStatus
+	0,  // 10: mirai.v1.CourseMetadata.status:type_name -> mirai.v1.CourseStatus
+	42, // 11: mirai.v1.CourseMetadata.created_at:type_name -> google.protobuf.Timestamp
+	42, // 12: mirai.v1.CourseMetadata.modified_at:type_name -> google.protobuf.Timestamp
+	0,  // 13: mirai.v1.Course.status:type_name -> mirai.v1.CourseStatus
+	15, // 14: mirai.v1.Course.metadata:type_name -> mirai.v1.CourseMetadata
+	14, // 15: mirai.v1.Course.settings:type_name -> mirai.v1.CourseSettings
+	6,  // 16: mirai.v1.Course.personas:type_name -> mirai.v1.Persona
+	5,  // 17: mirai.v1.Course.learning_objectives:type_name -> mirai.v1.LearningObjective
+	11, // 18: mirai.v1.Course.assessment_settings:type_name -> mirai.v1.AssessmentSettings
+	12, // 19: mirai.v1.Course.content:type_name -> mirai.v1.CourseContent
+	13, // 20: mirai.v1.Course.exports:type_name -> mirai.v1.CourseExport
+	0,  // 21: mirai.v1.LibraryEntry.status:type_name -> mirai.v1.CourseStatus
+	42, // 22: mirai.v1.LibraryEntry.created_at:type_name -> google.protobuf.Timestamp
+	42, // 23: mirai.v1.LibraryEntry.modified_at:type_name -> google.protobuf.Timestamp
+	2,  // 24: mirai.v1.Folder.type:type_name -> mirai.v1.FolderType
+	18, // 25: mirai.v1.Folder.children:type_name -> mirai.v1.Folder
+	42, // 26: mirai.v1.Library.last_updated:type_name -> google.protobuf.Timestamp
+	17, // 27: mirai.v1.Library.courses:type_name -> mirai.v1.LibraryEntry
+	18, // 28: mirai.v1.Library.folders:type_name -> mirai.v1.Folder
+	0,  // 29: mirai.v1.ListCoursesRequest.status:type_name -> mirai.v1.CourseStatus
+	17, // 30: mirai.v1.ListCoursesResponse.courses:type_name -> mirai.v1.LibraryEntry
+	16, // 31: mirai.v1.GetCourseResponse.course:type_name -> mirai.v1.Course
+	14, // 32: mirai.v1.CreateCourseRequest.settings:type_name -> mirai.v1.CourseSettings
+	6,  // 33: mirai.v1.CreateCourseRequest.personas:type_name -> mirai.v1.Persona
+	5,  // 34: mirai.v1.CreateCourseRequest.learning_objectives:type_name -> mirai.v1.LearningObjective
+	11, // 35: mirai.v1.CreateCourseRequest.assessment_settings:type_name -> mirai.v1.AssessmentSettings
+	12, // 36: mirai.v1.CreateCourseRequest.content:type_name -> mirai.v1.CourseContent
+	16, // 37: mirai.v1.CreateCourseResponse.course:type_name -> mirai.v1.Course
+	14, // 38: mirai.v1.UpdateCourseRequest.settings:type_name -> mirai.v1.CourseSettings
+	6,  // 39: mirai.v1.UpdateCourseRequest.personas:type_name -> mirai.v1.Persona
+	5,  // 40: mirai.v1.UpdateCourseRequest.learning_objectives:type_name -> mirai.v1.LearningObjective
+	11, // 41: mirai.v1.UpdateCourseRequest.assessment_settings:type_name -> mirai.v1.AssessmentSettings
+	12, // 42: mirai.v1.UpdateCourseRequest.content:type_name -> mirai.v1.CourseContent
+	0,  // 43: mirai.v1.UpdateCourseRequest.status:type_name -> mirai.v1.CourseStatus
+	15, // 44: mirai.v1.UpdateCourseRequest.metadata:type_name -> mirai.v1.CourseMetadata
+	16, // 45: mirai.v1.UpdateCourseResponse.course:type_name -> mirai.v1.Course
+	18, // 46: mirai.v1.GetFolderHierarchyResponse.folders:type_name -> mirai.v1.Folder
+	19, // 47: mirai.v1.GetLibraryResponse.library:type_name -> mirai.v1.Library
+	3,  // 48: mirai.v1.ExportCourseRequest.format:type_name -> mirai.v1.ExportFormat
+	13, // 49: mirai.v1.ExportCourseResponse.export:type_name -> mirai.v1.CourseExport
+	13, // 50: mirai.v1.GetExportStatusResponse.export:type_name -> mirai.v1.CourseExport
+	42, // 51: mirai.v1.DownloadExportResponse.expires_at:type_name -> google.protobuf.Timestamp
+	13, // 52: mirai.v1.ListExportsResponse.exports:type_name -> mirai.v1.CourseExport
+	20, // 53: mirai.v1.CourseService.ListCourses:input_type -> mirai.v1.ListCoursesRequest
+	22, // 54: mirai.v1.CourseService.GetCourse:input_type -> mirai.v1.GetCourseRequest
+	24, // 55: mirai.v1.CourseService.CreateCourse:input_type -> mirai.v1.CreateCourseRequest
+	26, // 56: mirai.v1.CourseService.UpdateCourse:input_type -> mirai.v1.UpdateCourseRequest
+	28, // 57: mirai.v1.CourseService.DeleteCourse:input_type -> mirai.v1.DeleteCourseRequest
+	30, // 58: mirai.v1.CourseService.GetFolderHierarchy:input_type -> mirai.v1.GetFolderHierarchyRequest
+	32, // 59: mirai.v1.CourseService.GetLibrary:input_type -> mirai.v1.GetLibraryRequest
+	34, // 60: mirai.v1.CourseService.ExportCourse:input_type -> mirai.v1.ExportCourseRequest
+	36, // 61: mirai.v1.CourseService.GetExportStatus:input_type -> mirai.v1.GetExportStatusRequest
+	38, // 62: mirai.v1.CourseService.DownloadExport:input_type -> mirai.v1.DownloadExportRequest
+	40, // 63: mirai.v1.CourseService.ListExports:input_type -> mirai.v1.ListExportsRequest
+	21, // 64: mirai.v1.CourseService.ListCourses:output_type -> mirai.v1.ListCoursesResponse
+	23, // 65: mirai.v1.CourseService.GetCourse:output_type -> mirai.v1.GetCourseResponse
+	25, // 66: mirai.v1.CourseService.CreateCourse:output_type -> mirai.v1.CreateCourseResponse
+	27, // 67: mirai.v1.CourseService.UpdateCourse:output_type -> mirai.v1.UpdateCourseResponse
+	29, // 68: mirai.v1.CourseService.DeleteCourse:output_type -> mirai.v1.DeleteCourseResponse
+	31, // 69: mirai.v1.CourseService.GetFolderHierarchy:output_type -> mirai.v1.GetFolderHierarchyResponse
+	33, // 70: mirai.v1.CourseService.GetLibrary:output_type -> mirai.v1.GetLibraryResponse
+	35, // 71: mirai.v1.CourseService.ExportCourse:output_type -> mirai.v1.ExportCourseResponse
+	37, // 72: mirai.v1.CourseService.GetExportStatus:output_type -> mirai.v1.GetExportStatusResponse
+	39, // 73: mirai.v1.CourseService.DownloadExport:output_type -> mirai.v1.DownloadExportResponse
+	41, // 74: mirai.v1.CourseService.ListExports:output_type -> mirai.v1.ListExportsResponse
+	64, // [64:75] is the sub-list for method output_type
+	53, // [53:64] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_course_proto_init() }
@@ -2422,7 +3068,9 @@ func file_mirai_v1_course_proto_init() {
 	file_mirai_v1_course_proto_msgTypes[1].OneofWrappers = []any{}
 	file_mirai_v1_course_proto_msgTypes[3].OneofWrappers = []any{}
 	file_mirai_v1_course_proto_msgTypes[4].OneofWrappers = []any{}
+	file_mirai_v1_course_proto_msgTypes[8].OneofWrappers = []any{}
 	file_mirai_v1_course_proto_msgTypes[10].OneofWrappers = []any{}
+	file_mirai_v1_course_proto_msgTypes[11].OneofWrappers = []any{}
 	file_mirai_v1_course_proto_msgTypes[12].OneofWrappers = []any{}
 	file_mirai_v1_course_proto_msgTypes[13].OneofWrappers = []any{}
 	file_mirai_v1_course_proto_msgTypes[15].OneofWrappers = []any{}
@@ -2433,8 +3081,8 @@ func file_mirai_v1_course_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_course_proto_rawDesc), len(file_mirai_v1_course_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   29,
+			NumEnums:      5,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

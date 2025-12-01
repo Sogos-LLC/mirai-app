@@ -53,6 +53,18 @@ const (
 	// CourseServiceGetLibraryProcedure is the fully-qualified name of the CourseService's GetLibrary
 	// RPC.
 	CourseServiceGetLibraryProcedure = "/mirai.v1.CourseService/GetLibrary"
+	// CourseServiceExportCourseProcedure is the fully-qualified name of the CourseService's
+	// ExportCourse RPC.
+	CourseServiceExportCourseProcedure = "/mirai.v1.CourseService/ExportCourse"
+	// CourseServiceGetExportStatusProcedure is the fully-qualified name of the CourseService's
+	// GetExportStatus RPC.
+	CourseServiceGetExportStatusProcedure = "/mirai.v1.CourseService/GetExportStatus"
+	// CourseServiceDownloadExportProcedure is the fully-qualified name of the CourseService's
+	// DownloadExport RPC.
+	CourseServiceDownloadExportProcedure = "/mirai.v1.CourseService/DownloadExport"
+	// CourseServiceListExportsProcedure is the fully-qualified name of the CourseService's ListExports
+	// RPC.
+	CourseServiceListExportsProcedure = "/mirai.v1.CourseService/ListExports"
 )
 
 // CourseServiceClient is a client for the mirai.v1.CourseService service.
@@ -71,6 +83,14 @@ type CourseServiceClient interface {
 	GetFolderHierarchy(context.Context, *connect.Request[v1.GetFolderHierarchyRequest]) (*connect.Response[v1.GetFolderHierarchyResponse], error)
 	// GetLibrary returns the full library with courses and folders.
 	GetLibrary(context.Context, *connect.Request[v1.GetLibraryRequest]) (*connect.Response[v1.GetLibraryResponse], error)
+	// ExportCourse initiates a course export job.
+	ExportCourse(context.Context, *connect.Request[v1.ExportCourseRequest]) (*connect.Response[v1.ExportCourseResponse], error)
+	// GetExportStatus returns the status of an export job.
+	GetExportStatus(context.Context, *connect.Request[v1.GetExportStatusRequest]) (*connect.Response[v1.GetExportStatusResponse], error)
+	// DownloadExport returns a presigned URL for downloading an export.
+	DownloadExport(context.Context, *connect.Request[v1.DownloadExportRequest]) (*connect.Response[v1.DownloadExportResponse], error)
+	// ListExports returns all exports for a course.
+	ListExports(context.Context, *connect.Request[v1.ListExportsRequest]) (*connect.Response[v1.ListExportsResponse], error)
 }
 
 // NewCourseServiceClient constructs a client for the mirai.v1.CourseService service. By default, it
@@ -126,6 +146,30 @@ func NewCourseServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(courseServiceMethods.ByName("GetLibrary")),
 			connect.WithClientOptions(opts...),
 		),
+		exportCourse: connect.NewClient[v1.ExportCourseRequest, v1.ExportCourseResponse](
+			httpClient,
+			baseURL+CourseServiceExportCourseProcedure,
+			connect.WithSchema(courseServiceMethods.ByName("ExportCourse")),
+			connect.WithClientOptions(opts...),
+		),
+		getExportStatus: connect.NewClient[v1.GetExportStatusRequest, v1.GetExportStatusResponse](
+			httpClient,
+			baseURL+CourseServiceGetExportStatusProcedure,
+			connect.WithSchema(courseServiceMethods.ByName("GetExportStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		downloadExport: connect.NewClient[v1.DownloadExportRequest, v1.DownloadExportResponse](
+			httpClient,
+			baseURL+CourseServiceDownloadExportProcedure,
+			connect.WithSchema(courseServiceMethods.ByName("DownloadExport")),
+			connect.WithClientOptions(opts...),
+		),
+		listExports: connect.NewClient[v1.ListExportsRequest, v1.ListExportsResponse](
+			httpClient,
+			baseURL+CourseServiceListExportsProcedure,
+			connect.WithSchema(courseServiceMethods.ByName("ListExports")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -138,6 +182,10 @@ type courseServiceClient struct {
 	deleteCourse       *connect.Client[v1.DeleteCourseRequest, v1.DeleteCourseResponse]
 	getFolderHierarchy *connect.Client[v1.GetFolderHierarchyRequest, v1.GetFolderHierarchyResponse]
 	getLibrary         *connect.Client[v1.GetLibraryRequest, v1.GetLibraryResponse]
+	exportCourse       *connect.Client[v1.ExportCourseRequest, v1.ExportCourseResponse]
+	getExportStatus    *connect.Client[v1.GetExportStatusRequest, v1.GetExportStatusResponse]
+	downloadExport     *connect.Client[v1.DownloadExportRequest, v1.DownloadExportResponse]
+	listExports        *connect.Client[v1.ListExportsRequest, v1.ListExportsResponse]
 }
 
 // ListCourses calls mirai.v1.CourseService.ListCourses.
@@ -175,6 +223,26 @@ func (c *courseServiceClient) GetLibrary(ctx context.Context, req *connect.Reque
 	return c.getLibrary.CallUnary(ctx, req)
 }
 
+// ExportCourse calls mirai.v1.CourseService.ExportCourse.
+func (c *courseServiceClient) ExportCourse(ctx context.Context, req *connect.Request[v1.ExportCourseRequest]) (*connect.Response[v1.ExportCourseResponse], error) {
+	return c.exportCourse.CallUnary(ctx, req)
+}
+
+// GetExportStatus calls mirai.v1.CourseService.GetExportStatus.
+func (c *courseServiceClient) GetExportStatus(ctx context.Context, req *connect.Request[v1.GetExportStatusRequest]) (*connect.Response[v1.GetExportStatusResponse], error) {
+	return c.getExportStatus.CallUnary(ctx, req)
+}
+
+// DownloadExport calls mirai.v1.CourseService.DownloadExport.
+func (c *courseServiceClient) DownloadExport(ctx context.Context, req *connect.Request[v1.DownloadExportRequest]) (*connect.Response[v1.DownloadExportResponse], error) {
+	return c.downloadExport.CallUnary(ctx, req)
+}
+
+// ListExports calls mirai.v1.CourseService.ListExports.
+func (c *courseServiceClient) ListExports(ctx context.Context, req *connect.Request[v1.ListExportsRequest]) (*connect.Response[v1.ListExportsResponse], error) {
+	return c.listExports.CallUnary(ctx, req)
+}
+
 // CourseServiceHandler is an implementation of the mirai.v1.CourseService service.
 type CourseServiceHandler interface {
 	// ListCourses returns a filtered list of courses.
@@ -191,6 +259,14 @@ type CourseServiceHandler interface {
 	GetFolderHierarchy(context.Context, *connect.Request[v1.GetFolderHierarchyRequest]) (*connect.Response[v1.GetFolderHierarchyResponse], error)
 	// GetLibrary returns the full library with courses and folders.
 	GetLibrary(context.Context, *connect.Request[v1.GetLibraryRequest]) (*connect.Response[v1.GetLibraryResponse], error)
+	// ExportCourse initiates a course export job.
+	ExportCourse(context.Context, *connect.Request[v1.ExportCourseRequest]) (*connect.Response[v1.ExportCourseResponse], error)
+	// GetExportStatus returns the status of an export job.
+	GetExportStatus(context.Context, *connect.Request[v1.GetExportStatusRequest]) (*connect.Response[v1.GetExportStatusResponse], error)
+	// DownloadExport returns a presigned URL for downloading an export.
+	DownloadExport(context.Context, *connect.Request[v1.DownloadExportRequest]) (*connect.Response[v1.DownloadExportResponse], error)
+	// ListExports returns all exports for a course.
+	ListExports(context.Context, *connect.Request[v1.ListExportsRequest]) (*connect.Response[v1.ListExportsResponse], error)
 }
 
 // NewCourseServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -242,6 +318,30 @@ func NewCourseServiceHandler(svc CourseServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(courseServiceMethods.ByName("GetLibrary")),
 		connect.WithHandlerOptions(opts...),
 	)
+	courseServiceExportCourseHandler := connect.NewUnaryHandler(
+		CourseServiceExportCourseProcedure,
+		svc.ExportCourse,
+		connect.WithSchema(courseServiceMethods.ByName("ExportCourse")),
+		connect.WithHandlerOptions(opts...),
+	)
+	courseServiceGetExportStatusHandler := connect.NewUnaryHandler(
+		CourseServiceGetExportStatusProcedure,
+		svc.GetExportStatus,
+		connect.WithSchema(courseServiceMethods.ByName("GetExportStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	courseServiceDownloadExportHandler := connect.NewUnaryHandler(
+		CourseServiceDownloadExportProcedure,
+		svc.DownloadExport,
+		connect.WithSchema(courseServiceMethods.ByName("DownloadExport")),
+		connect.WithHandlerOptions(opts...),
+	)
+	courseServiceListExportsHandler := connect.NewUnaryHandler(
+		CourseServiceListExportsProcedure,
+		svc.ListExports,
+		connect.WithSchema(courseServiceMethods.ByName("ListExports")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.CourseService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CourseServiceListCoursesProcedure:
@@ -258,6 +358,14 @@ func NewCourseServiceHandler(svc CourseServiceHandler, opts ...connect.HandlerOp
 			courseServiceGetFolderHierarchyHandler.ServeHTTP(w, r)
 		case CourseServiceGetLibraryProcedure:
 			courseServiceGetLibraryHandler.ServeHTTP(w, r)
+		case CourseServiceExportCourseProcedure:
+			courseServiceExportCourseHandler.ServeHTTP(w, r)
+		case CourseServiceGetExportStatusProcedure:
+			courseServiceGetExportStatusHandler.ServeHTTP(w, r)
+		case CourseServiceDownloadExportProcedure:
+			courseServiceDownloadExportHandler.ServeHTTP(w, r)
+		case CourseServiceListExportsProcedure:
+			courseServiceListExportsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -293,4 +401,20 @@ func (UnimplementedCourseServiceHandler) GetFolderHierarchy(context.Context, *co
 
 func (UnimplementedCourseServiceHandler) GetLibrary(context.Context, *connect.Request[v1.GetLibraryRequest]) (*connect.Response[v1.GetLibraryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseService.GetLibrary is not implemented"))
+}
+
+func (UnimplementedCourseServiceHandler) ExportCourse(context.Context, *connect.Request[v1.ExportCourseRequest]) (*connect.Response[v1.ExportCourseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseService.ExportCourse is not implemented"))
+}
+
+func (UnimplementedCourseServiceHandler) GetExportStatus(context.Context, *connect.Request[v1.GetExportStatusRequest]) (*connect.Response[v1.GetExportStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseService.GetExportStatus is not implemented"))
+}
+
+func (UnimplementedCourseServiceHandler) DownloadExport(context.Context, *connect.Request[v1.DownloadExportRequest]) (*connect.Response[v1.DownloadExportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseService.DownloadExport is not implemented"))
+}
+
+func (UnimplementedCourseServiceHandler) ListExports(context.Context, *connect.Request[v1.ListExportsRequest]) (*connect.Response[v1.ListExportsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseService.ListExports is not implemented"))
 }

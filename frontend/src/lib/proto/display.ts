@@ -30,13 +30,16 @@ export function planToDisplayString(plan: Plan): string {
 
 /**
  * Convert Role enum to display string
+ * LMS roles: Admin manages company, Instructor creates content, SME reviews.
  */
 export function roleToDisplayString(role: Role): string {
   const map: Record<Role, string> = {
     [Role.UNSPECIFIED]: 'Unknown',
-    [Role.OWNER]: 'Owner',
+    [Role.OWNER]: 'Admin',       // Deprecated: maps to Admin
     [Role.ADMIN]: 'Admin',
-    [Role.MEMBER]: 'Member',
+    [Role.MEMBER]: 'SME',        // Deprecated: maps to SME
+    [Role.INSTRUCTOR]: 'Instructor',
+    [Role.SME]: 'SME',
   };
   return map[role] ?? 'Unknown';
 }

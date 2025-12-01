@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/course.proto.
  */
 export const file_mirai_v1_course: GenFile = /*@__PURE__*/
-  fileDesc("ChVtaXJhaS92MS9jb3Vyc2UucHJvdG8SCG1pcmFpLnYxIi0KEUxlYXJuaW5nT2JqZWN0aXZlEgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkihQIKB1BlcnNvbmESCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIMCgRyb2xlGAMgASgJEgwKBGtwaXMYBCABKAkSGAoQcmVzcG9uc2liaWxpdGllcxgFIAEoCRIXCgpjaGFsbGVuZ2VzGAYgASgJSACIAQESFQoIY29uY2VybnMYByABKAlIAYgBARIWCglrbm93bGVkZ2UYCCABKAlIAogBARI4ChNsZWFybmluZ19vYmplY3RpdmVzGAkgAygLMhsubWlyYWkudjEuTGVhcm5pbmdPYmplY3RpdmVCDQoLX2NoYWxsZW5nZXNCCwoJX2NvbmNlcm5zQgwKCl9rbm93bGVkZ2UiTQoOQmxvY2tBbGlnbm1lbnQSEAoIcGVyc29uYXMYASADKAkSGwoTbGVhcm5pbmdfb2JqZWN0aXZlcxgCIAMoCRIMCgRrcGlzGAMgAygJIrwBCgtDb3Vyc2VCbG9jaxIKCgJpZBgBIAEoCRIhCgR0eXBlGAIgASgOMhMubWlyYWkudjEuQmxvY2tUeXBlEg8KB2NvbnRlbnQYAyABKAkSEwoGcHJvbXB0GAQgASgJSACIAQESMAoJYWxpZ25tZW50GAUgASgLMhgubWlyYWkudjEuQmxvY2tBbGlnbm1lbnRIAYgBARINCgVvcmRlchgGIAEoBUIJCgdfcHJvbXB0QgwKCl9hbGlnbm1lbnQibAoGTGVzc29uEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhQKB2NvbnRlbnQYAyABKAlIAIgBARIlCgZibG9ja3MYBCADKAsyFS5taXJhaS52MS5Db3Vyc2VCbG9ja0IKCghfY29udGVudCJMCg1Db3Vyc2VTZWN0aW9uEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSIQoHbGVzc29ucxgDIAMoCzIQLm1pcmFpLnYxLkxlc3NvbiJZChJBc3Nlc3NtZW50U2V0dGluZ3MSKAogZW5hYmxlX2VtYmVkZGVkX2tub3dsZWRnZV9jaGVja3MYASABKAgSGQoRZW5hYmxlX2ZpbmFsX2V4YW0YAiABKAgiaAoNQ291cnNlQ29udGVudBIpCghzZWN0aW9ucxgBIAMoCzIXLm1pcmFpLnYxLkNvdXJzZVNlY3Rpb24SLAoNY291cnNlX2Jsb2NrcxgCIAMoCzIVLm1pcmFpLnYxLkNvdXJzZUJsb2NrIn0KDENvdXJzZUV4cG9ydBIKCgJpZBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg4KBmZvcm1hdBgDIAEoCRIPCgd2ZXJzaW9uGAQgASgFEhEKCWZpbGVfcGF0aBgFIAEoCSKAAQoOQ291cnNlU2V0dGluZ3MSDQoFdGl0bGUYASABKAkSFwoPZGVzaXJlZF9vdXRjb21lGAIgASgJEhoKEmRlc3RpbmF0aW9uX2ZvbGRlchgDIAEoCRIVCg1jYXRlZ29yeV90YWdzGAQgAygJEhMKC2RhdGFfc291cmNlGAUgASgJIt4BCg5Db3Vyc2VNZXRhZGF0YRIKCgJpZBgBIAEoCRIPCgd2ZXJzaW9uGAIgASgFEiYKBnN0YXR1cxgDIAEoDjIWLm1pcmFpLnYxLkNvdXJzZVN0YXR1cxIuCgpjcmVhdGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIvCgttb2RpZmllZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFwoKY3JlYXRlZF9ieRgGIAEoCUgAiAEBQg0KC19jcmVhdGVkX2J5IpIDCgZDb3Vyc2USCgoCaWQYASABKAkSDwoHdmVyc2lvbhgCIAEoBRImCgZzdGF0dXMYAyABKA4yFi5taXJhaS52MS5Db3Vyc2VTdGF0dXMSKgoIbWV0YWRhdGEYBCABKAsyGC5taXJhaS52MS5Db3Vyc2VNZXRhZGF0YRIqCghzZXR0aW5ncxgFIAEoCzIYLm1pcmFpLnYxLkNvdXJzZVNldHRpbmdzEiMKCHBlcnNvbmFzGAYgAygLMhEubWlyYWkudjEuUGVyc29uYRI4ChNsZWFybmluZ19vYmplY3RpdmVzGAcgAygLMhsubWlyYWkudjEuTGVhcm5pbmdPYmplY3RpdmUSOQoTYXNzZXNzbWVudF9zZXR0aW5ncxgIIAEoCzIcLm1pcmFpLnYxLkFzc2Vzc21lbnRTZXR0aW5ncxIoCgdjb250ZW50GAkgASgLMhcubWlyYWkudjEuQ291cnNlQ29udGVudBInCgdleHBvcnRzGAogAygLMhYubWlyYWkudjEuQ291cnNlRXhwb3J0IqgCCgxMaWJyYXJ5RW50cnkSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSJgoGc3RhdHVzGAMgASgOMhYubWlyYWkudjEuQ291cnNlU3RhdHVzEg4KBmZvbGRlchgEIAEoCRIMCgR0YWdzGAUgAygJEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC21vZGlmaWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCgpjcmVhdGVkX2J5GAggASgJSACIAQESGwoOdGh1bWJuYWlsX3BhdGgYCSABKAlIAYgBAUINCgtfY3JlYXRlZF9ieUIRCg9fdGh1bWJuYWlsX3BhdGgivAEKBkZvbGRlchIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhYKCXBhcmVudF9pZBgDIAEoCUgAiAEBEiIKBHR5cGUYBCABKA4yFC5taXJhaS52MS5Gb2xkZXJUeXBlEiIKCGNoaWxkcmVuGAUgAygLMhAubWlyYWkudjEuRm9sZGVyEhkKDGNvdXJzZV9jb3VudBgGIAEoBUgBiAEBQgwKCl9wYXJlbnRfaWRCDwoNX2NvdXJzZV9jb3VudCKYAQoHTGlicmFyeRIPCgd2ZXJzaW9uGAEgASgJEjAKDGxhc3RfdXBkYXRlZBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJwoHY291cnNlcxgDIAMoCzIWLm1pcmFpLnYxLkxpYnJhcnlFbnRyeRIhCgdmb2xkZXJzGAQgAygLMhAubWlyYWkudjEuRm9sZGVyInoKEkxpc3RDb3Vyc2VzUmVxdWVzdBIrCgZzdGF0dXMYASABKA4yFi5taXJhaS52MS5Db3Vyc2VTdGF0dXNIAIgBARITCgZmb2xkZXIYAiABKAlIAYgBARIMCgR0YWdzGAMgAygJQgkKB19zdGF0dXNCCQoHX2ZvbGRlciI+ChNMaXN0Q291cnNlc1Jlc3BvbnNlEicKB2NvdXJzZXMYASADKAsyFi5taXJhaS52MS5MaWJyYXJ5RW50cnkiHgoQR2V0Q291cnNlUmVxdWVzdBIKCgJpZBgBIAEoCSI1ChFHZXRDb3Vyc2VSZXNwb25zZRIgCgZjb3Vyc2UYASABKAsyEC5taXJhaS52MS5Db3Vyc2Ui3QIKE0NyZWF0ZUNvdXJzZVJlcXVlc3QSDwoCaWQYASABKAlIAIgBARIvCghzZXR0aW5ncxgCIAEoCzIYLm1pcmFpLnYxLkNvdXJzZVNldHRpbmdzSAGIAQESIwoIcGVyc29uYXMYAyADKAsyES5taXJhaS52MS5QZXJzb25hEjgKE2xlYXJuaW5nX29iamVjdGl2ZXMYBCADKAsyGy5taXJhaS52MS5MZWFybmluZ09iamVjdGl2ZRI+ChNhc3Nlc3NtZW50X3NldHRpbmdzGAUgASgLMhwubWlyYWkudjEuQXNzZXNzbWVudFNldHRpbmdzSAKIAQESLQoHY29udGVudBgGIAEoCzIXLm1pcmFpLnYxLkNvdXJzZUNvbnRlbnRIA4gBAUIFCgNfaWRCCwoJX3NldHRpbmdzQhYKFF9hc3Nlc3NtZW50X3NldHRpbmdzQgoKCF9jb250ZW50IjgKFENyZWF0ZUNvdXJzZVJlc3BvbnNlEiAKBmNvdXJzZRgBIAEoCzIQLm1pcmFpLnYxLkNvdXJzZSLHAwoTVXBkYXRlQ291cnNlUmVxdWVzdBIKCgJpZBgBIAEoCRIvCghzZXR0aW5ncxgCIAEoCzIYLm1pcmFpLnYxLkNvdXJzZVNldHRpbmdzSACIAQESIwoIcGVyc29uYXMYAyADKAsyES5taXJhaS52MS5QZXJzb25hEjgKE2xlYXJuaW5nX29iamVjdGl2ZXMYBCADKAsyGy5taXJhaS52MS5MZWFybmluZ09iamVjdGl2ZRI+ChNhc3Nlc3NtZW50X3NldHRpbmdzGAUgASgLMhwubWlyYWkudjEuQXNzZXNzbWVudFNldHRpbmdzSAGIAQESLQoHY29udGVudBgGIAEoCzIXLm1pcmFpLnYxLkNvdXJzZUNvbnRlbnRIAogBARIrCgZzdGF0dXMYByABKA4yFi5taXJhaS52MS5Db3Vyc2VTdGF0dXNIA4gBARIvCghtZXRhZGF0YRgIIAEoCzIYLm1pcmFpLnYxLkNvdXJzZU1ldGFkYXRhSASIAQFCCwoJX3NldHRpbmdzQhYKFF9hc3Nlc3NtZW50X3NldHRpbmdzQgoKCF9jb250ZW50QgkKB19zdGF0dXNCCwoJX21ldGFkYXRhIjgKFFVwZGF0ZUNvdXJzZVJlc3BvbnNlEiAKBmNvdXJzZRgBIAEoCzIQLm1pcmFpLnYxLkNvdXJzZSIhChNEZWxldGVDb3Vyc2VSZXF1ZXN0EgoKAmlkGAEgASgJIicKFERlbGV0ZUNvdXJzZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiOgoZR2V0Rm9sZGVySGllcmFyY2h5UmVxdWVzdBIdChVpbmNsdWRlX2NvdXJzZV9jb3VudHMYASABKAgiPwoaR2V0Rm9sZGVySGllcmFyY2h5UmVzcG9uc2USIQoHZm9sZGVycxgBIAMoCzIQLm1pcmFpLnYxLkZvbGRlciIyChFHZXRMaWJyYXJ5UmVxdWVzdBIdChVpbmNsdWRlX2NvdXJzZV9jb3VudHMYASABKAgiOAoSR2V0TGlicmFyeVJlc3BvbnNlEiIKB2xpYnJhcnkYASABKAsyES5taXJhaS52MS5MaWJyYXJ5KoABCgxDb3Vyc2VTdGF0dXMSHQoZQ09VUlNFX1NUQVRVU19VTlNQRUNJRklFRBAAEhcKE0NPVVJTRV9TVEFUVVNfRFJBRlQQARIbChdDT1VSU0VfU1RBVFVTX1BVQkxJU0hFRBACEhsKF0NPVVJTRV9TVEFUVVNfR0VORVJBVEVEEAMqkAEKCUJsb2NrVHlwZRIaChZCTE9DS19UWVBFX1VOU1BFQ0lGSUVEEAASFgoSQkxPQ0tfVFlQRV9IRUFESU5HEAESEwoPQkxPQ0tfVFlQRV9URVhUEAISGgoWQkxPQ0tfVFlQRV9JTlRFUkFDVElWRRADEh4KGkJMT0NLX1RZUEVfS05PV0xFREdFX0NIRUNLEAQqigEKCkZvbGRlclR5cGUSGwoXRk9MREVSX1RZUEVfVU5TUEVDSUZJRUQQABIXChNGT0xERVJfVFlQRV9MSUJSQVJZEAESFAoQRk9MREVSX1RZUEVfVEVBTRACEhgKFEZPTERFUl9UWVBFX1BFUlNPTkFMEAMSFgoSRk9MREVSX1RZUEVfRk9MREVSEAQyuAQKDUNvdXJzZVNlcnZpY2USSgoLTGlzdENvdXJzZXMSHC5taXJhaS52MS5MaXN0Q291cnNlc1JlcXVlc3QaHS5taXJhaS52MS5MaXN0Q291cnNlc1Jlc3BvbnNlEkQKCUdldENvdXJzZRIaLm1pcmFpLnYxLkdldENvdXJzZVJlcXVlc3QaGy5taXJhaS52MS5HZXRDb3Vyc2VSZXNwb25zZRJNCgxDcmVhdGVDb3Vyc2USHS5taXJhaS52MS5DcmVhdGVDb3Vyc2VSZXF1ZXN0Gh4ubWlyYWkudjEuQ3JlYXRlQ291cnNlUmVzcG9uc2USTQoMVXBkYXRlQ291cnNlEh0ubWlyYWkudjEuVXBkYXRlQ291cnNlUmVxdWVzdBoeLm1pcmFpLnYxLlVwZGF0ZUNvdXJzZVJlc3BvbnNlEk0KDERlbGV0ZUNvdXJzZRIdLm1pcmFpLnYxLkRlbGV0ZUNvdXJzZVJlcXVlc3QaHi5taXJhaS52MS5EZWxldGVDb3Vyc2VSZXNwb25zZRJfChJHZXRGb2xkZXJIaWVyYXJjaHkSIy5taXJhaS52MS5HZXRGb2xkZXJIaWVyYXJjaHlSZXF1ZXN0GiQubWlyYWkudjEuR2V0Rm9sZGVySGllcmFyY2h5UmVzcG9uc2USRwoKR2V0TGlicmFyeRIbLm1pcmFpLnYxLkdldExpYnJhcnlSZXF1ZXN0GhwubWlyYWkudjEuR2V0TGlicmFyeVJlc3BvbnNlQpEBCgxjb20ubWlyYWkudjFCC0NvdXJzZVByb3RvUAFaM2dpdGh1Yi5jb20vc29nb3MvbWlyYWktYmFja2VuZC9nZW4vbWlyYWkvdjE7bWlyYWl2MaICA01YWKoCCE1pcmFpLlYxygIITWlyYWlcVjHiAhRNaXJhaVxWMVxHUEJNZXRhZGF0YeoCCU1pcmFpOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("ChVtaXJhaS92MS9jb3Vyc2UucHJvdG8SCG1pcmFpLnYxIi0KEUxlYXJuaW5nT2JqZWN0aXZlEgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkihQIKB1BlcnNvbmESCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIMCgRyb2xlGAMgASgJEgwKBGtwaXMYBCABKAkSGAoQcmVzcG9uc2liaWxpdGllcxgFIAEoCRIXCgpjaGFsbGVuZ2VzGAYgASgJSACIAQESFQoIY29uY2VybnMYByABKAlIAYgBARIWCglrbm93bGVkZ2UYCCABKAlIAogBARI4ChNsZWFybmluZ19vYmplY3RpdmVzGAkgAygLMhsubWlyYWkudjEuTGVhcm5pbmdPYmplY3RpdmVCDQoLX2NoYWxsZW5nZXNCCwoJX2NvbmNlcm5zQgwKCl9rbm93bGVkZ2UiTQoOQmxvY2tBbGlnbm1lbnQSEAoIcGVyc29uYXMYASADKAkSGwoTbGVhcm5pbmdfb2JqZWN0aXZlcxgCIAMoCRIMCgRrcGlzGAMgAygJIrwBCgtDb3Vyc2VCbG9jaxIKCgJpZBgBIAEoCRIhCgR0eXBlGAIgASgOMhMubWlyYWkudjEuQmxvY2tUeXBlEg8KB2NvbnRlbnQYAyABKAkSEwoGcHJvbXB0GAQgASgJSACIAQESMAoJYWxpZ25tZW50GAUgASgLMhgubWlyYWkudjEuQmxvY2tBbGlnbm1lbnRIAYgBARINCgVvcmRlchgGIAEoBUIJCgdfcHJvbXB0QgwKCl9hbGlnbm1lbnQibAoGTGVzc29uEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhQKB2NvbnRlbnQYAyABKAlIAIgBARIlCgZibG9ja3MYBCADKAsyFS5taXJhaS52MS5Db3Vyc2VCbG9ja0IKCghfY29udGVudCJMCg1Db3Vyc2VTZWN0aW9uEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSIQoHbGVzc29ucxgDIAMoCzIQLm1pcmFpLnYxLkxlc3NvbiJZChJBc3Nlc3NtZW50U2V0dGluZ3MSKAogZW5hYmxlX2VtYmVkZGVkX2tub3dsZWRnZV9jaGVja3MYASABKAgSGQoRZW5hYmxlX2ZpbmFsX2V4YW0YAiABKAgiaAoNQ291cnNlQ29udGVudBIpCghzZWN0aW9ucxgBIAMoCzIXLm1pcmFpLnYxLkNvdXJzZVNlY3Rpb24SLAoNY291cnNlX2Jsb2NrcxgCIAMoCzIVLm1pcmFpLnYxLkNvdXJzZUJsb2NrIusBCgxDb3Vyc2VFeHBvcnQSCgoCaWQYASABKAkSLQoJdGltZXN0YW1wGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBImCgZmb3JtYXQYAyABKA4yFi5taXJhaS52MS5FeHBvcnRGb3JtYXQSDwoHdmVyc2lvbhgEIAEoBRIRCglmaWxlX3BhdGgYBSABKAkSJgoGc3RhdHVzGAYgASgOMhYubWlyYWkudjEuRXhwb3J0U3RhdHVzEhoKDWVycm9yX21lc3NhZ2UYByABKAlIAIgBAUIQCg5fZXJyb3JfbWVzc2FnZSKAAQoOQ291cnNlU2V0dGluZ3MSDQoFdGl0bGUYASABKAkSFwoPZGVzaXJlZF9vdXRjb21lGAIgASgJEhoKEmRlc3RpbmF0aW9uX2ZvbGRlchgDIAEoCRIVCg1jYXRlZ29yeV90YWdzGAQgAygJEhMKC2RhdGFfc291cmNlGAUgASgJIt4BCg5Db3Vyc2VNZXRhZGF0YRIKCgJpZBgBIAEoCRIPCgd2ZXJzaW9uGAIgASgFEiYKBnN0YXR1cxgDIAEoDjIWLm1pcmFpLnYxLkNvdXJzZVN0YXR1cxIuCgpjcmVhdGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIvCgttb2RpZmllZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFwoKY3JlYXRlZF9ieRgGIAEoCUgAiAEBQg0KC19jcmVhdGVkX2J5IroECgZDb3Vyc2USCgoCaWQYASABKAkSDwoHdmVyc2lvbhgCIAEoBRImCgZzdGF0dXMYAyABKA4yFi5taXJhaS52MS5Db3Vyc2VTdGF0dXMSKgoIbWV0YWRhdGEYBCABKAsyGC5taXJhaS52MS5Db3Vyc2VNZXRhZGF0YRIqCghzZXR0aW5ncxgFIAEoCzIYLm1pcmFpLnYxLkNvdXJzZVNldHRpbmdzEiMKCHBlcnNvbmFzGAYgAygLMhEubWlyYWkudjEuUGVyc29uYRI4ChNsZWFybmluZ19vYmplY3RpdmVzGAcgAygLMhsubWlyYWkudjEuTGVhcm5pbmdPYmplY3RpdmUSOQoTYXNzZXNzbWVudF9zZXR0aW5ncxgIIAEoCzIcLm1pcmFpLnYxLkFzc2Vzc21lbnRTZXR0aW5ncxIoCgdjb250ZW50GAkgASgLMhcubWlyYWkudjEuQ291cnNlQ29udGVudBInCgdleHBvcnRzGAogAygLMhYubWlyYWkudjEuQ291cnNlRXhwb3J0EhcKCmNvbXBhbnlfaWQYCyABKAlIAIgBARIWCgl0ZW5hbnRfaWQYDCABKAlIAYgBARIfChJjcmVhdGVkX2J5X3VzZXJfaWQYDSABKAlIAogBARIUCgd0ZWFtX2lkGA4gASgJSAOIAQFCDQoLX2NvbXBhbnlfaWRCDAoKX3RlbmFudF9pZEIVChNfY3JlYXRlZF9ieV91c2VyX2lkQgoKCF90ZWFtX2lkIpgDCgxMaWJyYXJ5RW50cnkSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSJgoGc3RhdHVzGAMgASgOMhYubWlyYWkudjEuQ291cnNlU3RhdHVzEg4KBmZvbGRlchgEIAEoCRIMCgR0YWdzGAUgAygJEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC21vZGlmaWVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCgpjcmVhdGVkX2J5GAggASgJSACIAQESGwoOdGh1bWJuYWlsX3BhdGgYCSABKAlIAYgBARIXCgpjb21wYW55X2lkGAogASgJSAKIAQESFgoJdGVuYW50X2lkGAsgASgJSAOIAQESFAoHdGVhbV9pZBgMIAEoCUgEiAEBQg0KC19jcmVhdGVkX2J5QhEKD190aHVtYm5haWxfcGF0aEINCgtfY29tcGFueV9pZEIMCgpfdGVuYW50X2lkQgoKCF90ZWFtX2lkIrwBCgZGb2xkZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIWCglwYXJlbnRfaWQYAyABKAlIAIgBARIiCgR0eXBlGAQgASgOMhQubWlyYWkudjEuRm9sZGVyVHlwZRIiCghjaGlsZHJlbhgFIAMoCzIQLm1pcmFpLnYxLkZvbGRlchIZCgxjb3Vyc2VfY291bnQYBiABKAVIAYgBAUIMCgpfcGFyZW50X2lkQg8KDV9jb3Vyc2VfY291bnQimAEKB0xpYnJhcnkSDwoHdmVyc2lvbhgBIAEoCRIwCgxsYXN0X3VwZGF0ZWQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEicKB2NvdXJzZXMYAyADKAsyFi5taXJhaS52MS5MaWJyYXJ5RW50cnkSIQoHZm9sZGVycxgEIAMoCzIQLm1pcmFpLnYxLkZvbGRlciJ6ChJMaXN0Q291cnNlc1JlcXVlc3QSKwoGc3RhdHVzGAEgASgOMhYubWlyYWkudjEuQ291cnNlU3RhdHVzSACIAQESEwoGZm9sZGVyGAIgASgJSAGIAQESDAoEdGFncxgDIAMoCUIJCgdfc3RhdHVzQgkKB19mb2xkZXIiPgoTTGlzdENvdXJzZXNSZXNwb25zZRInCgdjb3Vyc2VzGAEgAygLMhYubWlyYWkudjEuTGlicmFyeUVudHJ5Ih4KEEdldENvdXJzZVJlcXVlc3QSCgoCaWQYASABKAkiNQoRR2V0Q291cnNlUmVzcG9uc2USIAoGY291cnNlGAEgASgLMhAubWlyYWkudjEuQ291cnNlIt0CChNDcmVhdGVDb3Vyc2VSZXF1ZXN0Eg8KAmlkGAEgASgJSACIAQESLwoIc2V0dGluZ3MYAiABKAsyGC5taXJhaS52MS5Db3Vyc2VTZXR0aW5nc0gBiAEBEiMKCHBlcnNvbmFzGAMgAygLMhEubWlyYWkudjEuUGVyc29uYRI4ChNsZWFybmluZ19vYmplY3RpdmVzGAQgAygLMhsubWlyYWkudjEuTGVhcm5pbmdPYmplY3RpdmUSPgoTYXNzZXNzbWVudF9zZXR0aW5ncxgFIAEoCzIcLm1pcmFpLnYxLkFzc2Vzc21lbnRTZXR0aW5nc0gCiAEBEi0KB2NvbnRlbnQYBiABKAsyFy5taXJhaS52MS5Db3Vyc2VDb250ZW50SAOIAQFCBQoDX2lkQgsKCV9zZXR0aW5nc0IWChRfYXNzZXNzbWVudF9zZXR0aW5nc0IKCghfY29udGVudCI4ChRDcmVhdGVDb3Vyc2VSZXNwb25zZRIgCgZjb3Vyc2UYASABKAsyEC5taXJhaS52MS5Db3Vyc2UixwMKE1VwZGF0ZUNvdXJzZVJlcXVlc3QSCgoCaWQYASABKAkSLwoIc2V0dGluZ3MYAiABKAsyGC5taXJhaS52MS5Db3Vyc2VTZXR0aW5nc0gAiAEBEiMKCHBlcnNvbmFzGAMgAygLMhEubWlyYWkudjEuUGVyc29uYRI4ChNsZWFybmluZ19vYmplY3RpdmVzGAQgAygLMhsubWlyYWkudjEuTGVhcm5pbmdPYmplY3RpdmUSPgoTYXNzZXNzbWVudF9zZXR0aW5ncxgFIAEoCzIcLm1pcmFpLnYxLkFzc2Vzc21lbnRTZXR0aW5nc0gBiAEBEi0KB2NvbnRlbnQYBiABKAsyFy5taXJhaS52MS5Db3Vyc2VDb250ZW50SAKIAQESKwoGc3RhdHVzGAcgASgOMhYubWlyYWkudjEuQ291cnNlU3RhdHVzSAOIAQESLwoIbWV0YWRhdGEYCCABKAsyGC5taXJhaS52MS5Db3Vyc2VNZXRhZGF0YUgEiAEBQgsKCV9zZXR0aW5nc0IWChRfYXNzZXNzbWVudF9zZXR0aW5nc0IKCghfY29udGVudEIJCgdfc3RhdHVzQgsKCV9tZXRhZGF0YSI4ChRVcGRhdGVDb3Vyc2VSZXNwb25zZRIgCgZjb3Vyc2UYASABKAsyEC5taXJhaS52MS5Db3Vyc2UiIQoTRGVsZXRlQ291cnNlUmVxdWVzdBIKCgJpZBgBIAEoCSInChREZWxldGVDb3Vyc2VSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIIjoKGUdldEZvbGRlckhpZXJhcmNoeVJlcXVlc3QSHQoVaW5jbHVkZV9jb3Vyc2VfY291bnRzGAEgASgIIj8KGkdldEZvbGRlckhpZXJhcmNoeVJlc3BvbnNlEiEKB2ZvbGRlcnMYASADKAsyEC5taXJhaS52MS5Gb2xkZXIiMgoRR2V0TGlicmFyeVJlcXVlc3QSHQoVaW5jbHVkZV9jb3Vyc2VfY291bnRzGAEgASgIIjgKEkdldExpYnJhcnlSZXNwb25zZRIiCgdsaWJyYXJ5GAEgASgLMhEubWlyYWkudjEuTGlicmFyeSJQChNFeHBvcnRDb3Vyc2VSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRImCgZmb3JtYXQYAiABKA4yFi5taXJhaS52MS5FeHBvcnRGb3JtYXQiPgoURXhwb3J0Q291cnNlUmVzcG9uc2USJgoGZXhwb3J0GAEgASgLMhYubWlyYWkudjEuQ291cnNlRXhwb3J0IisKFkdldEV4cG9ydFN0YXR1c1JlcXVlc3QSEQoJZXhwb3J0X2lkGAEgASgJIkEKF0dldEV4cG9ydFN0YXR1c1Jlc3BvbnNlEiYKBmV4cG9ydBgBIAEoCzIWLm1pcmFpLnYxLkNvdXJzZUV4cG9ydCIqChVEb3dubG9hZEV4cG9ydFJlcXVlc3QSEQoJZXhwb3J0X2lkGAEgASgJIl4KFkRvd25sb2FkRXhwb3J0UmVzcG9uc2USFAoMZG93bmxvYWRfdXJsGAEgASgJEi4KCmV4cGlyZXNfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIicKEkxpc3RFeHBvcnRzUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkiPgoTTGlzdEV4cG9ydHNSZXNwb25zZRInCgdleHBvcnRzGAEgAygLMhYubWlyYWkudjEuQ291cnNlRXhwb3J0KoABCgxDb3Vyc2VTdGF0dXMSHQoZQ09VUlNFX1NUQVRVU19VTlNQRUNJRklFRBAAEhcKE0NPVVJTRV9TVEFUVVNfRFJBRlQQARIbChdDT1VSU0VfU1RBVFVTX1BVQkxJU0hFRBACEhsKF0NPVVJTRV9TVEFUVVNfR0VORVJBVEVEEAMqkAEKCUJsb2NrVHlwZRIaChZCTE9DS19UWVBFX1VOU1BFQ0lGSUVEEAASFgoSQkxPQ0tfVFlQRV9IRUFESU5HEAESEwoPQkxPQ0tfVFlQRV9URVhUEAISGgoWQkxPQ0tfVFlQRV9JTlRFUkFDVElWRRADEh4KGkJMT0NLX1RZUEVfS05PV0xFREdFX0NIRUNLEAQqigEKCkZvbGRlclR5cGUSGwoXRk9MREVSX1RZUEVfVU5TUEVDSUZJRUQQABIXChNGT0xERVJfVFlQRV9MSUJSQVJZEAESFAoQRk9MREVSX1RZUEVfVEVBTRACEhgKFEZPTERFUl9UWVBFX1BFUlNPTkFMEAMSFgoSRk9MREVSX1RZUEVfRk9MREVSEAQqlgEKDEV4cG9ydEZvcm1hdBIdChlFWFBPUlRfRk9STUFUX1VOU1BFQ0lGSUVEEAASGgoWRVhQT1JUX0ZPUk1BVF9TQ09STV8xMhABEhwKGEVYUE9SVF9GT1JNQVRfU0NPUk1fMjAwNBACEhYKEkVYUE9SVF9GT1JNQVRfWEFQSRADEhUKEUVYUE9SVF9GT1JNQVRfUERGEAQqnQEKDEV4cG9ydFN0YXR1cxIdChlFWFBPUlRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASGQoVRVhQT1JUX1NUQVRVU19QRU5ESU5HEAESHAoYRVhQT1JUX1NUQVRVU19QUk9DRVNTSU5HEAISGwoXRVhQT1JUX1NUQVRVU19DT01QTEVURUQQAxIYChRFWFBPUlRfU1RBVFVTX0ZBSUxFRBAEMoAHCg1Db3Vyc2VTZXJ2aWNlEkoKC0xpc3RDb3Vyc2VzEhwubWlyYWkudjEuTGlzdENvdXJzZXNSZXF1ZXN0Gh0ubWlyYWkudjEuTGlzdENvdXJzZXNSZXNwb25zZRJECglHZXRDb3Vyc2USGi5taXJhaS52MS5HZXRDb3Vyc2VSZXF1ZXN0GhsubWlyYWkudjEuR2V0Q291cnNlUmVzcG9uc2USTQoMQ3JlYXRlQ291cnNlEh0ubWlyYWkudjEuQ3JlYXRlQ291cnNlUmVxdWVzdBoeLm1pcmFpLnYxLkNyZWF0ZUNvdXJzZVJlc3BvbnNlEk0KDFVwZGF0ZUNvdXJzZRIdLm1pcmFpLnYxLlVwZGF0ZUNvdXJzZVJlcXVlc3QaHi5taXJhaS52MS5VcGRhdGVDb3Vyc2VSZXNwb25zZRJNCgxEZWxldGVDb3Vyc2USHS5taXJhaS52MS5EZWxldGVDb3Vyc2VSZXF1ZXN0Gh4ubWlyYWkudjEuRGVsZXRlQ291cnNlUmVzcG9uc2USXwoSR2V0Rm9sZGVySGllcmFyY2h5EiMubWlyYWkudjEuR2V0Rm9sZGVySGllcmFyY2h5UmVxdWVzdBokLm1pcmFpLnYxLkdldEZvbGRlckhpZXJhcmNoeVJlc3BvbnNlEkcKCkdldExpYnJhcnkSGy5taXJhaS52MS5HZXRMaWJyYXJ5UmVxdWVzdBocLm1pcmFpLnYxLkdldExpYnJhcnlSZXNwb25zZRJNCgxFeHBvcnRDb3Vyc2USHS5taXJhaS52MS5FeHBvcnRDb3Vyc2VSZXF1ZXN0Gh4ubWlyYWkudjEuRXhwb3J0Q291cnNlUmVzcG9uc2USVgoPR2V0RXhwb3J0U3RhdHVzEiAubWlyYWkudjEuR2V0RXhwb3J0U3RhdHVzUmVxdWVzdBohLm1pcmFpLnYxLkdldEV4cG9ydFN0YXR1c1Jlc3BvbnNlElMKDkRvd25sb2FkRXhwb3J0Eh8ubWlyYWkudjEuRG93bmxvYWRFeHBvcnRSZXF1ZXN0GiAubWlyYWkudjEuRG93bmxvYWRFeHBvcnRSZXNwb25zZRJKCgtMaXN0RXhwb3J0cxIcLm1pcmFpLnYxLkxpc3RFeHBvcnRzUmVxdWVzdBodLm1pcmFpLnYxLkxpc3RFeHBvcnRzUmVzcG9uc2VCkQEKDGNvbS5taXJhaS52MUILQ291cnNlUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * LearningObjective represents a specific learning goal for the course.
@@ -298,9 +298,9 @@ export type CourseExport = Message<"mirai.v1.CourseExport"> & {
   timestamp?: Timestamp;
 
   /**
-   * @generated from field: string format = 3;
+   * @generated from field: mirai.v1.ExportFormat format = 3;
    */
-  format: string;
+  format: ExportFormat;
 
   /**
    * @generated from field: int32 version = 4;
@@ -311,6 +311,16 @@ export type CourseExport = Message<"mirai.v1.CourseExport"> & {
    * @generated from field: string file_path = 5;
    */
   filePath: string;
+
+  /**
+   * @generated from field: mirai.v1.ExportStatus status = 6;
+   */
+  status: ExportStatus;
+
+  /**
+   * @generated from field: optional string error_message = 7;
+   */
+  errorMessage?: string;
 };
 
 /**
@@ -458,6 +468,28 @@ export type Course = Message<"mirai.v1.Course"> & {
    * @generated from field: repeated mirai.v1.CourseExport exports = 10;
    */
   exports: CourseExport[];
+
+  /**
+   * Ownership fields for multi-tenancy
+   *
+   * @generated from field: optional string company_id = 11;
+   */
+  companyId?: string;
+
+  /**
+   * @generated from field: optional string tenant_id = 12;
+   */
+  tenantId?: string;
+
+  /**
+   * @generated from field: optional string created_by_user_id = 13;
+   */
+  createdByUserId?: string;
+
+  /**
+   * @generated from field: optional string team_id = 14;
+   */
+  teamId?: string;
 };
 
 /**
@@ -517,6 +549,23 @@ export type LibraryEntry = Message<"mirai.v1.LibraryEntry"> & {
    * @generated from field: optional string thumbnail_path = 9;
    */
   thumbnailPath?: string;
+
+  /**
+   * Ownership fields for multi-tenancy
+   *
+   * @generated from field: optional string company_id = 10;
+   */
+  companyId?: string;
+
+  /**
+   * @generated from field: optional string tenant_id = 11;
+   */
+  tenantId?: string;
+
+  /**
+   * @generated from field: optional string team_id = 12;
+   */
+  teamId?: string;
 };
 
 /**
@@ -941,6 +990,168 @@ export const GetLibraryResponseSchema: GenMessage<GetLibraryResponse> = /*@__PUR
   messageDesc(file_mirai_v1_course, 28);
 
 /**
+ * ExportCourseRequest contains the course ID and export format.
+ *
+ * @generated from message mirai.v1.ExportCourseRequest
+ */
+export type ExportCourseRequest = Message<"mirai.v1.ExportCourseRequest"> & {
+  /**
+   * @generated from field: string course_id = 1;
+   */
+  courseId: string;
+
+  /**
+   * @generated from field: mirai.v1.ExportFormat format = 2;
+   */
+  format: ExportFormat;
+};
+
+/**
+ * Describes the message mirai.v1.ExportCourseRequest.
+ * Use `create(ExportCourseRequestSchema)` to create a new message.
+ */
+export const ExportCourseRequestSchema: GenMessage<ExportCourseRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_course, 29);
+
+/**
+ * ExportCourseResponse contains the export job details.
+ *
+ * @generated from message mirai.v1.ExportCourseResponse
+ */
+export type ExportCourseResponse = Message<"mirai.v1.ExportCourseResponse"> & {
+  /**
+   * @generated from field: mirai.v1.CourseExport export = 1;
+   */
+  export?: CourseExport;
+};
+
+/**
+ * Describes the message mirai.v1.ExportCourseResponse.
+ * Use `create(ExportCourseResponseSchema)` to create a new message.
+ */
+export const ExportCourseResponseSchema: GenMessage<ExportCourseResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_course, 30);
+
+/**
+ * GetExportStatusRequest contains the export ID.
+ *
+ * @generated from message mirai.v1.GetExportStatusRequest
+ */
+export type GetExportStatusRequest = Message<"mirai.v1.GetExportStatusRequest"> & {
+  /**
+   * @generated from field: string export_id = 1;
+   */
+  exportId: string;
+};
+
+/**
+ * Describes the message mirai.v1.GetExportStatusRequest.
+ * Use `create(GetExportStatusRequestSchema)` to create a new message.
+ */
+export const GetExportStatusRequestSchema: GenMessage<GetExportStatusRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_course, 31);
+
+/**
+ * GetExportStatusResponse contains the export status.
+ *
+ * @generated from message mirai.v1.GetExportStatusResponse
+ */
+export type GetExportStatusResponse = Message<"mirai.v1.GetExportStatusResponse"> & {
+  /**
+   * @generated from field: mirai.v1.CourseExport export = 1;
+   */
+  export?: CourseExport;
+};
+
+/**
+ * Describes the message mirai.v1.GetExportStatusResponse.
+ * Use `create(GetExportStatusResponseSchema)` to create a new message.
+ */
+export const GetExportStatusResponseSchema: GenMessage<GetExportStatusResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_course, 32);
+
+/**
+ * DownloadExportRequest contains the export ID.
+ *
+ * @generated from message mirai.v1.DownloadExportRequest
+ */
+export type DownloadExportRequest = Message<"mirai.v1.DownloadExportRequest"> & {
+  /**
+   * @generated from field: string export_id = 1;
+   */
+  exportId: string;
+};
+
+/**
+ * Describes the message mirai.v1.DownloadExportRequest.
+ * Use `create(DownloadExportRequestSchema)` to create a new message.
+ */
+export const DownloadExportRequestSchema: GenMessage<DownloadExportRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_course, 33);
+
+/**
+ * DownloadExportResponse contains the presigned download URL.
+ *
+ * @generated from message mirai.v1.DownloadExportResponse
+ */
+export type DownloadExportResponse = Message<"mirai.v1.DownloadExportResponse"> & {
+  /**
+   * @generated from field: string download_url = 1;
+   */
+  downloadUrl: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 2;
+   */
+  expiresAt?: Timestamp;
+};
+
+/**
+ * Describes the message mirai.v1.DownloadExportResponse.
+ * Use `create(DownloadExportResponseSchema)` to create a new message.
+ */
+export const DownloadExportResponseSchema: GenMessage<DownloadExportResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_course, 34);
+
+/**
+ * ListExportsRequest contains the course ID.
+ *
+ * @generated from message mirai.v1.ListExportsRequest
+ */
+export type ListExportsRequest = Message<"mirai.v1.ListExportsRequest"> & {
+  /**
+   * @generated from field: string course_id = 1;
+   */
+  courseId: string;
+};
+
+/**
+ * Describes the message mirai.v1.ListExportsRequest.
+ * Use `create(ListExportsRequestSchema)` to create a new message.
+ */
+export const ListExportsRequestSchema: GenMessage<ListExportsRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_course, 35);
+
+/**
+ * ListExportsResponse contains the list of exports.
+ *
+ * @generated from message mirai.v1.ListExportsResponse
+ */
+export type ListExportsResponse = Message<"mirai.v1.ListExportsResponse"> & {
+  /**
+   * @generated from field: repeated mirai.v1.CourseExport exports = 1;
+   */
+  exports: CourseExport[];
+};
+
+/**
+ * Describes the message mirai.v1.ListExportsResponse.
+ * Use `create(ListExportsResponseSchema)` to create a new message.
+ */
+export const ListExportsResponseSchema: GenMessage<ListExportsResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_course, 36);
+
+/**
  * CourseStatus represents the publication state of a course.
  *
  * @generated from enum mirai.v1.CourseStatus
@@ -1050,6 +1261,82 @@ export const FolderTypeSchema: GenEnum<FolderType> = /*@__PURE__*/
   enumDesc(file_mirai_v1_course, 2);
 
 /**
+ * ExportFormat defines supported export formats for courses.
+ *
+ * @generated from enum mirai.v1.ExportFormat
+ */
+export enum ExportFormat {
+  /**
+   * @generated from enum value: EXPORT_FORMAT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: EXPORT_FORMAT_SCORM_12 = 1;
+   */
+  SCORM_12 = 1,
+
+  /**
+   * @generated from enum value: EXPORT_FORMAT_SCORM_2004 = 2;
+   */
+  SCORM_2004 = 2,
+
+  /**
+   * @generated from enum value: EXPORT_FORMAT_XAPI = 3;
+   */
+  XAPI = 3,
+
+  /**
+   * @generated from enum value: EXPORT_FORMAT_PDF = 4;
+   */
+  PDF = 4,
+}
+
+/**
+ * Describes the enum mirai.v1.ExportFormat.
+ */
+export const ExportFormatSchema: GenEnum<ExportFormat> = /*@__PURE__*/
+  enumDesc(file_mirai_v1_course, 3);
+
+/**
+ * ExportStatus tracks the export job state.
+ *
+ * @generated from enum mirai.v1.ExportStatus
+ */
+export enum ExportStatus {
+  /**
+   * @generated from enum value: EXPORT_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: EXPORT_STATUS_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * @generated from enum value: EXPORT_STATUS_PROCESSING = 2;
+   */
+  PROCESSING = 2,
+
+  /**
+   * @generated from enum value: EXPORT_STATUS_COMPLETED = 3;
+   */
+  COMPLETED = 3,
+
+  /**
+   * @generated from enum value: EXPORT_STATUS_FAILED = 4;
+   */
+  FAILED = 4,
+}
+
+/**
+ * Describes the enum mirai.v1.ExportStatus.
+ */
+export const ExportStatusSchema: GenEnum<ExportStatus> = /*@__PURE__*/
+  enumDesc(file_mirai_v1_course, 4);
+
+/**
  * CourseService handles course and library operations.
  *
  * @generated from service mirai.v1.CourseService
@@ -1124,6 +1411,46 @@ export const CourseService: GenService<{
     methodKind: "unary";
     input: typeof GetLibraryRequestSchema;
     output: typeof GetLibraryResponseSchema;
+  },
+  /**
+   * ExportCourse initiates a course export job.
+   *
+   * @generated from rpc mirai.v1.CourseService.ExportCourse
+   */
+  exportCourse: {
+    methodKind: "unary";
+    input: typeof ExportCourseRequestSchema;
+    output: typeof ExportCourseResponseSchema;
+  },
+  /**
+   * GetExportStatus returns the status of an export job.
+   *
+   * @generated from rpc mirai.v1.CourseService.GetExportStatus
+   */
+  getExportStatus: {
+    methodKind: "unary";
+    input: typeof GetExportStatusRequestSchema;
+    output: typeof GetExportStatusResponseSchema;
+  },
+  /**
+   * DownloadExport returns a presigned URL for downloading an export.
+   *
+   * @generated from rpc mirai.v1.CourseService.DownloadExport
+   */
+  downloadExport: {
+    methodKind: "unary";
+    input: typeof DownloadExportRequestSchema;
+    output: typeof DownloadExportResponseSchema;
+  },
+  /**
+   * ListExports returns all exports for a course.
+   *
+   * @generated from rpc mirai.v1.CourseService.ListExports
+   */
+  listExports: {
+    methodKind: "unary";
+    input: typeof ListExportsRequestSchema;
+    output: typeof ListExportsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_mirai_v1_course, 0);

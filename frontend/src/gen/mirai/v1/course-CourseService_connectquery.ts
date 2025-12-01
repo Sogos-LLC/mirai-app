@@ -52,3 +52,31 @@ export const getFolderHierarchy = CourseService.method.getFolderHierarchy;
  * @generated from rpc mirai.v1.CourseService.GetLibrary
  */
 export const getLibrary = CourseService.method.getLibrary;
+
+/**
+ * ExportCourse initiates a course export job.
+ *
+ * @generated from rpc mirai.v1.CourseService.ExportCourse
+ */
+export const exportCourse = CourseService.method.exportCourse;
+
+/**
+ * GetExportStatus returns the status of an export job.
+ *
+ * @generated from rpc mirai.v1.CourseService.GetExportStatus
+ */
+export const getExportStatus = CourseService.method.getExportStatus;
+
+/**
+ * DownloadExport returns a presigned URL for downloading an export.
+ *
+ * @generated from rpc mirai.v1.CourseService.DownloadExport
+ */
+export const downloadExport = CourseService.method.downloadExport;
+
+/**
+ * ListExports returns all exports for a course.
+ *
+ * @generated from rpc mirai.v1.CourseService.ListExports
+ */
+export const listExports = CourseService.method.listExports;

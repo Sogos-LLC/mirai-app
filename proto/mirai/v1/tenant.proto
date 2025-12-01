@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// TenantStatus represents the state of a tenant.
+enum TenantStatus {
+  TENANT_STATUS_UNSPECIFIED = 0;
+  TENANT_STATUS_ACTIVE = 1;
+  TENANT_STATUS_SUSPENDED = 2;
+}
+
+// Tenant represents a top-level organizational boundary.
+// Multiple companies can belong to a single tenant.
+message Tenant {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  TenantStatus status = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// TenantService handles tenant-related operations.
+service TenantService {
+  // GetTenant returns the tenant for the current user's context.
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+
+  // UpdateTenant updates tenant settings.
+  rpc UpdateTenant(UpdateTenantRequest) returns (UpdateTenantResponse);
+}
+
+// GetTenantRequest is empty - tenant is derived from auth context.
+message GetTenantRequest {}
+
+// GetTenantResponse contains the tenant.
+message GetTenantResponse {
+  Tenant tenant = 1;
+}
+
+// UpdateTenantRequest contains fields to update.
+message UpdateTenantRequest {
+  optional string name = 1;
+}
+
+// UpdateTenantResponse contains the updated tenant.
+message UpdateTenantResponse {
+  Tenant tenant = 1;
+}

@@ -8,6 +8,24 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 )
 
+// TenantRepository defines the interface for tenant data access.
+type TenantRepository interface {
+	// Create creates a new tenant.
+	Create(ctx context.Context, tenant *entity.Tenant) error
+
+	// GetByID retrieves a tenant by its ID.
+	GetByID(ctx context.Context, id uuid.UUID) (*entity.Tenant, error)
+
+	// GetBySlug retrieves a tenant by its slug.
+	GetBySlug(ctx context.Context, slug string) (*entity.Tenant, error)
+
+	// Update updates a tenant.
+	Update(ctx context.Context, tenant *entity.Tenant) error
+
+	// Delete deletes a tenant.
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
 // UserRepository defines the interface for user data access.
 type UserRepository interface {
 	// Create creates a new user.

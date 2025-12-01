@@ -76,13 +76,18 @@ func (Plan) EnumDescriptor() ([]byte, []int) {
 }
 
 // Role represents a user's role within a company.
+// LMS roles: ADMIN manages company, INSTRUCTOR creates content, SME reviews.
 type Role int32
 
 const (
 	Role_ROLE_UNSPECIFIED Role = 0
-	Role_ROLE_OWNER       Role = 1
-	Role_ROLE_ADMIN       Role = 2
-	Role_ROLE_MEMBER      Role = 3
+	// Deprecated: Marked as deprecated in mirai/v1/common.proto.
+	Role_ROLE_OWNER Role = 1 // Deprecated: use ROLE_ADMIN
+	Role_ROLE_ADMIN Role = 2 // Company admin (full access)
+	// Deprecated: Marked as deprecated in mirai/v1/common.proto.
+	Role_ROLE_MEMBER     Role = 3 // Deprecated: use ROLE_SME
+	Role_ROLE_INSTRUCTOR Role = 4 // Content creator
+	Role_ROLE_SME        Role = 5 // Subject Matter Expert (reviewer)
 )
 
 // Enum value maps for Role.
@@ -92,12 +97,16 @@ var (
 		1: "ROLE_OWNER",
 		2: "ROLE_ADMIN",
 		3: "ROLE_MEMBER",
+		4: "ROLE_INSTRUCTOR",
+		5: "ROLE_SME",
 	}
 	Role_value = map[string]int32{
 		"ROLE_UNSPECIFIED": 0,
 		"ROLE_OWNER":       1,
 		"ROLE_ADMIN":       2,
 		"ROLE_MEMBER":      3,
+		"ROLE_INSTRUCTOR":  4,
+		"ROLE_SME":         5,
 	}
 )
 
@@ -243,6 +252,7 @@ type User struct {
 	Role          Role                   `protobuf:"varint,4,opt,name=role,proto3,enum=mirai.v1.Role" json:"role,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	TenantId      *string                `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"` // Tenant for RLS isolation
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -319,7 +329,14 @@ func (x *User) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// Company represents a company/organization.
+func (x *User) GetTenantId() string {
+	if x != nil && x.TenantId != nil {
+		return *x.TenantId
+	}
+	return ""
+}
+
+// Company represents a company/organization within a tenant.
 type Company struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -333,6 +350,7 @@ type Company struct {
 	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	SeatCount            int32                  `protobuf:"varint,11,opt,name=seat_count,json=seatCount,proto3" json:"seat_count,omitempty"` // Purchased seats from Stripe subscription (0 = use plan default)
+	TenantId             string                 `protobuf:"bytes,12,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`     // Parent tenant for RLS isolation
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -444,6 +462,13 @@ func (x *Company) GetSeatCount() int32 {
 	return 0
 }
 
+func (x *Company) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 // Team represents a team within a company.
 type Team struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -453,6 +478,7 @@ type Team struct {
 	Description   *string                `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	TenantId      *string                `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"` // Tenant for RLS isolation
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -529,6 +555,13 @@ func (x *Team) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Team) GetTenantId() string {
+	if x != nil && x.TenantId != nil {
+		return *x.TenantId
+	}
+	return ""
+}
+
 // TeamMember represents a user's membership in a team.
 type TeamMember struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -537,6 +570,7 @@ type TeamMember struct {
 	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Role          TeamRole               `protobuf:"varint,4,opt,name=role,proto3,enum=mirai.v1.TeamRole" json:"role,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	TenantId      *string                `protobuf:"bytes,6,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"` // Tenant for RLS isolation
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -606,11 +640,18 @@ func (x *TeamMember) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *TeamMember) GetTenantId() string {
+	if x != nil && x.TenantId != nil {
+		return *x.TenantId
+	}
+	return ""
+}
+
 var File_mirai_v1_common_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x15mirai/v1/common.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x80\x02\n" +
+	"\x15mirai/v1/common.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb0\x02\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tkratos_id\x18\x02 \x01(\tR\bkratosId\x12\"\n" +
@@ -620,8 +661,11 @@ const file_mirai_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
-	"\v_company_id\"\xb3\x04\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12 \n" +
+	"\ttenant_id\x18\a \x01(\tH\x01R\btenantId\x88\x01\x01B\r\n" +
+	"\v_company_idB\f\n" +
+	"\n" +
+	"_tenant_id\"\xd0\x04\n" +
 	"\aCompany\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -637,12 +681,13 @@ const file_mirai_v1_common_proto_rawDesc = "" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"seat_count\x18\v \x01(\x05R\tseatCountB\v\n" +
+	"seat_count\x18\v \x01(\x05R\tseatCount\x12\x1b\n" +
+	"\ttenant_id\x18\f \x01(\tR\btenantIdB\v\n" +
 	"\t_industryB\f\n" +
 	"\n" +
 	"_team_sizeB\x15\n" +
 	"\x13_stripe_customer_idB\x19\n" +
-	"\x17_stripe_subscription_id\"\xf6\x01\n" +
+	"\x17_stripe_subscription_id\"\xa6\x02\n" +
 	"\x04Team\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -652,8 +697,11 @@ const file_mirai_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
-	"\f_description\"\xb1\x01\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12 \n" +
+	"\ttenant_id\x18\a \x01(\tH\x01R\btenantId\x88\x01\x01B\x0e\n" +
+	"\f_descriptionB\f\n" +
+	"\n" +
+	"_tenant_id\"\xe1\x01\n" +
 	"\n" +
 	"TeamMember\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
@@ -661,19 +709,24 @@ const file_mirai_v1_common_proto_rawDesc = "" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12&\n" +
 	"\x04role\x18\x04 \x01(\x0e2\x12.mirai.v1.TeamRoleR\x04role\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt*Q\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12 \n" +
+	"\ttenant_id\x18\x06 \x01(\tH\x00R\btenantId\x88\x01\x01B\f\n" +
+	"\n" +
+	"_tenant_id*Q\n" +
 	"\x04Plan\x12\x14\n" +
 	"\x10PLAN_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fPLAN_STARTER\x10\x01\x12\f\n" +
 	"\bPLAN_PRO\x10\x02\x12\x13\n" +
-	"\x0fPLAN_ENTERPRISE\x10\x03*M\n" +
+	"\x0fPLAN_ENTERPRISE\x10\x03*x\n" +
 	"\x04Role\x12\x14\n" +
-	"\x10ROLE_UNSPECIFIED\x10\x00\x12\x0e\n" +
+	"\x10ROLE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\n" +
-	"ROLE_OWNER\x10\x01\x12\x0e\n" +
+	"ROLE_OWNER\x10\x01\x1a\x02\b\x01\x12\x0e\n" +
 	"\n" +
-	"ROLE_ADMIN\x10\x02\x12\x0f\n" +
-	"\vROLE_MEMBER\x10\x03*O\n" +
+	"ROLE_ADMIN\x10\x02\x12\x13\n" +
+	"\vROLE_MEMBER\x10\x03\x1a\x02\b\x01\x12\x13\n" +
+	"\x0fROLE_INSTRUCTOR\x10\x04\x12\f\n" +
+	"\bROLE_SME\x10\x05*O\n" +
 	"\bTeamRole\x12\x19\n" +
 	"\x15TEAM_ROLE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eTEAM_ROLE_LEAD\x10\x01\x12\x14\n" +
@@ -738,6 +791,7 @@ func file_mirai_v1_common_proto_init() {
 	file_mirai_v1_common_proto_msgTypes[0].OneofWrappers = []any{}
 	file_mirai_v1_common_proto_msgTypes[1].OneofWrappers = []any{}
 	file_mirai_v1_common_proto_msgTypes[2].OneofWrappers = []any{}
+	file_mirai_v1_common_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

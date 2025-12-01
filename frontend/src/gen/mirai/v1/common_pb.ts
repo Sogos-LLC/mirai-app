@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/common.proto.
  */
 export const file_mirai_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChVtaXJhaS92MS9jb21tb24ucHJvdG8SCG1pcmFpLnYxIssBCgRVc2VyEgoKAmlkGAEgASgJEhEKCWtyYXRvc19pZBgCIAEoCRIXCgpjb21wYW55X2lkGAMgASgJSACIAQESHAoEcm9sZRgEIAEoDjIOLm1pcmFpLnYxLlJvbGUSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDQoLX2NvbXBhbnlfaWQisgMKB0NvbXBhbnkSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIVCghpbmR1c3RyeRgDIAEoCUgAiAEBEhYKCXRlYW1fc2l6ZRgEIAEoCUgBiAEBEhwKBHBsYW4YBSABKA4yDi5taXJhaS52MS5QbGFuEjkKE3N1YnNjcmlwdGlvbl9zdGF0dXMYBiABKA4yHC5taXJhaS52MS5TdWJzY3JpcHRpb25TdGF0dXMSHwoSc3RyaXBlX2N1c3RvbWVyX2lkGAcgASgJSAKIAQESIwoWc3RyaXBlX3N1YnNjcmlwdGlvbl9pZBgIIAEoCUgDiAEBEi4KCmNyZWF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCnNlYXRfY291bnQYCyABKAVCCwoJX2luZHVzdHJ5QgwKCl90ZWFtX3NpemVCFQoTX3N0cmlwZV9jdXN0b21lcl9pZEIZChdfc3RyaXBlX3N1YnNjcmlwdGlvbl9pZCK+AQoEVGVhbRIKCgJpZBgBIAEoCRISCgpjb21wYW55X2lkGAIgASgJEgwKBG5hbWUYAyABKAkSGAoLZGVzY3JpcHRpb24YBCABKAlIAIgBARIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIOCgxfZGVzY3JpcHRpb24ijAEKClRlYW1NZW1iZXISCgoCaWQYASABKAkSDwoHdGVhbV9pZBgCIAEoCRIPCgd1c2VyX2lkGAMgASgJEiAKBHJvbGUYBCABKA4yEi5taXJhaS52MS5UZWFtUm9sZRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCpRCgRQbGFuEhQKEFBMQU5fVU5TUEVDSUZJRUQQABIQCgxQTEFOX1NUQVJURVIQARIMCghQTEFOX1BSTxACEhMKD1BMQU5fRU5URVJQUklTRRADKk0KBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfT1dORVIQARIOCgpST0xFX0FETUlOEAISDwoLUk9MRV9NRU1CRVIQAypPCghUZWFtUm9sZRIZChVURUFNX1JPTEVfVU5TUEVDSUZJRUQQABISCg5URUFNX1JPTEVfTEVBRBABEhQKEFRFQU1fUk9MRV9NRU1CRVIQAiq7AQoSU3Vic2NyaXB0aW9uU3RhdHVzEiMKH1NVQlNDUklQVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIcChhTVUJTQ1JJUFRJT05fU1RBVFVTX05PTkUQARIeChpTVUJTQ1JJUFRJT05fU1RBVFVTX0FDVElWRRACEiAKHFNVQlNDUklQVElPTl9TVEFUVVNfUEFTVF9EVUUQAxIgChxTVUJTQ1JJUFRJT05fU1RBVFVTX0NBTkNFTEVEEARCkQEKDGNvbS5taXJhaS52MUILQ29tbW9uUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("ChVtaXJhaS92MS9jb21tb24ucHJvdG8SCG1pcmFpLnYxIvEBCgRVc2VyEgoKAmlkGAEgASgJEhEKCWtyYXRvc19pZBgCIAEoCRIXCgpjb21wYW55X2lkGAMgASgJSACIAQESHAoEcm9sZRgEIAEoDjIOLm1pcmFpLnYxLlJvbGUSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFgoJdGVuYW50X2lkGAcgASgJSAGIAQFCDQoLX2NvbXBhbnlfaWRCDAoKX3RlbmFudF9pZCLFAwoHQ29tcGFueRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhUKCGluZHVzdHJ5GAMgASgJSACIAQESFgoJdGVhbV9zaXplGAQgASgJSAGIAQESHAoEcGxhbhgFIAEoDjIOLm1pcmFpLnYxLlBsYW4SOQoTc3Vic2NyaXB0aW9uX3N0YXR1cxgGIAEoDjIcLm1pcmFpLnYxLlN1YnNjcmlwdGlvblN0YXR1cxIfChJzdHJpcGVfY3VzdG9tZXJfaWQYByABKAlIAogBARIjChZzdHJpcGVfc3Vic2NyaXB0aW9uX2lkGAggASgJSAOIAQESLgoKY3JlYXRlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKc2VhdF9jb3VudBgLIAEoBRIRCgl0ZW5hbnRfaWQYDCABKAlCCwoJX2luZHVzdHJ5QgwKCl90ZWFtX3NpemVCFQoTX3N0cmlwZV9jdXN0b21lcl9pZEIZChdfc3RyaXBlX3N1YnNjcmlwdGlvbl9pZCLkAQoEVGVhbRIKCgJpZBgBIAEoCRISCgpjb21wYW55X2lkGAIgASgJEgwKBG5hbWUYAyABKAkSGAoLZGVzY3JpcHRpb24YBCABKAlIAIgBARIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIWCgl0ZW5hbnRfaWQYByABKAlIAYgBAUIOCgxfZGVzY3JpcHRpb25CDAoKX3RlbmFudF9pZCKyAQoKVGVhbU1lbWJlchIKCgJpZBgBIAEoCRIPCgd0ZWFtX2lkGAIgASgJEg8KB3VzZXJfaWQYAyABKAkSIAoEcm9sZRgEIAEoDjISLm1pcmFpLnYxLlRlYW1Sb2xlEi4KCmNyZWF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKCXRlbmFudF9pZBgGIAEoCUgAiAEBQgwKCl90ZW5hbnRfaWQqUQoEUGxhbhIUChBQTEFOX1VOU1BFQ0lGSUVEEAASEAoMUExBTl9TVEFSVEVSEAESDAoIUExBTl9QUk8QAhITCg9QTEFOX0VOVEVSUFJJU0UQAyp4CgRSb2xlEhQKEFJPTEVfVU5TUEVDSUZJRUQQABISCgpST0xFX09XTkVSEAEaAggBEg4KClJPTEVfQURNSU4QAhITCgtST0xFX01FTUJFUhADGgIIARITCg9ST0xFX0lOU1RSVUNUT1IQBBIMCghST0xFX1NNRRAFKk8KCFRlYW1Sb2xlEhkKFVRFQU1fUk9MRV9VTlNQRUNJRklFRBAAEhIKDlRFQU1fUk9MRV9MRUFEEAESFAoQVEVBTV9ST0xFX01FTUJFUhACKrsBChJTdWJzY3JpcHRpb25TdGF0dXMSIwofU1VCU0NSSVBUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEhwKGFNVQlNDUklQVElPTl9TVEFUVVNfTk9ORRABEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfQUNUSVZFEAISIAocU1VCU0NSSVBUSU9OX1NUQVRVU19QQVNUX0RVRRADEiAKHFNVQlNDUklQVElPTl9TVEFUVVNfQ0FOQ0VMRUQQBEKRAQoMY29tLm1pcmFpLnYxQgtDb21tb25Qcm90b1ABWjNnaXRodWIuY29tL3NvZ29zL21pcmFpLWJhY2tlbmQvZ2VuL21pcmFpL3YxO21pcmFpdjGiAgNNWFiqAghNaXJhaS5WMcoCCE1pcmFpXFYx4gIUTWlyYWlcVjFcR1BCTWV0YWRhdGHqAglNaXJhaTo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * User represents a user in the system.
@@ -49,6 +49,13 @@ export type User = Message<"mirai.v1.User"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 6;
    */
   updatedAt?: Timestamp;
+
+  /**
+   * Tenant for RLS isolation
+   *
+   * @generated from field: optional string tenant_id = 7;
+   */
+  tenantId?: string;
 };
 
 /**
@@ -59,7 +66,7 @@ export const UserSchema: GenMessage<User> = /*@__PURE__*/
   messageDesc(file_mirai_v1_common, 0);
 
 /**
- * Company represents a company/organization.
+ * Company represents a company/organization within a tenant.
  *
  * @generated from message mirai.v1.Company
  */
@@ -120,6 +127,13 @@ export type Company = Message<"mirai.v1.Company"> & {
    * @generated from field: int32 seat_count = 11;
    */
   seatCount: number;
+
+  /**
+   * Parent tenant for RLS isolation
+   *
+   * @generated from field: string tenant_id = 12;
+   */
+  tenantId: string;
 };
 
 /**
@@ -164,6 +178,13 @@ export type Team = Message<"mirai.v1.Team"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 6;
    */
   updatedAt?: Timestamp;
+
+  /**
+   * Tenant for RLS isolation
+   *
+   * @generated from field: optional string tenant_id = 7;
+   */
+  tenantId?: string;
 };
 
 /**
@@ -203,6 +224,13 @@ export type TeamMember = Message<"mirai.v1.TeamMember"> & {
    * @generated from field: google.protobuf.Timestamp created_at = 5;
    */
   createdAt?: Timestamp;
+
+  /**
+   * Tenant for RLS isolation
+   *
+   * @generated from field: optional string tenant_id = 6;
+   */
+  tenantId?: string;
 };
 
 /**
@@ -247,6 +275,7 @@ export const PlanSchema: GenEnum<Plan> = /*@__PURE__*/
 
 /**
  * Role represents a user's role within a company.
+ * LMS roles: ADMIN manages company, INSTRUCTOR creates content, SME reviews.
  *
  * @generated from enum mirai.v1.Role
  */
@@ -257,19 +286,41 @@ export enum Role {
   UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: ROLE_OWNER = 1;
+   * Deprecated: use ROLE_ADMIN
+   *
+   * @generated from enum value: ROLE_OWNER = 1 [deprecated = true];
+   * @deprecated
    */
   OWNER = 1,
 
   /**
+   * Company admin (full access)
+   *
    * @generated from enum value: ROLE_ADMIN = 2;
    */
   ADMIN = 2,
 
   /**
-   * @generated from enum value: ROLE_MEMBER = 3;
+   * Deprecated: use ROLE_SME
+   *
+   * @generated from enum value: ROLE_MEMBER = 3 [deprecated = true];
+   * @deprecated
    */
   MEMBER = 3,
+
+  /**
+   * Content creator
+   *
+   * @generated from enum value: ROLE_INSTRUCTOR = 4;
+   */
+  INSTRUCTOR = 4,
+
+  /**
+   * Subject Matter Expert (reviewer)
+   *
+   * @generated from enum value: ROLE_SME = 5;
+   */
+  SME = 5,
 }
 
 /**

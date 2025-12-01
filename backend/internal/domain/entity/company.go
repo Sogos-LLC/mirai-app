@@ -10,6 +10,7 @@ import (
 // Company represents an organization in the system.
 type Company struct {
 	ID                   uuid.UUID
+	TenantID             uuid.UUID // Parent tenant for RLS isolation
 	Name                 string
 	Industry             *string
 	TeamSize             *string

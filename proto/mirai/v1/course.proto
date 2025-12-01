@@ -30,6 +30,24 @@ enum FolderType {
   FOLDER_TYPE_FOLDER = 4;
 }
 
+// ExportFormat defines supported export formats for courses.
+enum ExportFormat {
+  EXPORT_FORMAT_UNSPECIFIED = 0;
+  EXPORT_FORMAT_SCORM_12 = 1;
+  EXPORT_FORMAT_SCORM_2004 = 2;
+  EXPORT_FORMAT_XAPI = 3;
+  EXPORT_FORMAT_PDF = 4;
+}
+
+// ExportStatus tracks the export job state.
+enum ExportStatus {
+  EXPORT_STATUS_UNSPECIFIED = 0;
+  EXPORT_STATUS_PENDING = 1;
+  EXPORT_STATUS_PROCESSING = 2;
+  EXPORT_STATUS_COMPLETED = 3;
+  EXPORT_STATUS_FAILED = 4;
+}
+
 // LearningObjective represents a specific learning goal for the course.
 message LearningObjective {
   string id = 1;
@@ -97,9 +115,11 @@ message CourseContent {
 message CourseExport {
   string id = 1;
   google.protobuf.Timestamp timestamp = 2;
-  string format = 3;
+  ExportFormat format = 3;
   int32 version = 4;
   string file_path = 5;
+  ExportStatus status = 6;
+  optional string error_message = 7;
 }
 
 // CourseSettings contains the configurable settings for a course.
@@ -133,6 +153,11 @@ message Course {
   AssessmentSettings assessment_settings = 8;
   CourseContent content = 9;
   repeated CourseExport exports = 10;
+  // Ownership fields for multi-tenancy
+  optional string company_id = 11;
+  optional string tenant_id = 12;
+  optional string created_by_user_id = 13;
+  optional string team_id = 14;
 }
 
 // LibraryEntry represents a course listing in the content library.
@@ -146,6 +171,10 @@ message LibraryEntry {
   google.protobuf.Timestamp modified_at = 7;
   optional string created_by = 8;
   optional string thumbnail_path = 9;
+  // Ownership fields for multi-tenancy
+  optional string company_id = 10;
+  optional string tenant_id = 11;
+  optional string team_id = 12;
 }
 
 // Folder represents a folder in the library hierarchy.
@@ -188,6 +217,18 @@ service CourseService {
 
   // GetLibrary returns the full library with courses and folders.
   rpc GetLibrary(GetLibraryRequest) returns (GetLibraryResponse);
+
+  // ExportCourse initiates a course export job.
+  rpc ExportCourse(ExportCourseRequest) returns (ExportCourseResponse);
+
+  // GetExportStatus returns the status of an export job.
+  rpc GetExportStatus(GetExportStatusRequest) returns (GetExportStatusResponse);
+
+  // DownloadExport returns a presigned URL for downloading an export.
+  rpc DownloadExport(DownloadExportRequest) returns (DownloadExportResponse);
+
+  // ListExports returns all exports for a course.
+  rpc ListExports(ListExportsRequest) returns (ListExportsResponse);
 }
 
 // ListCoursesRequest contains optional filters for listing courses.
@@ -272,4 +313,46 @@ message GetLibraryRequest {
 // GetLibraryResponse contains the full library.
 message GetLibraryResponse {
   Library library = 1;
+}
+
+// ExportCourseRequest contains the course ID and export format.
+message ExportCourseRequest {
+  string course_id = 1;
+  ExportFormat format = 2;
+}
+
+// ExportCourseResponse contains the export job details.
+message ExportCourseResponse {
+  CourseExport export = 1;
+}
+
+// GetExportStatusRequest contains the export ID.
+message GetExportStatusRequest {
+  string export_id = 1;
+}
+
+// GetExportStatusResponse contains the export status.
+message GetExportStatusResponse {
+  CourseExport export = 1;
+}
+
+// DownloadExportRequest contains the export ID.
+message DownloadExportRequest {
+  string export_id = 1;
+}
+
+// DownloadExportResponse contains the presigned download URL.
+message DownloadExportResponse {
+  string download_url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+// ListExportsRequest contains the course ID.
+message ListExportsRequest {
+  string course_id = 1;
+}
+
+// ListExportsResponse contains the list of exports.
+message ListExportsResponse {
+  repeated CourseExport exports = 1;
 }

@@ -13,11 +13,14 @@ enum Plan {
 }
 
 // Role represents a user's role within a company.
+// LMS roles: ADMIN manages company, INSTRUCTOR creates content, SME reviews.
 enum Role {
   ROLE_UNSPECIFIED = 0;
-  ROLE_OWNER = 1;
-  ROLE_ADMIN = 2;
-  ROLE_MEMBER = 3;
+  ROLE_OWNER = 1 [deprecated = true];      // Deprecated: use ROLE_ADMIN
+  ROLE_ADMIN = 2;                          // Company admin (full access)
+  ROLE_MEMBER = 3 [deprecated = true];     // Deprecated: use ROLE_SME
+  ROLE_INSTRUCTOR = 4;                     // Content creator
+  ROLE_SME = 5;                            // Subject Matter Expert (reviewer)
 }
 
 // TeamRole represents a user's role within a team.
@@ -44,9 +47,10 @@ message User {
   Role role = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
+  optional string tenant_id = 7;  // Tenant for RLS isolation
 }
 
-// Company represents a company/organization.
+// Company represents a company/organization within a tenant.
 message Company {
   string id = 1;
   string name = 2;
@@ -59,6 +63,7 @@ message Company {
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
   int32 seat_count = 11;  // Purchased seats from Stripe subscription (0 = use plan default)
+  string tenant_id = 12;  // Parent tenant for RLS isolation
 }
 
 // Team represents a team within a company.
@@ -69,6 +74,7 @@ message Team {
   optional string description = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
+  optional string tenant_id = 7;  // Tenant for RLS isolation
 }
 
 // TeamMember represents a user's membership in a team.
@@ -78,4 +84,5 @@ message TeamMember {
   string user_id = 3;
   TeamRole role = 4;
   google.protobuf.Timestamp created_at = 5;
+  optional string tenant_id = 6;  // Tenant for RLS isolation
 }

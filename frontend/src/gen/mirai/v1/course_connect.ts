@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateCourseRequest, CreateCourseResponse, DeleteCourseRequest, DeleteCourseResponse, GetCourseRequest, GetCourseResponse, GetFolderHierarchyRequest, GetFolderHierarchyResponse, GetLibraryRequest, GetLibraryResponse, ListCoursesRequest, ListCoursesResponse, UpdateCourseRequest, UpdateCourseResponse } from "./course_pb.js";
+import { CreateCourseRequest, CreateCourseResponse, DeleteCourseRequest, DeleteCourseResponse, DownloadExportRequest, DownloadExportResponse, ExportCourseRequest, ExportCourseResponse, GetCourseRequest, GetCourseResponse, GetExportStatusRequest, GetExportStatusResponse, GetFolderHierarchyRequest, GetFolderHierarchyResponse, GetLibraryRequest, GetLibraryResponse, ListCoursesRequest, ListCoursesResponse, ListExportsRequest, ListExportsResponse, UpdateCourseRequest, UpdateCourseResponse } from "./course_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -89,6 +89,50 @@ export const CourseService = {
       name: "GetLibrary",
       I: GetLibraryRequest,
       O: GetLibraryResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ExportCourse initiates a course export job.
+     *
+     * @generated from rpc mirai.v1.CourseService.ExportCourse
+     */
+    exportCourse: {
+      name: "ExportCourse",
+      I: ExportCourseRequest,
+      O: ExportCourseResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetExportStatus returns the status of an export job.
+     *
+     * @generated from rpc mirai.v1.CourseService.GetExportStatus
+     */
+    getExportStatus: {
+      name: "GetExportStatus",
+      I: GetExportStatusRequest,
+      O: GetExportStatusResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * DownloadExport returns a presigned URL for downloading an export.
+     *
+     * @generated from rpc mirai.v1.CourseService.DownloadExport
+     */
+    downloadExport: {
+      name: "DownloadExport",
+      I: DownloadExportRequest,
+      O: DownloadExportResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ListExports returns all exports for a course.
+     *
+     * @generated from rpc mirai.v1.CourseService.ListExports
+     */
+    listExports: {
+      name: "ListExports",
+      I: ListExportsRequest,
+      O: ListExportsResponse,
       kind: MethodKind.Unary,
     },
   }
