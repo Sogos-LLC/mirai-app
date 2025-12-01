@@ -1,0 +1,396 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// GenerationJobType represents the type of AI generation job.
+enum GenerationJobType {
+  GENERATION_JOB_TYPE_UNSPECIFIED = 0;
+  GENERATION_JOB_TYPE_SME_INGESTION = 1;      // Process SME content submissions
+  GENERATION_JOB_TYPE_COURSE_OUTLINE = 2;     // Generate course outline
+  GENERATION_JOB_TYPE_LESSON_CONTENT = 3;     // Generate content for a lesson
+  GENERATION_JOB_TYPE_COMPONENT_REGEN = 4;    // Regenerate single component
+}
+
+// GenerationJobStatus represents job state.
+enum GenerationJobStatus {
+  GENERATION_JOB_STATUS_UNSPECIFIED = 0;
+  GENERATION_JOB_STATUS_QUEUED = 1;
+  GENERATION_JOB_STATUS_PROCESSING = 2;
+  GENERATION_JOB_STATUS_COMPLETED = 3;
+  GENERATION_JOB_STATUS_FAILED = 4;
+  GENERATION_JOB_STATUS_CANCELLED = 5;
+}
+
+// OutlineApprovalStatus for generated content review.
+enum OutlineApprovalStatus {
+  OUTLINE_APPROVAL_STATUS_UNSPECIFIED = 0;
+  OUTLINE_APPROVAL_STATUS_PENDING_REVIEW = 1;
+  OUTLINE_APPROVAL_STATUS_APPROVED = 2;
+  OUTLINE_APPROVAL_STATUS_REJECTED = 3;
+  OUTLINE_APPROVAL_STATUS_REVISION_REQUESTED = 4;
+}
+
+// LessonComponentType - content block types for lessons.
+// MVP: Text, Heading, Image, Quiz. Expand later.
+enum LessonComponentType {
+  LESSON_COMPONENT_TYPE_UNSPECIFIED = 0;
+  LESSON_COMPONENT_TYPE_TEXT = 1;
+  LESSON_COMPONENT_TYPE_HEADING = 2;
+  LESSON_COMPONENT_TYPE_IMAGE = 3;
+  LESSON_COMPONENT_TYPE_QUIZ = 4;
+  // Future expansion:
+  // LESSON_COMPONENT_TYPE_VIDEO = 5;
+  // LESSON_COMPONENT_TYPE_VIDEO_EMBED = 6;
+  // LESSON_COMPONENT_TYPE_ACCORDION = 7;
+  // LESSON_COMPONENT_TYPE_TABLE = 8;
+  // LESSON_COMPONENT_TYPE_CALLOUT = 9;
+  // LESSON_COMPONENT_TYPE_CODE_BLOCK = 10;
+  // LESSON_COMPONENT_TYPE_GALLERY = 11;
+  // LESSON_COMPONENT_TYPE_TABS = 12;
+}
+
+// HeadingLevel for heading components.
+enum HeadingLevel {
+  HEADING_LEVEL_UNSPECIFIED = 0;
+  HEADING_LEVEL_H1 = 1;
+  HEADING_LEVEL_H2 = 2;
+  HEADING_LEVEL_H3 = 3;
+  HEADING_LEVEL_H4 = 4;
+}
+
+// GenerationJob represents an AI generation job.
+message GenerationJob {
+  string id = 1;
+  string tenant_id = 2;
+
+  GenerationJobType type = 3;
+  GenerationJobStatus status = 4;
+
+  // References based on job type
+  optional string course_id = 5;
+  optional string lesson_id = 6;
+  optional string sme_task_id = 7;
+  optional string submission_id = 8;
+
+  // Progress tracking
+  int32 progress_percent = 9;
+  optional string progress_message = 10;
+
+  // Results
+  optional string result_path = 11;      // S3 path to result JSON
+  optional string error_message = 12;
+
+  // Token usage for billing
+  int64 tokens_used = 13;
+
+  // Retry tracking
+  int32 retry_count = 14;
+  int32 max_retries = 15;
+
+  string created_by_user_id = 16;
+  google.protobuf.Timestamp created_at = 17;
+  optional google.protobuf.Timestamp started_at = 18;
+  optional google.protobuf.Timestamp completed_at = 19;
+}
+
+// CourseOutline represents the generated course structure.
+message CourseOutline {
+  string id = 1;
+  string course_id = 2;
+  int32 version = 3;
+
+  repeated OutlineSection sections = 4;
+
+  OutlineApprovalStatus approval_status = 5;
+  optional string rejection_reason = 6;
+
+  google.protobuf.Timestamp generated_at = 7;
+  optional google.protobuf.Timestamp approved_at = 8;
+  optional string approved_by_user_id = 9;
+}
+
+// OutlineSection represents a section in the outline.
+message OutlineSection {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  int32 order = 4;
+  repeated OutlineLesson lessons = 5;
+}
+
+// OutlineLesson represents a lesson in the outline.
+message OutlineLesson {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  int32 order = 4;
+  int32 estimated_duration_minutes = 5;
+  repeated string learning_objectives = 6;
+  bool is_last_in_section = 7;           // Flag for segue generation
+  bool is_last_in_course = 8;            // Flag for course conclusion
+}
+
+// GeneratedLesson contains full lesson content.
+message GeneratedLesson {
+  string id = 1;
+  string course_id = 2;
+  string section_id = 3;
+  string outline_lesson_id = 4;
+
+  string title = 5;
+  repeated LessonComponent components = 6;
+
+  optional string segue_text = 7;        // Transition to next lesson
+
+  google.protobuf.Timestamp generated_at = 8;
+}
+
+// LessonComponent represents a content component in a lesson.
+message LessonComponent {
+  string id = 1;
+  LessonComponentType type = 2;
+  int32 order = 3;
+
+  // Type-specific content (JSON string for flexibility)
+  string content_json = 4;
+
+  // Alignment metadata - tracks what SME knowledge/objectives this supports
+  optional ComponentAlignment alignment = 5;
+}
+
+// ComponentAlignment tracks what knowledge/objectives a component addresses.
+message ComponentAlignment {
+  repeated string sme_chunk_ids = 1;
+  repeated string learning_objective_ids = 2;
+}
+
+// TextContent for text components.
+message TextContent {
+  string html = 1;
+  string plaintext = 2;
+}
+
+// HeadingContent for heading components.
+message HeadingContent {
+  HeadingLevel level = 1;
+  string text = 2;
+}
+
+// ImageContent for image components.
+message ImageContent {
+  string url = 1;
+  string alt_text = 2;
+  optional string caption = 3;
+}
+
+// QuizContent for quiz/knowledge check components.
+message QuizContent {
+  string question = 1;
+  string question_type = 2;              // multiple_choice, true_false
+  repeated QuizOption options = 3;
+  string correct_answer_id = 4;
+  string explanation = 5;
+  optional string correct_feedback = 6;
+  optional string incorrect_feedback = 7;
+}
+
+// QuizOption represents an answer option.
+message QuizOption {
+  string id = 1;
+  string text = 2;
+}
+
+// CourseGenerationInput captures inputs for AI course generation.
+message CourseGenerationInput {
+  string course_id = 1;
+  repeated string sme_ids = 2;                    // SMEs to use as knowledge sources
+  repeated string target_audience_ids = 3;        // Target audience templates
+  string desired_outcome = 4;                     // What learners should achieve
+  optional string additional_context = 5;         // Extra context/instructions
+}
+
+// AIGenerationService handles AI generation operations.
+service AIGenerationService {
+  // GenerateCourseOutline starts outline generation job.
+  rpc GenerateCourseOutline(GenerateCourseOutlineRequest) returns (GenerateCourseOutlineResponse);
+
+  // GetCourseOutline returns the generated outline for a course.
+  rpc GetCourseOutline(GetCourseOutlineRequest) returns (GetCourseOutlineResponse);
+
+  // ApproveCourseOutline approves an outline for content generation.
+  rpc ApproveCourseOutline(ApproveCourseOutlineRequest) returns (ApproveCourseOutlineResponse);
+
+  // RejectCourseOutline rejects an outline with feedback.
+  rpc RejectCourseOutline(RejectCourseOutlineRequest) returns (RejectCourseOutlineResponse);
+
+  // UpdateCourseOutline allows editing the outline before approval.
+  rpc UpdateCourseOutline(UpdateCourseOutlineRequest) returns (UpdateCourseOutlineResponse);
+
+  // GenerateLessonContent generates content for a specific lesson.
+  rpc GenerateLessonContent(GenerateLessonContentRequest) returns (GenerateLessonContentResponse);
+
+  // GenerateAllLessons generates content for all lessons in outline.
+  rpc GenerateAllLessons(GenerateAllLessonsRequest) returns (GenerateAllLessonsResponse);
+
+  // RegenerateComponent regenerates a single component with modifications.
+  rpc RegenerateComponent(RegenerateComponentRequest) returns (RegenerateComponentResponse);
+
+  // GetJob returns a generation job by ID.
+  rpc GetJob(GetJobRequest) returns (GetJobResponse);
+
+  // ListJobs returns generation jobs for the current user.
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+
+  // CancelJob cancels a queued or processing job.
+  rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
+
+  // GetGeneratedLesson returns generated lesson content.
+  rpc GetGeneratedLesson(GetGeneratedLessonRequest) returns (GetGeneratedLessonResponse);
+
+  // ListGeneratedLessons returns all generated lessons for a course.
+  rpc ListGeneratedLessons(ListGeneratedLessonsRequest) returns (ListGeneratedLessonsResponse);
+}
+
+// GenerateCourseOutlineRequest starts outline generation.
+message GenerateCourseOutlineRequest {
+  CourseGenerationInput input = 1;
+}
+
+// GenerateCourseOutlineResponse returns the job ID to track progress.
+message GenerateCourseOutlineResponse {
+  GenerationJob job = 1;
+}
+
+// GetCourseOutlineRequest fetches the outline for a course.
+message GetCourseOutlineRequest {
+  string course_id = 1;
+  optional int32 version = 2;     // If not specified, returns latest
+}
+
+// GetCourseOutlineResponse contains the outline.
+message GetCourseOutlineResponse {
+  CourseOutline outline = 1;
+}
+
+// ApproveCourseOutlineRequest approves an outline.
+message ApproveCourseOutlineRequest {
+  string course_id = 1;
+  string outline_id = 2;
+}
+
+// ApproveCourseOutlineResponse confirms approval.
+message ApproveCourseOutlineResponse {
+  CourseOutline outline = 1;
+}
+
+// RejectCourseOutlineRequest rejects an outline.
+message RejectCourseOutlineRequest {
+  string course_id = 1;
+  string outline_id = 2;
+  string reason = 3;
+}
+
+// RejectCourseOutlineResponse confirms rejection.
+message RejectCourseOutlineResponse {
+  CourseOutline outline = 1;
+}
+
+// UpdateCourseOutlineRequest allows editing the outline.
+message UpdateCourseOutlineRequest {
+  string course_id = 1;
+  string outline_id = 2;
+  repeated OutlineSection sections = 3;
+}
+
+// UpdateCourseOutlineResponse contains the updated outline.
+message UpdateCourseOutlineResponse {
+  CourseOutline outline = 1;
+}
+
+// GenerateLessonContentRequest generates content for one lesson.
+message GenerateLessonContentRequest {
+  string course_id = 1;
+  string outline_lesson_id = 2;
+}
+
+// GenerateLessonContentResponse returns the job ID.
+message GenerateLessonContentResponse {
+  GenerationJob job = 1;
+}
+
+// GenerateAllLessonsRequest generates all lessons for a course.
+message GenerateAllLessonsRequest {
+  string course_id = 1;
+}
+
+// GenerateAllLessonsResponse returns the job ID.
+message GenerateAllLessonsResponse {
+  GenerationJob job = 1;
+}
+
+// RegenerateComponentRequest regenerates a single component.
+message RegenerateComponentRequest {
+  string course_id = 1;
+  string lesson_id = 2;
+  string component_id = 3;
+  string modification_prompt = 4;     // Instructions for regeneration
+}
+
+// RegenerateComponentResponse returns the job ID.
+message RegenerateComponentResponse {
+  GenerationJob job = 1;
+}
+
+// GetJobRequest fetches a job by ID.
+message GetJobRequest {
+  string job_id = 1;
+}
+
+// GetJobResponse contains the job.
+message GetJobResponse {
+  GenerationJob job = 1;
+}
+
+// ListJobsRequest contains filters for jobs.
+message ListJobsRequest {
+  optional GenerationJobType type = 1;
+  optional GenerationJobStatus status = 2;
+  optional string course_id = 3;
+}
+
+// ListJobsResponse contains matching jobs.
+message ListJobsResponse {
+  repeated GenerationJob jobs = 1;
+}
+
+// CancelJobRequest cancels a job.
+message CancelJobRequest {
+  string job_id = 1;
+}
+
+// CancelJobResponse confirms cancellation.
+message CancelJobResponse {
+  GenerationJob job = 1;
+}
+
+// GetGeneratedLessonRequest fetches generated lesson content.
+message GetGeneratedLessonRequest {
+  string lesson_id = 1;
+}
+
+// GetGeneratedLessonResponse contains the lesson.
+message GetGeneratedLessonResponse {
+  GeneratedLesson lesson = 1;
+}
+
+// ListGeneratedLessonsRequest fetches all lessons for a course.
+message ListGeneratedLessonsRequest {
+  string course_id = 1;
+}
+
+// ListGeneratedLessonsResponse contains the lessons.
+message ListGeneratedLessonsResponse {
+  repeated GeneratedLesson lessons = 1;
+}

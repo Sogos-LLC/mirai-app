@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// AIProvider represents supported AI providers.
+enum AIProvider {
+  AI_PROVIDER_UNSPECIFIED = 0;
+  AI_PROVIDER_GEMINI = 1;
+}
+
+// TenantAISettings contains AI configuration for a tenant.
+// Only ADMIN/OWNER roles can access these settings.
+message TenantAISettings {
+  string tenant_id = 1;
+
+  AIProvider provider = 2;
+  bool api_key_configured = 3;     // True if key is set (never expose actual key)
+
+  // Usage tracking
+  int64 total_tokens_used = 4;
+  optional int64 monthly_token_limit = 5;
+
+  google.protobuf.Timestamp updated_at = 6;
+  optional string updated_by_user_id = 7;
+}
+
+// TenantSettingsService handles tenant-level settings.
+// All methods require ADMIN or OWNER role.
+service TenantSettingsService {
+  // GetAISettings returns the current AI configuration.
+  rpc GetAISettings(GetAISettingsRequest) returns (GetAISettingsResponse);
+
+  // SetAPIKey sets the Gemini API key for the tenant.
+  rpc SetAPIKey(SetAPIKeyRequest) returns (SetAPIKeyResponse);
+
+  // RemoveAPIKey removes the configured API key.
+  rpc RemoveAPIKey(RemoveAPIKeyRequest) returns (RemoveAPIKeyResponse);
+
+  // TestAPIKey tests if the provided API key is valid.
+  rpc TestAPIKey(TestAPIKeyRequest) returns (TestAPIKeyResponse);
+
+  // GetUsageStats returns AI usage statistics.
+  rpc GetUsageStats(GetUsageStatsRequest) returns (GetUsageStatsResponse);
+}
+
+// GetAISettingsRequest is empty as tenant is from auth context.
+message GetAISettingsRequest {}
+
+// GetAISettingsResponse contains the AI settings.
+message GetAISettingsResponse {
+  TenantAISettings settings = 1;
+}
+
+// SetAPIKeyRequest contains the API key to set.
+message SetAPIKeyRequest {
+  AIProvider provider = 1;
+  string api_key = 2;             // Plain text, will be encrypted server-side
+}
+
+// SetAPIKeyResponse confirms the key was set.
+message SetAPIKeyResponse {
+  TenantAISettings settings = 1;
+}
+
+// RemoveAPIKeyRequest removes the API key.
+message RemoveAPIKeyRequest {}
+
+// RemoveAPIKeyResponse confirms removal.
+message RemoveAPIKeyResponse {
+  TenantAISettings settings = 1;
+}
+
+// TestAPIKeyRequest tests an API key without saving.
+message TestAPIKeyRequest {
+  AIProvider provider = 1;
+  string api_key = 2;
+}
+
+// TestAPIKeyResponse indicates if the key is valid.
+message TestAPIKeyResponse {
+  bool valid = 1;
+  optional string error_message = 2;
+}
+
+// GetUsageStatsRequest fetches usage statistics.
+message GetUsageStatsRequest {
+  optional google.protobuf.Timestamp from_date = 1;
+  optional google.protobuf.Timestamp to_date = 2;
+}
+
+// UsageByType breaks down usage by job type.
+message UsageByType {
+  string job_type = 1;
+  int64 tokens_used = 2;
+  int32 job_count = 3;
+}
+
+// GetUsageStatsResponse contains usage statistics.
+message GetUsageStatsResponse {
+  int64 total_tokens_used = 1;
+  int64 tokens_this_month = 2;
+  optional int64 monthly_limit = 3;
+  repeated UsageByType usage_by_type = 4;
+}

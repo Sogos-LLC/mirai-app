@@ -1,0 +1,359 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// SMEScope defines whether an SME is global or team-scoped.
+enum SMEScope {
+  SME_SCOPE_UNSPECIFIED = 0;
+  SME_SCOPE_GLOBAL = 1;      // Company-wide, accessible to all teams
+  SME_SCOPE_TEAM = 2;        // Scoped to specific teams
+}
+
+// SMEStatus represents the state of an SME entity.
+enum SMEStatus {
+  SME_STATUS_UNSPECIFIED = 0;
+  SME_STATUS_DRAFT = 1;           // Initial creation, no knowledge yet
+  SME_STATUS_INGESTING = 2;       // Knowledge being processed
+  SME_STATUS_ACTIVE = 3;          // Ready for use in course generation
+  SME_STATUS_ARCHIVED = 4;        // No longer active
+}
+
+// SMETaskStatus represents the state of a delegated task.
+enum SMETaskStatus {
+  SME_TASK_STATUS_UNSPECIFIED = 0;
+  SME_TASK_STATUS_PENDING = 1;        // Assigned, waiting for content
+  SME_TASK_STATUS_SUBMITTED = 2;      // Content submitted, awaiting ingestion
+  SME_TASK_STATUS_PROCESSING = 3;     // Gemini ingestion in progress
+  SME_TASK_STATUS_COMPLETED = 4;      // Successfully processed
+  SME_TASK_STATUS_FAILED = 5;         // Ingestion failed
+  SME_TASK_STATUS_CANCELLED = 6;      // Task cancelled
+}
+
+// ContentType for uploaded materials.
+enum ContentType {
+  CONTENT_TYPE_UNSPECIFIED = 0;
+  CONTENT_TYPE_DOCUMENT = 1;    // PDF, DOCX, TXT
+  CONTENT_TYPE_IMAGE = 2;       // PNG, JPG, etc.
+  CONTENT_TYPE_VIDEO = 3;       // MP4, MOV, etc.
+  CONTENT_TYPE_AUDIO = 4;       // MP3, WAV, etc.
+  CONTENT_TYPE_URL = 5;         // Web URL for scraping
+  CONTENT_TYPE_TEXT = 6;        // Plain text input
+}
+
+// SubjectMatterExpert represents a knowledge source entity.
+message SubjectMatterExpert {
+  string id = 1;
+  string tenant_id = 2;
+  string company_id = 3;
+
+  string name = 4;
+  string description = 5;
+  string domain = 6;              // Knowledge domain (e.g., "Sales Training")
+
+  SMEScope scope = 7;
+  repeated string team_ids = 8;   // If scope is TEAM, which teams have access
+
+  SMEStatus status = 9;
+
+  // Distilled knowledge storage
+  optional string knowledge_summary = 10;       // AI-generated summary
+  optional string knowledge_content_path = 11;  // S3 path to full distilled knowledge JSON
+
+  string created_by_user_id = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// SMETask represents a delegated task for content submission.
+message SMETask {
+  string id = 1;
+  string tenant_id = 2;
+  string sme_id = 3;
+
+  string title = 4;
+  string description = 5;                  // What content is being requested
+  ContentType expected_content_type = 6;   // Hint for what to upload
+
+  // Assignment
+  string assigned_to_user_id = 7;          // User who should submit content
+  string assigned_by_user_id = 8;          // Team lead who created task
+  optional string team_id = 9;             // Team context
+
+  SMETaskStatus status = 10;
+
+  // Deadline
+  optional google.protobuf.Timestamp due_date = 11;
+
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  optional google.protobuf.Timestamp completed_at = 14;
+}
+
+// SMETaskSubmission represents uploaded content for a task.
+message SMETaskSubmission {
+  string id = 1;
+  string tenant_id = 2;
+  string task_id = 3;
+
+  string file_name = 4;
+  string file_path = 5;           // S3 path
+  ContentType content_type = 6;
+  int64 file_size_bytes = 7;
+
+  // Ingestion results
+  optional string extracted_text = 8;      // Raw extracted text
+  optional string ai_summary = 9;          // Gemini-generated summary
+  optional string ingestion_error = 10;    // Error if failed
+
+  string submitted_by_user_id = 11;
+  google.protobuf.Timestamp submitted_at = 12;
+  optional google.protobuf.Timestamp processed_at = 13;
+}
+
+// SMEKnowledgeChunk represents a unit of distilled knowledge.
+message SMEKnowledgeChunk {
+  string id = 1;
+  string sme_id = 2;
+  optional string submission_id = 3;       // Source submission (if from task)
+
+  string content = 4;             // The knowledge text
+  string topic = 5;               // Categorized topic
+  repeated string keywords = 6;   // Extracted keywords
+  float relevance_score = 7;      // For ranking in generation
+
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// SMEService handles SME and task operations.
+service SMEService {
+  // CreateSME creates a new subject matter expert entity.
+  rpc CreateSME(CreateSMERequest) returns (CreateSMEResponse);
+
+  // GetSME returns a specific SME by ID.
+  rpc GetSME(GetSMERequest) returns (GetSMEResponse);
+
+  // ListSMEs returns all SMEs accessible to the current user.
+  rpc ListSMEs(ListSMEsRequest) returns (ListSMEsResponse);
+
+  // UpdateSME updates an SME entity.
+  rpc UpdateSME(UpdateSMERequest) returns (UpdateSMEResponse);
+
+  // DeleteSME deletes an SME entity.
+  rpc DeleteSME(DeleteSMERequest) returns (DeleteSMEResponse);
+
+  // CreateTask creates a delegated task for content submission.
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+
+  // GetTask returns a specific task by ID.
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+
+  // ListTasks returns tasks based on filters.
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+
+  // UpdateTask updates a task.
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+
+  // CancelTask cancels a pending task.
+  rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
+
+  // GetUploadURL returns a presigned URL for content upload.
+  rpc GetUploadURL(GetUploadURLRequest) returns (GetUploadURLResponse);
+
+  // SubmitContent records a content submission for a task.
+  rpc SubmitContent(SubmitContentRequest) returns (SubmitContentResponse);
+
+  // ListSubmissions returns all submissions for a task.
+  rpc ListSubmissions(ListSubmissionsRequest) returns (ListSubmissionsResponse);
+
+  // GetKnowledge returns distilled knowledge for an SME.
+  rpc GetKnowledge(GetKnowledgeRequest) returns (GetKnowledgeResponse);
+
+  // SearchKnowledge searches across SME knowledge.
+  rpc SearchKnowledge(SearchKnowledgeRequest) returns (SearchKnowledgeResponse);
+}
+
+// CreateSMERequest contains data for a new SME.
+message CreateSMERequest {
+  string name = 1;
+  string description = 2;
+  string domain = 3;
+  SMEScope scope = 4;
+  repeated string team_ids = 5;   // Required if scope is TEAM
+}
+
+// CreateSMEResponse contains the created SME.
+message CreateSMEResponse {
+  SubjectMatterExpert sme = 1;
+}
+
+// GetSMERequest contains the SME ID to fetch.
+message GetSMERequest {
+  string sme_id = 1;
+}
+
+// GetSMEResponse contains the requested SME.
+message GetSMEResponse {
+  SubjectMatterExpert sme = 1;
+}
+
+// ListSMEsRequest contains optional filters.
+message ListSMEsRequest {
+  optional SMEScope scope = 1;
+  optional SMEStatus status = 2;
+  optional string team_id = 3;    // Filter by team access
+}
+
+// ListSMEsResponse contains SMEs matching the filters.
+message ListSMEsResponse {
+  repeated SubjectMatterExpert smes = 1;
+}
+
+// UpdateSMERequest contains fields to update on an SME.
+message UpdateSMERequest {
+  string sme_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string domain = 4;
+  optional SMEScope scope = 5;
+  repeated string team_ids = 6;
+  optional SMEStatus status = 7;
+}
+
+// UpdateSMEResponse contains the updated SME.
+message UpdateSMEResponse {
+  SubjectMatterExpert sme = 1;
+}
+
+// DeleteSMERequest contains the SME ID to delete.
+message DeleteSMERequest {
+  string sme_id = 1;
+}
+
+// DeleteSMEResponse confirms deletion.
+message DeleteSMEResponse {}
+
+// CreateTaskRequest contains data for a new task.
+message CreateTaskRequest {
+  string sme_id = 1;
+  string title = 2;
+  string description = 3;
+  ContentType expected_content_type = 4;
+  string assigned_to_user_id = 5;
+  optional string team_id = 6;
+  optional google.protobuf.Timestamp due_date = 7;
+}
+
+// CreateTaskResponse contains the created task.
+message CreateTaskResponse {
+  SMETask task = 1;
+}
+
+// GetTaskRequest contains the task ID to fetch.
+message GetTaskRequest {
+  string task_id = 1;
+}
+
+// GetTaskResponse contains the requested task.
+message GetTaskResponse {
+  SMETask task = 1;
+}
+
+// ListTasksRequest contains filters for tasks.
+message ListTasksRequest {
+  optional string sme_id = 1;            // Filter by SME
+  optional string assigned_to_user_id = 2;  // Filter by assignee
+  optional SMETaskStatus status = 3;      // Filter by status
+}
+
+// ListTasksResponse contains tasks matching the filters.
+message ListTasksResponse {
+  repeated SMETask tasks = 1;
+}
+
+// UpdateTaskRequest contains fields to update on a task.
+message UpdateTaskRequest {
+  string task_id = 1;
+  optional string title = 2;
+  optional string description = 3;
+  optional ContentType expected_content_type = 4;
+  optional google.protobuf.Timestamp due_date = 5;
+}
+
+// UpdateTaskResponse contains the updated task.
+message UpdateTaskResponse {
+  SMETask task = 1;
+}
+
+// CancelTaskRequest contains the task ID to cancel.
+message CancelTaskRequest {
+  string task_id = 1;
+}
+
+// CancelTaskResponse confirms cancellation.
+message CancelTaskResponse {
+  SMETask task = 1;
+}
+
+// GetUploadURLRequest requests a presigned URL for upload.
+message GetUploadURLRequest {
+  string task_id = 1;
+  string file_name = 2;
+  ContentType content_type = 3;
+  int64 file_size_bytes = 4;
+}
+
+// GetUploadURLResponse contains the presigned upload URL.
+message GetUploadURLResponse {
+  string upload_url = 1;
+  string file_path = 2;       // S3 path where file will be stored
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+// SubmitContentRequest records a content submission.
+message SubmitContentRequest {
+  string task_id = 1;
+  string file_name = 2;
+  string file_path = 3;           // S3 path from GetUploadURL
+  ContentType content_type = 4;
+  int64 file_size_bytes = 5;
+}
+
+// SubmitContentResponse contains the created submission.
+message SubmitContentResponse {
+  SMETaskSubmission submission = 1;
+}
+
+// ListSubmissionsRequest contains the task ID.
+message ListSubmissionsRequest {
+  string task_id = 1;
+}
+
+// ListSubmissionsResponse contains all submissions for the task.
+message ListSubmissionsResponse {
+  repeated SMETaskSubmission submissions = 1;
+}
+
+// GetKnowledgeRequest requests knowledge for an SME.
+message GetKnowledgeRequest {
+  string sme_id = 1;
+}
+
+// GetKnowledgeResponse contains the SME's knowledge.
+message GetKnowledgeResponse {
+  SubjectMatterExpert sme = 1;
+  repeated SMEKnowledgeChunk chunks = 2;
+}
+
+// SearchKnowledgeRequest searches across SME knowledge.
+message SearchKnowledgeRequest {
+  repeated string sme_ids = 1;    // SMEs to search within
+  string query = 2;               // Search query
+  int32 limit = 3;                // Max results
+}
+
+// SearchKnowledgeResponse contains matching knowledge chunks.
+message SearchKnowledgeResponse {
+  repeated SMEKnowledgeChunk chunks = 1;
+}

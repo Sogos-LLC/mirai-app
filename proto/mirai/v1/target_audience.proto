@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ExperienceLevel represents the learner's experience level.
+enum ExperienceLevel {
+  EXPERIENCE_LEVEL_UNSPECIFIED = 0;
+  EXPERIENCE_LEVEL_BEGINNER = 1;
+  EXPERIENCE_LEVEL_INTERMEDIATE = 2;
+  EXPERIENCE_LEVEL_ADVANCED = 3;
+  EXPERIENCE_LEVEL_EXPERT = 4;
+}
+
+// TargetAudienceTemplate represents a reusable learner profile template.
+message TargetAudienceTemplate {
+  string id = 1;
+  string tenant_id = 2;
+  string company_id = 3;
+
+  string name = 4;
+  string description = 5;
+
+  // Profile attributes
+  string role = 6;                           // Job role (e.g., "Sales Representative")
+  ExperienceLevel experience_level = 7;
+  repeated string learning_goals = 8;        // What they want to achieve
+  repeated string prerequisites = 9;         // Required prior knowledge
+  repeated string challenges = 10;           // Pain points they face
+  repeated string motivations = 11;          // Why they need to learn
+
+  optional string industry_context = 12;     // Industry-specific context
+  optional string typical_background = 13;   // Background description
+
+  string created_by_user_id = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+// TargetAudienceService handles target audience template operations.
+service TargetAudienceService {
+  // CreateTemplate creates a new target audience template.
+  rpc CreateTemplate(CreateTemplateRequest) returns (CreateTemplateResponse);
+
+  // GetTemplate returns a specific template by ID.
+  rpc GetTemplate(GetTemplateRequest) returns (GetTemplateResponse);
+
+  // ListTemplates returns all templates for the company.
+  rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse);
+
+  // UpdateTemplate updates a template.
+  rpc UpdateTemplate(UpdateTemplateRequest) returns (UpdateTemplateResponse);
+
+  // DeleteTemplate deletes a template.
+  rpc DeleteTemplate(DeleteTemplateRequest) returns (DeleteTemplateResponse);
+}
+
+// CreateTemplateRequest contains data for a new template.
+message CreateTemplateRequest {
+  string name = 1;
+  string description = 2;
+  string role = 3;
+  ExperienceLevel experience_level = 4;
+  repeated string learning_goals = 5;
+  repeated string prerequisites = 6;
+  repeated string challenges = 7;
+  repeated string motivations = 8;
+  optional string industry_context = 9;
+  optional string typical_background = 10;
+}
+
+// CreateTemplateResponse contains the created template.
+message CreateTemplateResponse {
+  TargetAudienceTemplate template = 1;
+}
+
+// GetTemplateRequest contains the template ID to fetch.
+message GetTemplateRequest {
+  string template_id = 1;
+}
+
+// GetTemplateResponse contains the requested template.
+message GetTemplateResponse {
+  TargetAudienceTemplate template = 1;
+}
+
+// ListTemplatesRequest is empty as company is identified by auth context.
+message ListTemplatesRequest {}
+
+// ListTemplatesResponse contains all templates.
+message ListTemplatesResponse {
+  repeated TargetAudienceTemplate templates = 1;
+}
+
+// UpdateTemplateRequest contains fields to update on a template.
+message UpdateTemplateRequest {
+  string template_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string role = 4;
+  optional ExperienceLevel experience_level = 5;
+  repeated string learning_goals = 6;
+  repeated string prerequisites = 7;
+  repeated string challenges = 8;
+  repeated string motivations = 9;
+  optional string industry_context = 10;
+  optional string typical_background = 11;
+}
+
+// UpdateTemplateResponse contains the updated template.
+message UpdateTemplateResponse {
+  TargetAudienceTemplate template = 1;
+}
+
+// DeleteTemplateRequest contains the template ID to delete.
+message DeleteTemplateRequest {
+  string template_id = 1;
+}
+
+// DeleteTemplateResponse confirms deletion.
+message DeleteTemplateResponse {}
