@@ -112,6 +112,11 @@ spec:
               key: secretkey
         - name: GIN_MODE
           value: "release"
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mirai-encryption-secret
+              key: encryption-key
         resources:
           requests:
             memory: "128Mi"
