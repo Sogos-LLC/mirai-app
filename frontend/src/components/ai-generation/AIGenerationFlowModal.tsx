@@ -42,16 +42,32 @@ import { generatedLessonsToCourseContent, toApiFormat } from '@/lib/contentTrans
 interface AIGenerationFlowModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Optional course ID for editing an existing course */
+  courseId?: string;
 }
 
-export function AIGenerationFlowModal({ isOpen, onClose }: AIGenerationFlowModalProps) {
+export function AIGenerationFlowModal({ isOpen, onClose, courseId: initialCourseId }: AIGenerationFlowModalProps) {
   const router = useRouter();
 
   // Track state for local polling and job management
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
+  const [createdCourseId, setCreatedCourseId] = useState<string | null>(initialCourseId || null);
   const [courseTitle, setCourseTitle] = useState<string>('');
   const selectedAudiencesRef = useRef<TargetAudienceTemplate[]>([]);
+  const hasInitializedEdit = useRef(false);
+
+  // Reset state when modal opens with a different course
+  useEffect(() => {
+    if (isOpen) {
+      setCreatedCourseId(initialCourseId || null);
+      if (!initialCourseId) {
+        hasInitializedEdit.current = false;
+      }
+    } else {
+      // Reset when modal closes
+      hasInitializedEdit.current = false;
+    }
+  }, [isOpen, initialCourseId]);
 
   // Track whether state machine is controlling polling (to disable hook auto-polling)
   const [machineIsPolling, setMachineIsPolling] = useState(false);
@@ -84,30 +100,97 @@ export function AIGenerationFlowModal({ isOpen, onClose }: AIGenerationFlowModal
   // Lessons fetching
   const { data: generatedLessons, refetch: refetchLessons } = useListGeneratedLessons(createdCourseId || undefined);
 
-  // Configure machine with real actor implementations
-  const machineWithActors = courseGenerationMachine.provide({
+  // Use refs to avoid stale closure issues in actors
+  // These refs always point to the latest functions from hooks
+  const refetchJobRef = useRef(refetchJob);
+  const refetchOutlineRef = useRef(refetchOutline);
+  const refetchLessonsRef = useRef(refetchLessons);
+  const generateOutlineRef = useRef(generateOutlineHook.mutate);
+  const approveOutlineRef = useRef(approveOutlineHook.mutate);
+  const rejectOutlineRef = useRef(rejectOutlineHook.mutate);
+  const generateAllLessonsRef = useRef(generateAllLessonsHook.mutate);
+  const setCurrentJobIdRef = useRef(setCurrentJobId);
+  const outlineRef = useRef(outline);
+
+  // Keep refs updated with latest functions
+  useEffect(() => {
+    refetchJobRef.current = refetchJob;
+  }, [refetchJob]);
+
+  useEffect(() => {
+    refetchOutlineRef.current = refetchOutline;
+  }, [refetchOutline]);
+
+  useEffect(() => {
+    refetchLessonsRef.current = refetchLessons;
+  }, [refetchLessons]);
+
+  useEffect(() => {
+    generateOutlineRef.current = generateOutlineHook.mutate;
+  }, [generateOutlineHook.mutate]);
+
+  useEffect(() => {
+    approveOutlineRef.current = approveOutlineHook.mutate;
+  }, [approveOutlineHook.mutate]);
+
+  useEffect(() => {
+    rejectOutlineRef.current = rejectOutlineHook.mutate;
+  }, [rejectOutlineHook.mutate]);
+
+  useEffect(() => {
+    generateAllLessonsRef.current = generateAllLessonsHook.mutate;
+  }, [generateAllLessonsHook.mutate]);
+
+  useEffect(() => {
+    setCurrentJobIdRef.current = setCurrentJobId;
+  }, []);
+
+  useEffect(() => {
+    outlineRef.current = outline;
+  }, [outline]);
+
+  // Configure machine with real actor implementations - memoized to prevent recreation
+  // Empty dependency array ensures machine is created once and actors use refs for latest values
+  const machineWithActors = useMemo(() => courseGenerationMachine.provide({
     actors: {
       generateOutlineActor: fromPromise(async ({ input }: { input: CourseGenerationInput }) => {
-        const result = await generateOutlineHook.mutate({
+        console.log('[generateOutlineActor] Starting outline generation for course:', input.courseId);
+        const result = await generateOutlineRef.current({
           courseId: input.courseId,
           smeIds: input.smeIds,
           targetAudienceIds: input.targetAudienceIds,
           desiredOutcome: input.desiredOutcome,
           additionalContext: input.additionalContext,
         });
-        if (result.job) {
-          setCurrentJobId(result.job.id);
+
+        if (!result.job) {
+          console.error('[generateOutlineActor] No job returned from outline generation');
+          throw new Error('Failed to start outline generation - no job returned');
         }
-        return { job: result.job! };
+
+        console.log('[generateOutlineActor] Job created:', result.job.id);
+        setCurrentJobIdRef.current(result.job.id);
+        return { job: result.job };
       }),
       pollJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
         console.log('[pollJobActor] Polling job:', input.jobId);
-        const result = await refetchJob();
+
+        // Wait a tick to ensure React has re-rendered with the new currentJobId
+        // This prevents stale closure issues where the ref hasn't been updated yet
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Use ref to get the latest refetch function to avoid stale closures
+        const result = await refetchJobRef.current();
         const freshJob = result.data?.job;
 
         if (!freshJob) {
-          console.error('[pollJobActor] No job data returned from refetch');
+          console.error('[pollJobActor] No job data returned from refetch, jobId:', input.jobId);
           throw new Error('Failed to fetch job status');
+        }
+
+        // Verify we got the right job (sanity check)
+        if (freshJob.id !== input.jobId) {
+          console.warn('[pollJobActor] Job ID mismatch, expected:', input.jobId, 'got:', freshJob.id);
         }
 
         console.log('[pollJobActor] Fresh status:', freshJob.status, 'progress:', freshJob.progressPercent);
@@ -115,11 +198,16 @@ export function AIGenerationFlowModal({ isOpen, onClose }: AIGenerationFlowModal
       }),
       getOutlineActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
         console.log('[getOutlineActor] Fetching outline for course:', input.courseId);
-        const result = await refetchOutline();
+
+        // Wait a tick to ensure React has re-rendered with the latest state
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Use ref to get the latest refetch function to avoid stale closures
+        const result = await refetchOutlineRef.current();
         const freshOutline = result.data?.outline;
 
         if (!freshOutline) {
-          console.error('[getOutlineActor] No outline data returned from refetch');
+          console.error('[getOutlineActor] No outline data returned from refetch, courseId:', input.courseId);
           throw new Error('Failed to fetch outline');
         }
 
@@ -127,34 +215,36 @@ export function AIGenerationFlowModal({ isOpen, onClose }: AIGenerationFlowModal
         return { outline: freshOutline };
       }),
       approveOutlineActor: fromPromise(async ({ input }: { input: { courseId: string; outlineId: string } }) => {
-        const result = await approveOutlineHook.mutate(input.courseId, input.outlineId);
+        const result = await approveOutlineRef.current(input.courseId, input.outlineId);
         return { outline: result.outline! };
       }),
       rejectOutlineActor: fromPromise(async ({ input }: { input: { courseId: string; outlineId: string; reason: string } }) => {
-        const result = await rejectOutlineHook.mutate(input.courseId, input.outlineId, input.reason);
+        const result = await rejectOutlineRef.current(input.courseId, input.outlineId, input.reason);
         return { outline: result.outline! };
       }),
       updateOutlineActor: fromPromise(async ({ input }: { input: { courseId: string; outlineId: string; sections: OutlineSection[] } }) => {
         // Note: updateOutline hook would be needed here - for now return current outline
-        return { outline: outline! };
+        return { outline: outlineRef.current! };
       }),
       generateLessonsActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
-        const result = await generateAllLessonsHook.mutate(input.courseId);
+        const result = await generateAllLessonsRef.current(input.courseId);
         if (result.job) {
-          setCurrentJobId(result.job.id);
+          setCurrentJobIdRef.current(result.job.id);
         }
         return { job: result.job! };
       }),
       listLessonsActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
         console.log('[listLessonsActor] Fetching lessons for course:', input.courseId);
-        const result = await refetchLessons();
+        // Use ref to get the latest refetch function to avoid stale closures
+        const result = await refetchLessonsRef.current();
         const freshLessons = result.data?.lessons || [];
 
         console.log('[listLessonsActor] Fetched', freshLessons.length, 'lessons');
         return { lessons: freshLessons };
       }),
     },
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []); // Empty deps - actors use refs for latest values, machine should only be created once
 
   const [state, send] = useMachine(machineWithActors);
 
@@ -171,6 +261,34 @@ export function AIGenerationFlowModal({ isOpen, onClose }: AIGenerationFlowModal
   const currentStateValue = getStateValue();
   const context = state.context as CourseGenerationContext;
 
+  // When editing an existing course, check if there's an outline and skip to review
+  useEffect(() => {
+    if (
+      isOpen &&
+      initialCourseId &&
+      outline &&
+      !hasInitializedEdit.current &&
+      currentStateValue === 'configure'
+    ) {
+      hasInitializedEdit.current = true;
+      console.log('[AIGenerationFlowModal] Editing existing course with outline, skipping to review');
+
+      // Set up the machine context for the existing course
+      send({
+        type: 'SET_INPUT',
+        input: {
+          courseId: initialCourseId,
+          smeIds: [],
+          targetAudienceIds: [],
+          desiredOutcome: '',
+        },
+      });
+
+      // Trigger outline generated event to jump to review state
+      send({ type: 'OUTLINE_GENERATED', outline });
+    }
+  }, [isOpen, initialCourseId, outline, currentStateValue, send]);
+
   // Update machineIsPolling when state changes
   // When in these states, the state machine controls polling - disable hook auto-polling
   useEffect(() => {
@@ -185,14 +303,16 @@ export function AIGenerationFlowModal({ isOpen, onClose }: AIGenerationFlowModal
 
   // Handle wizard completion - create course and start generation
   const handleStartGeneration = useCallback(
-    async (input: CourseGenerationInput) => {
+    async (input: CourseGenerationInput & { categoryTags?: string[]; destinationFolder?: string }) => {
       try {
-        // First create the course
+        // First create the course with folder and tags from wizard
         const result = await createCourseHook.mutate({
           settings: {
             title: courseTitle || 'AI Generated Course',
             desiredOutcome: input.desiredOutcome,
             dataSource: 'ai-generated',
+            destinationFolder: input.destinationFolder,
+            categoryTags: input.categoryTags,
           },
         });
 

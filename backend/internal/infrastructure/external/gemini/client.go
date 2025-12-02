@@ -57,56 +57,97 @@ func (c *Client) TestConnection(ctx context.Context) error {
 }
 
 // GenerateCourseOutline generates a course outline using structured output.
+// This uses a two-call approach to avoid Gemini's nested schema depth limits:
+// 1. First call generates sections with lesson titles only (flat schema)
+// 2. Second calls generate detailed lessons for each section
 func (c *Client) GenerateCourseOutline(ctx context.Context, req service.GenerateOutlineRequest) (*service.GenerateOutlineResult, error) {
-	prompt := buildOutlinePrompt(req)
+	var totalTokensUsed int64
 
-	config := &genai.GenerateContentConfig{
-		ResponseMIMEType:  "application/json",
-		ResponseJsonSchema: courseOutlineSchema(),
+	// Step 1: Generate sections with lesson titles only
+	sectionsPrompt := buildSectionsOnlyPrompt(req)
+	sectionsConfig := &genai.GenerateContentConfig{
+		ResponseMIMEType:   "application/json",
+		ResponseJsonSchema: sectionsOnlySchema(),
 	}
 
-	result, err := c.client.Models.GenerateContent(
+	sectionsResult, err := c.client.Models.GenerateContent(
 		ctx,
 		c.model,
-		genai.Text(prompt),
-		config,
+		genai.Text(sectionsPrompt),
+		sectionsConfig,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate outline: %w", err)
+		return nil, fmt.Errorf("failed to generate sections: %w", err)
+	}
+	totalTokensUsed += extractTokensUsed(sectionsResult)
+
+	// Parse sections response
+	var sectionsResp sectionsOnlyResponse
+	if err := json.Unmarshal([]byte(sectionsResult.Text()), &sectionsResp); err != nil {
+		return nil, fmt.Errorf("failed to parse sections response: %w", err)
 	}
 
-	// Parse the structured response
-	var outlineResp courseOutlineResponse
-	if err := json.Unmarshal([]byte(result.Text()), &outlineResp); err != nil {
-		return nil, fmt.Errorf("failed to parse outline response: %w", err)
-	}
+	// Step 2: Generate detailed lessons for each section
+	sections := make([]service.OutlineSectionResult, len(sectionsResp.Sections))
+	totalLessons := 0
 
-	// Convert to domain result
-	sections := make([]service.OutlineSectionResult, len(outlineResp.Sections))
-	for i, s := range outlineResp.Sections {
-		lessons := make([]service.OutlineLessonResult, len(s.Lessons))
-		for j, l := range s.Lessons {
+	for i, section := range sectionsResp.Sections {
+		lessonsPrompt := buildSectionLessonsPrompt(req, section.Title, section.Description, section.LessonTitles)
+		lessonsConfig := &genai.GenerateContentConfig{
+			ResponseMIMEType:   "application/json",
+			ResponseJsonSchema: sectionLessonsSchema(),
+		}
+
+		lessonsResult, err := c.client.Models.GenerateContent(
+			ctx,
+			c.model,
+			genai.Text(lessonsPrompt),
+			lessonsConfig,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate lessons for section %q: %w", section.Title, err)
+		}
+		totalTokensUsed += extractTokensUsed(lessonsResult)
+
+		// Parse lessons response
+		var lessonsResp sectionLessonsResponse
+		if err := json.Unmarshal([]byte(lessonsResult.Text()), &lessonsResp); err != nil {
+			return nil, fmt.Errorf("failed to parse lessons response for section %q: %w", section.Title, err)
+		}
+
+		// Convert to domain result
+		lessons := make([]service.OutlineLessonResult, len(lessonsResp.Lessons))
+		for j, l := range lessonsResp.Lessons {
 			lessons[j] = service.OutlineLessonResult{
 				Title:                    l.Title,
 				Description:              l.Description,
 				Order:                    j + 1,
 				EstimatedDurationMinutes: l.EstimatedDurationMinutes,
 				LearningObjectives:       l.LearningObjectives,
-				IsLastInSection:          j == len(s.Lessons)-1,
-				IsLastInCourse:           i == len(outlineResp.Sections)-1 && j == len(s.Lessons)-1,
+				IsLastInSection:          j == len(lessonsResp.Lessons)-1,
 			}
+			totalLessons++
 		}
+
 		sections[i] = service.OutlineSectionResult{
-			Title:       s.Title,
-			Description: s.Description,
+			Title:       section.Title,
+			Description: section.Description,
 			Order:       i + 1,
 			Lessons:     lessons,
 		}
 	}
 
+	// Set IsLastInCourse on the last lesson
+	if len(sections) > 0 {
+		lastSection := &sections[len(sections)-1]
+		if len(lastSection.Lessons) > 0 {
+			lastSection.Lessons[len(lastSection.Lessons)-1].IsLastInCourse = true
+		}
+	}
+
 	return &service.GenerateOutlineResult{
 		Sections:   sections,
-		TokensUsed: extractTokensUsed(result),
+		TokensUsed: totalTokensUsed,
 	}, nil
 }
 
@@ -135,17 +176,17 @@ func (c *Client) GenerateLessonContent(ctx context.Context, req service.Generate
 		return nil, fmt.Errorf("failed to parse lesson response: %w", err)
 	}
 
-	// Convert to domain result
+	// Convert to domain result - transform flat schema to nested contentJSON
 	components := make([]service.LessonComponentResult, len(lessonResp.Components))
 	for i, comp := range lessonResp.Components {
-		contentJSON, err := json.Marshal(comp.Content)
+		contentJSON, err := comp.toContentJSON()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal component content: %w", err)
+			return nil, fmt.Errorf("failed to convert component content: %w", err)
 		}
 		components[i] = service.LessonComponentResult{
-			Type:        comp.Type,
+			Type:        comp.ComponentType,
 			Order:       i + 1,
-			ContentJSON: string(contentJSON),
+			ContentJSON: contentJSON,
 		}
 	}
 
@@ -226,14 +267,20 @@ func (c *Client) ProcessSMEContent(ctx context.Context, req service.ProcessSMECo
 
 // Response types for JSON parsing
 
-type courseOutlineResponse struct {
-	Sections []outlineSection `json:"sections"`
+// sectionsOnlyResponse is for the first call - flat schema with just section titles and lesson titles
+type sectionsOnlyResponse struct {
+	Sections []sectionOutline `json:"sections"`
 }
 
-type outlineSection struct {
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	Lessons     []outlineLesson `json:"lessons"`
+type sectionOutline struct {
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	LessonTitles []string `json:"lesson_titles"`
+}
+
+// sectionLessonsResponse is for the second call - detailed lessons for a single section
+type sectionLessonsResponse struct {
+	Lessons []outlineLesson `json:"lessons"`
 }
 
 type outlineLesson struct {
@@ -244,13 +291,94 @@ type outlineLesson struct {
 }
 
 type lessonContentResponse struct {
-	Components []lessonComponent `json:"components"`
-	SegueText  string            `json:"segue_text"`
+	Components []flatLessonComponent `json:"components"`
+	SegueText  string                `json:"segue_text"`
 }
 
-type lessonComponent struct {
-	Type    string         `json:"type"`
-	Content map[string]any `json:"content"`
+// flatLessonComponent matches the new flat schema where all fields are at the same level
+type flatLessonComponent struct {
+	// Discriminator
+	ComponentType string `json:"component_type"`
+	// Text fields
+	TextHTML string `json:"text_html,omitempty"`
+	// Heading fields
+	HeadingLevel int    `json:"heading_level,omitempty"`
+	HeadingText  string `json:"heading_text,omitempty"`
+	// Image fields
+	ImageDescription string `json:"image_description,omitempty"`
+	ImageAltText     string `json:"image_alt_text,omitempty"`
+	ImageCaption     string `json:"image_caption,omitempty"`
+	// Quiz fields
+	QuizQuestion        string       `json:"quiz_question,omitempty"`
+	QuizOptions         []quizOption `json:"quiz_options,omitempty"`
+	QuizCorrectAnswerID string       `json:"quiz_correct_answer_id,omitempty"`
+	QuizExplanation     string       `json:"quiz_explanation,omitempty"`
+}
+
+type quizOption struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+// toContentJSON converts flat component fields to the nested contentJSON format for storage
+func (c *flatLessonComponent) toContentJSON() (string, error) {
+	var content map[string]any
+
+	switch c.ComponentType {
+	case "text":
+		content = map[string]any{
+			"html":      c.TextHTML,
+			"plaintext": stripHTML(c.TextHTML),
+		}
+	case "heading":
+		content = map[string]any{
+			"level": c.HeadingLevel,
+			"text":  c.HeadingText,
+		}
+	case "image":
+		content = map[string]any{
+			"image_description": c.ImageDescription,
+			"alt_text":          c.ImageAltText,
+			"caption":           c.ImageCaption,
+		}
+	case "quiz":
+		options := make([]map[string]string, len(c.QuizOptions))
+		for i, opt := range c.QuizOptions {
+			options[i] = map[string]string{"id": opt.ID, "text": opt.Text}
+		}
+		content = map[string]any{
+			"question":          c.QuizQuestion,
+			"question_type":     "multiple_choice",
+			"options":           options,
+			"correct_answer_id": c.QuizCorrectAnswerID,
+			"explanation":       c.QuizExplanation,
+		}
+	default:
+		content = map[string]any{}
+	}
+
+	jsonBytes, err := json.Marshal(content)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonBytes), nil
+}
+
+// stripHTML removes HTML tags from a string to create plaintext
+func stripHTML(html string) string {
+	// Simple regex-free approach
+	result := strings.Builder{}
+	inTag := false
+	for _, r := range html {
+		if r == '<' {
+			inTag = true
+		} else if r == '>' {
+			inTag = false
+		} else if !inTag {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
 }
 
 type smeProcessingResponse struct {
@@ -267,7 +395,9 @@ type smeChunk struct {
 
 // Schema definitions for structured output
 
-func courseOutlineSchema() map[string]any {
+// sectionsOnlySchema returns a flat schema for the first call - sections with lesson titles only
+// This avoids Gemini's nested schema depth limits by keeping lessons as simple string arrays
+func sectionsOnlySchema() map[string]any {
 	return map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -285,39 +415,54 @@ func courseOutlineSchema() map[string]any {
 							"type":        "string",
 							"description": "Brief description of what this section covers",
 						},
-						"lessons": map[string]any{
+						"lesson_titles": map[string]any{
 							"type":        "array",
-							"description": "Lessons within this section",
-							"items": map[string]any{
-								"type": "object",
-								"properties": map[string]any{
-									"title": map[string]any{
-										"type":        "string",
-										"description": "Lesson title",
-									},
-									"description": map[string]any{
-										"type":        "string",
-										"description": "Brief description of the lesson content",
-									},
-									"estimated_duration_minutes": map[string]any{
-										"type":        "integer",
-										"description": "Estimated time to complete the lesson in minutes",
-									},
-									"learning_objectives": map[string]any{
-										"type":        "array",
-										"description": "Specific learning objectives for this lesson",
-										"items":       map[string]any{"type": "string"},
-									},
-								},
-								"required": []string{"title", "description", "estimated_duration_minutes", "learning_objectives"},
-							},
+							"description": "Lesson titles for this section (2-5 lessons)",
+							"items":       map[string]any{"type": "string"},
 						},
 					},
-					"required": []string{"title", "description", "lessons"},
+					"required": []string{"title", "description", "lesson_titles"},
 				},
 			},
 		},
 		"required": []string{"sections"},
+	}
+}
+
+// sectionLessonsSchema returns a schema for generating detailed lessons for a single section
+func sectionLessonsSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"lessons": map[string]any{
+				"type":        "array",
+				"description": "Detailed lessons for this section",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"title": map[string]any{
+							"type":        "string",
+							"description": "Lesson title",
+						},
+						"description": map[string]any{
+							"type":        "string",
+							"description": "Brief description of the lesson content",
+						},
+						"estimated_duration_minutes": map[string]any{
+							"type":        "integer",
+							"description": "Estimated time to complete the lesson in minutes",
+						},
+						"learning_objectives": map[string]any{
+							"type":        "array",
+							"description": "Specific learning objectives for this lesson",
+							"items":       map[string]any{"type": "string"},
+						},
+					},
+					"required": []string{"title", "description", "estimated_duration_minutes", "learning_objectives"},
+				},
+			},
+		},
+		"required": []string{"lessons"},
 	}
 }
 
@@ -327,26 +472,85 @@ func lessonContentSchema() map[string]any {
 		"properties": map[string]any{
 			"components": map[string]any{
 				"type":        "array",
-				"description": "Lesson content components in order",
+				"description": "Lesson content components in order. Each component has a type and type-specific fields.",
 				"items": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
-						"type": map[string]any{
+						// Discriminator field
+						"component_type": map[string]any{
 							"type":        "string",
 							"enum":        []string{"text", "heading", "image", "quiz"},
-							"description": "Component type",
+							"description": "The type of component. Determines which other fields are used.",
 						},
-						"content": map[string]any{
-							"type":        "object",
-							"description": "Type-specific content",
+						// Text component fields (used when component_type = "text")
+						"text_html": map[string]any{
+							"type":        "string",
+							"description": "For text components: HTML-formatted rich text content with paragraphs, lists, emphasis, etc.",
+						},
+						// Heading component fields (used when component_type = "heading")
+						"heading_level": map[string]any{
+							"type":        "integer",
+							"minimum":     1,
+							"maximum":     4,
+							"description": "For heading components: Heading level (1=largest, 4=smallest). Use 2 for section titles, 3 for subsections.",
+						},
+						"heading_text": map[string]any{
+							"type":        "string",
+							"description": "For heading components: The heading text.",
+						},
+						// Image component fields (used when component_type = "image")
+						"image_description": map[string]any{
+							"type":        "string",
+							"description": "For image components: Detailed description of what image should be displayed (e.g. 'A diagram showing the water circulation system in a hot tub'). This will be used to find or generate an appropriate image later.",
+						},
+						"image_alt_text": map[string]any{
+							"type":        "string",
+							"description": "For image components: Accessibility alt text describing the image for screen readers.",
+						},
+						"image_caption": map[string]any{
+							"type":        "string",
+							"description": "For image components: Optional caption to display below the image.",
+						},
+						// Quiz component fields (used when component_type = "quiz")
+						"quiz_question": map[string]any{
+							"type":        "string",
+							"description": "For quiz components: The question text.",
+						},
+						"quiz_options": map[string]any{
+							"type":        "array",
+							"description": "For quiz components: Array of 2-4 answer options.",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"id": map[string]any{
+										"type":        "string",
+										"description": "Unique identifier for this option (e.g. 'a', 'b', 'c', 'd').",
+									},
+									"text": map[string]any{
+										"type":        "string",
+										"description": "The answer option text.",
+									},
+								},
+								"required": []string{"id", "text"},
+							},
+							"minItems": 2,
+							"maxItems": 4,
+						},
+						"quiz_correct_answer_id": map[string]any{
+							"type":        "string",
+							"description": "For quiz components: The id of the correct answer option.",
+						},
+						"quiz_explanation": map[string]any{
+							"type":        "string",
+							"description": "For quiz components: Explanation shown after answering, explaining why the correct answer is right.",
 						},
 					},
-					"required": []string{"type", "content"},
+					"required": []string{"component_type"},
 				},
 			},
 			"segue_text": map[string]any{
 				"type":        "string",
-				"description": "Transition text to the next lesson (empty if last lesson)",
+				"description": "Transition text to the next lesson. Should smoothly connect this lesson's content to the next topic. Leave empty if this is the final lesson in the course.",
 			},
 		},
 		"required": []string{"components", "segue_text"},
@@ -521,7 +725,8 @@ func smeProcessingSchema() map[string]any {
 
 // Prompt builders
 
-func buildOutlinePrompt(req service.GenerateOutlineRequest) string {
+// buildSectionsOnlyPrompt creates the prompt for the first call - sections with lesson titles only
+func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
 	var sb strings.Builder
 
 	sb.WriteString("You are an expert instructional designer creating a course outline.\n\n")
@@ -571,11 +776,60 @@ func buildOutlinePrompt(req service.GenerateOutlineRequest) string {
 	}
 
 	sb.WriteString("## Instructions\n")
-	sb.WriteString("Create a comprehensive course outline with logical sections and lessons.\n")
+	sb.WriteString("Create a high-level course outline with sections and lesson titles.\n")
 	sb.WriteString("Each section should have a clear theme and 2-5 lessons.\n")
-	sb.WriteString("Each lesson should take 5-20 minutes to complete.\n")
-	sb.WriteString("Include specific, measurable learning objectives for each lesson.\n")
-	sb.WriteString("Ensure content flows logically and builds on previous lessons.\n")
+	sb.WriteString("For each section, provide the section title, description, and a list of lesson titles.\n")
+	sb.WriteString("Ensure content flows logically and builds on previous sections.\n")
+
+	return sb.String()
+}
+
+// buildSectionLessonsPrompt creates the prompt for generating detailed lessons for a specific section
+func buildSectionLessonsPrompt(req service.GenerateOutlineRequest, sectionTitle, sectionDescription string, lessonTitles []string) string {
+	var sb strings.Builder
+
+	sb.WriteString("You are an expert instructional designer creating detailed lesson plans.\n\n")
+
+	sb.WriteString("## Course Information\n")
+	sb.WriteString(fmt.Sprintf("**Course Title:** %s\n", req.CourseTitle))
+	sb.WriteString(fmt.Sprintf("**Desired Outcome:** %s\n\n", req.DesiredOutcome))
+
+	sb.WriteString("## Current Section\n")
+	sb.WriteString(fmt.Sprintf("**Section Title:** %s\n", sectionTitle))
+	sb.WriteString(fmt.Sprintf("**Section Description:** %s\n\n", sectionDescription))
+
+	sb.WriteString("## Lesson Titles to Expand\n")
+	for i, title := range lessonTitles {
+		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, title))
+	}
+	sb.WriteString("\n")
+
+	sb.WriteString("## Target Audience\n")
+	sb.WriteString(fmt.Sprintf("**Role:** %s\n", req.TargetAudience.Role))
+	sb.WriteString(fmt.Sprintf("**Experience Level:** %s\n", req.TargetAudience.ExperienceLevel))
+	if len(req.TargetAudience.Challenges) > 0 {
+		sb.WriteString(fmt.Sprintf("**Challenges:** %s\n", strings.Join(req.TargetAudience.Challenges, ", ")))
+	}
+	sb.WriteString("\n")
+
+	// Include limited SME knowledge for context
+	if len(req.SMEKnowledge) > 0 {
+		sb.WriteString("## Subject Matter Expert Knowledge (Summary)\n")
+		for _, sme := range req.SMEKnowledge {
+			if sme.Summary != "" {
+				sb.WriteString(fmt.Sprintf("**%s (%s):** %s\n", sme.SMEName, sme.Domain, sme.Summary))
+			}
+		}
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("## Instructions\n")
+	sb.WriteString("For each lesson title provided above, create detailed lesson information:\n")
+	sb.WriteString("- Keep the original title or improve it slightly\n")
+	sb.WriteString("- Write a brief description of what the lesson covers\n")
+	sb.WriteString("- Estimate duration (5-20 minutes)\n")
+	sb.WriteString("- Include 2-4 specific, measurable learning objectives\n")
+	sb.WriteString("- Ensure lessons flow logically within the section\n")
 
 	return sb.String()
 }
@@ -701,6 +955,76 @@ func buildSMEProcessingPrompt(req service.ProcessSMEContentRequest) string {
 	sb.WriteString("Focus on actionable knowledge that can be taught to learners.\n")
 
 	return sb.String()
+}
+
+// SummarizeContent creates a concise summary of the provided content.
+func (c *Client) SummarizeContent(ctx context.Context, content string) (string, error) {
+	prompt := buildSummarizePrompt(content)
+
+	result, err := c.client.Models.GenerateContent(
+		ctx,
+		c.model,
+		genai.Text(prompt),
+		nil,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to summarize content: %w", err)
+	}
+
+	return result.Text(), nil
+}
+
+// ImproveContent improves the provided content by cleaning up, clarifying, and structuring it.
+func (c *Client) ImproveContent(ctx context.Context, content string) (string, error) {
+	prompt := buildImprovePrompt(content)
+
+	result, err := c.client.Models.GenerateContent(
+		ctx,
+		c.model,
+		genai.Text(prompt),
+		nil,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to improve content: %w", err)
+	}
+
+	return result.Text(), nil
+}
+
+func buildSummarizePrompt(content string) string {
+	return fmt.Sprintf(`You are an expert at creating concise summaries of knowledge content.
+
+## Content to Summarize
+%s
+
+## Instructions
+Create a clear, concise summary of the above content. The summary should:
+- Capture the key points and main ideas
+- Be 2-4 paragraphs long
+- Be written in a professional, educational tone
+- Preserve important details and facts
+- Be suitable for use as SME knowledge for course generation
+
+Return only the summary text without any additional formatting or headers.`, content)
+}
+
+func buildImprovePrompt(content string) string {
+	return fmt.Sprintf(`You are an expert editor who improves content for clarity and structure.
+
+## Content to Improve
+%s
+
+## Instructions
+Improve the above content by:
+- Fixing grammar and spelling errors
+- Improving clarity and readability
+- Organizing information logically
+- Breaking up long paragraphs
+- Adding appropriate structure (headers, bullet points where helpful)
+- Maintaining the original meaning and facts
+- Keeping a professional, educational tone
+
+Return only the improved content without any additional commentary.`, content)
 }
 
 // Helper functions

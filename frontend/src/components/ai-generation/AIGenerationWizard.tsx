@@ -1,17 +1,21 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { Tag, FolderOpen, X, Hash } from 'lucide-react';
 import type { SubjectMatterExpert, SMEStatus } from '@/gen/mirai/v1/sme_pb';
 import type { TargetAudienceTemplate, ExperienceLevel } from '@/gen/mirai/v1/target_audience_pb';
 import type { CourseGenerationInput } from '@/gen/mirai/v1/ai_generation_pb';
+import TagsSelectionModal from '@/components/course/TagsSelectionModal';
+import FolderSelectionModal from '@/components/course/FolderSelectionModal';
 
 // Step type for wizard navigation
-type WizardStep = 'sme-selection' | 'audience-selection' | 'configuration' | 'review';
+type WizardStep = 'sme-selection' | 'audience-selection' | 'configuration' | 'organization' | 'review';
 
 const STEPS: { key: WizardStep; label: string; description: string }[] = [
   { key: 'sme-selection', label: 'Knowledge Source', description: 'Select SMEs to use as content source' },
   { key: 'audience-selection', label: 'Target Audience', description: 'Choose who this course is for' },
   { key: 'configuration', label: 'Course Goals', description: 'Define learning outcomes' },
+  { key: 'organization', label: 'Organization', description: 'Set tags and folder location' },
   { key: 'review', label: 'Review', description: 'Confirm and generate' },
 ];
 
@@ -20,6 +24,9 @@ interface WizardState {
   selectedAudienceIds: string[];
   desiredOutcome: string;
   additionalContext: string;
+  categoryTags: string[];
+  destinationFolder: string;
+  destinationFolderName: string;
 }
 
 interface AIGenerationWizardProps {
@@ -27,7 +34,7 @@ interface AIGenerationWizardProps {
   courseName: string;
   availableSmes: SubjectMatterExpert[];
   availableAudiences: TargetAudienceTemplate[];
-  onStartGeneration: (input: CourseGenerationInput) => void;
+  onStartGeneration: (input: CourseGenerationInput & { categoryTags?: string[]; destinationFolder?: string }) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -47,7 +54,14 @@ export function AIGenerationWizard({
     selectedAudienceIds: [],
     desiredOutcome: '',
     additionalContext: '',
+    categoryTags: [],
+    destinationFolder: '',
+    destinationFolderName: '',
   });
+
+  // Modal states
+  const [showTagsModal, setShowTagsModal] = useState(false);
+  const [showFolderModal, setShowFolderModal] = useState(false);
 
   const currentStepIndex = STEPS.findIndex((s) => s.key === currentStep);
 
@@ -59,6 +73,8 @@ export function AIGenerationWizard({
         return state.selectedAudienceIds.length > 0;
       case 'configuration':
         return state.desiredOutcome.trim().length > 10;
+      case 'organization':
+        return true; // Tags and folder are optional
       case 'review':
         return true;
       default:
@@ -81,13 +97,15 @@ export function AIGenerationWizard({
   };
 
   const handleStartGeneration = () => {
-    const input: CourseGenerationInput = {
+    const input: CourseGenerationInput & { categoryTags?: string[]; destinationFolder?: string } = {
       $typeName: 'mirai.v1.CourseGenerationInput',
       courseId,
       smeIds: state.selectedSmeIds,
       targetAudienceIds: state.selectedAudienceIds,
       desiredOutcome: state.desiredOutcome,
       additionalContext: state.additionalContext || undefined,
+      categoryTags: state.categoryTags.length > 0 ? state.categoryTags : undefined,
+      destinationFolder: state.destinationFolder || undefined,
     };
     onStartGeneration(input);
   };
@@ -107,6 +125,25 @@ export function AIGenerationWizard({
       selectedAudienceIds: prev.selectedAudienceIds.includes(audienceId)
         ? prev.selectedAudienceIds.filter((id) => id !== audienceId)
         : [...prev.selectedAudienceIds, audienceId],
+    }));
+  };
+
+  const handleTagsChange = (tags: string[]) => {
+    setState((prev) => ({ ...prev, categoryTags: tags }));
+  };
+
+  const handleFolderSelect = (folderId: string, folderName: string) => {
+    setState((prev) => ({
+      ...prev,
+      destinationFolder: folderId,
+      destinationFolderName: folderName,
+    }));
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setState((prev) => ({
+      ...prev,
+      categoryTags: prev.categoryTags.filter((tag) => tag !== tagToRemove),
     }));
   };
 
@@ -154,7 +191,7 @@ export function AIGenerationWizard({
               </div>
               {index < STEPS.length - 1 && (
                 <div
-                  className={`w-16 h-0.5 mx-2 ${index < currentStepIndex ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                  className={`w-12 h-0.5 mx-2 ${index < currentStepIndex ? 'bg-indigo-600' : 'bg-gray-200'}`}
                 />
               )}
             </div>
@@ -322,7 +359,86 @@ export function AIGenerationWizard({
           </div>
         )}
 
-        {/* Step 4: Review */}
+        {/* Step 4: Organization */}
+        {currentStep === 'organization' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Organize Your Course</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Add tags for categorization and choose where to save the course in your library.
+            </p>
+
+            {/* Tags Section */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-gray-600" />
+                  <h4 className="text-sm font-medium text-gray-900">Category Tags</h4>
+                </div>
+                <button
+                  onClick={() => setShowTagsModal(true)}
+                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  {state.categoryTags.length > 0 ? 'Edit Tags' : 'Add Tags'}
+                </button>
+              </div>
+
+              {state.categoryTags.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {state.categoryTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium"
+                    >
+                      <Hash className="w-3 h-3" />
+                      {tag}
+                      <button
+                        onClick={() => removeTag(tag)}
+                        className="ml-1 hover:bg-indigo-200 rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No tags selected. Tags help organize and find your courses.</p>
+              )}
+            </div>
+
+            {/* Folder Section */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="w-5 h-5 text-gray-600" />
+                  <h4 className="text-sm font-medium text-gray-900">Destination Folder</h4>
+                </div>
+                <button
+                  onClick={() => setShowFolderModal(true)}
+                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  {state.destinationFolder ? 'Change Folder' : 'Select Folder'}
+                </button>
+              </div>
+
+              {state.destinationFolder ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <FolderOpen className="w-4 h-4 text-yellow-600" />
+                  <span className="font-medium text-gray-900">{state.destinationFolderName}</span>
+                  <button
+                    onClick={() => setState((prev) => ({ ...prev, destinationFolder: '', destinationFolderName: '' }))}
+                    className="ml-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No folder selected. The course will be saved to your default library location.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Review */}
         {currentStep === 'review' && (
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900 mb-2">Review Configuration</h3>
@@ -388,6 +504,37 @@ export function AIGenerationWizard({
                 <div className="p-4">
                   <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Additional Context</h4>
                   <p className="text-sm text-gray-700">{state.additionalContext}</p>
+                </div>
+              )}
+
+              {/* Tags */}
+              {state.categoryTags.length > 0 && (
+                <div className="p-4">
+                  <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                    Tags ({state.categoryTags.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {state.categoryTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700"
+                      >
+                        <Hash className="w-3 h-3" />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Folder */}
+              {state.destinationFolder && (
+                <div className="p-4">
+                  <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Destination Folder</h4>
+                  <div className="flex items-center gap-2 text-sm">
+                    <FolderOpen className="w-4 h-4 text-yellow-600" />
+                    <span className="font-medium text-gray-900">{state.destinationFolderName}</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -469,6 +616,21 @@ export function AIGenerationWizard({
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      <TagsSelectionModal
+        isOpen={showTagsModal}
+        onClose={() => setShowTagsModal(false)}
+        selectedTags={state.categoryTags}
+        onTagsChange={handleTagsChange}
+      />
+
+      <FolderSelectionModal
+        isOpen={showFolderModal}
+        onClose={() => setShowFolderModal(false)}
+        onSelect={handleFolderSelect}
+        selectedFolder={state.destinationFolderName}
+      />
     </div>
   );
 }

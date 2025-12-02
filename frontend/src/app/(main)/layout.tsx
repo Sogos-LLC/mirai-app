@@ -44,7 +44,7 @@ export default function Layout({
     setTokenProcessed(true);
   }, [searchParams]);
 
-  // Initialize auth and prefetch all routes/data AFTER token is processed
+  // Initialize auth AFTER token is processed
   useEffect(() => {
     if (!tokenProcessed) return;
 
@@ -52,6 +52,11 @@ export default function Layout({
     if (!isAuthInitialized) {
       dispatch(checkSession());
     }
+  }, [dispatch, isAuthInitialized, tokenProcessed]);
+
+  // Prefetch routes and API data only AFTER auth is initialized
+  useEffect(() => {
+    if (!isAuthInitialized) return;
 
     // Prefetch all sidebar routes for instant navigation
     const allPaths = [
@@ -69,10 +74,10 @@ export default function Layout({
     }
     allPaths.forEach((path) => router.prefetch(path));
 
-    // Prefetch API data
+    // Prefetch API data - only after auth is ready
     dispatch(prefetchFolders(true));
     dispatch(prefetchCourses());
-  }, [router, dispatch, isAuthInitialized, tokenProcessed]);
+  }, [router, dispatch, isAuthInitialized]);
 
   // Desktop: sidebar margin based on collapsed/expanded state
   // Mobile: no margin (sidebar is a drawer overlay)

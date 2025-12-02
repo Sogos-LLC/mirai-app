@@ -1,6 +1,9 @@
 'use client';
 
-import type { TextContent } from '@/gen/mirai/v1/ai_generation_pb';
+interface TextContent {
+  html: string;
+  plaintext: string;
+}
 
 interface TextRendererProps {
   content: TextContent;

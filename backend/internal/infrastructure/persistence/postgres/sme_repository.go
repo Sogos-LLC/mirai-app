@@ -441,6 +441,23 @@ func (r *SMETaskRepository) Cancel(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// Delete permanently deletes a task.
+func (r *SMETaskRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM sme_tasks WHERE id = $1`
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("task not found")
+	}
+	return nil
+}
+
 // SMESubmissionRepository implements repository.SMESubmissionRepository using PostgreSQL.
 type SMESubmissionRepository struct {
 	db *sql.DB
@@ -454,8 +471,8 @@ func NewSMESubmissionRepository(db *sql.DB) repository.SMESubmissionRepository {
 // Create creates a new submission.
 func (r *SMESubmissionRepository) Create(ctx context.Context, submission *entity.SMETaskSubmission) error {
 	query := `
-		INSERT INTO sme_task_submissions (tenant_id, task_id, file_name, file_path, content_type, file_size_bytes, submitted_by_user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO sme_task_submissions (tenant_id, task_id, file_name, file_path, content_type, file_size_bytes, extracted_text, submitted_by_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, submitted_at
 	`
 	return r.db.QueryRowContext(ctx, query,
@@ -465,6 +482,7 @@ func (r *SMESubmissionRepository) Create(ctx context.Context, submission *entity
 		submission.FilePath,
 		submission.ContentType.String(),
 		submission.FileSizeBytes,
+		submission.ExtractedText,
 		submission.SubmittedByUserID,
 	).Scan(&submission.ID, &submission.SubmittedAt)
 }
@@ -472,7 +490,8 @@ func (r *SMESubmissionRepository) Create(ctx context.Context, submission *entity
 // GetByID retrieves a submission by its ID.
 func (r *SMESubmissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.SMETaskSubmission, error) {
 	query := `
-		SELECT id, tenant_id, task_id, file_name, file_path, content_type, file_size_bytes, extracted_text, ai_summary, ingestion_error, submitted_by_user_id, submitted_at, processed_at
+		SELECT id, tenant_id, task_id, file_name, file_path, content_type, file_size_bytes, extracted_text, ai_summary, ingestion_error, submitted_by_user_id, submitted_at, processed_at,
+			reviewer_notes, approved_content, is_approved, approved_at, approved_by_user_id
 		FROM sme_task_submissions
 		WHERE id = $1
 	`
@@ -492,6 +511,11 @@ func (r *SMESubmissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*e
 		&sub.SubmittedByUserID,
 		&sub.SubmittedAt,
 		&sub.ProcessedAt,
+		&sub.ReviewerNotes,
+		&sub.ApprovedContent,
+		&sub.IsApproved,
+		&sub.ApprovedAt,
+		&sub.ApprovedByUserID,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -506,7 +530,8 @@ func (r *SMESubmissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*e
 // ListByTaskID retrieves all submissions for a task.
 func (r *SMESubmissionRepository) ListByTaskID(ctx context.Context, taskID uuid.UUID) ([]*entity.SMETaskSubmission, error) {
 	query := `
-		SELECT id, tenant_id, task_id, file_name, file_path, content_type, file_size_bytes, extracted_text, ai_summary, ingestion_error, submitted_by_user_id, submitted_at, processed_at
+		SELECT id, tenant_id, task_id, file_name, file_path, content_type, file_size_bytes, extracted_text, ai_summary, ingestion_error, submitted_by_user_id, submitted_at, processed_at,
+			reviewer_notes, approved_content, is_approved, approved_at, approved_by_user_id
 		FROM sme_task_submissions
 		WHERE task_id = $1
 		ORDER BY submitted_at DESC
@@ -535,6 +560,11 @@ func (r *SMESubmissionRepository) ListByTaskID(ctx context.Context, taskID uuid.
 			&sub.SubmittedByUserID,
 			&sub.SubmittedAt,
 			&sub.ProcessedAt,
+			&sub.ReviewerNotes,
+			&sub.ApprovedContent,
+			&sub.IsApproved,
+			&sub.ApprovedAt,
+			&sub.ApprovedByUserID,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan submission: %w", err)
 		}
@@ -548,14 +578,20 @@ func (r *SMESubmissionRepository) ListByTaskID(ctx context.Context, taskID uuid.
 func (r *SMESubmissionRepository) Update(ctx context.Context, submission *entity.SMETaskSubmission) error {
 	query := `
 		UPDATE sme_task_submissions
-		SET extracted_text = $1, ai_summary = $2, ingestion_error = $3, processed_at = $4
-		WHERE id = $5
+		SET extracted_text = $1, ai_summary = $2, ingestion_error = $3, processed_at = $4,
+			reviewer_notes = $5, approved_content = $6, is_approved = $7, approved_at = $8, approved_by_user_id = $9
+		WHERE id = $10
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		submission.ExtractedText,
 		submission.AISummary,
 		submission.IngestionError,
 		submission.ProcessedAt,
+		submission.ReviewerNotes,
+		submission.ApprovedContent,
+		submission.IsApproved,
+		submission.ApprovedAt,
+		submission.ApprovedByUserID,
 		submission.ID,
 	)
 	return err
@@ -700,4 +736,37 @@ func (r *SMEKnowledgeRepository) DeleteBySMEID(ctx context.Context, smeID uuid.U
 	query := `DELETE FROM sme_knowledge_chunks WHERE sme_id = $1`
 	_, err := r.db.ExecContext(ctx, query, smeID)
 	return err
+}
+
+// Update updates a knowledge chunk.
+func (r *SMEKnowledgeRepository) Update(ctx context.Context, chunk *entity.SMEKnowledgeChunk) error {
+	query := `
+		UPDATE sme_knowledge_chunks
+		SET content = $1, topic = $2, keywords = $3
+		WHERE id = $4
+	`
+	_, err := r.db.ExecContext(ctx, query,
+		chunk.Content,
+		chunk.Topic,
+		pq.Array(chunk.Keywords),
+		chunk.ID,
+	)
+	return err
+}
+
+// Delete deletes a knowledge chunk by ID.
+func (r *SMEKnowledgeRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM sme_knowledge_chunks WHERE id = $1`
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete chunk: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("chunk not found")
+	}
+	return nil
 }

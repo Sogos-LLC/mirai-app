@@ -185,6 +185,9 @@ func userToProto(u *dto.UserResponse) *v1.User {
 		Role:      roleToProto(u.Role),
 		CreatedAt: timestamppb.New(u.CreatedAt),
 		UpdatedAt: timestamppb.New(u.UpdatedAt),
+		Email:     strPtr(u.Email),
+		FirstName: strPtr(u.FirstName),
+		LastName:  strPtr(u.LastName),
 	}
 }
 

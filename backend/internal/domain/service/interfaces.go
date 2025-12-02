@@ -222,6 +222,12 @@ type EmailProvider interface {
 
 	// SendGenerationFailed sends a generation failure notification email.
 	SendGenerationFailed(ctx context.Context, req SendGenerationFailedRequest) error
+
+	// SendOutlineReady sends a notification when course outline is ready for review.
+	SendOutlineReady(ctx context.Context, req SendOutlineReadyRequest) error
+
+	// SendCourseComplete sends a notification when full course generation is complete.
+	SendCourseComplete(ctx context.Context, req SendCourseCompleteRequest) error
 }
 
 // SendInvitationRequest contains data for sending an invitation email.
@@ -288,6 +294,27 @@ type SendGenerationFailedRequest struct {
 	ContentType  string // "outline" or "lesson"
 	ErrorMessage string
 	CourseURL    string
+}
+
+// SendOutlineReadyRequest contains data for outline ready notification email.
+type SendOutlineReadyRequest struct {
+	To           string
+	UserName     string
+	CourseTitle  string
+	SectionCount int
+	LessonCount  int
+	ReviewURL    string
+}
+
+// SendCourseCompleteRequest contains data for full course completion email with summary.
+type SendCourseCompleteRequest struct {
+	To                   string
+	UserName             string
+	CourseTitle          string
+	SectionCount         int
+	LessonCount          int
+	TotalDurationMinutes int
+	CourseURL            string
 }
 
 // AIProvider abstracts AI generation operations (Gemini, OpenAI, etc.).
@@ -427,4 +454,13 @@ type SMEChunkResult struct {
 	Topic          string
 	Keywords       []string
 	RelevanceScore float32
+}
+
+// ContentEnhancer abstracts AI content enhancement operations.
+type ContentEnhancer interface {
+	// SummarizeContent creates a concise summary of the provided content.
+	SummarizeContent(ctx context.Context, content string) (string, error)
+
+	// ImproveContent improves content by cleaning up, clarifying, and structuring.
+	ImproveContent(ctx context.Context, content string) (string, error)
 }

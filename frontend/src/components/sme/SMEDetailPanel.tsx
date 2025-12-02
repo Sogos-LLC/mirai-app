@@ -1,11 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import type { SubjectMatterExpert, SMEKnowledgeChunk, SMEStatus } from '@/gen/mirai/v1/sme_pb';
+import type { SubjectMatterExpert, SMEKnowledgeChunk, SMETask } from '@/gen/mirai/v1/sme_pb';
+import type { User } from '@/gen/mirai/v1/common_pb';
+import { TaskList } from './TaskList';
+import { KnowledgeChunkCard } from './KnowledgeChunkCard';
 
 interface SMEDetailPanelProps {
   sme: SubjectMatterExpert;
   chunks?: SMEKnowledgeChunk[];
+  tasks?: SMETask[];
+  users?: Map<string, User>;
+  currentUserId?: string;
+  isLoadingTasks?: boolean;
+  isLoadingChunks?: boolean;
+  isDeletingChunk?: string; // ID of chunk being deleted
   isIngesting?: boolean;
   ingestionProgress?: number;
   onBack: () => void;
@@ -14,6 +23,12 @@ interface SMEDetailPanelProps {
   onDelete?: () => void;
   onEdit?: () => void;
   onRestore?: () => void;
+  onCreateTask?: () => void;
+  onCancelTask?: (taskId: string) => void;
+  onSubmitToTask?: (task: SMETask) => void;
+  onReviewTask?: (task: SMETask) => void;
+  onEditChunk?: (chunk: SMEKnowledgeChunk) => void;
+  onDeleteChunk?: (chunkId: string) => void;
 }
 
 const STATUS_CONFIG: Record<number, { label: string; color: string; icon: string }> = {
@@ -27,6 +42,12 @@ const STATUS_CONFIG: Record<number, { label: string; color: string; icon: string
 export function SMEDetailPanel({
   sme,
   chunks = [],
+  tasks = [],
+  users = new Map(),
+  currentUserId,
+  isLoadingTasks = false,
+  isLoadingChunks = false,
+  isDeletingChunk,
   isIngesting = false,
   ingestionProgress = 0,
   onBack,
@@ -35,6 +56,12 @@ export function SMEDetailPanel({
   onDelete,
   onEdit,
   onRestore,
+  onCreateTask,
+  onCancelTask,
+  onSubmitToTask,
+  onReviewTask,
+  onEditChunk,
+  onDeleteChunk,
 }: SMEDetailPanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const status = STATUS_CONFIG[sme.status] || STATUS_CONFIG[0];
@@ -128,39 +155,76 @@ export function SMEDetailPanel({
         )}
       </div>
 
-      {/* Knowledge Chunks */}
-      {chunks.length > 0 && (
+      {/* Tasks Section - only show for non-archived SMEs */}
+      {!isArchived && (
         <div className="px-4 py-5 sm:px-6 border-t border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Knowledge Chunks ({chunks.length})
-          </h3>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {chunks.map((chunk) => (
-              <div key={chunk.id} className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-900">{chunk.topic}</span>
-                  <span className="text-xs text-gray-500">
-                    Score: {(chunk.relevanceScore * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 line-clamp-3">{chunk.content}</p>
-                {chunk.keywords && chunk.keywords.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {chunk.keywords.slice(0, 5).map((keyword, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-200 text-gray-700"
-                      >
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <TaskList
+            tasks={tasks}
+            users={users}
+            currentUserId={currentUserId}
+            isLoading={isLoadingTasks}
+            onCreateTask={onCreateTask}
+            onCancelTask={onCancelTask}
+            onSubmitToTask={onSubmitToTask}
+            onReviewTask={onReviewTask}
+          />
         </div>
       )}
+
+      {/* Knowledge Chunks */}
+      <div className="px-4 py-5 sm:px-6 border-t border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">
+            Knowledge Base {chunks.length > 0 && <span className="text-gray-500">({chunks.length})</span>}
+          </h3>
+          {chunks.length > 0 && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Context Package Ready
+            </span>
+          )}
+        </div>
+
+        {isLoadingChunks ? (
+          <div className="flex justify-center py-8">
+            <svg className="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+        ) : chunks.length > 0 ? (
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {chunks.map((chunk) => (
+              <KnowledgeChunkCard
+                key={chunk.id}
+                chunk={chunk}
+                onEdit={onEditChunk}
+                onDelete={onDeleteChunk}
+                isDeleting={isDeletingChunk === chunk.id}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+            <svg
+              className="mx-auto h-10 w-10 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+              />
+            </svg>
+            <p className="mt-2 text-sm text-gray-500">No knowledge yet</p>
+            <p className="text-xs text-gray-400">
+              Assign tasks and approve submissions to build the knowledge base
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Actions */}
       <div className="px-4 py-4 sm:px-6 border-t border-gray-200 bg-gray-50">

@@ -244,7 +244,9 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	job.ProgressPercent = 20
 	progressMsg = "Analyzing target audience..."
 	job.ProgressMessage = &progressMsg
-	_ = s.jobRepo.Update(ctx, job)
+	if err := s.jobRepo.Update(ctx, job); err != nil {
+		log.Error("failed to update job progress", "progress", 20, "error", err)
+	}
 
 	// Get target audience
 	var targetAudience service.TargetAudienceInput
@@ -272,7 +274,9 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	job.ProgressPercent = 40
 	progressMsg = "Generating course outline with AI..."
 	job.ProgressMessage = &progressMsg
-	_ = s.jobRepo.Update(ctx, job)
+	if err := s.jobRepo.Update(ctx, job); err != nil {
+		log.Error("failed to update job progress", "progress", 40, "error", err)
+	}
 
 	// Generate outline with AI
 	additionalContext := ""
@@ -304,7 +308,9 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	progressMsg = "Storing outline..."
 	job.ProgressMessage = &progressMsg
 	job.TokensUsed = outlineResult.TokensUsed
-	_ = s.jobRepo.Update(ctx, job)
+	if err := s.jobRepo.Update(ctx, job); err != nil {
+		log.Error("failed to update job progress", "progress", 70, "error", err)
+	}
 
 	// Create outline entity
 	outline := &entity.CourseOutline{
@@ -446,7 +452,30 @@ func (s *AIGenerationService) ApproveCourseOutline(ctx context.Context, kratosID
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	log.Info("outline approved")
+	// Load sections and lessons to return complete outline
+	sections, err := s.sectionRepo.ListByOutlineID(ctx, outline.ID)
+	if err != nil {
+		log.Error("failed to load sections", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	for _, section := range sections {
+		lessons, err := s.lessonRepo.ListBySectionID(ctx, section.ID)
+		if err != nil {
+			continue
+		}
+		section.Lessons = make([]entity.OutlineLesson, len(lessons))
+		for i, l := range lessons {
+			section.Lessons[i] = *l
+		}
+	}
+
+	outline.Sections = make([]entity.OutlineSection, len(sections))
+	for i, sec := range sections {
+		outline.Sections[i] = *sec
+	}
+
+	log.Info("outline approved", "sectionCount", len(outline.Sections))
 	return outline, nil
 }
 
@@ -619,7 +648,7 @@ func (s *AIGenerationService) GenerateLessonContent(ctx context.Context, kratosI
 		Type:            valueobject.GenerationJobTypeLessonContent,
 		Status:          valueobject.GenerationJobStatusQueued,
 		CourseID:        &req.CourseID,
-		LessonID:        &req.OutlineLessonID,
+		OutlineLessonID: &req.OutlineLessonID, // References outline_lessons table
 		ProgressPercent: 0,
 		MaxRetries:      3,
 		CreatedByUserID: user.ID,
@@ -638,7 +667,7 @@ func (s *AIGenerationService) GenerateLessonContent(ctx context.Context, kratosI
 // ProcessLessonGenerationJob processes a lesson content generation job.
 // This is called by the background worker.
 func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, job *entity.GenerationJob) error {
-	log := s.logger.With("jobID", job.ID, "lessonID", job.LessonID)
+	log := s.logger.With("jobID", job.ID, "outlineLessonID", job.OutlineLessonID)
 
 	// Mark job as processing
 	now := time.Now()
@@ -650,8 +679,11 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		return fmt.Errorf("failed to update job status: %w", err)
 	}
 
-	// Get outline lesson
-	outlineLesson, err := s.lessonRepo.GetByID(ctx, *job.LessonID)
+	// Get outline lesson using OutlineLessonID (references outline_lessons table)
+	if job.OutlineLessonID == nil {
+		return s.failJob(ctx, job, "outline lesson ID not set")
+	}
+	outlineLesson, err := s.lessonRepo.GetByID(ctx, *job.OutlineLessonID)
 	if err != nil || outlineLesson == nil {
 		return s.failJob(ctx, job, "outline lesson not found")
 	}
@@ -715,7 +747,9 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 	job.ProgressPercent = 30
 	progressMsg = "Generating lesson content with AI..."
 	job.ProgressMessage = &progressMsg
-	_ = s.jobRepo.Update(ctx, job)
+	if err := s.jobRepo.Update(ctx, job); err != nil {
+		log.Error("failed to update job progress", "progress", 30, "error", err)
+	}
 
 	// Get tenant-specific AI provider
 	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, job.TenantID)
@@ -746,7 +780,9 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 	progressMsg = "Storing lesson content..."
 	job.ProgressMessage = &progressMsg
 	job.TokensUsed = lessonResult.TokensUsed
-	_ = s.jobRepo.Update(ctx, job)
+	if err := s.jobRepo.Update(ctx, job); err != nil {
+		log.Error("failed to update job progress", "progress", 70, "error", err)
+	}
 
 	// Create generated lesson
 	genLesson := &entity.GeneratedLesson{
@@ -800,8 +836,9 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		log.Error("failed to mark job as completed", "error", err)
 	}
 
-	// Notify user of individual lesson completion (tenant-isolated via user lookup)
-	if s.notifier != nil {
+	// Only notify for standalone lesson generation (not part of full course generation)
+	// Full course generation sends ONE notification when all lessons are done
+	if s.notifier != nil && job.ParentJobID == nil {
 		if err := s.notifier.NotifyJobProgress(ctx, job.CreatedByUserID, job.ID, "Lesson Content", "completed", 100); err != nil {
 			log.Error("failed to send completion notification", "error", err)
 		}
@@ -819,23 +856,12 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 	return nil
 }
 
-// checkAndCompleteParentJob checks if all child jobs of a parent are complete
-// and marks the parent as complete, sending notification.
+// checkAndCompleteParentJob checks child job progress and updates the parent job.
+// Updates progress incrementally as children complete, and marks parent complete when all done.
 func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, parentJobID uuid.UUID) error {
 	log := s.logger.With("parentJobID", parentJobID)
 
-	// Check if all children are complete
-	allComplete, err := s.jobRepo.CheckAllChildrenComplete(ctx, parentJobID)
-	if err != nil {
-		return fmt.Errorf("failed to check children completion: %w", err)
-	}
-
-	if !allComplete {
-		log.Debug("not all children complete yet")
-		return nil
-	}
-
-	// Get parent job
+	// Get parent job first
 	parentJob, err := s.jobRepo.GetByID(ctx, parentJobID)
 	if err != nil || parentJob == nil {
 		return fmt.Errorf("failed to get parent job: %w", err)
@@ -847,30 +873,64 @@ func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, par
 		return nil
 	}
 
-	// Check if any children failed
+	// Get all children to calculate progress
 	children, err := s.jobRepo.ListByParentID(ctx, parentJobID)
 	if err != nil {
 		return fmt.Errorf("failed to list children: %w", err)
 	}
 
-	var failedCount int
+	if len(children) == 0 {
+		return nil
+	}
+
+	// Count completed and failed children
+	var completedCount, failedCount int
 	var totalTokens int64
 	for _, child := range children {
-		if child.Status == valueobject.GenerationJobStatusFailed {
+		switch child.Status {
+		case valueobject.GenerationJobStatusCompleted:
+			completedCount++
+			totalTokens += child.TokensUsed
+		case valueobject.GenerationJobStatusFailed:
 			failedCount++
+			completedCount++ // Failed also counts as "done"
 		}
-		totalTokens += child.TokensUsed
 	}
+
+	totalChildren := len(children)
+	doneCount := completedCount // includes failed
+	allComplete := doneCount == totalChildren
+
+	// Calculate progress percentage (10% reserved for initial queuing, 90% for lesson generation)
+	// Progress goes from 10% to 100%
+	progressPercent := int32(10 + (90 * doneCount / totalChildren))
+	progressMsg := fmt.Sprintf("Generated %d of %d lessons...", completedCount-failedCount, totalChildren)
+
+	// Update parent progress incrementally
+	parentJob.ProgressPercent = progressPercent
+	parentJob.ProgressMessage = &progressMsg
+	parentJob.TokensUsed = totalTokens
+
+	if !allComplete {
+		// Just update progress, not status
+		if err := s.jobRepo.Update(ctx, parentJob); err != nil {
+			log.Error("failed to update parent job progress", "progress", progressPercent, "error", err)
+		} else {
+			log.Info("parent job progress updated", "progress", progressPercent, "completed", completedCount-failedCount, "total", totalChildren)
+		}
+		return nil
+	}
+
+	// All children complete - finalize parent job
+	log.Info("all children complete, finalizing parent job", "completed", completedCount-failedCount, "failed", failedCount)
 
 	// Mark parent as complete or failed
 	now := time.Now()
 	parentJob.CompletedAt = &now
-	parentJob.TokensUsed = totalTokens
 
 	// Get course title for notification
 	courseTitle := "Course"
 	if parentJob.CourseID != nil {
-		// We could fetch the course title here, but for now use a generic title
 		courseTitle = "Your Course"
 	}
 
@@ -878,8 +938,8 @@ func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, par
 		parentJob.Status = valueobject.GenerationJobStatusFailed
 		errMsg := fmt.Sprintf("%d lesson(s) failed to generate", failedCount)
 		parentJob.ErrorMessage = &errMsg
-		progressMsg := "Course generation failed"
-		parentJob.ProgressMessage = &progressMsg
+		finalMsg := "Course generation failed"
+		parentJob.ProgressMessage = &finalMsg
 		parentJob.ProgressPercent = 100
 
 		if err := s.jobRepo.Update(ctx, parentJob); err != nil {
@@ -896,8 +956,8 @@ func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, par
 		log.Info("parent job marked as failed", "failedCount", failedCount)
 	} else {
 		parentJob.Status = valueobject.GenerationJobStatusCompleted
-		progressMsg := "All lessons generated successfully"
-		parentJob.ProgressMessage = &progressMsg
+		finalMsg := "All lessons generated successfully"
+		parentJob.ProgressMessage = &finalMsg
 		parentJob.ProgressPercent = 100
 
 		if err := s.jobRepo.Update(ctx, parentJob); err != nil {
@@ -998,15 +1058,15 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 	// Queue individual lesson generation jobs with parent_job_id
 	for _, section := range outline.Sections {
 		for _, lesson := range section.Lessons {
-			lessonID := lesson.ID
+			outlineLessonID := lesson.ID
 			job := &entity.GenerationJob{
 				ID:              uuid.New(),
 				TenantID:        *user.TenantID,
 				Type:            valueobject.GenerationJobTypeLessonContent,
 				Status:          valueobject.GenerationJobStatusQueued,
 				CourseID:        &courseID,
-				LessonID:        &lessonID,
-				ParentJobID:     &parentJob.ID, // Link to parent job
+				OutlineLessonID: &outlineLessonID, // References outline_lessons table
+				ParentJobID:     &parentJob.ID,    // Link to parent job
 				ProgressPercent: 0,
 				MaxRetries:      3,
 				CreatedByUserID: user.ID,
@@ -1014,7 +1074,7 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 			}
 
 			if err := s.jobRepo.Create(ctx, job); err != nil {
-				log.Error("failed to create lesson job", "lessonID", lessonID, "error", err)
+				log.Error("failed to create lesson job", "outlineLessonID", outlineLessonID, "error", err)
 				// Continue with other lessons
 			}
 		}
@@ -1196,6 +1256,18 @@ func (s *AIGenerationService) ListGeneratedLessons(ctx context.Context, kratosID
 	lessons, err := s.genLessonRepo.ListByCourseID(ctx, courseID)
 	if err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Load components for each lesson
+	for _, lesson := range lessons {
+		components, err := s.componentRepo.ListByLessonID(ctx, lesson.ID)
+		if err != nil {
+			continue // Skip if components fail to load
+		}
+		lesson.Components = make([]entity.LessonComponent, len(components))
+		for i, c := range components {
+			lesson.Components[i] = *c
+		}
 	}
 
 	return lessons, nil

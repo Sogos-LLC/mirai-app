@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-// Plain object types for editing (contentJson is stored as JSON string)
 interface QuizOption {
   id: string;
   text: string;
@@ -14,8 +13,6 @@ interface QuizContent {
   options: QuizOption[];
   correctAnswerId: string;
   explanation: string;
-  correctFeedback?: string;
-  incorrectFeedback?: string;
 }
 
 interface QuizRendererProps {
@@ -148,28 +145,6 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Correct Feedback (optional)</label>
-            <input
-              type="text"
-              value={content.correctFeedback || ''}
-              onChange={(e) => onEdit({ ...content, correctFeedback: e.target.value || undefined })}
-              className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Great job!"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Incorrect Feedback (optional)</label>
-            <input
-              type="text"
-              value={content.incorrectFeedback || ''}
-              onChange={(e) => onEdit({ ...content, incorrectFeedback: e.target.value || undefined })}
-              className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Try again!"
-            />
-          </div>
-        </div>
       </div>
     );
   }
@@ -243,9 +218,7 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
         {showFeedback && (
           <div className={`mt-4 p-4 rounded-lg ${isCorrect ? 'bg-green-50' : 'bg-amber-50'}`}>
             <p className={`font-medium ${isCorrect ? 'text-green-800' : 'text-amber-800'}`}>
-              {isCorrect
-                ? content.correctFeedback || 'Correct!'
-                : content.incorrectFeedback || 'Not quite right.'}
+              {isCorrect ? 'Correct!' : 'Not quite right.'}
             </p>
             <p className="mt-2 text-sm text-gray-700">{content.explanation}</p>
           </div>

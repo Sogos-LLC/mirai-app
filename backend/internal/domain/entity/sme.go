@@ -84,6 +84,13 @@ type SMETaskSubmission struct {
 	SubmittedByUserID uuid.UUID
 	SubmittedAt       time.Time
 	ProcessedAt       *time.Time
+
+	// Approval workflow
+	ReviewerNotes    *string    // Feedback from reviewer
+	ApprovedContent  *string    // Final approved text (may differ from original)
+	IsApproved       bool       // Whether submission is approved
+	ApprovedAt       *time.Time // When approval occurred
+	ApprovedByUserID *uuid.UUID // Who approved the submission
 }
 
 // SMEKnowledgeChunk represents a unit of distilled knowledge.

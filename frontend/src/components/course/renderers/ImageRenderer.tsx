@@ -1,8 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
-import type { ImageContent } from '@/gen/mirai/v1/ai_generation_pb';
+
+// New schema: Gemini provides description instead of URL
+// URL can be added later by user or image search integration
+interface ImageContent {
+  imageDescription: string;
+  altText: string;
+  caption?: string;
+  // Optional URL - only present if user adds a real image
+  url?: string;
+}
 
 interface ImageRendererProps {
   content: ImageContent;
@@ -13,19 +21,37 @@ interface ImageRendererProps {
 export function ImageRenderer({ content, isEditing = false, onEdit }: ImageRendererProps) {
   const [imageError, setImageError] = useState(false);
 
+  // Check if we have a real URL (user-provided, not placeholder)
+  const hasRealUrl = content.url && !content.url.includes('example.com');
+
   if (isEditing && onEdit) {
     return (
       <div className="border rounded-lg p-4 bg-white space-y-3">
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Image URL</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Image Description (AI-generated)</label>
+          <textarea
+            value={content.imageDescription}
+            onChange={(e) =>
+              onEdit({
+                ...content,
+                imageDescription: e.target.value,
+              })
+            }
+            className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+            rows={2}
+            placeholder="Describe what image should be shown..."
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Image URL (optional - add your own image)</label>
           <input
             type="url"
-            value={content.url}
+            value={content.url || ''}
             onChange={(e) => {
               setImageError(false);
               onEdit({
                 ...content,
-                url: e.target.value,
+                url: e.target.value || undefined,
               });
             }}
             className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -33,7 +59,7 @@ export function ImageRenderer({ content, isEditing = false, onEdit }: ImageRende
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Alt Text (required for accessibility)</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Alt Text (for accessibility)</label>
           <input
             type="text"
             value={content.altText}
@@ -44,7 +70,7 @@ export function ImageRenderer({ content, isEditing = false, onEdit }: ImageRende
               })
             }
             className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Describe the image..."
+            placeholder="Describe the image for screen readers..."
           />
         </div>
         <div>
@@ -62,7 +88,7 @@ export function ImageRenderer({ content, isEditing = false, onEdit }: ImageRende
             placeholder="Add a caption..."
           />
         </div>
-        {content.url && (
+        {hasRealUrl && (
           <div className="pt-2 border-t">
             <p className="text-xs text-gray-500 mb-2">Preview:</p>
             <div className="relative max-w-md">
@@ -85,47 +111,51 @@ export function ImageRenderer({ content, isEditing = false, onEdit }: ImageRende
     );
   }
 
-  if (!content.url) {
+  // Show placeholder when no real URL or image load error
+  if (!hasRealUrl || imageError) {
     return (
-      <div className="p-8 bg-gray-50 rounded-lg text-center">
-        <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-        <p className="mt-2 text-sm text-gray-500">No image URL provided</p>
-      </div>
+      <figure className="my-4">
+        <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-dashed border-indigo-200">
+          <div className="flex items-start gap-4">
+            {/* Image icon */}
+            <div className="flex-shrink-0 p-3 bg-white rounded-lg shadow-sm">
+              <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            {/* Description */}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-1">
+                Image Placeholder
+              </p>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {content.imageDescription || content.altText || 'An image will be added here'}
+              </p>
+              {content.caption && (
+                <p className="mt-2 text-xs text-gray-500 italic">{content.caption}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </figure>
     );
   }
 
   return (
     <figure className="my-4">
-      {!imageError ? (
-        <div className="relative overflow-hidden rounded-lg shadow-md">
-          <img
-            src={content.url}
-            alt={content.altText}
-            onError={() => setImageError(true)}
-            className="max-w-full h-auto mx-auto"
-          />
-        </div>
-      ) : (
-        <div className="p-8 bg-gray-100 rounded-lg text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-          <p className="mt-2 text-sm text-gray-500">Failed to load image</p>
-          <p className="text-xs text-gray-400 mt-1">{content.url}</p>
-        </div>
-      )}
+      <div className="relative overflow-hidden rounded-lg shadow-md">
+        <img
+          src={content.url}
+          alt={content.altText}
+          onError={() => setImageError(true)}
+          className="max-w-full h-auto mx-auto"
+        />
+      </div>
       {content.caption && (
         <figcaption className="mt-2 text-center text-sm text-gray-500 italic">{content.caption}</figcaption>
       )}

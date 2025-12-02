@@ -16,6 +16,9 @@ type UserResponse struct {
 	Role      valueobject.Role `json:"role"`
 	CreatedAt time.Time        `json:"created_at"`
 	UpdatedAt time.Time        `json:"updated_at"`
+	Email     string           `json:"email,omitempty"`
+	FirstName string           `json:"first_name,omitempty"`
+	LastName  string           `json:"last_name,omitempty"`
 }
 
 // FromUser converts a domain entity to a response DTO.
@@ -30,6 +33,24 @@ func FromUser(u *entity.User) *UserResponse {
 		Role:      u.Role,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
+	}
+}
+
+// FromUserWithIdentity converts a domain entity to a response DTO with identity data.
+func FromUserWithIdentity(u *entity.User, email, firstName, lastName string) *UserResponse {
+	if u == nil {
+		return nil
+	}
+	return &UserResponse{
+		ID:        u.ID,
+		KratosID:  u.KratosID,
+		CompanyID: u.CompanyID,
+		Role:      u.Role,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+		Email:     email,
+		FirstName: firstName,
+		LastName:  lastName,
 	}
 }
 
@@ -100,6 +121,7 @@ type TeamMemberResponse struct {
 	UserID    uuid.UUID            `json:"user_id"`
 	Role      valueobject.TeamRole `json:"role"`
 	CreatedAt time.Time            `json:"created_at"`
+	User      *UserResponse        `json:"user,omitempty"`
 }
 
 // FromTeamMember converts a domain entity to a response DTO.

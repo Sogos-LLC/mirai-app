@@ -52,12 +52,15 @@ export function useSetAPIKey() {
     mutate: async (apiKey: string) => {
       const request = create(SetAPIKeyRequestSchema, { apiKey });
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && (k.includes('getAISettings') || k.includes('getUsageStats'))
-          ),
-      });
+      // Invalidate AI settings query using the proper connect-query key
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: getAISettings, cardinality: undefined }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: getUsageStats, cardinality: undefined }),
+        }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,
@@ -77,12 +80,15 @@ export function useRemoveAPIKey() {
     mutate: async () => {
       const request = create(RemoveAPIKeyRequestSchema, {});
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && (k.includes('getAISettings') || k.includes('getUsageStats'))
-          ),
-      });
+      // Invalidate AI settings query using the proper connect-query key
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: getAISettings, cardinality: undefined }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: getUsageStats, cardinality: undefined }),
+        }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,

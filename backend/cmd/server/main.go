@@ -151,9 +151,9 @@ func main() {
 	// Initialize application services
 	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, pendingRegRepo, kratosClient, stripeClient, logger, cfg.FrontendURL, cfg.MarketingURL, cfg.BackendURL)
 	billingService := service.NewBillingService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
-	userService := service.NewUserService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
+	userService := service.NewUserService(userRepo, companyRepo, kratosClient, stripeClient, logger, cfg.FrontendURL)
 	companyService := service.NewCompanyService(userRepo, companyRepo, logger)
-	teamService := service.NewTeamService(userRepo, companyRepo, teamRepo, logger)
+	teamService := service.NewTeamService(userRepo, companyRepo, teamRepo, folderRepo, kratosClient, logger)
 	invitationService := service.NewInvitationService(userRepo, companyRepo, invitationRepo, stripeClient, emailClient, logger, cfg.FrontendURL)
 	courseService := service.NewCourseService(courseRepo, folderRepo, userRepo, tenantStorage, courseCache, logger)
 
@@ -161,7 +161,8 @@ func main() {
 	notificationService := service.NewNotificationService(userRepo, notificationRepo, kratosClient, emailClient, cfg.FrontendURL, logger)
 
 	// SME and Target Audience services
-	smeService := service.NewSMEService(userRepo, companyRepo, teamRepo, smeRepo, smeTaskRepo, smeSubmissionRepo, smeKnowledgeRepo, tenantStorage, notificationService, logger)
+	// Note: enhancer is nil initially, will be set when AI services are available
+	smeService := service.NewSMEService(userRepo, companyRepo, teamRepo, smeRepo, smeTaskRepo, smeSubmissionRepo, smeKnowledgeRepo, tenantStorage, notificationService, nil, logger)
 	targetAudienceService := service.NewTargetAudienceService(userRepo, targetAudienceRepo, logger)
 
 	// AI services (require encryptor)

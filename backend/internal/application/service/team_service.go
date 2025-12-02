@@ -16,6 +16,8 @@ type TeamService struct {
 	userRepo    repository.UserRepository
 	companyRepo repository.CompanyRepository
 	teamRepo    repository.TeamRepository
+	folderRepo  repository.FolderRepository
+	identity    service.IdentityProvider
 	logger      service.Logger
 }
 
@@ -24,12 +26,16 @@ func NewTeamService(
 	userRepo repository.UserRepository,
 	companyRepo repository.CompanyRepository,
 	teamRepo repository.TeamRepository,
+	folderRepo repository.FolderRepository,
+	identity service.IdentityProvider,
 	logger service.Logger,
 ) *TeamService {
 	return &TeamService{
 		userRepo:    userRepo,
 		companyRepo: companyRepo,
 		teamRepo:    teamRepo,
+		folderRepo:  folderRepo,
+		identity:    identity,
 		logger:      logger,
 	}
 }
@@ -96,6 +102,21 @@ func (s *TeamService) CreateTeam(ctx context.Context, kratosID uuid.UUID, req dt
 	if err := s.teamRepo.Create(ctx, team); err != nil {
 		log.Error("failed to create team", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Create a folder for the team
+	teamFolder := &entity.Folder{
+		TenantID: *user.TenantID,
+		Name:     req.Name, // Use team name as folder name
+		Type:     entity.FolderTypeTeam,
+		TeamID:   &team.ID,
+	}
+
+	if err := s.folderRepo.Create(ctx, teamFolder); err != nil {
+		log.Error("failed to create team folder", "error", err)
+		// Don't fail team creation if folder creation fails, but log it
+	} else {
+		log.Info("team folder created", "folderID", teamFolder.ID)
 	}
 
 	log.Info("team created", "teamID", team.ID)
@@ -221,7 +242,20 @@ func (s *TeamService) ListMembers(ctx context.Context, kratosID uuid.UUID, teamI
 
 	responses := make([]*dto.TeamMemberResponse, len(members))
 	for i, m := range members {
-		responses[i] = dto.FromTeamMember(m)
+		response := dto.FromTeamMember(m)
+
+		// Fetch user details from database and Kratos
+		memberUser, err := s.userRepo.GetByID(ctx, m.UserID)
+		if err == nil && memberUser != nil {
+			identity, err := s.identity.GetIdentity(ctx, memberUser.KratosID.String())
+			if err == nil && identity != nil {
+				response.User = dto.FromUserWithIdentity(memberUser, identity.Email, identity.FirstName, identity.LastName)
+			} else {
+				response.User = dto.FromUser(memberUser)
+			}
+		}
+
+		responses[i] = response
 	}
 	return responses, nil
 }
@@ -286,7 +320,17 @@ func (s *TeamService) AddMember(ctx context.Context, kratosID uuid.UUID, teamID 
 	}
 
 	log.Info("team member added")
-	return dto.FromTeamMember(member), nil
+
+	// Return response with user details
+	response := dto.FromTeamMember(member)
+	identity, err := s.identity.GetIdentity(ctx, targetUser.KratosID.String())
+	if err == nil && identity != nil {
+		response.User = dto.FromUserWithIdentity(targetUser, identity.Email, identity.FirstName, identity.LastName)
+	} else {
+		response.User = dto.FromUser(targetUser)
+	}
+
+	return response, nil
 }
 
 // RemoveMember removes a member from a team.

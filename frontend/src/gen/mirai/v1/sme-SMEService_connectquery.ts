@@ -115,3 +115,52 @@ export const getKnowledge = SMEService.method.getKnowledge;
  * @generated from rpc mirai.v1.SMEService.SearchKnowledge
  */
 export const searchKnowledge = SMEService.method.searchKnowledge;
+
+/**
+ * GetSubmission returns a specific submission by ID.
+ *
+ * @generated from rpc mirai.v1.SMEService.GetSubmission
+ */
+export const getSubmission = SMEService.method.getSubmission;
+
+/**
+ * ApproveSubmission approves content and creates knowledge chunks.
+ *
+ * @generated from rpc mirai.v1.SMEService.ApproveSubmission
+ */
+export const approveSubmission = SMEService.method.approveSubmission;
+
+/**
+ * RequestSubmissionChanges sends submission back to submitter with feedback.
+ *
+ * @generated from rpc mirai.v1.SMEService.RequestSubmissionChanges
+ */
+export const requestSubmissionChanges = SMEService.method.requestSubmissionChanges;
+
+/**
+ * EnhanceSubmissionContent uses AI to summarize or improve content.
+ *
+ * @generated from rpc mirai.v1.SMEService.EnhanceSubmissionContent
+ */
+export const enhanceSubmissionContent = SMEService.method.enhanceSubmissionContent;
+
+/**
+ * UpdateKnowledgeChunk updates a knowledge chunk's content.
+ *
+ * @generated from rpc mirai.v1.SMEService.UpdateKnowledgeChunk
+ */
+export const updateKnowledgeChunk = SMEService.method.updateKnowledgeChunk;
+
+/**
+ * DeleteKnowledgeChunk removes a knowledge chunk.
+ *
+ * @generated from rpc mirai.v1.SMEService.DeleteKnowledgeChunk
+ */
+export const deleteKnowledgeChunk = SMEService.method.deleteKnowledgeChunk;
+
+/**
+ * DeleteTask permanently removes a task.
+ *
+ * @generated from rpc mirai.v1.SMEService.DeleteTask
+ */
+export const deleteTask = SMEService.method.deleteTask;

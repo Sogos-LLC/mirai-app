@@ -190,14 +190,38 @@ export function GenerationProgressPanel({
             )}
           </div>
         ) : isGenerating ? (
-          <div className="space-y-4">
-            {/* Progress Bar */}
-            <div>
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
-                <span>{progressMessage || 'Processing...'}</span>
-                <span>{Math.round(progressPercent)}%</span>
+          <div className="space-y-6">
+            {/* Simple Spinner with Status */}
+            <div className="flex flex-col items-center py-8">
+              <div className="relative mb-6">
+                {/* Outer ring */}
+                <div className="w-20 h-20 rounded-full border-4 border-indigo-100" />
+                {/* Spinning indicator */}
+                <div className="absolute inset-0">
+                  <div className="w-20 h-20 border-4 border-transparent border-t-indigo-600 rounded-full animate-spin" />
+                </div>
+                {/* Progress percentage in center */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-semibold text-indigo-600">{Math.round(progressPercent)}%</span>
+                </div>
               </div>
-              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+
+              {/* Status Message */}
+              <div className="text-center">
+                <p className="text-lg font-medium text-gray-900">
+                  {progressMessage || (currentStep === 'generating-outline' ? 'Generating Outline...' : 'Generating Content...')}
+                </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  {currentStep === 'generating-outline'
+                    ? 'AI is analyzing your SME knowledge and creating a course structure'
+                    : 'AI is generating detailed lesson content based on the approved outline'}
+                </p>
+              </div>
+            </div>
+
+            {/* Minimal Progress Bar */}
+            <div className="px-4">
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${progressPercent}%` }}
@@ -205,60 +229,14 @@ export function GenerationProgressPanel({
               </div>
             </div>
 
-            {/* Job Details */}
-            {job && (
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Job Status</span>
-                  <span className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${getStatusColor(job.status)}`} />
-                    <span className="font-medium">{getStatusLabel(job.status)}</span>
-                  </span>
-                </div>
-                {job.tokensUsed > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Tokens Used</span>
-                    <span className="font-medium">{job.tokensUsed.toLocaleString()}</span>
-                  </div>
-                )}
-                {job.retryCount > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Retry Attempts</span>
-                    <span className="font-medium">
-                      {job.retryCount} / {job.maxRetries}
-                    </span>
-                  </div>
-                )}
+            {/* Compact Job Details (only show if retry) */}
+            {job && job.retryCount > 0 && (
+              <div className="flex justify-center">
+                <span className="text-xs text-gray-400">
+                  Retry attempt {job.retryCount} of {job.maxRetries}
+                </span>
               </div>
             )}
-
-            {/* Animated Icon */}
-            <div className="flex justify-center py-4">
-              <div className="relative">
-                <svg
-                  className="w-16 h-16 text-indigo-600 animate-pulse"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                </div>
-              </div>
-            </div>
-
-            <p className="text-center text-sm text-gray-500">
-              {currentStep === 'generating-outline'
-                ? 'AI is analyzing your SME knowledge and creating a course structure...'
-                : 'AI is generating detailed lesson content based on the approved outline...'}
-            </p>
           </div>
         ) : currentStep === 'complete' ? (
           <div className="text-center py-8">

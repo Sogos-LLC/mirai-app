@@ -23,12 +23,21 @@ enum SMEStatus {
 // SMETaskStatus represents the state of a delegated task.
 enum SMETaskStatus {
   SME_TASK_STATUS_UNSPECIFIED = 0;
-  SME_TASK_STATUS_PENDING = 1;        // Assigned, waiting for content
-  SME_TASK_STATUS_SUBMITTED = 2;      // Content submitted, awaiting ingestion
-  SME_TASK_STATUS_PROCESSING = 3;     // Gemini ingestion in progress
-  SME_TASK_STATUS_COMPLETED = 4;      // Successfully processed
-  SME_TASK_STATUS_FAILED = 5;         // Ingestion failed
-  SME_TASK_STATUS_CANCELLED = 6;      // Task cancelled
+  SME_TASK_STATUS_PENDING = 1;            // Assigned, waiting for content
+  SME_TASK_STATUS_SUBMITTED = 2;          // Content submitted (legacy)
+  SME_TASK_STATUS_PROCESSING = 3;         // Gemini ingestion in progress
+  SME_TASK_STATUS_COMPLETED = 4;          // Successfully processed
+  SME_TASK_STATUS_FAILED = 5;             // Ingestion failed
+  SME_TASK_STATUS_CANCELLED = 6;          // Task cancelled
+  SME_TASK_STATUS_AWAITING_REVIEW = 7;    // Content submitted, awaiting assigner review
+  SME_TASK_STATUS_CHANGES_REQUESTED = 8;  // Sent back to submitter for revision
+}
+
+// EnhanceType for AI content enhancement operations.
+enum EnhanceType {
+  ENHANCE_TYPE_UNSPECIFIED = 0;
+  ENHANCE_TYPE_SUMMARIZE = 1;   // Create a concise summary
+  ENHANCE_TYPE_IMPROVE = 2;     // Clean up, clarify, and structure
 }
 
 // ContentType for uploaded materials.
@@ -110,6 +119,13 @@ message SMETaskSubmission {
   string submitted_by_user_id = 11;
   google.protobuf.Timestamp submitted_at = 12;
   optional google.protobuf.Timestamp processed_at = 13;
+
+  // Review/approval fields
+  optional string reviewer_notes = 14;       // Feedback from reviewer
+  optional string approved_content = 15;     // Final approved text (may differ from original)
+  bool is_approved = 16;                     // Whether submission is approved
+  optional google.protobuf.Timestamp approved_at = 17;
+  optional string approved_by_user_id = 18;
 }
 
 // SMEKnowledgeChunk represents a unit of distilled knowledge.
@@ -175,6 +191,31 @@ service SMEService {
 
   // SearchKnowledge searches across SME knowledge.
   rpc SearchKnowledge(SearchKnowledgeRequest) returns (SearchKnowledgeResponse);
+
+  // === Submission Review & Approval ===
+
+  // GetSubmission returns a specific submission by ID.
+  rpc GetSubmission(GetSubmissionRequest) returns (GetSubmissionResponse);
+
+  // ApproveSubmission approves content and creates knowledge chunks.
+  rpc ApproveSubmission(ApproveSubmissionRequest) returns (ApproveSubmissionResponse);
+
+  // RequestSubmissionChanges sends submission back to submitter with feedback.
+  rpc RequestSubmissionChanges(RequestSubmissionChangesRequest) returns (RequestSubmissionChangesResponse);
+
+  // EnhanceSubmissionContent uses AI to summarize or improve content.
+  rpc EnhanceSubmissionContent(EnhanceSubmissionContentRequest) returns (EnhanceSubmissionContentResponse);
+
+  // === Knowledge CRUD ===
+
+  // UpdateKnowledgeChunk updates a knowledge chunk's content.
+  rpc UpdateKnowledgeChunk(UpdateKnowledgeChunkRequest) returns (UpdateKnowledgeChunkResponse);
+
+  // DeleteKnowledgeChunk removes a knowledge chunk.
+  rpc DeleteKnowledgeChunk(DeleteKnowledgeChunkRequest) returns (DeleteKnowledgeChunkResponse);
+
+  // DeleteTask permanently removes a task.
+  rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
 }
 
 // CreateSMERequest contains data for a new SME.
@@ -328,10 +369,11 @@ message GetUploadURLResponse {
 // SubmitContentRequest records a content submission.
 message SubmitContentRequest {
   string task_id = 1;
-  string file_name = 2;
-  string file_path = 3;           // S3 path from GetUploadURL
+  string file_name = 2;           // Optional for text submissions
+  string file_path = 3;           // S3 path from GetUploadURL (optional for text)
   ContentType content_type = 4;
-  int64 file_size_bytes = 5;
+  int64 file_size_bytes = 5;      // Optional for text submissions
+  optional string text_content = 6;  // Direct text content (for CONTENT_TYPE_TEXT)
 }
 
 // SubmitContentResponse contains the created submission.
@@ -371,3 +413,81 @@ message SearchKnowledgeRequest {
 message SearchKnowledgeResponse {
   repeated SMEKnowledgeChunk chunks = 1;
 }
+
+// === Submission Review & Approval Messages ===
+
+// GetSubmissionRequest requests a specific submission.
+message GetSubmissionRequest {
+  string submission_id = 1;
+}
+
+// GetSubmissionResponse contains the requested submission.
+message GetSubmissionResponse {
+  SMETaskSubmission submission = 1;
+}
+
+// ApproveSubmissionRequest approves a submission and creates knowledge.
+message ApproveSubmissionRequest {
+  string submission_id = 1;
+  string approved_content = 2;  // The final content to use (may be edited by reviewer)
+}
+
+// ApproveSubmissionResponse contains the approved submission and created knowledge.
+message ApproveSubmissionResponse {
+  SMETaskSubmission submission = 1;
+  repeated SMEKnowledgeChunk created_chunks = 2;
+}
+
+// RequestSubmissionChangesRequest sends submission back for revision.
+message RequestSubmissionChangesRequest {
+  string submission_id = 1;
+  string feedback = 2;  // What needs to change
+}
+
+// RequestSubmissionChangesResponse contains the updated submission.
+message RequestSubmissionChangesResponse {
+  SMETaskSubmission submission = 1;
+}
+
+// EnhanceSubmissionContentRequest requests AI enhancement of content.
+message EnhanceSubmissionContentRequest {
+  string submission_id = 1;
+  EnhanceType enhance_type = 2;
+}
+
+// EnhanceSubmissionContentResponse contains enhanced content.
+message EnhanceSubmissionContentResponse {
+  string enhanced_content = 1;
+  string original_content = 2;
+}
+
+// === Knowledge CRUD Messages ===
+
+// UpdateKnowledgeChunkRequest updates a knowledge chunk.
+message UpdateKnowledgeChunkRequest {
+  string chunk_id = 1;
+  string content = 2;
+  optional string topic = 3;
+  repeated string keywords = 4;
+}
+
+// UpdateKnowledgeChunkResponse contains the updated chunk.
+message UpdateKnowledgeChunkResponse {
+  SMEKnowledgeChunk chunk = 1;
+}
+
+// DeleteKnowledgeChunkRequest deletes a knowledge chunk.
+message DeleteKnowledgeChunkRequest {
+  string chunk_id = 1;
+}
+
+// DeleteKnowledgeChunkResponse confirms deletion.
+message DeleteKnowledgeChunkResponse {}
+
+// DeleteTaskRequest permanently deletes a task.
+message DeleteTaskRequest {
+  string task_id = 1;
+}
+
+// DeleteTaskResponse confirms task deletion.
+message DeleteTaskResponse {}

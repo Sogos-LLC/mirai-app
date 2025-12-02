@@ -309,6 +309,7 @@ func teamMemberToProto(m *dto.TeamMemberResponse) *v1.TeamMember {
 		UserId:    m.UserID.String(),
 		Role:      teamRoleToProto(m.Role),
 		CreatedAt: timestamppb.New(m.CreatedAt),
+		User:      userToProto(m.User),
 	}
 }
 

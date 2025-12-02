@@ -16,6 +16,7 @@ import (
 type UserService struct {
 	userRepo    repository.UserRepository
 	companyRepo repository.CompanyRepository
+	identity    service.IdentityProvider
 	payments    service.PaymentProvider
 	logger      service.Logger
 	frontendURL string
@@ -25,6 +26,7 @@ type UserService struct {
 func NewUserService(
 	userRepo repository.UserRepository,
 	companyRepo repository.CompanyRepository,
+	identity service.IdentityProvider,
 	payments service.PaymentProvider,
 	logger service.Logger,
 	frontendURL string,
@@ -32,6 +34,7 @@ func NewUserService(
 	return &UserService{
 		userRepo:    userRepo,
 		companyRepo: companyRepo,
+		identity:    identity,
 		payments:    payments,
 		logger:      logger,
 		frontendURL: frontendURL,
@@ -152,7 +155,18 @@ func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*dto.UserR
 	if user == nil {
 		return nil, domainerrors.ErrUserNotFound
 	}
-	return dto.FromUser(user), nil
+
+	// Fetch identity data from Kratos
+	identity, err := s.identity.GetIdentity(ctx, user.KratosID.String())
+	if err != nil {
+		s.logger.Warn("failed to get identity from Kratos", "kratosID", user.KratosID, "error", err)
+		return dto.FromUser(user), nil
+	}
+	if identity == nil {
+		return dto.FromUser(user), nil
+	}
+
+	return dto.FromUserWithIdentity(user, identity.Email, identity.FirstName, identity.LastName), nil
 }
 
 // ListUsersByCompany retrieves all users in a company.
@@ -174,7 +188,18 @@ func (s *UserService) ListUsersByCompany(ctx context.Context, kratosID uuid.UUID
 
 	responses := make([]*dto.UserResponse, len(users))
 	for i, u := range users {
-		responses[i] = dto.FromUser(u)
+		// Fetch identity data from Kratos for each user
+		identity, err := s.identity.GetIdentity(ctx, u.KratosID.String())
+		if err != nil {
+			s.logger.Warn("failed to get identity from Kratos", "kratosID", u.KratosID, "error", err)
+			responses[i] = dto.FromUser(u)
+			continue
+		}
+		if identity == nil {
+			responses[i] = dto.FromUser(u)
+			continue
+		}
+		responses[i] = dto.FromUserWithIdentity(u, identity.Email, identity.FirstName, identity.LastName)
 	}
 	return responses, nil
 }

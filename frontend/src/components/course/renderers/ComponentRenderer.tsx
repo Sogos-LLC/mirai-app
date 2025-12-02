@@ -1,14 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type {
-  LessonComponent,
-  LessonComponentType,
-  TextContent,
-  HeadingContent,
-  ImageContent,
-  QuizContent,
-} from '@/gen/mirai/v1/ai_generation_pb';
+import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
 import { TextRenderer } from './TextRenderer';
 import { HeadingRenderer } from './HeadingRenderer';
 import { ImageRenderer } from './ImageRenderer';
@@ -22,6 +15,36 @@ const COMPONENT_TYPES = {
   IMAGE: 3,
   QUIZ: 4,
 } as const;
+
+// Content types matching the new Gemini schema
+interface TextContent {
+  html: string;
+  plaintext: string;
+}
+
+interface HeadingContent {
+  level: number;
+  text: string;
+}
+
+interface ImageContent {
+  imageDescription: string;
+  altText: string;
+  caption?: string;
+}
+
+interface QuizOption {
+  id: string;
+  text: string;
+}
+
+interface QuizContent {
+  question: string;
+  questionType: string;
+  options: QuizOption[];
+  correctAnswerId: string;
+  explanation: string;
+}
 
 interface ComponentRendererProps {
   component: LessonComponent;
@@ -40,8 +63,15 @@ function parseContent<T>(contentJson: string): T | null {
   }
 }
 
-function stringifyContent<T>(content: T): string {
-  return JSON.stringify(content);
+// Transform snake_case quiz JSON to camelCase
+function normalizeQuizContent(raw: Record<string, unknown>): QuizContent {
+  return {
+    question: (raw.question as string) || '',
+    questionType: (raw.questionType as string) || (raw.question_type as string) || 'multiple_choice',
+    options: (raw.options as QuizOption[]) || [],
+    correctAnswerId: (raw.correctAnswerId as string) || (raw.correct_answer_id as string) || '',
+    explanation: (raw.explanation as string) || '',
+  };
 }
 
 export function ComponentRenderer({
@@ -53,11 +83,11 @@ export function ComponentRenderer({
   onQuizAnswer,
 }: ComponentRendererProps) {
   const content = useMemo(() => {
-    return parseContent(component.contentJson);
+    return parseContent<Record<string, unknown>>(component.contentJson);
   }, [component.contentJson]);
 
   const handleUpdate = (newContent: unknown) => {
-    onUpdate?.(stringifyContent(newContent));
+    onUpdate?.(JSON.stringify(newContent));
   };
 
   // Wrapper for selectable/editable state
@@ -89,7 +119,7 @@ export function ComponentRenderer({
 
   // Render based on component type
   switch (component.type) {
-    case COMPONENT_TYPES.TEXT:
+    case COMPONENT_TYPES.TEXT: {
       const textContent = content as TextContent | null;
       if (!textContent) {
         return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid text content</div>;
@@ -103,8 +133,9 @@ export function ComponentRenderer({
           />
         </Wrapper>
       );
+    }
 
-    case COMPONENT_TYPES.HEADING:
+    case COMPONENT_TYPES.HEADING: {
       const headingContent = content as HeadingContent | null;
       if (!headingContent) {
         return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid heading content</div>;
@@ -118,8 +149,9 @@ export function ComponentRenderer({
           />
         </Wrapper>
       );
+    }
 
-    case COMPONENT_TYPES.IMAGE:
+    case COMPONENT_TYPES.IMAGE: {
       const imageContent = content as ImageContent | null;
       if (!imageContent) {
         return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid image content</div>;
@@ -133,12 +165,13 @@ export function ComponentRenderer({
           />
         </Wrapper>
       );
+    }
 
-    case COMPONENT_TYPES.QUIZ:
-      const quizContent = content as QuizContent | null;
-      if (!quizContent) {
+    case COMPONENT_TYPES.QUIZ: {
+      if (!content) {
         return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid quiz content</div>;
       }
+      const quizContent = normalizeQuizContent(content);
       return (
         <Wrapper>
           <QuizRenderer
@@ -149,6 +182,7 @@ export function ComponentRenderer({
           />
         </Wrapper>
       );
+    }
 
     default:
       return (
@@ -162,7 +196,7 @@ export function ComponentRenderer({
 /**
  * Get the display name for a component type
  */
-export function getComponentTypeName(type: LessonComponentType): string {
+export function getComponentTypeName(type: number): string {
   const names: Record<number, string> = {
     [COMPONENT_TYPES.UNSPECIFIED]: 'Unknown',
     [COMPONENT_TYPES.TEXT]: 'Text',
@@ -176,13 +210,13 @@ export function getComponentTypeName(type: LessonComponentType): string {
 /**
  * Get an icon for a component type
  */
-export function getComponentTypeIcon(type: LessonComponentType): string {
+export function getComponentTypeIcon(type: number): string {
   const icons: Record<number, string> = {
-    [COMPONENT_TYPES.UNSPECIFIED]: '❓',
-    [COMPONENT_TYPES.TEXT]: '📝',
-    [COMPONENT_TYPES.HEADING]: '📌',
-    [COMPONENT_TYPES.IMAGE]: '🖼️',
-    [COMPONENT_TYPES.QUIZ]: '✅',
+    [COMPONENT_TYPES.UNSPECIFIED]: '?',
+    [COMPONENT_TYPES.TEXT]: 'T',
+    [COMPONENT_TYPES.HEADING]: 'H',
+    [COMPONENT_TYPES.IMAGE]: 'I',
+    [COMPONENT_TYPES.QUIZ]: 'Q',
   };
-  return icons[type] || '❓';
+  return icons[type] || '?';
 }

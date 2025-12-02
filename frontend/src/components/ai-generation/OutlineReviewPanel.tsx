@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { CourseOutline, OutlineSection, OutlineLesson } from '@/gen/mirai/v1/ai_generation_pb';
+import { OutlineEditor } from './OutlineEditor';
 
 // Approval status constants from proto
 const APPROVAL_STATUS = {
@@ -80,44 +81,6 @@ export function OutlineReviewPanel({
       setShowRejectModal(false);
       setRejectReason('');
     }
-  };
-
-  const updateSectionTitle = (sectionId: string, title: string) => {
-    setEditedSections((prev) =>
-      prev.map((s) => (s.id === sectionId ? { ...s, title } : s))
-    );
-  };
-
-  const updateSectionDescription = (sectionId: string, description: string) => {
-    setEditedSections((prev) =>
-      prev.map((s) => (s.id === sectionId ? { ...s, description } : s))
-    );
-  };
-
-  const updateLessonTitle = (sectionId: string, lessonId: string, title: string) => {
-    setEditedSections((prev) =>
-      prev.map((s) =>
-        s.id === sectionId
-          ? {
-              ...s,
-              lessons: s.lessons.map((l) => (l.id === lessonId ? { ...l, title } : l)),
-            }
-          : s
-      )
-    );
-  };
-
-  const updateLessonDescription = (sectionId: string, lessonId: string, description: string) => {
-    setEditedSections((prev) =>
-      prev.map((s) =>
-        s.id === sectionId
-          ? {
-              ...s,
-              lessons: s.lessons.map((l) => (l.id === lessonId ? { ...l, description } : l)),
-            }
-          : s
-      )
-    );
   };
 
   const getApprovalStatusBadge = () => {
@@ -207,40 +170,35 @@ export function OutlineReviewPanel({
 
       {/* Outline Content */}
       <div className="p-6 max-h-[500px] overflow-y-auto">
-        <div className="space-y-4">
-          {sectionsToDisplay.map((section, sectionIndex) => {
-            const isExpanded = expandedSections.has(section.id);
+        {isEditing ? (
+          <OutlineEditor
+            sections={editedSections}
+            onChange={setEditedSections}
+          />
+        ) : (
+          <div className="space-y-4">
+            {sectionsToDisplay.map((section, sectionIndex) => {
+              const isExpanded = expandedSections.has(section.id);
 
-            return (
-              <div key={section.id} className="border rounded-lg overflow-hidden">
-                {/* Section Header */}
-                <div
-                  className={`
-                    flex items-center justify-between p-4 cursor-pointer
-                    ${isExpanded ? 'bg-indigo-50 border-b' : 'bg-gray-50 hover:bg-gray-100'}
-                  `}
-                  onClick={() => !isEditing && toggleSection(section.id)}
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm font-medium">
-                      {sectionIndex + 1}
-                    </span>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={section.title}
-                        onChange={(e) => updateSectionTitle(section.id, e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex-1 px-2 py-1 border rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    ) : (
+              return (
+                <div key={section.id} className="border rounded-lg overflow-hidden">
+                  {/* Section Header */}
+                  <div
+                    className={`
+                      flex items-center justify-between p-4 cursor-pointer
+                      ${isExpanded ? 'bg-indigo-50 border-b' : 'bg-gray-50 hover:bg-gray-100'}
+                    `}
+                    onClick={() => toggleSection(section.id)}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm font-medium">
+                        {sectionIndex + 1}
+                      </span>
                       <div>
                         <h3 className="font-medium text-gray-900">{section.title}</h3>
                         <p className="text-sm text-gray-500">{section.lessons.length} lessons</p>
                       </div>
-                    )}
-                  </div>
-                  {!isEditing && (
+                    </div>
                     <svg
                       className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                       fill="none"
@@ -249,81 +207,47 @@ export function OutlineReviewPanel({
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
-                  )}
-                </div>
-
-                {/* Section Description (editing mode) */}
-                {isEditing && (
-                  <div className="px-4 pb-2 bg-indigo-50">
-                    <label className="block text-xs text-gray-500 mb-1">Section Description</label>
-                    <textarea
-                      value={section.description}
-                      onChange={(e) => updateSectionDescription(section.id, e.target.value)}
-                      className="w-full px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      rows={2}
-                    />
                   </div>
-                )}
 
-                {/* Lessons List */}
-                {(isExpanded || isEditing) && (
-                  <div className="divide-y divide-gray-100">
-                    {section.lessons.map((lesson, lessonIndex) => (
-                      <div key={lesson.id} className="p-4 hover:bg-gray-50">
-                        <div className="flex items-start gap-3">
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center">
-                            {sectionIndex + 1}.{lessonIndex + 1}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            {isEditing ? (
-                              <div className="space-y-2">
-                                <input
-                                  type="text"
-                                  value={lesson.title}
-                                  onChange={(e) => updateLessonTitle(section.id, lesson.id, e.target.value)}
-                                  className="w-full px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                  placeholder="Lesson title"
-                                />
-                                <textarea
-                                  value={lesson.description}
-                                  onChange={(e) => updateLessonDescription(section.id, lesson.id, e.target.value)}
-                                  className="w-full px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                  rows={2}
-                                  placeholder="Lesson description"
-                                />
-                              </div>
-                            ) : (
-                              <>
-                                <h4 className="font-medium text-gray-900">{lesson.title}</h4>
-                                <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{lesson.description}</p>
-                                <div className="flex items-center gap-3 mt-2">
+                  {/* Lessons List */}
+                  {isExpanded && (
+                    <div className="divide-y divide-gray-100">
+                      {section.lessons.map((lesson, lessonIndex) => (
+                        <div key={lesson.id} className="p-4 hover:bg-gray-50">
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center">
+                              {sectionIndex + 1}.{lessonIndex + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900">{lesson.title}</h4>
+                              <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{lesson.description}</p>
+                              <div className="flex items-center gap-3 mt-2">
+                                <span className="inline-flex items-center text-xs text-gray-400">
+                                  <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  {lesson.estimatedDurationMinutes} min
+                                </span>
+                                {lesson.learningObjectives.length > 0 && (
                                   <span className="inline-flex items-center text-xs text-gray-400">
                                     <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                    {lesson.estimatedDurationMinutes} min
+                                    {lesson.learningObjectives.length} objectives
                                   </span>
-                                  {lesson.learningObjectives.length > 0 && (
-                                    <span className="inline-flex items-center text-xs text-gray-400">
-                                      <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      {lesson.learningObjectives.length} objectives
-                                    </span>
-                                  )}
-                                </div>
-                              </>
-                            )}
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Footer Actions */}

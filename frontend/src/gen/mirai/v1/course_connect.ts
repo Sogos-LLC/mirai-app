@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateCourseRequest, CreateCourseResponse, DeleteCourseRequest, DeleteCourseResponse, DownloadExportRequest, DownloadExportResponse, ExportCourseRequest, ExportCourseResponse, GetCourseRequest, GetCourseResponse, GetExportStatusRequest, GetExportStatusResponse, GetFolderHierarchyRequest, GetFolderHierarchyResponse, GetLibraryRequest, GetLibraryResponse, ListCoursesRequest, ListCoursesResponse, ListExportsRequest, ListExportsResponse, UpdateCourseRequest, UpdateCourseResponse } from "./course_pb.js";
+import { CreateCourseRequest, CreateCourseResponse, CreateFolderRequest, CreateFolderResponse, DeleteCourseRequest, DeleteCourseResponse, DeleteFolderRequest, DeleteFolderResponse, DownloadExportRequest, DownloadExportResponse, ExportCourseRequest, ExportCourseResponse, GetCourseRequest, GetCourseResponse, GetExportStatusRequest, GetExportStatusResponse, GetFolderHierarchyRequest, GetFolderHierarchyResponse, GetLibraryRequest, GetLibraryResponse, ListCoursesRequest, ListCoursesResponse, ListExportsRequest, ListExportsResponse, UpdateCourseRequest, UpdateCourseResponse } from "./course_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -89,6 +89,28 @@ export const CourseService = {
       name: "GetLibrary",
       I: GetLibraryRequest,
       O: GetLibraryResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * CreateFolder creates a new folder in the library hierarchy (max 3 levels deep).
+     *
+     * @generated from rpc mirai.v1.CourseService.CreateFolder
+     */
+    createFolder: {
+      name: "CreateFolder",
+      I: CreateFolderRequest,
+      O: CreateFolderResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * DeleteFolder deletes an empty folder from the library.
+     *
+     * @generated from rpc mirai.v1.CourseService.DeleteFolder
+     */
+    deleteFolder: {
+      name: "DeleteFolder",
+      I: DeleteFolderRequest,
+      O: DeleteFolderResponse,
       kind: MethodKind.Unary,
     },
     /**

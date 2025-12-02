@@ -372,8 +372,48 @@ func (s *SMEServiceServer) UpdateTask(
 	ctx context.Context,
 	req *connect.Request[v1.UpdateTaskRequest],
 ) (*connect.Response[v1.UpdateTaskResponse], error) {
-	// TODO: Implement when needed
-	return nil, connect.NewError(connect.CodeUnimplemented, errUnauthenticated)
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	taskID, err := parseUUID(req.Msg.TaskId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	var dueDate *time.Time
+	if req.Msg.DueDate != nil {
+		t := req.Msg.DueDate.AsTime()
+		dueDate = &t
+	}
+
+	var expectedContentType *valueobject.ContentType
+	if req.Msg.ExpectedContentType != nil && *req.Msg.ExpectedContentType != v1.ContentType_CONTENT_TYPE_UNSPECIFIED {
+		ct := protoToContentType(*req.Msg.ExpectedContentType)
+		expectedContentType = &ct
+	}
+
+	updateReq := service.UpdateTaskRequest{
+		Title:               req.Msg.Title,
+		Description:         req.Msg.Description,
+		ExpectedContentType: expectedContentType,
+		DueDate:             dueDate,
+	}
+
+	task, err := s.smeService.UpdateTask(ctx, kratosID, taskID, updateReq)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.UpdateTaskResponse{
+		Task: taskToProto(task),
+	}), nil
 }
 
 // CancelTask cancels a pending task.
@@ -469,6 +509,7 @@ func (s *SMEServiceServer) SubmitContent(
 		FilePath:      req.Msg.FilePath,
 		ContentType:   protoToContentType(req.Msg.ContentType),
 		FileSizeBytes: req.Msg.FileSizeBytes,
+		TextContent:   req.Msg.TextContent,
 	}
 
 	submission, err := s.smeService.SubmitContent(ctx, kratosID, submitReq)
@@ -560,6 +601,239 @@ func (s *SMEServiceServer) SearchKnowledge(
 	return nil, connect.NewError(connect.CodeUnimplemented, errUnauthenticated)
 }
 
+// GetSubmission returns a specific submission by ID.
+func (s *SMEServiceServer) GetSubmission(
+	ctx context.Context,
+	req *connect.Request[v1.GetSubmissionRequest],
+) (*connect.Response[v1.GetSubmissionResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	submissionID, err := parseUUID(req.Msg.SubmissionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	submission, err := s.smeService.GetSubmission(ctx, kratosID, submissionID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.GetSubmissionResponse{
+		Submission: submissionToProto(submission),
+	}), nil
+}
+
+// ApproveSubmission approves content and creates knowledge chunks.
+func (s *SMEServiceServer) ApproveSubmission(
+	ctx context.Context,
+	req *connect.Request[v1.ApproveSubmissionRequest],
+) (*connect.Response[v1.ApproveSubmissionResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	submissionID, err := parseUUID(req.Msg.SubmissionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	approveReq := service.ApproveSubmissionRequest{
+		SubmissionID:    submissionID,
+		ApprovedContent: req.Msg.ApprovedContent,
+	}
+
+	submission, chunks, err := s.smeService.ApproveSubmission(ctx, kratosID, approveReq)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	protoChunks := make([]*v1.SMEKnowledgeChunk, len(chunks))
+	for i, chunk := range chunks {
+		protoChunks[i] = knowledgeChunkToProto(chunk)
+	}
+
+	return connect.NewResponse(&v1.ApproveSubmissionResponse{
+		Submission:    submissionToProto(submission),
+		CreatedChunks: protoChunks,
+	}), nil
+}
+
+// RequestSubmissionChanges sends submission back to submitter with feedback.
+func (s *SMEServiceServer) RequestSubmissionChanges(
+	ctx context.Context,
+	req *connect.Request[v1.RequestSubmissionChangesRequest],
+) (*connect.Response[v1.RequestSubmissionChangesResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	submissionID, err := parseUUID(req.Msg.SubmissionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	changesReq := service.RequestSubmissionChangesRequest{
+		SubmissionID: submissionID,
+		Feedback:     req.Msg.Feedback,
+	}
+
+	submission, err := s.smeService.RequestSubmissionChanges(ctx, kratosID, changesReq)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.RequestSubmissionChangesResponse{
+		Submission: submissionToProto(submission),
+	}), nil
+}
+
+// EnhanceSubmissionContent uses AI to summarize or improve text content.
+func (s *SMEServiceServer) EnhanceSubmissionContent(
+	ctx context.Context,
+	req *connect.Request[v1.EnhanceSubmissionContentRequest],
+) (*connect.Response[v1.EnhanceSubmissionContentResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	submissionID, err := parseUUID(req.Msg.SubmissionId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	enhanceReq := service.EnhanceSubmissionContentRequest{
+		SubmissionID: submissionID,
+		EnhanceType:  protoToEnhanceType(req.Msg.EnhanceType),
+	}
+
+	result, err := s.smeService.EnhanceSubmissionContent(ctx, kratosID, enhanceReq)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.EnhanceSubmissionContentResponse{
+		EnhancedContent: result.EnhancedContent,
+		OriginalContent: result.OriginalContent,
+	}), nil
+}
+
+// UpdateKnowledgeChunk updates a knowledge chunk's content.
+func (s *SMEServiceServer) UpdateKnowledgeChunk(
+	ctx context.Context,
+	req *connect.Request[v1.UpdateKnowledgeChunkRequest],
+) (*connect.Response[v1.UpdateKnowledgeChunkResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	chunkID, err := parseUUID(req.Msg.ChunkId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	updateReq := service.UpdateKnowledgeChunkRequest{
+		ChunkID:  chunkID,
+		Content:  req.Msg.Content,
+		Topic:    req.Msg.Topic,
+		Keywords: req.Msg.Keywords,
+	}
+
+	chunk, err := s.smeService.UpdateKnowledgeChunk(ctx, kratosID, updateReq)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.UpdateKnowledgeChunkResponse{
+		Chunk: knowledgeChunkToProto(chunk),
+	}), nil
+}
+
+// DeleteKnowledgeChunk removes a knowledge chunk.
+func (s *SMEServiceServer) DeleteKnowledgeChunk(
+	ctx context.Context,
+	req *connect.Request[v1.DeleteKnowledgeChunkRequest],
+) (*connect.Response[v1.DeleteKnowledgeChunkResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	chunkID, err := parseUUID(req.Msg.ChunkId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	if err := s.smeService.DeleteKnowledgeChunk(ctx, kratosID, chunkID); err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.DeleteKnowledgeChunkResponse{}), nil
+}
+
+// DeleteTask permanently removes a task.
+func (s *SMEServiceServer) DeleteTask(
+	ctx context.Context,
+	req *connect.Request[v1.DeleteTaskRequest],
+) (*connect.Response[v1.DeleteTaskResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	taskID, err := parseUUID(req.Msg.TaskId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	if err := s.smeService.DeleteTask(ctx, kratosID, taskID); err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.DeleteTaskResponse{}), nil
+}
+
 // Helper functions for proto conversion
 
 func smeToProto(sme *entity.SubjectMatterExpert) *v1.SubjectMatterExpert {
@@ -645,9 +919,18 @@ func submissionToProto(sub *entity.SMETaskSubmission) *v1.SMETaskSubmission {
 		return nil
 	}
 
-	var processedAt *timestamppb.Timestamp
+	var processedAt, approvedAt *timestamppb.Timestamp
 	if sub.ProcessedAt != nil {
 		processedAt = timestamppb.New(*sub.ProcessedAt)
+	}
+	if sub.ApprovedAt != nil {
+		approvedAt = timestamppb.New(*sub.ApprovedAt)
+	}
+
+	var approvedByUserID *string
+	if sub.ApprovedByUserID != nil {
+		s := sub.ApprovedByUserID.String()
+		approvedByUserID = &s
 	}
 
 	return &v1.SMETaskSubmission{
@@ -664,6 +947,11 @@ func submissionToProto(sub *entity.SMETaskSubmission) *v1.SMETaskSubmission {
 		SubmittedByUserId: sub.SubmittedByUserID.String(),
 		SubmittedAt:       timestamppb.New(sub.SubmittedAt),
 		ProcessedAt:       processedAt,
+		ReviewerNotes:     sub.ReviewerNotes,
+		ApprovedContent:   sub.ApprovedContent,
+		IsApproved:        sub.IsApproved,
+		ApprovedAt:        approvedAt,
+		ApprovedByUserId:  approvedByUserID,
 	}
 }
 
@@ -741,6 +1029,10 @@ func taskStatusToProto(status valueobject.SMETaskStatus) v1.SMETaskStatus {
 		return v1.SMETaskStatus_SME_TASK_STATUS_FAILED
 	case valueobject.SMETaskStatusCancelled:
 		return v1.SMETaskStatus_SME_TASK_STATUS_CANCELLED
+	case valueobject.SMETaskStatusAwaitingReview:
+		return v1.SMETaskStatus_SME_TASK_STATUS_AWAITING_REVIEW
+	case valueobject.SMETaskStatusChangesRequested:
+		return v1.SMETaskStatus_SME_TASK_STATUS_CHANGES_REQUESTED
 	default:
 		return v1.SMETaskStatus_SME_TASK_STATUS_UNSPECIFIED
 	}
@@ -781,5 +1073,16 @@ func protoToContentType(ct v1.ContentType) valueobject.ContentType {
 		return valueobject.ContentTypeText
 	default:
 		return valueobject.ContentTypeDocument
+	}
+}
+
+func protoToEnhanceType(et v1.EnhanceType) valueobject.EnhanceType {
+	switch et {
+	case v1.EnhanceType_ENHANCE_TYPE_SUMMARIZE:
+		return valueobject.EnhanceTypeSummarize
+	case v1.EnhanceType_ENHANCE_TYPE_IMPROVE:
+		return valueobject.EnhanceTypeImprove
+	default:
+		return valueobject.EnhanceTypeSummarize
 	}
 }

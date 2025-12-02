@@ -68,6 +68,26 @@ const (
 	// SMEServiceSearchKnowledgeProcedure is the fully-qualified name of the SMEService's
 	// SearchKnowledge RPC.
 	SMEServiceSearchKnowledgeProcedure = "/mirai.v1.SMEService/SearchKnowledge"
+	// SMEServiceGetSubmissionProcedure is the fully-qualified name of the SMEService's GetSubmission
+	// RPC.
+	SMEServiceGetSubmissionProcedure = "/mirai.v1.SMEService/GetSubmission"
+	// SMEServiceApproveSubmissionProcedure is the fully-qualified name of the SMEService's
+	// ApproveSubmission RPC.
+	SMEServiceApproveSubmissionProcedure = "/mirai.v1.SMEService/ApproveSubmission"
+	// SMEServiceRequestSubmissionChangesProcedure is the fully-qualified name of the SMEService's
+	// RequestSubmissionChanges RPC.
+	SMEServiceRequestSubmissionChangesProcedure = "/mirai.v1.SMEService/RequestSubmissionChanges"
+	// SMEServiceEnhanceSubmissionContentProcedure is the fully-qualified name of the SMEService's
+	// EnhanceSubmissionContent RPC.
+	SMEServiceEnhanceSubmissionContentProcedure = "/mirai.v1.SMEService/EnhanceSubmissionContent"
+	// SMEServiceUpdateKnowledgeChunkProcedure is the fully-qualified name of the SMEService's
+	// UpdateKnowledgeChunk RPC.
+	SMEServiceUpdateKnowledgeChunkProcedure = "/mirai.v1.SMEService/UpdateKnowledgeChunk"
+	// SMEServiceDeleteKnowledgeChunkProcedure is the fully-qualified name of the SMEService's
+	// DeleteKnowledgeChunk RPC.
+	SMEServiceDeleteKnowledgeChunkProcedure = "/mirai.v1.SMEService/DeleteKnowledgeChunk"
+	// SMEServiceDeleteTaskProcedure is the fully-qualified name of the SMEService's DeleteTask RPC.
+	SMEServiceDeleteTaskProcedure = "/mirai.v1.SMEService/DeleteTask"
 )
 
 // SMEServiceClient is a client for the mirai.v1.SMEService service.
@@ -104,6 +124,20 @@ type SMEServiceClient interface {
 	GetKnowledge(context.Context, *connect.Request[v1.GetKnowledgeRequest]) (*connect.Response[v1.GetKnowledgeResponse], error)
 	// SearchKnowledge searches across SME knowledge.
 	SearchKnowledge(context.Context, *connect.Request[v1.SearchKnowledgeRequest]) (*connect.Response[v1.SearchKnowledgeResponse], error)
+	// GetSubmission returns a specific submission by ID.
+	GetSubmission(context.Context, *connect.Request[v1.GetSubmissionRequest]) (*connect.Response[v1.GetSubmissionResponse], error)
+	// ApproveSubmission approves content and creates knowledge chunks.
+	ApproveSubmission(context.Context, *connect.Request[v1.ApproveSubmissionRequest]) (*connect.Response[v1.ApproveSubmissionResponse], error)
+	// RequestSubmissionChanges sends submission back to submitter with feedback.
+	RequestSubmissionChanges(context.Context, *connect.Request[v1.RequestSubmissionChangesRequest]) (*connect.Response[v1.RequestSubmissionChangesResponse], error)
+	// EnhanceSubmissionContent uses AI to summarize or improve content.
+	EnhanceSubmissionContent(context.Context, *connect.Request[v1.EnhanceSubmissionContentRequest]) (*connect.Response[v1.EnhanceSubmissionContentResponse], error)
+	// UpdateKnowledgeChunk updates a knowledge chunk's content.
+	UpdateKnowledgeChunk(context.Context, *connect.Request[v1.UpdateKnowledgeChunkRequest]) (*connect.Response[v1.UpdateKnowledgeChunkResponse], error)
+	// DeleteKnowledgeChunk removes a knowledge chunk.
+	DeleteKnowledgeChunk(context.Context, *connect.Request[v1.DeleteKnowledgeChunkRequest]) (*connect.Response[v1.DeleteKnowledgeChunkResponse], error)
+	// DeleteTask permanently removes a task.
+	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
 }
 
 // NewSMEServiceClient constructs a client for the mirai.v1.SMEService service. By default, it uses
@@ -213,27 +247,76 @@ func NewSMEServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(sMEServiceMethods.ByName("SearchKnowledge")),
 			connect.WithClientOptions(opts...),
 		),
+		getSubmission: connect.NewClient[v1.GetSubmissionRequest, v1.GetSubmissionResponse](
+			httpClient,
+			baseURL+SMEServiceGetSubmissionProcedure,
+			connect.WithSchema(sMEServiceMethods.ByName("GetSubmission")),
+			connect.WithClientOptions(opts...),
+		),
+		approveSubmission: connect.NewClient[v1.ApproveSubmissionRequest, v1.ApproveSubmissionResponse](
+			httpClient,
+			baseURL+SMEServiceApproveSubmissionProcedure,
+			connect.WithSchema(sMEServiceMethods.ByName("ApproveSubmission")),
+			connect.WithClientOptions(opts...),
+		),
+		requestSubmissionChanges: connect.NewClient[v1.RequestSubmissionChangesRequest, v1.RequestSubmissionChangesResponse](
+			httpClient,
+			baseURL+SMEServiceRequestSubmissionChangesProcedure,
+			connect.WithSchema(sMEServiceMethods.ByName("RequestSubmissionChanges")),
+			connect.WithClientOptions(opts...),
+		),
+		enhanceSubmissionContent: connect.NewClient[v1.EnhanceSubmissionContentRequest, v1.EnhanceSubmissionContentResponse](
+			httpClient,
+			baseURL+SMEServiceEnhanceSubmissionContentProcedure,
+			connect.WithSchema(sMEServiceMethods.ByName("EnhanceSubmissionContent")),
+			connect.WithClientOptions(opts...),
+		),
+		updateKnowledgeChunk: connect.NewClient[v1.UpdateKnowledgeChunkRequest, v1.UpdateKnowledgeChunkResponse](
+			httpClient,
+			baseURL+SMEServiceUpdateKnowledgeChunkProcedure,
+			connect.WithSchema(sMEServiceMethods.ByName("UpdateKnowledgeChunk")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteKnowledgeChunk: connect.NewClient[v1.DeleteKnowledgeChunkRequest, v1.DeleteKnowledgeChunkResponse](
+			httpClient,
+			baseURL+SMEServiceDeleteKnowledgeChunkProcedure,
+			connect.WithSchema(sMEServiceMethods.ByName("DeleteKnowledgeChunk")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteTask: connect.NewClient[v1.DeleteTaskRequest, v1.DeleteTaskResponse](
+			httpClient,
+			baseURL+SMEServiceDeleteTaskProcedure,
+			connect.WithSchema(sMEServiceMethods.ByName("DeleteTask")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // sMEServiceClient implements SMEServiceClient.
 type sMEServiceClient struct {
-	createSME       *connect.Client[v1.CreateSMERequest, v1.CreateSMEResponse]
-	getSME          *connect.Client[v1.GetSMERequest, v1.GetSMEResponse]
-	listSMEs        *connect.Client[v1.ListSMEsRequest, v1.ListSMEsResponse]
-	updateSME       *connect.Client[v1.UpdateSMERequest, v1.UpdateSMEResponse]
-	deleteSME       *connect.Client[v1.DeleteSMERequest, v1.DeleteSMEResponse]
-	restoreSME      *connect.Client[v1.RestoreSMERequest, v1.RestoreSMEResponse]
-	createTask      *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
-	getTask         *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
-	listTasks       *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
-	updateTask      *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
-	cancelTask      *connect.Client[v1.CancelTaskRequest, v1.CancelTaskResponse]
-	getUploadURL    *connect.Client[v1.GetUploadURLRequest, v1.GetUploadURLResponse]
-	submitContent   *connect.Client[v1.SubmitContentRequest, v1.SubmitContentResponse]
-	listSubmissions *connect.Client[v1.ListSubmissionsRequest, v1.ListSubmissionsResponse]
-	getKnowledge    *connect.Client[v1.GetKnowledgeRequest, v1.GetKnowledgeResponse]
-	searchKnowledge *connect.Client[v1.SearchKnowledgeRequest, v1.SearchKnowledgeResponse]
+	createSME                *connect.Client[v1.CreateSMERequest, v1.CreateSMEResponse]
+	getSME                   *connect.Client[v1.GetSMERequest, v1.GetSMEResponse]
+	listSMEs                 *connect.Client[v1.ListSMEsRequest, v1.ListSMEsResponse]
+	updateSME                *connect.Client[v1.UpdateSMERequest, v1.UpdateSMEResponse]
+	deleteSME                *connect.Client[v1.DeleteSMERequest, v1.DeleteSMEResponse]
+	restoreSME               *connect.Client[v1.RestoreSMERequest, v1.RestoreSMEResponse]
+	createTask               *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
+	getTask                  *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
+	listTasks                *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
+	updateTask               *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
+	cancelTask               *connect.Client[v1.CancelTaskRequest, v1.CancelTaskResponse]
+	getUploadURL             *connect.Client[v1.GetUploadURLRequest, v1.GetUploadURLResponse]
+	submitContent            *connect.Client[v1.SubmitContentRequest, v1.SubmitContentResponse]
+	listSubmissions          *connect.Client[v1.ListSubmissionsRequest, v1.ListSubmissionsResponse]
+	getKnowledge             *connect.Client[v1.GetKnowledgeRequest, v1.GetKnowledgeResponse]
+	searchKnowledge          *connect.Client[v1.SearchKnowledgeRequest, v1.SearchKnowledgeResponse]
+	getSubmission            *connect.Client[v1.GetSubmissionRequest, v1.GetSubmissionResponse]
+	approveSubmission        *connect.Client[v1.ApproveSubmissionRequest, v1.ApproveSubmissionResponse]
+	requestSubmissionChanges *connect.Client[v1.RequestSubmissionChangesRequest, v1.RequestSubmissionChangesResponse]
+	enhanceSubmissionContent *connect.Client[v1.EnhanceSubmissionContentRequest, v1.EnhanceSubmissionContentResponse]
+	updateKnowledgeChunk     *connect.Client[v1.UpdateKnowledgeChunkRequest, v1.UpdateKnowledgeChunkResponse]
+	deleteKnowledgeChunk     *connect.Client[v1.DeleteKnowledgeChunkRequest, v1.DeleteKnowledgeChunkResponse]
+	deleteTask               *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
 }
 
 // CreateSME calls mirai.v1.SMEService.CreateSME.
@@ -316,6 +399,41 @@ func (c *sMEServiceClient) SearchKnowledge(ctx context.Context, req *connect.Req
 	return c.searchKnowledge.CallUnary(ctx, req)
 }
 
+// GetSubmission calls mirai.v1.SMEService.GetSubmission.
+func (c *sMEServiceClient) GetSubmission(ctx context.Context, req *connect.Request[v1.GetSubmissionRequest]) (*connect.Response[v1.GetSubmissionResponse], error) {
+	return c.getSubmission.CallUnary(ctx, req)
+}
+
+// ApproveSubmission calls mirai.v1.SMEService.ApproveSubmission.
+func (c *sMEServiceClient) ApproveSubmission(ctx context.Context, req *connect.Request[v1.ApproveSubmissionRequest]) (*connect.Response[v1.ApproveSubmissionResponse], error) {
+	return c.approveSubmission.CallUnary(ctx, req)
+}
+
+// RequestSubmissionChanges calls mirai.v1.SMEService.RequestSubmissionChanges.
+func (c *sMEServiceClient) RequestSubmissionChanges(ctx context.Context, req *connect.Request[v1.RequestSubmissionChangesRequest]) (*connect.Response[v1.RequestSubmissionChangesResponse], error) {
+	return c.requestSubmissionChanges.CallUnary(ctx, req)
+}
+
+// EnhanceSubmissionContent calls mirai.v1.SMEService.EnhanceSubmissionContent.
+func (c *sMEServiceClient) EnhanceSubmissionContent(ctx context.Context, req *connect.Request[v1.EnhanceSubmissionContentRequest]) (*connect.Response[v1.EnhanceSubmissionContentResponse], error) {
+	return c.enhanceSubmissionContent.CallUnary(ctx, req)
+}
+
+// UpdateKnowledgeChunk calls mirai.v1.SMEService.UpdateKnowledgeChunk.
+func (c *sMEServiceClient) UpdateKnowledgeChunk(ctx context.Context, req *connect.Request[v1.UpdateKnowledgeChunkRequest]) (*connect.Response[v1.UpdateKnowledgeChunkResponse], error) {
+	return c.updateKnowledgeChunk.CallUnary(ctx, req)
+}
+
+// DeleteKnowledgeChunk calls mirai.v1.SMEService.DeleteKnowledgeChunk.
+func (c *sMEServiceClient) DeleteKnowledgeChunk(ctx context.Context, req *connect.Request[v1.DeleteKnowledgeChunkRequest]) (*connect.Response[v1.DeleteKnowledgeChunkResponse], error) {
+	return c.deleteKnowledgeChunk.CallUnary(ctx, req)
+}
+
+// DeleteTask calls mirai.v1.SMEService.DeleteTask.
+func (c *sMEServiceClient) DeleteTask(ctx context.Context, req *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error) {
+	return c.deleteTask.CallUnary(ctx, req)
+}
+
 // SMEServiceHandler is an implementation of the mirai.v1.SMEService service.
 type SMEServiceHandler interface {
 	// CreateSME creates a new subject matter expert entity.
@@ -350,6 +468,20 @@ type SMEServiceHandler interface {
 	GetKnowledge(context.Context, *connect.Request[v1.GetKnowledgeRequest]) (*connect.Response[v1.GetKnowledgeResponse], error)
 	// SearchKnowledge searches across SME knowledge.
 	SearchKnowledge(context.Context, *connect.Request[v1.SearchKnowledgeRequest]) (*connect.Response[v1.SearchKnowledgeResponse], error)
+	// GetSubmission returns a specific submission by ID.
+	GetSubmission(context.Context, *connect.Request[v1.GetSubmissionRequest]) (*connect.Response[v1.GetSubmissionResponse], error)
+	// ApproveSubmission approves content and creates knowledge chunks.
+	ApproveSubmission(context.Context, *connect.Request[v1.ApproveSubmissionRequest]) (*connect.Response[v1.ApproveSubmissionResponse], error)
+	// RequestSubmissionChanges sends submission back to submitter with feedback.
+	RequestSubmissionChanges(context.Context, *connect.Request[v1.RequestSubmissionChangesRequest]) (*connect.Response[v1.RequestSubmissionChangesResponse], error)
+	// EnhanceSubmissionContent uses AI to summarize or improve content.
+	EnhanceSubmissionContent(context.Context, *connect.Request[v1.EnhanceSubmissionContentRequest]) (*connect.Response[v1.EnhanceSubmissionContentResponse], error)
+	// UpdateKnowledgeChunk updates a knowledge chunk's content.
+	UpdateKnowledgeChunk(context.Context, *connect.Request[v1.UpdateKnowledgeChunkRequest]) (*connect.Response[v1.UpdateKnowledgeChunkResponse], error)
+	// DeleteKnowledgeChunk removes a knowledge chunk.
+	DeleteKnowledgeChunk(context.Context, *connect.Request[v1.DeleteKnowledgeChunkRequest]) (*connect.Response[v1.DeleteKnowledgeChunkResponse], error)
+	// DeleteTask permanently removes a task.
+	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
 }
 
 // NewSMEServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -455,6 +587,48 @@ func NewSMEServiceHandler(svc SMEServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(sMEServiceMethods.ByName("SearchKnowledge")),
 		connect.WithHandlerOptions(opts...),
 	)
+	sMEServiceGetSubmissionHandler := connect.NewUnaryHandler(
+		SMEServiceGetSubmissionProcedure,
+		svc.GetSubmission,
+		connect.WithSchema(sMEServiceMethods.ByName("GetSubmission")),
+		connect.WithHandlerOptions(opts...),
+	)
+	sMEServiceApproveSubmissionHandler := connect.NewUnaryHandler(
+		SMEServiceApproveSubmissionProcedure,
+		svc.ApproveSubmission,
+		connect.WithSchema(sMEServiceMethods.ByName("ApproveSubmission")),
+		connect.WithHandlerOptions(opts...),
+	)
+	sMEServiceRequestSubmissionChangesHandler := connect.NewUnaryHandler(
+		SMEServiceRequestSubmissionChangesProcedure,
+		svc.RequestSubmissionChanges,
+		connect.WithSchema(sMEServiceMethods.ByName("RequestSubmissionChanges")),
+		connect.WithHandlerOptions(opts...),
+	)
+	sMEServiceEnhanceSubmissionContentHandler := connect.NewUnaryHandler(
+		SMEServiceEnhanceSubmissionContentProcedure,
+		svc.EnhanceSubmissionContent,
+		connect.WithSchema(sMEServiceMethods.ByName("EnhanceSubmissionContent")),
+		connect.WithHandlerOptions(opts...),
+	)
+	sMEServiceUpdateKnowledgeChunkHandler := connect.NewUnaryHandler(
+		SMEServiceUpdateKnowledgeChunkProcedure,
+		svc.UpdateKnowledgeChunk,
+		connect.WithSchema(sMEServiceMethods.ByName("UpdateKnowledgeChunk")),
+		connect.WithHandlerOptions(opts...),
+	)
+	sMEServiceDeleteKnowledgeChunkHandler := connect.NewUnaryHandler(
+		SMEServiceDeleteKnowledgeChunkProcedure,
+		svc.DeleteKnowledgeChunk,
+		connect.WithSchema(sMEServiceMethods.ByName("DeleteKnowledgeChunk")),
+		connect.WithHandlerOptions(opts...),
+	)
+	sMEServiceDeleteTaskHandler := connect.NewUnaryHandler(
+		SMEServiceDeleteTaskProcedure,
+		svc.DeleteTask,
+		connect.WithSchema(sMEServiceMethods.ByName("DeleteTask")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.SMEService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SMEServiceCreateSMEProcedure:
@@ -489,6 +663,20 @@ func NewSMEServiceHandler(svc SMEServiceHandler, opts ...connect.HandlerOption) 
 			sMEServiceGetKnowledgeHandler.ServeHTTP(w, r)
 		case SMEServiceSearchKnowledgeProcedure:
 			sMEServiceSearchKnowledgeHandler.ServeHTTP(w, r)
+		case SMEServiceGetSubmissionProcedure:
+			sMEServiceGetSubmissionHandler.ServeHTTP(w, r)
+		case SMEServiceApproveSubmissionProcedure:
+			sMEServiceApproveSubmissionHandler.ServeHTTP(w, r)
+		case SMEServiceRequestSubmissionChangesProcedure:
+			sMEServiceRequestSubmissionChangesHandler.ServeHTTP(w, r)
+		case SMEServiceEnhanceSubmissionContentProcedure:
+			sMEServiceEnhanceSubmissionContentHandler.ServeHTTP(w, r)
+		case SMEServiceUpdateKnowledgeChunkProcedure:
+			sMEServiceUpdateKnowledgeChunkHandler.ServeHTTP(w, r)
+		case SMEServiceDeleteKnowledgeChunkProcedure:
+			sMEServiceDeleteKnowledgeChunkHandler.ServeHTTP(w, r)
+		case SMEServiceDeleteTaskProcedure:
+			sMEServiceDeleteTaskHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -560,4 +748,32 @@ func (UnimplementedSMEServiceHandler) GetKnowledge(context.Context, *connect.Req
 
 func (UnimplementedSMEServiceHandler) SearchKnowledge(context.Context, *connect.Request[v1.SearchKnowledgeRequest]) (*connect.Response[v1.SearchKnowledgeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.SMEService.SearchKnowledge is not implemented"))
+}
+
+func (UnimplementedSMEServiceHandler) GetSubmission(context.Context, *connect.Request[v1.GetSubmissionRequest]) (*connect.Response[v1.GetSubmissionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.SMEService.GetSubmission is not implemented"))
+}
+
+func (UnimplementedSMEServiceHandler) ApproveSubmission(context.Context, *connect.Request[v1.ApproveSubmissionRequest]) (*connect.Response[v1.ApproveSubmissionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.SMEService.ApproveSubmission is not implemented"))
+}
+
+func (UnimplementedSMEServiceHandler) RequestSubmissionChanges(context.Context, *connect.Request[v1.RequestSubmissionChangesRequest]) (*connect.Response[v1.RequestSubmissionChangesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.SMEService.RequestSubmissionChanges is not implemented"))
+}
+
+func (UnimplementedSMEServiceHandler) EnhanceSubmissionContent(context.Context, *connect.Request[v1.EnhanceSubmissionContentRequest]) (*connect.Response[v1.EnhanceSubmissionContentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.SMEService.EnhanceSubmissionContent is not implemented"))
+}
+
+func (UnimplementedSMEServiceHandler) UpdateKnowledgeChunk(context.Context, *connect.Request[v1.UpdateKnowledgeChunkRequest]) (*connect.Response[v1.UpdateKnowledgeChunkResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.SMEService.UpdateKnowledgeChunk is not implemented"))
+}
+
+func (UnimplementedSMEServiceHandler) DeleteKnowledgeChunk(context.Context, *connect.Request[v1.DeleteKnowledgeChunkRequest]) (*connect.Response[v1.DeleteKnowledgeChunkResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.SMEService.DeleteKnowledgeChunk is not implemented"))
+}
+
+func (UnimplementedSMEServiceHandler) DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.SMEService.DeleteTask is not implemented"))
 }

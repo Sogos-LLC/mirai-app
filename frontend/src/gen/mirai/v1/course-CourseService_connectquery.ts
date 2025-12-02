@@ -54,6 +54,20 @@ export const getFolderHierarchy = CourseService.method.getFolderHierarchy;
 export const getLibrary = CourseService.method.getLibrary;
 
 /**
+ * CreateFolder creates a new folder in the library hierarchy (max 3 levels deep).
+ *
+ * @generated from rpc mirai.v1.CourseService.CreateFolder
+ */
+export const createFolder = CourseService.method.createFolder;
+
+/**
+ * DeleteFolder deletes an empty folder from the library.
+ *
+ * @generated from rpc mirai.v1.CourseService.DeleteFolder
+ */
+export const deleteFolder = CourseService.method.deleteFolder;
+
+/**
  * ExportCourse initiates a course export job.
  *
  * @generated from rpc mirai.v1.CourseService.ExportCourse

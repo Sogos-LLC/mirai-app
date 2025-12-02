@@ -11,17 +11,26 @@ import {
   createTask,
   getTask,
   listTasks,
+  updateTask,
   cancelTask,
+  deleteTask,
   getUploadURL,
   submitContent,
   listSubmissions,
+  getSubmission,
+  approveSubmission,
+  requestSubmissionChanges,
+  enhanceSubmissionContent,
   getKnowledge,
+  updateKnowledgeChunk,
+  deleteKnowledgeChunk,
 } from '@/gen/mirai/v1/sme-SMEService_connectquery';
 import {
   SMEScope,
   SMEStatus,
   SMETaskStatus,
   ContentType,
+  EnhanceType,
   type SubjectMatterExpert,
   type SMETask,
   type SMETaskSubmission,
@@ -32,13 +41,21 @@ import {
   RestoreSMERequestSchema,
   ListSMEsRequestSchema,
   CreateTaskRequestSchema,
+  UpdateTaskRequestSchema,
   CancelTaskRequestSchema,
+  DeleteTaskRequestSchema,
   GetUploadURLRequestSchema,
   SubmitContentRequestSchema,
+  GetSubmissionRequestSchema,
+  ApproveSubmissionRequestSchema,
+  RequestSubmissionChangesRequestSchema,
+  EnhanceSubmissionContentRequestSchema,
+  UpdateKnowledgeChunkRequestSchema,
+  DeleteKnowledgeChunkRequestSchema,
 } from '@/gen/mirai/v1/sme_pb';
 
 // Re-export types and enums
-export { SMEScope, SMEStatus, SMETaskStatus, ContentType };
+export { SMEScope, SMEStatus, SMETaskStatus, ContentType, EnhanceType };
 export type { SubjectMatterExpert, SMETask, SMETaskSubmission, SMEKnowledgeChunk };
 
 /**
@@ -333,6 +350,7 @@ export function useSubmitContent() {
       filePath: string;
       contentType: ContentType;
       fileSizeBytes: number;
+      textContent?: string;
     }) => {
       const request = create(SubmitContentRequestSchema, {
         taskId: data.taskId,
@@ -340,6 +358,7 @@ export function useSubmitContent() {
         filePath: data.filePath,
         contentType: data.contentType,
         fileSizeBytes: BigInt(data.fileSizeBytes),
+        textContent: data.textContent,
       });
 
       const result = await mutation.mutateAsync(request);
@@ -388,5 +407,214 @@ export function useGetKnowledge(smeId: string | undefined) {
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
+  };
+}
+
+/**
+ * Hook to update a task.
+ */
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(updateTask);
+
+  return {
+    mutate: async (
+      taskId: string,
+      data: {
+        title?: string;
+        description?: string;
+        expectedContentType?: ContentType;
+        dueDate?: Date;
+      }
+    ) => {
+      const request = create(UpdateTaskRequestSchema, {
+        taskId,
+        title: data.title,
+        description: data.description,
+        expectedContentType: data.expectedContentType,
+        dueDate: data.dueDate
+          ? { seconds: BigInt(Math.floor(data.dueDate.getTime() / 1000)), nanos: 0 }
+          : undefined,
+      });
+
+      const result = await mutation.mutateAsync(request);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listTasks, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getTask, cardinality: undefined }) }),
+      ]);
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
+ * Hook to delete a task.
+ */
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(deleteTask);
+
+  return {
+    mutate: async (taskId: string) => {
+      const request = create(DeleteTaskRequestSchema, { taskId });
+      const result = await mutation.mutateAsync(request);
+      await queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: listTasks, cardinality: undefined }),
+      });
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
+ * Hook to get a single submission.
+ */
+export function useGetSubmission(submissionId: string | undefined) {
+  const query = useQuery(
+    getSubmission,
+    submissionId ? { submissionId } : undefined,
+    { enabled: !!submissionId }
+  );
+
+  return {
+    data: query.data?.submission,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+  };
+}
+
+/**
+ * Hook to approve a submission.
+ */
+export function useApproveSubmission() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(approveSubmission);
+
+  return {
+    mutate: async (data: { submissionId: string; approvedContent: string }) => {
+      const request = create(ApproveSubmissionRequestSchema, {
+        submissionId: data.submissionId,
+        approvedContent: data.approvedContent,
+      });
+
+      const result = await mutation.mutateAsync(request);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listTasks, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getTask, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listSubmissions, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getSubmission, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getKnowledge, cardinality: undefined }) }),
+      ]);
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
+ * Hook to request changes to a submission.
+ */
+export function useRequestSubmissionChanges() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(requestSubmissionChanges);
+
+  return {
+    mutate: async (data: { submissionId: string; feedback: string }) => {
+      const request = create(RequestSubmissionChangesRequestSchema, {
+        submissionId: data.submissionId,
+        feedback: data.feedback,
+      });
+
+      const result = await mutation.mutateAsync(request);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listTasks, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getTask, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listSubmissions, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getSubmission, cardinality: undefined }) }),
+      ]);
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
+ * Hook to enhance submission content with AI (summarize or improve).
+ * Only available for TEXT content type submissions.
+ */
+export function useEnhanceSubmissionContent() {
+  const mutation = useMutation(enhanceSubmissionContent);
+
+  return {
+    mutate: async (data: { submissionId: string; enhanceType: EnhanceType }) => {
+      const request = create(EnhanceSubmissionContentRequestSchema, {
+        submissionId: data.submissionId,
+        enhanceType: data.enhanceType,
+      });
+
+      return await mutation.mutateAsync(request);
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
+ * Hook to update a knowledge chunk.
+ */
+export function useUpdateKnowledgeChunk() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(updateKnowledgeChunk);
+
+  return {
+    mutate: async (data: {
+      chunkId: string;
+      content: string;
+      topic?: string;
+      keywords?: string[];
+    }) => {
+      const request = create(UpdateKnowledgeChunkRequestSchema, {
+        chunkId: data.chunkId,
+        content: data.content,
+        topic: data.topic,
+        keywords: data.keywords ?? [],
+      });
+
+      const result = await mutation.mutateAsync(request);
+      await queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: getKnowledge, cardinality: undefined }),
+      });
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
+ * Hook to delete a knowledge chunk.
+ */
+export function useDeleteKnowledgeChunk() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(deleteKnowledgeChunk);
+
+  return {
+    mutate: async (chunkId: string) => {
+      const request = create(DeleteKnowledgeChunkRequestSchema, { chunkId });
+      const result = await mutation.mutateAsync(request);
+      await queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: getKnowledge, cardinality: undefined }),
+      });
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
   };
 }

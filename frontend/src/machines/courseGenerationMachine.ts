@@ -245,6 +245,15 @@ export const courseGenerationMachine = createMachine({
             flowStartedAt: () => Date.now(),
           }),
         },
+        // Allow jumping directly to outline review when editing an existing course
+        OUTLINE_GENERATED: {
+          target: 'reviewOutline',
+          actions: assign({
+            outline: ({ event }) => event.outline,
+            progressPercent: 100,
+            progressMessage: 'Outline ready for review',
+          }),
+        },
       },
     },
 
@@ -265,7 +274,7 @@ export const courseGenerationMachine = createMachine({
         submitting: {
           invoke: {
             id: 'generateOutline',
-            src: generateOutlineActor,
+            src: 'generateOutlineActor',
             input: ({ context }) => context.input!,
             onDone: {
               target: 'polling',
@@ -294,7 +303,7 @@ export const courseGenerationMachine = createMachine({
         polling: {
           invoke: {
             id: 'pollOutlineJob',
-            src: pollJobActor,
+            src: 'pollJobActor',
             input: ({ context }) => ({ jobId: context.outlineJob!.id }),
             onDone: [
               {
@@ -361,7 +370,7 @@ export const courseGenerationMachine = createMachine({
         fetchingOutline: {
           invoke: {
             id: 'getOutline',
-            src: getOutlineActor,
+            src: 'getOutlineActor',
             input: ({ context }) => ({ courseId: context.input!.courseId }),
             onDone: {
               target: '#courseGeneration.reviewOutline',
@@ -418,7 +427,7 @@ export const courseGenerationMachine = createMachine({
         approving: {
           invoke: {
             id: 'approveOutline',
-            src: approveOutlineActor,
+            src: 'approveOutlineActor',
             input: ({ context }) => ({
               courseId: context.input!.courseId,
               outlineId: context.outline!.id,
@@ -449,7 +458,7 @@ export const courseGenerationMachine = createMachine({
         rejecting: {
           invoke: {
             id: 'rejectOutline',
-            src: rejectOutlineActor,
+            src: 'rejectOutlineActor',
             input: ({ context, event }) => ({
               courseId: context.input!.courseId,
               outlineId: context.outline!.id,
@@ -481,7 +490,7 @@ export const courseGenerationMachine = createMachine({
         updating: {
           invoke: {
             id: 'updateOutline',
-            src: updateOutlineActor,
+            src: 'updateOutlineActor',
             input: ({ context, event }) => ({
               courseId: context.input!.courseId,
               outlineId: context.outline!.id,
@@ -525,7 +534,7 @@ export const courseGenerationMachine = createMachine({
         submitting: {
           invoke: {
             id: 'generateLessonsForQueue',
-            src: generateLessonsActor,
+            src: 'generateLessonsActor',
             input: ({ context }) => ({ courseId: context.input!.courseId }),
             onDone: {
               target: 'confirmation',
@@ -615,7 +624,7 @@ export const courseGenerationMachine = createMachine({
         polling: {
           invoke: {
             id: 'pollLessonJob',
-            src: pollJobActor,
+            src: 'pollJobActor',
             input: ({ context }) => ({ jobId: context.lessonJob!.id }),
             onDone: [
               {
@@ -683,7 +692,7 @@ export const courseGenerationMachine = createMachine({
         fetchingLessons: {
           invoke: {
             id: 'listLessons',
-            src: listLessonsActor,
+            src: 'listLessonsActor',
             input: ({ context }) => ({ courseId: context.input!.courseId }),
             onDone: {
               target: '#courseGeneration.complete',

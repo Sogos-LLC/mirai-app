@@ -1,6 +1,9 @@
 'use client';
 
-import type { HeadingContent, HeadingLevel } from '@/gen/mirai/v1/ai_generation_pb';
+interface HeadingContent {
+  level: number;
+  text: string;
+}
 
 interface HeadingRendererProps {
   content: HeadingContent;
@@ -9,11 +12,10 @@ interface HeadingRendererProps {
 }
 
 const HEADING_STYLES: Record<number, string> = {
-  0: 'text-3xl font-bold text-gray-900', // Unspecified - treat as H1
-  1: 'text-3xl font-bold text-gray-900', // H1
-  2: 'text-2xl font-semibold text-gray-900', // H2
-  3: 'text-xl font-semibold text-gray-800', // H3
-  4: 'text-lg font-medium text-gray-800', // H4
+  1: 'text-3xl font-bold text-gray-900',
+  2: 'text-2xl font-semibold text-gray-900',
+  3: 'text-xl font-semibold text-gray-800',
+  4: 'text-lg font-medium text-gray-800',
 };
 
 const LEVEL_OPTIONS = [
@@ -24,7 +26,9 @@ const LEVEL_OPTIONS = [
 ];
 
 export function HeadingRenderer({ content, isEditing = false, onEdit }: HeadingRendererProps) {
-  const style = HEADING_STYLES[content.level] || HEADING_STYLES[1];
+  // Ensure valid heading level (1-4)
+  const level = Math.min(Math.max(content.level || 2, 1), 4);
+  const style = HEADING_STYLES[level];
 
   if (isEditing && onEdit) {
     return (
@@ -36,7 +40,7 @@ export function HeadingRenderer({ content, isEditing = false, onEdit }: HeadingR
             onChange={(e) =>
               onEdit({
                 ...content,
-                level: parseInt(e.target.value, 10) as HeadingLevel,
+                level: parseInt(e.target.value, 10),
               })
             }
             className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -72,7 +76,7 @@ export function HeadingRenderer({ content, isEditing = false, onEdit }: HeadingR
   }
 
   // Render appropriate heading tag based on level
-  const HeadingTag = `h${Math.min(Math.max(content.level || 1, 1), 6)}` as keyof JSX.IntrinsicElements;
+  const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
 
   return <HeadingTag className={style}>{content.text}</HeadingTag>;
 }

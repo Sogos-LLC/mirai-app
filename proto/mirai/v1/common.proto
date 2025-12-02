@@ -48,6 +48,9 @@ message User {
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
   optional string tenant_id = 7;  // Tenant for RLS isolation
+  optional string email = 8;      // From Kratos identity
+  optional string first_name = 9; // From Kratos identity
+  optional string last_name = 10; // From Kratos identity
 }
 
 // Company represents a company/organization within a tenant.
@@ -85,4 +88,5 @@ message TeamMember {
   TeamRole role = 4;
   google.protobuf.Timestamp created_at = 5;
   optional string tenant_id = 6;  // Tenant for RLS isolation
+  optional User user = 7;         // Populated user details (name, email)
 }

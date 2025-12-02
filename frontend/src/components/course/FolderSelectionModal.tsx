@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, Users, User } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, Users, User, Plus, X, Check } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import * as courseClient from '@/lib/courseClient';
 
@@ -10,6 +10,7 @@ interface FolderNode {
   name: string;
   type?: 'library' | 'team' | 'personal' | 'folder';
   children?: FolderNode[];
+  depth?: number;
 }
 
 interface FolderSelectionModalProps {
@@ -19,6 +20,8 @@ interface FolderSelectionModalProps {
   selectedFolder?: string;
 }
 
+const MAX_FOLDER_DEPTH = 3;
+
 export default function FolderSelectionModal({
   isOpen,
   onClose,
@@ -27,36 +30,53 @@ export default function FolderSelectionModal({
 }: FolderSelectionModalProps) {
   const [folderStructure, setFolderStructure] = useState<FolderNode[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set(['library', 'team', 'personal'])
   );
 
-  // Load folder structure from connect-rpc API
-  useEffect(() => {
-    const loadFolders = async () => {
-      try {
-        setLoading(true);
-        const folders = await courseClient.getFolderHierarchy(false);
-        // Convert proto folders to local format
-        setFolderStructure(folders.map((f: any) => ({
-          id: f.id,
-          name: f.name,
-          type: f.type === 1 ? 'library' : f.type === 2 ? 'team' : f.type === 3 ? 'personal' : 'folder',
-          children: f.children?.map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            type: c.type === 1 ? 'library' : c.type === 2 ? 'team' : c.type === 3 ? 'personal' : 'folder',
-            children: c.children,
-          })),
-        })));
-      } catch (error) {
-        console.error('Error loading folders:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Folder creation state
+  const [creatingFolderIn, setCreatingFolderIn] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
+  // Calculate folder depth from root
+  const calculateDepths = (folders: FolderNode[], depth: number = 1): FolderNode[] => {
+    return folders.map(folder => ({
+      ...folder,
+      depth,
+      children: folder.children ? calculateDepths(folder.children, depth + 1) : undefined
+    }));
+  };
+
+  // Load folder structure from connect-rpc API
+  const loadFolders = async () => {
+    try {
+      setLoading(true);
+      const folders = await courseClient.getFolderHierarchy(false);
+      // Convert proto folders to local format with depth calculation
+      const convertedFolders = folders.map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        type: f.type === 1 ? 'library' : f.type === 2 ? 'team' : f.type === 3 ? 'personal' : 'folder',
+        children: f.children?.map((c: any) => convertFolder(c)),
+      }));
+      setFolderStructure(calculateDepths(convertedFolders as FolderNode[]));
+    } catch (error) {
+      console.error('Error loading folders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const convertFolder = (f: any): FolderNode => ({
+    id: f.id,
+    name: f.name,
+    type: f.type === 1 ? 'library' : f.type === 2 ? 'team' : f.type === 3 ? 'personal' : 'folder',
+    children: f.children?.map((c: any) => convertFolder(c)),
+  });
+
+  useEffect(() => {
     if (isOpen) {
       loadFolders();
     }
@@ -77,10 +97,46 @@ export default function FolderSelectionModal({
     onClose();
   };
 
+  const handleStartCreateFolder = (parentId: string) => {
+    setCreatingFolderIn(parentId);
+    setNewFolderName('');
+    setCreateError(null);
+    // Expand the parent folder
+    setExpandedFolders(prev => new Set([...prev, parentId]));
+  };
+
+  const handleCancelCreateFolder = () => {
+    setCreatingFolderIn(null);
+    setNewFolderName('');
+    setCreateError(null);
+  };
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim() || !creatingFolderIn) return;
+
+    try {
+      setIsCreating(true);
+      setCreateError(null);
+      await courseClient.createFolder(newFolderName.trim(), creatingFolderIn);
+      // Reload folders to show the new one
+      await loadFolders();
+      setCreatingFolderIn(null);
+      setNewFolderName('');
+    } catch (error: any) {
+      console.error('Error creating folder:', error);
+      setCreateError(error.message || 'Failed to create folder');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const renderFolderNode = (node: FolderNode, level: number = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedFolders.has(node.id);
     const isSelected = selectedFolder === node.name;
+    const currentDepth = node.depth || (level + 1);
+    const canCreateSubfolder = currentDepth < MAX_FOLDER_DEPTH;
+    const isCreatingHere = creatingFolderIn === node.id;
 
     const getIcon = () => {
       if (node.type === 'team') return <Users className="w-5 h-5 text-blue-600" />;
@@ -93,7 +149,7 @@ export default function FolderSelectionModal({
       <div key={node.id}>
         <div
           className={`
-            flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer
+            group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer
             hover:bg-gray-100 transition-colors
             ${isSelected ? 'bg-primary-100 border border-primary-300' : ''}
           `}
@@ -107,7 +163,7 @@ export default function FolderSelectionModal({
             }
           }}
         >
-          {hasChildren && (
+          {hasChildren || isCreatingHere ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -121,22 +177,91 @@ export default function FolderSelectionModal({
                 <ChevronRight className="w-4 h-4 text-gray-500" />
               )}
             </button>
+          ) : (
+            <div className="w-5" />
           )}
-          {!hasChildren && <div className="w-5" />}
 
           {getIcon()}
 
           <span className={`
-            font-medium
+            flex-1 font-medium
             ${node.type === 'team' || node.type === 'personal' ? 'text-gray-900 font-semibold' : 'text-gray-700'}
           `}>
             {node.name}
           </span>
+
+          {/* New Folder button - only show if depth allows */}
+          {canCreateSubfolder && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStartCreateFolder(node.id);
+              }}
+              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+              title="Create subfolder"
+            >
+              <Plus className="w-4 h-4 text-gray-500" />
+            </button>
+          )}
         </div>
 
-        {hasChildren && isExpanded && (
+        {/* Children and new folder input */}
+        {(hasChildren || isCreatingHere) && isExpanded && (
           <div>
-            {node.children!.map((child) => renderFolderNode(child, level + 1))}
+            {node.children?.map((child) => renderFolderNode(child, level + 1))}
+
+            {/* New folder input row */}
+            {isCreatingHere && (
+              <div
+                className="flex items-center gap-2 px-3 py-2"
+                style={{ paddingLeft: `${(level + 1) * 20 + 12}px` }}
+              >
+                <div className="w-5" />
+                <Folder className="w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newFolderName.trim()) {
+                      handleCreateFolder();
+                    } else if (e.key === 'Escape') {
+                      handleCancelCreateFolder();
+                    }
+                  }}
+                  placeholder="New folder name"
+                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  autoFocus
+                  disabled={isCreating}
+                />
+                <button
+                  onClick={handleCreateFolder}
+                  disabled={!newFolderName.trim() || isCreating}
+                  className="p-1 hover:bg-green-100 rounded text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Create folder"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleCancelCreateFolder}
+                  disabled={isCreating}
+                  className="p-1 hover:bg-red-100 rounded text-red-600"
+                  title="Cancel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Error message */}
+            {isCreatingHere && createError && (
+              <div
+                className="flex items-center gap-2 px-3 py-1 text-sm text-red-600"
+                style={{ paddingLeft: `${(level + 1) * 20 + 12 + 28}px` }}
+              >
+                {createError}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -158,6 +283,11 @@ export default function FolderSelectionModal({
           </div>
         ) : (
           <>
+            {/* Info text */}
+            <p className="text-sm text-gray-500 mb-4">
+              Select a folder or create a new one (max {MAX_FOLDER_DEPTH} levels deep). Hover over a folder to see the create option.
+            </p>
+
             {/* Folder Tree */}
             <div className="flex-1 overflow-y-auto -mx-4 px-4 lg:mx-0 lg:px-0">
               <div className="space-y-1">

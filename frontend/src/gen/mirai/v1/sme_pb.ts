@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/sme.proto.
  */
 export const file_mirai_v1_sme: GenFile = /*@__PURE__*/
-  fileDesc("ChJtaXJhaS92MS9zbWUucHJvdG8SCG1pcmFpLnYxIscDChNTdWJqZWN0TWF0dGVyRXhwZXJ0EgoKAmlkGAEgASgJEhEKCXRlbmFudF9pZBgCIAEoCRISCgpjb21wYW55X2lkGAMgASgJEgwKBG5hbWUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSDgoGZG9tYWluGAYgASgJEiEKBXNjb3BlGAcgASgOMhIubWlyYWkudjEuU01FU2NvcGUSEAoIdGVhbV9pZHMYCCADKAkSIwoGc3RhdHVzGAkgASgOMhMubWlyYWkudjEuU01FU3RhdHVzEh4KEWtub3dsZWRnZV9zdW1tYXJ5GAogASgJSACIAQESIwoWa25vd2xlZGdlX2NvbnRlbnRfcGF0aBgLIAEoCUgBiAEBEhoKEmNyZWF0ZWRfYnlfdXNlcl9pZBgMIAEoCRIuCgpjcmVhdGVkX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIUChJfa25vd2xlZGdlX3N1bW1hcnlCGQoXX2tub3dsZWRnZV9jb250ZW50X3BhdGgi/wMKB1NNRVRhc2sSCgoCaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEg4KBnNtZV9pZBgDIAEoCRINCgV0aXRsZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRI0ChVleHBlY3RlZF9jb250ZW50X3R5cGUYBiABKA4yFS5taXJhaS52MS5Db250ZW50VHlwZRIbChNhc3NpZ25lZF90b191c2VyX2lkGAcgASgJEhsKE2Fzc2lnbmVkX2J5X3VzZXJfaWQYCCABKAkSFAoHdGVhbV9pZBgJIAEoCUgAiAEBEicKBnN0YXR1cxgKIAEoDjIXLm1pcmFpLnYxLlNNRVRhc2tTdGF0dXMSMQoIZHVlX2RhdGUYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESLgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMY29tcGxldGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgCiAEBQgoKCF90ZWFtX2lkQgsKCV9kdWVfZGF0ZUIPCg1fY29tcGxldGVkX2F0ItEDChFTTUVUYXNrU3VibWlzc2lvbhIKCgJpZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSDwoHdGFza19pZBgDIAEoCRIRCglmaWxlX25hbWUYBCABKAkSEQoJZmlsZV9wYXRoGAUgASgJEisKDGNvbnRlbnRfdHlwZRgGIAEoDjIVLm1pcmFpLnYxLkNvbnRlbnRUeXBlEhcKD2ZpbGVfc2l6ZV9ieXRlcxgHIAEoAxIbCg5leHRyYWN0ZWRfdGV4dBgIIAEoCUgAiAEBEhcKCmFpX3N1bW1hcnkYCSABKAlIAYgBARIcCg9pbmdlc3Rpb25fZXJyb3IYCiABKAlIAogBARIcChRzdWJtaXR0ZWRfYnlfdXNlcl9pZBgLIAEoCRIwCgxzdWJtaXR0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKDHByb2Nlc3NlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIA4gBAUIRCg9fZXh0cmFjdGVkX3RleHRCDQoLX2FpX3N1bW1hcnlCEgoQX2luZ2VzdGlvbl9lcnJvckIPCg1fcHJvY2Vzc2VkX2F0ItgBChFTTUVLbm93bGVkZ2VDaHVuaxIKCgJpZBgBIAEoCRIOCgZzbWVfaWQYAiABKAkSGgoNc3VibWlzc2lvbl9pZBgDIAEoCUgAiAEBEg8KB2NvbnRlbnQYBCABKAkSDQoFdG9waWMYBSABKAkSEAoIa2V5d29yZHMYBiADKAkSFwoPcmVsZXZhbmNlX3Njb3JlGAcgASgCEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQhAKDl9zdWJtaXNzaW9uX2lkInoKEENyZWF0ZVNNRVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIOCgZkb21haW4YAyABKAkSIQoFc2NvcGUYBCABKA4yEi5taXJhaS52MS5TTUVTY29wZRIQCgh0ZWFtX2lkcxgFIAMoCSI/ChFDcmVhdGVTTUVSZXNwb25zZRIqCgNzbWUYASABKAsyHS5taXJhaS52MS5TdWJqZWN0TWF0dGVyRXhwZXJ0Ih8KDUdldFNNRVJlcXVlc3QSDgoGc21lX2lkGAEgASgJIjwKDkdldFNNRVJlc3BvbnNlEioKA3NtZRgBIAEoCzIdLm1pcmFpLnYxLlN1YmplY3RNYXR0ZXJFeHBlcnQizgEKD0xpc3RTTUVzUmVxdWVzdBImCgVzY29wZRgBIAEoDjISLm1pcmFpLnYxLlNNRVNjb3BlSACIAQESKAoGc3RhdHVzGAIgASgOMhMubWlyYWkudjEuU01FU3RhdHVzSAGIAQESFAoHdGVhbV9pZBgDIAEoCUgCiAEBEh0KEGluY2x1ZGVfYXJjaGl2ZWQYBCABKAhIA4gBAUIICgZfc2NvcGVCCQoHX3N0YXR1c0IKCghfdGVhbV9pZEITChFfaW5jbHVkZV9hcmNoaXZlZCI/ChBMaXN0U01Fc1Jlc3BvbnNlEisKBHNtZXMYASADKAsyHS5taXJhaS52MS5TdWJqZWN0TWF0dGVyRXhwZXJ0IoECChBVcGRhdGVTTUVSZXF1ZXN0Eg4KBnNtZV9pZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESGAoLZGVzY3JpcHRpb24YAyABKAlIAYgBARITCgZkb21haW4YBCABKAlIAogBARImCgVzY29wZRgFIAEoDjISLm1pcmFpLnYxLlNNRVNjb3BlSAOIAQESEAoIdGVhbV9pZHMYBiADKAkSKAoGc3RhdHVzGAcgASgOMhMubWlyYWkudjEuU01FU3RhdHVzSASIAQFCBwoFX25hbWVCDgoMX2Rlc2NyaXB0aW9uQgkKB19kb21haW5CCAoGX3Njb3BlQgkKB19zdGF0dXMiPwoRVXBkYXRlU01FUmVzcG9uc2USKgoDc21lGAEgASgLMh0ubWlyYWkudjEuU3ViamVjdE1hdHRlckV4cGVydCIiChBEZWxldGVTTUVSZXF1ZXN0Eg4KBnNtZV9pZBgBIAEoCSITChFEZWxldGVTTUVSZXNwb25zZSIjChFSZXN0b3JlU01FUmVxdWVzdBIOCgZzbWVfaWQYASABKAkiQAoSUmVzdG9yZVNNRVJlc3BvbnNlEioKA3NtZRgBIAEoCzIdLm1pcmFpLnYxLlN1YmplY3RNYXR0ZXJFeHBlcnQi/AEKEUNyZWF0ZVRhc2tSZXF1ZXN0Eg4KBnNtZV9pZBgBIAEoCRINCgV0aXRsZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRI0ChVleHBlY3RlZF9jb250ZW50X3R5cGUYBCABKA4yFS5taXJhaS52MS5Db250ZW50VHlwZRIbChNhc3NpZ25lZF90b191c2VyX2lkGAUgASgJEhQKB3RlYW1faWQYBiABKAlIAIgBARIxCghkdWVfZGF0ZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAYgBAUIKCghfdGVhbV9pZEILCglfZHVlX2RhdGUiNQoSQ3JlYXRlVGFza1Jlc3BvbnNlEh8KBHRhc2sYASABKAsyES5taXJhaS52MS5TTUVUYXNrIiEKDkdldFRhc2tSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkiMgoPR2V0VGFza1Jlc3BvbnNlEh8KBHRhc2sYASABKAsyES5taXJhaS52MS5TTUVUYXNrIqUBChBMaXN0VGFza3NSZXF1ZXN0EhMKBnNtZV9pZBgBIAEoCUgAiAEBEiAKE2Fzc2lnbmVkX3RvX3VzZXJfaWQYAiABKAlIAYgBARIsCgZzdGF0dXMYAyABKA4yFy5taXJhaS52MS5TTUVUYXNrU3RhdHVzSAKIAQFCCQoHX3NtZV9pZEIWChRfYXNzaWduZWRfdG9fdXNlcl9pZEIJCgdfc3RhdHVzIjUKEUxpc3RUYXNrc1Jlc3BvbnNlEiAKBXRhc2tzGAEgAygLMhEubWlyYWkudjEuU01FVGFzayKBAgoRVXBkYXRlVGFza1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCRISCgV0aXRsZRgCIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAMgASgJSAGIAQESOQoVZXhwZWN0ZWRfY29udGVudF90eXBlGAQgASgOMhUubWlyYWkudjEuQ29udGVudFR5cGVIAogBARIxCghkdWVfZGF0ZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIA4gBAUIICgZfdGl0bGVCDgoMX2Rlc2NyaXB0aW9uQhgKFl9leHBlY3RlZF9jb250ZW50X3R5cGVCCwoJX2R1ZV9kYXRlIjUKElVwZGF0ZVRhc2tSZXNwb25zZRIfCgR0YXNrGAEgASgLMhEubWlyYWkudjEuU01FVGFzayIkChFDYW5jZWxUYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJIjUKEkNhbmNlbFRhc2tSZXNwb25zZRIfCgR0YXNrGAEgASgLMhEubWlyYWkudjEuU01FVGFzayJ/ChNHZXRVcGxvYWRVUkxSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEQoJZmlsZV9uYW1lGAIgASgJEisKDGNvbnRlbnRfdHlwZRgDIAEoDjIVLm1pcmFpLnYxLkNvbnRlbnRUeXBlEhcKD2ZpbGVfc2l6ZV9ieXRlcxgEIAEoAyJtChRHZXRVcGxvYWRVUkxSZXNwb25zZRISCgp1cGxvYWRfdXJsGAEgASgJEhEKCWZpbGVfcGF0aBgCIAEoCRIuCgpleHBpcmVzX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKTAQoUU3VibWl0Q29udGVudFJlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIRCglmaWxlX25hbWUYAiABKAkSEQoJZmlsZV9wYXRoGAMgASgJEisKDGNvbnRlbnRfdHlwZRgEIAEoDjIVLm1pcmFpLnYxLkNvbnRlbnRUeXBlEhcKD2ZpbGVfc2l6ZV9ieXRlcxgFIAEoAyJIChVTdWJtaXRDb250ZW50UmVzcG9uc2USLwoKc3VibWlzc2lvbhgBIAEoCzIbLm1pcmFpLnYxLlNNRVRhc2tTdWJtaXNzaW9uIikKFkxpc3RTdWJtaXNzaW9uc1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCSJLChdMaXN0U3VibWlzc2lvbnNSZXNwb25zZRIwCgtzdWJtaXNzaW9ucxgBIAMoCzIbLm1pcmFpLnYxLlNNRVRhc2tTdWJtaXNzaW9uIiUKE0dldEtub3dsZWRnZVJlcXVlc3QSDgoGc21lX2lkGAEgASgJIm8KFEdldEtub3dsZWRnZVJlc3BvbnNlEioKA3NtZRgBIAEoCzIdLm1pcmFpLnYxLlN1YmplY3RNYXR0ZXJFeHBlcnQSKwoGY2h1bmtzGAIgAygLMhsubWlyYWkudjEuU01FS25vd2xlZGdlQ2h1bmsiRwoWU2VhcmNoS25vd2xlZGdlUmVxdWVzdBIPCgdzbWVfaWRzGAEgAygJEg0KBXF1ZXJ5GAIgASgJEg0KBWxpbWl0GAMgASgFIkYKF1NlYXJjaEtub3dsZWRnZVJlc3BvbnNlEisKBmNodW5rcxgBIAMoCzIbLm1pcmFpLnYxLlNNRUtub3dsZWRnZUNodW5rKk8KCFNNRVNjb3BlEhkKFVNNRV9TQ09QRV9VTlNQRUNJRklFRBAAEhQKEFNNRV9TQ09QRV9HTE9CQUwQARISCg5TTUVfU0NPUEVfVEVBTRACKocBCglTTUVTdGF0dXMSGgoWU01FX1NUQVRVU19VTlNQRUNJRklFRBAAEhQKEFNNRV9TVEFUVVNfRFJBRlQQARIYChRTTUVfU1RBVFVTX0lOR0VTVElORxACEhUKEVNNRV9TVEFUVVNfQUNUSVZFEAMSFwoTU01FX1NUQVRVU19BUkNISVZFRBAEKuYBCg1TTUVUYXNrU3RhdHVzEh8KG1NNRV9UQVNLX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF1NNRV9UQVNLX1NUQVRVU19QRU5ESU5HEAESHQoZU01FX1RBU0tfU1RBVFVTX1NVQk1JVFRFRBACEh4KGlNNRV9UQVNLX1NUQVRVU19QUk9DRVNTSU5HEAMSHQoZU01FX1RBU0tfU1RBVFVTX0NPTVBMRVRFRBAEEhoKFlNNRV9UQVNLX1NUQVRVU19GQUlMRUQQBRIdChlTTUVfVEFTS19TVEFUVVNfQ0FOQ0VMTEVEEAYquwEKC0NvbnRlbnRUeXBlEhwKGENPTlRFTlRfVFlQRV9VTlNQRUNJRklFRBAAEhkKFUNPTlRFTlRfVFlQRV9ET0NVTUVOVBABEhYKEkNPTlRFTlRfVFlQRV9JTUFHRRACEhYKEkNPTlRFTlRfVFlQRV9WSURFTxADEhYKEkNPTlRFTlRfVFlQRV9BVURJTxAEEhQKEENPTlRFTlRfVFlQRV9VUkwQBRIVChFDT05URU5UX1RZUEVfVEVYVBAGMqgJCgpTTUVTZXJ2aWNlEkQKCUNyZWF0ZVNNRRIaLm1pcmFpLnYxLkNyZWF0ZVNNRVJlcXVlc3QaGy5taXJhaS52MS5DcmVhdGVTTUVSZXNwb25zZRI7CgZHZXRTTUUSFy5taXJhaS52MS5HZXRTTUVSZXF1ZXN0GhgubWlyYWkudjEuR2V0U01FUmVzcG9uc2USQQoITGlzdFNNRXMSGS5taXJhaS52MS5MaXN0U01Fc1JlcXVlc3QaGi5taXJhaS52MS5MaXN0U01Fc1Jlc3BvbnNlEkQKCVVwZGF0ZVNNRRIaLm1pcmFpLnYxLlVwZGF0ZVNNRVJlcXVlc3QaGy5taXJhaS52MS5VcGRhdGVTTUVSZXNwb25zZRJECglEZWxldGVTTUUSGi5taXJhaS52MS5EZWxldGVTTUVSZXF1ZXN0GhsubWlyYWkudjEuRGVsZXRlU01FUmVzcG9uc2USRwoKUmVzdG9yZVNNRRIbLm1pcmFpLnYxLlJlc3RvcmVTTUVSZXF1ZXN0GhwubWlyYWkudjEuUmVzdG9yZVNNRVJlc3BvbnNlEkcKCkNyZWF0ZVRhc2sSGy5taXJhaS52MS5DcmVhdGVUYXNrUmVxdWVzdBocLm1pcmFpLnYxLkNyZWF0ZVRhc2tSZXNwb25zZRI+CgdHZXRUYXNrEhgubWlyYWkudjEuR2V0VGFza1JlcXVlc3QaGS5taXJhaS52MS5HZXRUYXNrUmVzcG9uc2USRAoJTGlzdFRhc2tzEhoubWlyYWkudjEuTGlzdFRhc2tzUmVxdWVzdBobLm1pcmFpLnYxLkxpc3RUYXNrc1Jlc3BvbnNlEkcKClVwZGF0ZVRhc2sSGy5taXJhaS52MS5VcGRhdGVUYXNrUmVxdWVzdBocLm1pcmFpLnYxLlVwZGF0ZVRhc2tSZXNwb25zZRJHCgpDYW5jZWxUYXNrEhsubWlyYWkudjEuQ2FuY2VsVGFza1JlcXVlc3QaHC5taXJhaS52MS5DYW5jZWxUYXNrUmVzcG9uc2USTQoMR2V0VXBsb2FkVVJMEh0ubWlyYWkudjEuR2V0VXBsb2FkVVJMUmVxdWVzdBoeLm1pcmFpLnYxLkdldFVwbG9hZFVSTFJlc3BvbnNlElAKDVN1Ym1pdENvbnRlbnQSHi5taXJhaS52MS5TdWJtaXRDb250ZW50UmVxdWVzdBofLm1pcmFpLnYxLlN1Ym1pdENvbnRlbnRSZXNwb25zZRJWCg9MaXN0U3VibWlzc2lvbnMSIC5taXJhaS52MS5MaXN0U3VibWlzc2lvbnNSZXF1ZXN0GiEubWlyYWkudjEuTGlzdFN1Ym1pc3Npb25zUmVzcG9uc2USTQoMR2V0S25vd2xlZGdlEh0ubWlyYWkudjEuR2V0S25vd2xlZGdlUmVxdWVzdBoeLm1pcmFpLnYxLkdldEtub3dsZWRnZVJlc3BvbnNlElYKD1NlYXJjaEtub3dsZWRnZRIgLm1pcmFpLnYxLlNlYXJjaEtub3dsZWRnZVJlcXVlc3QaIS5taXJhaS52MS5TZWFyY2hLbm93bGVkZ2VSZXNwb25zZUKOAQoMY29tLm1pcmFpLnYxQghTbWVQcm90b1ABWjNnaXRodWIuY29tL3NvZ29zL21pcmFpLWJhY2tlbmQvZ2VuL21pcmFpL3YxO21pcmFpdjGiAgNNWFiqAghNaXJhaS5WMcoCCE1pcmFpXFYx4gIUTWlyYWlcVjFcR1BCTWV0YWRhdGHqAglNaXJhaTo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("ChJtaXJhaS92MS9zbWUucHJvdG8SCG1pcmFpLnYxIscDChNTdWJqZWN0TWF0dGVyRXhwZXJ0EgoKAmlkGAEgASgJEhEKCXRlbmFudF9pZBgCIAEoCRISCgpjb21wYW55X2lkGAMgASgJEgwKBG5hbWUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSDgoGZG9tYWluGAYgASgJEiEKBXNjb3BlGAcgASgOMhIubWlyYWkudjEuU01FU2NvcGUSEAoIdGVhbV9pZHMYCCADKAkSIwoGc3RhdHVzGAkgASgOMhMubWlyYWkudjEuU01FU3RhdHVzEh4KEWtub3dsZWRnZV9zdW1tYXJ5GAogASgJSACIAQESIwoWa25vd2xlZGdlX2NvbnRlbnRfcGF0aBgLIAEoCUgBiAEBEhoKEmNyZWF0ZWRfYnlfdXNlcl9pZBgMIAEoCRIuCgpjcmVhdGVkX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIUChJfa25vd2xlZGdlX3N1bW1hcnlCGQoXX2tub3dsZWRnZV9jb250ZW50X3BhdGgi/wMKB1NNRVRhc2sSCgoCaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEg4KBnNtZV9pZBgDIAEoCRINCgV0aXRsZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRI0ChVleHBlY3RlZF9jb250ZW50X3R5cGUYBiABKA4yFS5taXJhaS52MS5Db250ZW50VHlwZRIbChNhc3NpZ25lZF90b191c2VyX2lkGAcgASgJEhsKE2Fzc2lnbmVkX2J5X3VzZXJfaWQYCCABKAkSFAoHdGVhbV9pZBgJIAEoCUgAiAEBEicKBnN0YXR1cxgKIAEoDjIXLm1pcmFpLnYxLlNNRVRhc2tTdGF0dXMSMQoIZHVlX2RhdGUYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESLgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMY29tcGxldGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgCiAEBQgoKCF90ZWFtX2lkQgsKCV9kdWVfZGF0ZUIPCg1fY29tcGxldGVkX2F0IsoFChFTTUVUYXNrU3VibWlzc2lvbhIKCgJpZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSDwoHdGFza19pZBgDIAEoCRIRCglmaWxlX25hbWUYBCABKAkSEQoJZmlsZV9wYXRoGAUgASgJEisKDGNvbnRlbnRfdHlwZRgGIAEoDjIVLm1pcmFpLnYxLkNvbnRlbnRUeXBlEhcKD2ZpbGVfc2l6ZV9ieXRlcxgHIAEoAxIbCg5leHRyYWN0ZWRfdGV4dBgIIAEoCUgAiAEBEhcKCmFpX3N1bW1hcnkYCSABKAlIAYgBARIcCg9pbmdlc3Rpb25fZXJyb3IYCiABKAlIAogBARIcChRzdWJtaXR0ZWRfYnlfdXNlcl9pZBgLIAEoCRIwCgxzdWJtaXR0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKDHByb2Nlc3NlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIA4gBARIbCg5yZXZpZXdlcl9ub3RlcxgOIAEoCUgEiAEBEh0KEGFwcHJvdmVkX2NvbnRlbnQYDyABKAlIBYgBARITCgtpc19hcHByb3ZlZBgQIAEoCBI0CgthcHByb3ZlZF9hdBgRIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIBogBARIgChNhcHByb3ZlZF9ieV91c2VyX2lkGBIgASgJSAeIAQFCEQoPX2V4dHJhY3RlZF90ZXh0Qg0KC19haV9zdW1tYXJ5QhIKEF9pbmdlc3Rpb25fZXJyb3JCDwoNX3Byb2Nlc3NlZF9hdEIRCg9fcmV2aWV3ZXJfbm90ZXNCEwoRX2FwcHJvdmVkX2NvbnRlbnRCDgoMX2FwcHJvdmVkX2F0QhYKFF9hcHByb3ZlZF9ieV91c2VyX2lkItgBChFTTUVLbm93bGVkZ2VDaHVuaxIKCgJpZBgBIAEoCRIOCgZzbWVfaWQYAiABKAkSGgoNc3VibWlzc2lvbl9pZBgDIAEoCUgAiAEBEg8KB2NvbnRlbnQYBCABKAkSDQoFdG9waWMYBSABKAkSEAoIa2V5d29yZHMYBiADKAkSFwoPcmVsZXZhbmNlX3Njb3JlGAcgASgCEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQhAKDl9zdWJtaXNzaW9uX2lkInoKEENyZWF0ZVNNRVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIOCgZkb21haW4YAyABKAkSIQoFc2NvcGUYBCABKA4yEi5taXJhaS52MS5TTUVTY29wZRIQCgh0ZWFtX2lkcxgFIAMoCSI/ChFDcmVhdGVTTUVSZXNwb25zZRIqCgNzbWUYASABKAsyHS5taXJhaS52MS5TdWJqZWN0TWF0dGVyRXhwZXJ0Ih8KDUdldFNNRVJlcXVlc3QSDgoGc21lX2lkGAEgASgJIjwKDkdldFNNRVJlc3BvbnNlEioKA3NtZRgBIAEoCzIdLm1pcmFpLnYxLlN1YmplY3RNYXR0ZXJFeHBlcnQizgEKD0xpc3RTTUVzUmVxdWVzdBImCgVzY29wZRgBIAEoDjISLm1pcmFpLnYxLlNNRVNjb3BlSACIAQESKAoGc3RhdHVzGAIgASgOMhMubWlyYWkudjEuU01FU3RhdHVzSAGIAQESFAoHdGVhbV9pZBgDIAEoCUgCiAEBEh0KEGluY2x1ZGVfYXJjaGl2ZWQYBCABKAhIA4gBAUIICgZfc2NvcGVCCQoHX3N0YXR1c0IKCghfdGVhbV9pZEITChFfaW5jbHVkZV9hcmNoaXZlZCI/ChBMaXN0U01Fc1Jlc3BvbnNlEisKBHNtZXMYASADKAsyHS5taXJhaS52MS5TdWJqZWN0TWF0dGVyRXhwZXJ0IoECChBVcGRhdGVTTUVSZXF1ZXN0Eg4KBnNtZV9pZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESGAoLZGVzY3JpcHRpb24YAyABKAlIAYgBARITCgZkb21haW4YBCABKAlIAogBARImCgVzY29wZRgFIAEoDjISLm1pcmFpLnYxLlNNRVNjb3BlSAOIAQESEAoIdGVhbV9pZHMYBiADKAkSKAoGc3RhdHVzGAcgASgOMhMubWlyYWkudjEuU01FU3RhdHVzSASIAQFCBwoFX25hbWVCDgoMX2Rlc2NyaXB0aW9uQgkKB19kb21haW5CCAoGX3Njb3BlQgkKB19zdGF0dXMiPwoRVXBkYXRlU01FUmVzcG9uc2USKgoDc21lGAEgASgLMh0ubWlyYWkudjEuU3ViamVjdE1hdHRlckV4cGVydCIiChBEZWxldGVTTUVSZXF1ZXN0Eg4KBnNtZV9pZBgBIAEoCSITChFEZWxldGVTTUVSZXNwb25zZSIjChFSZXN0b3JlU01FUmVxdWVzdBIOCgZzbWVfaWQYASABKAkiQAoSUmVzdG9yZVNNRVJlc3BvbnNlEioKA3NtZRgBIAEoCzIdLm1pcmFpLnYxLlN1YmplY3RNYXR0ZXJFeHBlcnQi/AEKEUNyZWF0ZVRhc2tSZXF1ZXN0Eg4KBnNtZV9pZBgBIAEoCRINCgV0aXRsZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRI0ChVleHBlY3RlZF9jb250ZW50X3R5cGUYBCABKA4yFS5taXJhaS52MS5Db250ZW50VHlwZRIbChNhc3NpZ25lZF90b191c2VyX2lkGAUgASgJEhQKB3RlYW1faWQYBiABKAlIAIgBARIxCghkdWVfZGF0ZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAYgBAUIKCghfdGVhbV9pZEILCglfZHVlX2RhdGUiNQoSQ3JlYXRlVGFza1Jlc3BvbnNlEh8KBHRhc2sYASABKAsyES5taXJhaS52MS5TTUVUYXNrIiEKDkdldFRhc2tSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkiMgoPR2V0VGFza1Jlc3BvbnNlEh8KBHRhc2sYASABKAsyES5taXJhaS52MS5TTUVUYXNrIqUBChBMaXN0VGFza3NSZXF1ZXN0EhMKBnNtZV9pZBgBIAEoCUgAiAEBEiAKE2Fzc2lnbmVkX3RvX3VzZXJfaWQYAiABKAlIAYgBARIsCgZzdGF0dXMYAyABKA4yFy5taXJhaS52MS5TTUVUYXNrU3RhdHVzSAKIAQFCCQoHX3NtZV9pZEIWChRfYXNzaWduZWRfdG9fdXNlcl9pZEIJCgdfc3RhdHVzIjUKEUxpc3RUYXNrc1Jlc3BvbnNlEiAKBXRhc2tzGAEgAygLMhEubWlyYWkudjEuU01FVGFzayKBAgoRVXBkYXRlVGFza1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCRISCgV0aXRsZRgCIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAMgASgJSAGIAQESOQoVZXhwZWN0ZWRfY29udGVudF90eXBlGAQgASgOMhUubWlyYWkudjEuQ29udGVudFR5cGVIAogBARIxCghkdWVfZGF0ZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIA4gBAUIICgZfdGl0bGVCDgoMX2Rlc2NyaXB0aW9uQhgKFl9leHBlY3RlZF9jb250ZW50X3R5cGVCCwoJX2R1ZV9kYXRlIjUKElVwZGF0ZVRhc2tSZXNwb25zZRIfCgR0YXNrGAEgASgLMhEubWlyYWkudjEuU01FVGFzayIkChFDYW5jZWxUYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJIjUKEkNhbmNlbFRhc2tSZXNwb25zZRIfCgR0YXNrGAEgASgLMhEubWlyYWkudjEuU01FVGFzayJ/ChNHZXRVcGxvYWRVUkxSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEQoJZmlsZV9uYW1lGAIgASgJEisKDGNvbnRlbnRfdHlwZRgDIAEoDjIVLm1pcmFpLnYxLkNvbnRlbnRUeXBlEhcKD2ZpbGVfc2l6ZV9ieXRlcxgEIAEoAyJtChRHZXRVcGxvYWRVUkxSZXNwb25zZRISCgp1cGxvYWRfdXJsGAEgASgJEhEKCWZpbGVfcGF0aBgCIAEoCRIuCgpleHBpcmVzX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK/AQoUU3VibWl0Q29udGVudFJlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIRCglmaWxlX25hbWUYAiABKAkSEQoJZmlsZV9wYXRoGAMgASgJEisKDGNvbnRlbnRfdHlwZRgEIAEoDjIVLm1pcmFpLnYxLkNvbnRlbnRUeXBlEhcKD2ZpbGVfc2l6ZV9ieXRlcxgFIAEoAxIZCgx0ZXh0X2NvbnRlbnQYBiABKAlIAIgBAUIPCg1fdGV4dF9jb250ZW50IkgKFVN1Ym1pdENvbnRlbnRSZXNwb25zZRIvCgpzdWJtaXNzaW9uGAEgASgLMhsubWlyYWkudjEuU01FVGFza1N1Ym1pc3Npb24iKQoWTGlzdFN1Ym1pc3Npb25zUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJIksKF0xpc3RTdWJtaXNzaW9uc1Jlc3BvbnNlEjAKC3N1Ym1pc3Npb25zGAEgAygLMhsubWlyYWkudjEuU01FVGFza1N1Ym1pc3Npb24iJQoTR2V0S25vd2xlZGdlUmVxdWVzdBIOCgZzbWVfaWQYASABKAkibwoUR2V0S25vd2xlZGdlUmVzcG9uc2USKgoDc21lGAEgASgLMh0ubWlyYWkudjEuU3ViamVjdE1hdHRlckV4cGVydBIrCgZjaHVua3MYAiADKAsyGy5taXJhaS52MS5TTUVLbm93bGVkZ2VDaHVuayJHChZTZWFyY2hLbm93bGVkZ2VSZXF1ZXN0Eg8KB3NtZV9pZHMYASADKAkSDQoFcXVlcnkYAiABKAkSDQoFbGltaXQYAyABKAUiRgoXU2VhcmNoS25vd2xlZGdlUmVzcG9uc2USKwoGY2h1bmtzGAEgAygLMhsubWlyYWkudjEuU01FS25vd2xlZGdlQ2h1bmsiLQoUR2V0U3VibWlzc2lvblJlcXVlc3QSFQoNc3VibWlzc2lvbl9pZBgBIAEoCSJIChVHZXRTdWJtaXNzaW9uUmVzcG9uc2USLwoKc3VibWlzc2lvbhgBIAEoCzIbLm1pcmFpLnYxLlNNRVRhc2tTdWJtaXNzaW9uIksKGEFwcHJvdmVTdWJtaXNzaW9uUmVxdWVzdBIVCg1zdWJtaXNzaW9uX2lkGAEgASgJEhgKEGFwcHJvdmVkX2NvbnRlbnQYAiABKAkigQEKGUFwcHJvdmVTdWJtaXNzaW9uUmVzcG9uc2USLwoKc3VibWlzc2lvbhgBIAEoCzIbLm1pcmFpLnYxLlNNRVRhc2tTdWJtaXNzaW9uEjMKDmNyZWF0ZWRfY2h1bmtzGAIgAygLMhsubWlyYWkudjEuU01FS25vd2xlZGdlQ2h1bmsiSgofUmVxdWVzdFN1Ym1pc3Npb25DaGFuZ2VzUmVxdWVzdBIVCg1zdWJtaXNzaW9uX2lkGAEgASgJEhAKCGZlZWRiYWNrGAIgASgJIlMKIFJlcXVlc3RTdWJtaXNzaW9uQ2hhbmdlc1Jlc3BvbnNlEi8KCnN1Ym1pc3Npb24YASABKAsyGy5taXJhaS52MS5TTUVUYXNrU3VibWlzc2lvbiJlCh9FbmhhbmNlU3VibWlzc2lvbkNvbnRlbnRSZXF1ZXN0EhUKDXN1Ym1pc3Npb25faWQYASABKAkSKwoMZW5oYW5jZV90eXBlGAIgASgOMhUubWlyYWkudjEuRW5oYW5jZVR5cGUiVgogRW5oYW5jZVN1Ym1pc3Npb25Db250ZW50UmVzcG9uc2USGAoQZW5oYW5jZWRfY29udGVudBgBIAEoCRIYChBvcmlnaW5hbF9jb250ZW50GAIgASgJInAKG1VwZGF0ZUtub3dsZWRnZUNodW5rUmVxdWVzdBIQCghjaHVua19pZBgBIAEoCRIPCgdjb250ZW50GAIgASgJEhIKBXRvcGljGAMgASgJSACIAQESEAoIa2V5d29yZHMYBCADKAlCCAoGX3RvcGljIkoKHFVwZGF0ZUtub3dsZWRnZUNodW5rUmVzcG9uc2USKgoFY2h1bmsYASABKAsyGy5taXJhaS52MS5TTUVLbm93bGVkZ2VDaHVuayIvChtEZWxldGVLbm93bGVkZ2VDaHVua1JlcXVlc3QSEAoIY2h1bmtfaWQYASABKAkiHgocRGVsZXRlS25vd2xlZGdlQ2h1bmtSZXNwb25zZSIkChFEZWxldGVUYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJIhQKEkRlbGV0ZVRhc2tSZXNwb25zZSpPCghTTUVTY29wZRIZChVTTUVfU0NPUEVfVU5TUEVDSUZJRUQQABIUChBTTUVfU0NPUEVfR0xPQkFMEAESEgoOU01FX1NDT1BFX1RFQU0QAiqHAQoJU01FU3RhdHVzEhoKFlNNRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIUChBTTUVfU1RBVFVTX0RSQUZUEAESGAoUU01FX1NUQVRVU19JTkdFU1RJTkcQAhIVChFTTUVfU1RBVFVTX0FDVElWRRADEhcKE1NNRV9TVEFUVVNfQVJDSElWRUQQBCqyAgoNU01FVGFza1N0YXR1cxIfChtTTUVfVEFTS19TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdTTUVfVEFTS19TVEFUVVNfUEVORElORxABEh0KGVNNRV9UQVNLX1NUQVRVU19TVUJNSVRURUQQAhIeChpTTUVfVEFTS19TVEFUVVNfUFJPQ0VTU0lORxADEh0KGVNNRV9UQVNLX1NUQVRVU19DT01QTEVURUQQBBIaChZTTUVfVEFTS19TVEFUVVNfRkFJTEVEEAUSHQoZU01FX1RBU0tfU1RBVFVTX0NBTkNFTExFRBAGEiMKH1NNRV9UQVNLX1NUQVRVU19BV0FJVElOR19SRVZJRVcQBxIlCiFTTUVfVEFTS19TVEFUVVNfQ0hBTkdFU19SRVFVRVNURUQQCCphCgtFbmhhbmNlVHlwZRIcChhFTkhBTkNFX1RZUEVfVU5TUEVDSUZJRUQQABIaChZFTkhBTkNFX1RZUEVfU1VNTUFSSVpFEAESGAoURU5IQU5DRV9UWVBFX0lNUFJPVkUQAiq7AQoLQ29udGVudFR5cGUSHAoYQ09OVEVOVF9UWVBFX1VOU1BFQ0lGSUVEEAASGQoVQ09OVEVOVF9UWVBFX0RPQ1VNRU5UEAESFgoSQ09OVEVOVF9UWVBFX0lNQUdFEAISFgoSQ09OVEVOVF9UWVBFX1ZJREVPEAMSFgoSQ09OVEVOVF9UWVBFX0FVRElPEAQSFAoQQ09OVEVOVF9UWVBFX1VSTBAFEhUKEUNPTlRFTlRfVFlQRV9URVhUEAYy1Q4KClNNRVNlcnZpY2USRAoJQ3JlYXRlU01FEhoubWlyYWkudjEuQ3JlYXRlU01FUmVxdWVzdBobLm1pcmFpLnYxLkNyZWF0ZVNNRVJlc3BvbnNlEjsKBkdldFNNRRIXLm1pcmFpLnYxLkdldFNNRVJlcXVlc3QaGC5taXJhaS52MS5HZXRTTUVSZXNwb25zZRJBCghMaXN0U01FcxIZLm1pcmFpLnYxLkxpc3RTTUVzUmVxdWVzdBoaLm1pcmFpLnYxLkxpc3RTTUVzUmVzcG9uc2USRAoJVXBkYXRlU01FEhoubWlyYWkudjEuVXBkYXRlU01FUmVxdWVzdBobLm1pcmFpLnYxLlVwZGF0ZVNNRVJlc3BvbnNlEkQKCURlbGV0ZVNNRRIaLm1pcmFpLnYxLkRlbGV0ZVNNRVJlcXVlc3QaGy5taXJhaS52MS5EZWxldGVTTUVSZXNwb25zZRJHCgpSZXN0b3JlU01FEhsubWlyYWkudjEuUmVzdG9yZVNNRVJlcXVlc3QaHC5taXJhaS52MS5SZXN0b3JlU01FUmVzcG9uc2USRwoKQ3JlYXRlVGFzaxIbLm1pcmFpLnYxLkNyZWF0ZVRhc2tSZXF1ZXN0GhwubWlyYWkudjEuQ3JlYXRlVGFza1Jlc3BvbnNlEj4KB0dldFRhc2sSGC5taXJhaS52MS5HZXRUYXNrUmVxdWVzdBoZLm1pcmFpLnYxLkdldFRhc2tSZXNwb25zZRJECglMaXN0VGFza3MSGi5taXJhaS52MS5MaXN0VGFza3NSZXF1ZXN0GhsubWlyYWkudjEuTGlzdFRhc2tzUmVzcG9uc2USRwoKVXBkYXRlVGFzaxIbLm1pcmFpLnYxLlVwZGF0ZVRhc2tSZXF1ZXN0GhwubWlyYWkudjEuVXBkYXRlVGFza1Jlc3BvbnNlEkcKCkNhbmNlbFRhc2sSGy5taXJhaS52MS5DYW5jZWxUYXNrUmVxdWVzdBocLm1pcmFpLnYxLkNhbmNlbFRhc2tSZXNwb25zZRJNCgxHZXRVcGxvYWRVUkwSHS5taXJhaS52MS5HZXRVcGxvYWRVUkxSZXF1ZXN0Gh4ubWlyYWkudjEuR2V0VXBsb2FkVVJMUmVzcG9uc2USUAoNU3VibWl0Q29udGVudBIeLm1pcmFpLnYxLlN1Ym1pdENvbnRlbnRSZXF1ZXN0Gh8ubWlyYWkudjEuU3VibWl0Q29udGVudFJlc3BvbnNlElYKD0xpc3RTdWJtaXNzaW9ucxIgLm1pcmFpLnYxLkxpc3RTdWJtaXNzaW9uc1JlcXVlc3QaIS5taXJhaS52MS5MaXN0U3VibWlzc2lvbnNSZXNwb25zZRJNCgxHZXRLbm93bGVkZ2USHS5taXJhaS52MS5HZXRLbm93bGVkZ2VSZXF1ZXN0Gh4ubWlyYWkudjEuR2V0S25vd2xlZGdlUmVzcG9uc2USVgoPU2VhcmNoS25vd2xlZGdlEiAubWlyYWkudjEuU2VhcmNoS25vd2xlZGdlUmVxdWVzdBohLm1pcmFpLnYxLlNlYXJjaEtub3dsZWRnZVJlc3BvbnNlElAKDUdldFN1Ym1pc3Npb24SHi5taXJhaS52MS5HZXRTdWJtaXNzaW9uUmVxdWVzdBofLm1pcmFpLnYxLkdldFN1Ym1pc3Npb25SZXNwb25zZRJcChFBcHByb3ZlU3VibWlzc2lvbhIiLm1pcmFpLnYxLkFwcHJvdmVTdWJtaXNzaW9uUmVxdWVzdBojLm1pcmFpLnYxLkFwcHJvdmVTdWJtaXNzaW9uUmVzcG9uc2UScQoYUmVxdWVzdFN1Ym1pc3Npb25DaGFuZ2VzEikubWlyYWkudjEuUmVxdWVzdFN1Ym1pc3Npb25DaGFuZ2VzUmVxdWVzdBoqLm1pcmFpLnYxLlJlcXVlc3RTdWJtaXNzaW9uQ2hhbmdlc1Jlc3BvbnNlEnEKGEVuaGFuY2VTdWJtaXNzaW9uQ29udGVudBIpLm1pcmFpLnYxLkVuaGFuY2VTdWJtaXNzaW9uQ29udGVudFJlcXVlc3QaKi5taXJhaS52MS5FbmhhbmNlU3VibWlzc2lvbkNvbnRlbnRSZXNwb25zZRJlChRVcGRhdGVLbm93bGVkZ2VDaHVuaxIlLm1pcmFpLnYxLlVwZGF0ZUtub3dsZWRnZUNodW5rUmVxdWVzdBomLm1pcmFpLnYxLlVwZGF0ZUtub3dsZWRnZUNodW5rUmVzcG9uc2USZQoURGVsZXRlS25vd2xlZGdlQ2h1bmsSJS5taXJhaS52MS5EZWxldGVLbm93bGVkZ2VDaHVua1JlcXVlc3QaJi5taXJhaS52MS5EZWxldGVLbm93bGVkZ2VDaHVua1Jlc3BvbnNlEkcKCkRlbGV0ZVRhc2sSGy5taXJhaS52MS5EZWxldGVUYXNrUmVxdWVzdBocLm1pcmFpLnYxLkRlbGV0ZVRhc2tSZXNwb25zZUKOAQoMY29tLm1pcmFpLnYxQghTbWVQcm90b1ABWjNnaXRodWIuY29tL3NvZ29zL21pcmFpLWJhY2tlbmQvZ2VuL21pcmFpL3YxO21pcmFpdjGiAgNNWFiqAghNaXJhaS5WMcoCCE1pcmFpXFYx4gIUTWlyYWlcVjFcR1BCTWV0YWRhdGHqAglNaXJhaTo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * SubjectMatterExpert represents a knowledge source entity.
@@ -286,6 +286,39 @@ export type SMETaskSubmission = Message<"mirai.v1.SMETaskSubmission"> & {
    * @generated from field: optional google.protobuf.Timestamp processed_at = 13;
    */
   processedAt?: Timestamp;
+
+  /**
+   * Review/approval fields
+   *
+   * Feedback from reviewer
+   *
+   * @generated from field: optional string reviewer_notes = 14;
+   */
+  reviewerNotes?: string;
+
+  /**
+   * Final approved text (may differ from original)
+   *
+   * @generated from field: optional string approved_content = 15;
+   */
+  approvedContent?: string;
+
+  /**
+   * Whether submission is approved
+   *
+   * @generated from field: bool is_approved = 16;
+   */
+  isApproved: boolean;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp approved_at = 17;
+   */
+  approvedAt?: Timestamp;
+
+  /**
+   * @generated from field: optional string approved_by_user_id = 18;
+   */
+  approvedByUserId?: string;
 };
 
 /**
@@ -985,12 +1018,14 @@ export type SubmitContentRequest = Message<"mirai.v1.SubmitContentRequest"> & {
   taskId: string;
 
   /**
+   * Optional for text submissions
+   *
    * @generated from field: string file_name = 2;
    */
   fileName: string;
 
   /**
-   * S3 path from GetUploadURL
+   * S3 path from GetUploadURL (optional for text)
    *
    * @generated from field: string file_path = 3;
    */
@@ -1002,9 +1037,18 @@ export type SubmitContentRequest = Message<"mirai.v1.SubmitContentRequest"> & {
   contentType: ContentType;
 
   /**
+   * Optional for text submissions
+   *
    * @generated from field: int64 file_size_bytes = 5;
    */
   fileSizeBytes: bigint;
+
+  /**
+   * Direct text content (for CONTENT_TYPE_TEXT)
+   *
+   * @generated from field: optional string text_content = 6;
+   */
+  textContent?: string;
 };
 
 /**
@@ -1169,6 +1213,308 @@ export const SearchKnowledgeResponseSchema: GenMessage<SearchKnowledgeResponse> 
   messageDesc(file_mirai_v1_sme, 35);
 
 /**
+ * GetSubmissionRequest requests a specific submission.
+ *
+ * @generated from message mirai.v1.GetSubmissionRequest
+ */
+export type GetSubmissionRequest = Message<"mirai.v1.GetSubmissionRequest"> & {
+  /**
+   * @generated from field: string submission_id = 1;
+   */
+  submissionId: string;
+};
+
+/**
+ * Describes the message mirai.v1.GetSubmissionRequest.
+ * Use `create(GetSubmissionRequestSchema)` to create a new message.
+ */
+export const GetSubmissionRequestSchema: GenMessage<GetSubmissionRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 36);
+
+/**
+ * GetSubmissionResponse contains the requested submission.
+ *
+ * @generated from message mirai.v1.GetSubmissionResponse
+ */
+export type GetSubmissionResponse = Message<"mirai.v1.GetSubmissionResponse"> & {
+  /**
+   * @generated from field: mirai.v1.SMETaskSubmission submission = 1;
+   */
+  submission?: SMETaskSubmission;
+};
+
+/**
+ * Describes the message mirai.v1.GetSubmissionResponse.
+ * Use `create(GetSubmissionResponseSchema)` to create a new message.
+ */
+export const GetSubmissionResponseSchema: GenMessage<GetSubmissionResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 37);
+
+/**
+ * ApproveSubmissionRequest approves a submission and creates knowledge.
+ *
+ * @generated from message mirai.v1.ApproveSubmissionRequest
+ */
+export type ApproveSubmissionRequest = Message<"mirai.v1.ApproveSubmissionRequest"> & {
+  /**
+   * @generated from field: string submission_id = 1;
+   */
+  submissionId: string;
+
+  /**
+   * The final content to use (may be edited by reviewer)
+   *
+   * @generated from field: string approved_content = 2;
+   */
+  approvedContent: string;
+};
+
+/**
+ * Describes the message mirai.v1.ApproveSubmissionRequest.
+ * Use `create(ApproveSubmissionRequestSchema)` to create a new message.
+ */
+export const ApproveSubmissionRequestSchema: GenMessage<ApproveSubmissionRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 38);
+
+/**
+ * ApproveSubmissionResponse contains the approved submission and created knowledge.
+ *
+ * @generated from message mirai.v1.ApproveSubmissionResponse
+ */
+export type ApproveSubmissionResponse = Message<"mirai.v1.ApproveSubmissionResponse"> & {
+  /**
+   * @generated from field: mirai.v1.SMETaskSubmission submission = 1;
+   */
+  submission?: SMETaskSubmission;
+
+  /**
+   * @generated from field: repeated mirai.v1.SMEKnowledgeChunk created_chunks = 2;
+   */
+  createdChunks: SMEKnowledgeChunk[];
+};
+
+/**
+ * Describes the message mirai.v1.ApproveSubmissionResponse.
+ * Use `create(ApproveSubmissionResponseSchema)` to create a new message.
+ */
+export const ApproveSubmissionResponseSchema: GenMessage<ApproveSubmissionResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 39);
+
+/**
+ * RequestSubmissionChangesRequest sends submission back for revision.
+ *
+ * @generated from message mirai.v1.RequestSubmissionChangesRequest
+ */
+export type RequestSubmissionChangesRequest = Message<"mirai.v1.RequestSubmissionChangesRequest"> & {
+  /**
+   * @generated from field: string submission_id = 1;
+   */
+  submissionId: string;
+
+  /**
+   * What needs to change
+   *
+   * @generated from field: string feedback = 2;
+   */
+  feedback: string;
+};
+
+/**
+ * Describes the message mirai.v1.RequestSubmissionChangesRequest.
+ * Use `create(RequestSubmissionChangesRequestSchema)` to create a new message.
+ */
+export const RequestSubmissionChangesRequestSchema: GenMessage<RequestSubmissionChangesRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 40);
+
+/**
+ * RequestSubmissionChangesResponse contains the updated submission.
+ *
+ * @generated from message mirai.v1.RequestSubmissionChangesResponse
+ */
+export type RequestSubmissionChangesResponse = Message<"mirai.v1.RequestSubmissionChangesResponse"> & {
+  /**
+   * @generated from field: mirai.v1.SMETaskSubmission submission = 1;
+   */
+  submission?: SMETaskSubmission;
+};
+
+/**
+ * Describes the message mirai.v1.RequestSubmissionChangesResponse.
+ * Use `create(RequestSubmissionChangesResponseSchema)` to create a new message.
+ */
+export const RequestSubmissionChangesResponseSchema: GenMessage<RequestSubmissionChangesResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 41);
+
+/**
+ * EnhanceSubmissionContentRequest requests AI enhancement of content.
+ *
+ * @generated from message mirai.v1.EnhanceSubmissionContentRequest
+ */
+export type EnhanceSubmissionContentRequest = Message<"mirai.v1.EnhanceSubmissionContentRequest"> & {
+  /**
+   * @generated from field: string submission_id = 1;
+   */
+  submissionId: string;
+
+  /**
+   * @generated from field: mirai.v1.EnhanceType enhance_type = 2;
+   */
+  enhanceType: EnhanceType;
+};
+
+/**
+ * Describes the message mirai.v1.EnhanceSubmissionContentRequest.
+ * Use `create(EnhanceSubmissionContentRequestSchema)` to create a new message.
+ */
+export const EnhanceSubmissionContentRequestSchema: GenMessage<EnhanceSubmissionContentRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 42);
+
+/**
+ * EnhanceSubmissionContentResponse contains enhanced content.
+ *
+ * @generated from message mirai.v1.EnhanceSubmissionContentResponse
+ */
+export type EnhanceSubmissionContentResponse = Message<"mirai.v1.EnhanceSubmissionContentResponse"> & {
+  /**
+   * @generated from field: string enhanced_content = 1;
+   */
+  enhancedContent: string;
+
+  /**
+   * @generated from field: string original_content = 2;
+   */
+  originalContent: string;
+};
+
+/**
+ * Describes the message mirai.v1.EnhanceSubmissionContentResponse.
+ * Use `create(EnhanceSubmissionContentResponseSchema)` to create a new message.
+ */
+export const EnhanceSubmissionContentResponseSchema: GenMessage<EnhanceSubmissionContentResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 43);
+
+/**
+ * UpdateKnowledgeChunkRequest updates a knowledge chunk.
+ *
+ * @generated from message mirai.v1.UpdateKnowledgeChunkRequest
+ */
+export type UpdateKnowledgeChunkRequest = Message<"mirai.v1.UpdateKnowledgeChunkRequest"> & {
+  /**
+   * @generated from field: string chunk_id = 1;
+   */
+  chunkId: string;
+
+  /**
+   * @generated from field: string content = 2;
+   */
+  content: string;
+
+  /**
+   * @generated from field: optional string topic = 3;
+   */
+  topic?: string;
+
+  /**
+   * @generated from field: repeated string keywords = 4;
+   */
+  keywords: string[];
+};
+
+/**
+ * Describes the message mirai.v1.UpdateKnowledgeChunkRequest.
+ * Use `create(UpdateKnowledgeChunkRequestSchema)` to create a new message.
+ */
+export const UpdateKnowledgeChunkRequestSchema: GenMessage<UpdateKnowledgeChunkRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 44);
+
+/**
+ * UpdateKnowledgeChunkResponse contains the updated chunk.
+ *
+ * @generated from message mirai.v1.UpdateKnowledgeChunkResponse
+ */
+export type UpdateKnowledgeChunkResponse = Message<"mirai.v1.UpdateKnowledgeChunkResponse"> & {
+  /**
+   * @generated from field: mirai.v1.SMEKnowledgeChunk chunk = 1;
+   */
+  chunk?: SMEKnowledgeChunk;
+};
+
+/**
+ * Describes the message mirai.v1.UpdateKnowledgeChunkResponse.
+ * Use `create(UpdateKnowledgeChunkResponseSchema)` to create a new message.
+ */
+export const UpdateKnowledgeChunkResponseSchema: GenMessage<UpdateKnowledgeChunkResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 45);
+
+/**
+ * DeleteKnowledgeChunkRequest deletes a knowledge chunk.
+ *
+ * @generated from message mirai.v1.DeleteKnowledgeChunkRequest
+ */
+export type DeleteKnowledgeChunkRequest = Message<"mirai.v1.DeleteKnowledgeChunkRequest"> & {
+  /**
+   * @generated from field: string chunk_id = 1;
+   */
+  chunkId: string;
+};
+
+/**
+ * Describes the message mirai.v1.DeleteKnowledgeChunkRequest.
+ * Use `create(DeleteKnowledgeChunkRequestSchema)` to create a new message.
+ */
+export const DeleteKnowledgeChunkRequestSchema: GenMessage<DeleteKnowledgeChunkRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 46);
+
+/**
+ * DeleteKnowledgeChunkResponse confirms deletion.
+ *
+ * @generated from message mirai.v1.DeleteKnowledgeChunkResponse
+ */
+export type DeleteKnowledgeChunkResponse = Message<"mirai.v1.DeleteKnowledgeChunkResponse"> & {
+};
+
+/**
+ * Describes the message mirai.v1.DeleteKnowledgeChunkResponse.
+ * Use `create(DeleteKnowledgeChunkResponseSchema)` to create a new message.
+ */
+export const DeleteKnowledgeChunkResponseSchema: GenMessage<DeleteKnowledgeChunkResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 47);
+
+/**
+ * DeleteTaskRequest permanently deletes a task.
+ *
+ * @generated from message mirai.v1.DeleteTaskRequest
+ */
+export type DeleteTaskRequest = Message<"mirai.v1.DeleteTaskRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+};
+
+/**
+ * Describes the message mirai.v1.DeleteTaskRequest.
+ * Use `create(DeleteTaskRequestSchema)` to create a new message.
+ */
+export const DeleteTaskRequestSchema: GenMessage<DeleteTaskRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 48);
+
+/**
+ * DeleteTaskResponse confirms task deletion.
+ *
+ * @generated from message mirai.v1.DeleteTaskResponse
+ */
+export type DeleteTaskResponse = Message<"mirai.v1.DeleteTaskResponse"> & {
+};
+
+/**
+ * Describes the message mirai.v1.DeleteTaskResponse.
+ * Use `create(DeleteTaskResponseSchema)` to create a new message.
+ */
+export const DeleteTaskResponseSchema: GenMessage<DeleteTaskResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_sme, 49);
+
+/**
  * SMEScope defines whether an SME is global or team-scoped.
  *
  * @generated from enum mirai.v1.SMEScope
@@ -1265,7 +1611,7 @@ export enum SMETaskStatus {
   SME_TASK_STATUS_PENDING = 1,
 
   /**
-   * Content submitted, awaiting ingestion
+   * Content submitted (legacy)
    *
    * @generated from enum value: SME_TASK_STATUS_SUBMITTED = 2;
    */
@@ -1298,6 +1644,20 @@ export enum SMETaskStatus {
    * @generated from enum value: SME_TASK_STATUS_CANCELLED = 6;
    */
   SME_TASK_STATUS_CANCELLED = 6,
+
+  /**
+   * Content submitted, awaiting assigner review
+   *
+   * @generated from enum value: SME_TASK_STATUS_AWAITING_REVIEW = 7;
+   */
+  SME_TASK_STATUS_AWAITING_REVIEW = 7,
+
+  /**
+   * Sent back to submitter for revision
+   *
+   * @generated from enum value: SME_TASK_STATUS_CHANGES_REQUESTED = 8;
+   */
+  SME_TASK_STATUS_CHANGES_REQUESTED = 8,
 }
 
 /**
@@ -1305,6 +1665,38 @@ export enum SMETaskStatus {
  */
 export const SMETaskStatusSchema: GenEnum<SMETaskStatus> = /*@__PURE__*/
   enumDesc(file_mirai_v1_sme, 2);
+
+/**
+ * EnhanceType for AI content enhancement operations.
+ *
+ * @generated from enum mirai.v1.EnhanceType
+ */
+export enum EnhanceType {
+  /**
+   * @generated from enum value: ENHANCE_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Create a concise summary
+   *
+   * @generated from enum value: ENHANCE_TYPE_SUMMARIZE = 1;
+   */
+  SUMMARIZE = 1,
+
+  /**
+   * Clean up, clarify, and structure
+   *
+   * @generated from enum value: ENHANCE_TYPE_IMPROVE = 2;
+   */
+  IMPROVE = 2,
+}
+
+/**
+ * Describes the enum mirai.v1.EnhanceType.
+ */
+export const EnhanceTypeSchema: GenEnum<EnhanceType> = /*@__PURE__*/
+  enumDesc(file_mirai_v1_sme, 3);
 
 /**
  * ContentType for uploaded materials.
@@ -1364,7 +1756,7 @@ export enum ContentType {
  * Describes the enum mirai.v1.ContentType.
  */
 export const ContentTypeSchema: GenEnum<ContentType> = /*@__PURE__*/
-  enumDesc(file_mirai_v1_sme, 3);
+  enumDesc(file_mirai_v1_sme, 4);
 
 /**
  * SMEService handles SME and task operations.
@@ -1531,6 +1923,76 @@ export const SMEService: GenService<{
     methodKind: "unary";
     input: typeof SearchKnowledgeRequestSchema;
     output: typeof SearchKnowledgeResponseSchema;
+  },
+  /**
+   * GetSubmission returns a specific submission by ID.
+   *
+   * @generated from rpc mirai.v1.SMEService.GetSubmission
+   */
+  getSubmission: {
+    methodKind: "unary";
+    input: typeof GetSubmissionRequestSchema;
+    output: typeof GetSubmissionResponseSchema;
+  },
+  /**
+   * ApproveSubmission approves content and creates knowledge chunks.
+   *
+   * @generated from rpc mirai.v1.SMEService.ApproveSubmission
+   */
+  approveSubmission: {
+    methodKind: "unary";
+    input: typeof ApproveSubmissionRequestSchema;
+    output: typeof ApproveSubmissionResponseSchema;
+  },
+  /**
+   * RequestSubmissionChanges sends submission back to submitter with feedback.
+   *
+   * @generated from rpc mirai.v1.SMEService.RequestSubmissionChanges
+   */
+  requestSubmissionChanges: {
+    methodKind: "unary";
+    input: typeof RequestSubmissionChangesRequestSchema;
+    output: typeof RequestSubmissionChangesResponseSchema;
+  },
+  /**
+   * EnhanceSubmissionContent uses AI to summarize or improve content.
+   *
+   * @generated from rpc mirai.v1.SMEService.EnhanceSubmissionContent
+   */
+  enhanceSubmissionContent: {
+    methodKind: "unary";
+    input: typeof EnhanceSubmissionContentRequestSchema;
+    output: typeof EnhanceSubmissionContentResponseSchema;
+  },
+  /**
+   * UpdateKnowledgeChunk updates a knowledge chunk's content.
+   *
+   * @generated from rpc mirai.v1.SMEService.UpdateKnowledgeChunk
+   */
+  updateKnowledgeChunk: {
+    methodKind: "unary";
+    input: typeof UpdateKnowledgeChunkRequestSchema;
+    output: typeof UpdateKnowledgeChunkResponseSchema;
+  },
+  /**
+   * DeleteKnowledgeChunk removes a knowledge chunk.
+   *
+   * @generated from rpc mirai.v1.SMEService.DeleteKnowledgeChunk
+   */
+  deleteKnowledgeChunk: {
+    methodKind: "unary";
+    input: typeof DeleteKnowledgeChunkRequestSchema;
+    output: typeof DeleteKnowledgeChunkResponseSchema;
+  },
+  /**
+   * DeleteTask permanently removes a task.
+   *
+   * @generated from rpc mirai.v1.SMEService.DeleteTask
+   */
+  deleteTask: {
+    methodKind: "unary";
+    input: typeof DeleteTaskRequestSchema;
+    output: typeof DeleteTaskResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_mirai_v1_sme, 0);

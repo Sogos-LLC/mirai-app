@@ -272,6 +272,38 @@ export async function getLibrary(includeCourseCounts: boolean = true) {
   return response.library;
 }
 
+/**
+ * Create a new folder
+ * @param name - The folder name
+ * @param parentId - Optional parent folder ID (null for root-level)
+ * @param type - Folder type (defaults to 4 = FOLDER_TYPE_FOLDER)
+ */
+export async function createFolder(
+  name: string,
+  parentId?: string,
+  type: number = 4 // FOLDER_TYPE_FOLDER
+): Promise<Folder> {
+  const response = await callMethod<any, { folder: Folder }>(
+    'mirai.v1.CourseService',
+    'CreateFolder',
+    { name, parentId, type }
+  );
+  return response.folder;
+}
+
+/**
+ * Delete a folder
+ * @param folderId - The folder ID to delete
+ */
+export async function deleteFolder(folderId: string): Promise<boolean> {
+  const response = await callMethod<any, { success: boolean }>(
+    'mirai.v1.CourseService',
+    'DeleteFolder',
+    { id: folderId }
+  );
+  return response.success;
+}
+
 // Re-export types
 export { CourseStatus };
 export type { Course, LibraryEntry, Folder };

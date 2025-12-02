@@ -6,14 +6,17 @@ import "fmt"
 type NotificationType string
 
 const (
-	NotificationTypeTaskAssigned       NotificationType = "task_assigned"
-	NotificationTypeTaskDueSoon        NotificationType = "task_due_soon"
-	NotificationTypeIngestionComplete  NotificationType = "ingestion_complete"
-	NotificationTypeIngestionFailed    NotificationType = "ingestion_failed"
-	NotificationTypeOutlineReady       NotificationType = "outline_ready"
-	NotificationTypeGenerationComplete NotificationType = "generation_complete"
-	NotificationTypeGenerationFailed   NotificationType = "generation_failed"
-	NotificationTypeApprovalRequested  NotificationType = "approval_requested"
+	NotificationTypeTaskAssigned             NotificationType = "task_assigned"
+	NotificationTypeTaskDueSoon              NotificationType = "task_due_soon"
+	NotificationTypeIngestionComplete        NotificationType = "ingestion_complete"
+	NotificationTypeIngestionFailed          NotificationType = "ingestion_failed"
+	NotificationTypeOutlineReady             NotificationType = "outline_ready"
+	NotificationTypeGenerationComplete       NotificationType = "generation_complete"
+	NotificationTypeGenerationFailed         NotificationType = "generation_failed"
+	NotificationTypeApprovalRequested        NotificationType = "approval_requested"
+	NotificationTypeSubmissionReadyForReview NotificationType = "submission_ready_for_review"
+	NotificationTypeSubmissionApproved       NotificationType = "submission_approved"
+	NotificationTypeChangesRequested         NotificationType = "changes_requested"
 )
 
 func (t NotificationType) String() string {
@@ -25,7 +28,9 @@ func (t NotificationType) IsValid() bool {
 	case NotificationTypeTaskAssigned, NotificationTypeTaskDueSoon,
 		NotificationTypeIngestionComplete, NotificationTypeIngestionFailed,
 		NotificationTypeOutlineReady, NotificationTypeGenerationComplete,
-		NotificationTypeGenerationFailed, NotificationTypeApprovalRequested:
+		NotificationTypeGenerationFailed, NotificationTypeApprovalRequested,
+		NotificationTypeSubmissionReadyForReview, NotificationTypeSubmissionApproved,
+		NotificationTypeChangesRequested:
 		return true
 	}
 	return false

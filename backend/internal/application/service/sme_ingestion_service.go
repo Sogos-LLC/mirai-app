@@ -143,24 +143,32 @@ func (s *SMEIngestionService) processIngestionJob(ctx context.Context, job *enti
 	job.ProgressMessage = &progressMsg
 	_ = s.jobRepo.Update(ctx, job)
 
-	// Get file content from storage
-	content, err := s.storage.GetContent(ctx, submission.FilePath)
-	if err != nil {
-		log.Error("failed to get file content", "path", submission.FilePath, "error", err)
-		return s.failJob(ctx, job, "failed to retrieve file content")
-	}
+	// Check if text is already extracted (e.g., for text submissions)
+	var extractedText string
+	if submission.ExtractedText != nil && *submission.ExtractedText != "" {
+		// Text already available (text submissions set this directly)
+		extractedText = *submission.ExtractedText
+		log.Info("using pre-populated extracted text", "length", len(extractedText))
+	} else {
+		// Need to retrieve file and extract text
+		content, err := s.storage.GetContent(ctx, submission.FilePath)
+		if err != nil {
+			log.Error("failed to get file content", "path", submission.FilePath, "error", err)
+			return s.failJob(ctx, job, "failed to retrieve file content")
+		}
 
-	// Extract text based on content type
-	extractedText, err := s.extractText(submission.ContentType, content)
-	if err != nil {
-		log.Error("failed to extract text", "contentType", submission.ContentType, "error", err)
-		return s.failJob(ctx, job, fmt.Sprintf("failed to extract text: %v", err))
-	}
+		// Extract text based on content type
+		extractedText, err = s.extractText(submission.ContentType, content)
+		if err != nil {
+			log.Error("failed to extract text", "contentType", submission.ContentType, "error", err)
+			return s.failJob(ctx, job, fmt.Sprintf("failed to extract text: %v", err))
+		}
 
-	// Update submission with extracted text
-	submission.ExtractedText = &extractedText
-	if err := s.submissionRepo.Update(ctx, submission); err != nil {
-		log.Warn("failed to save extracted text", "error", err)
+		// Update submission with extracted text
+		submission.ExtractedText = &extractedText
+		if err := s.submissionRepo.Update(ctx, submission); err != nil {
+			log.Warn("failed to save extracted text", "error", err)
+		}
 	}
 
 	// Update progress

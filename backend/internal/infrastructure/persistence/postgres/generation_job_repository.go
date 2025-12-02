@@ -24,8 +24,8 @@ func NewGenerationJobRepository(db *sql.DB) repository.GenerationJobRepository {
 // Create creates a new job.
 func (r *GenerationJobRepository) Create(ctx context.Context, job *entity.GenerationJob) error {
 	query := `
-		INSERT INTO generation_jobs (tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		INSERT INTO generation_jobs (tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING id, created_at
 	`
 	return r.db.QueryRowContext(ctx, query,
@@ -34,6 +34,7 @@ func (r *GenerationJobRepository) Create(ctx context.Context, job *entity.Genera
 		job.Status.String(),
 		job.CourseID,
 		job.LessonID,
+		job.OutlineLessonID,
 		job.SMETaskID,
 		job.SubmissionID,
 		job.ParentJobID,
@@ -51,7 +52,7 @@ func (r *GenerationJobRepository) Create(ctx context.Context, job *entity.Genera
 // GetByID retrieves a job by its ID.
 func (r *GenerationJobRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.GenerationJob, error) {
 	query := `
-		SELECT id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
+		SELECT id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
 		FROM generation_jobs
 		WHERE id = $1
 	`
@@ -64,6 +65,7 @@ func (r *GenerationJobRepository) GetByID(ctx context.Context, id uuid.UUID) (*e
 		&statusStr,
 		&job.CourseID,
 		&job.LessonID,
+		&job.OutlineLessonID,
 		&job.SMETaskID,
 		&job.SubmissionID,
 		&job.ParentJobID,
@@ -93,7 +95,7 @@ func (r *GenerationJobRepository) GetByID(ctx context.Context, id uuid.UUID) (*e
 // List retrieves jobs with optional filtering.
 func (r *GenerationJobRepository) List(ctx context.Context, opts entity.GenerationJobListOptions) ([]*entity.GenerationJob, error) {
 	query := `
-		SELECT id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
+		SELECT id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
 		FROM generation_jobs
 		WHERE 1=1
 	`
@@ -137,6 +139,7 @@ func (r *GenerationJobRepository) List(ctx context.Context, opts entity.Generati
 			&statusStr,
 			&job.CourseID,
 			&job.LessonID,
+			&job.OutlineLessonID,
 			&job.SMETaskID,
 			&job.SubmissionID,
 			&job.ParentJobID,
@@ -186,7 +189,7 @@ func (r *GenerationJobRepository) Update(ctx context.Context, job *entity.Genera
 // GetNextQueued retrieves the next queued job for processing.
 func (r *GenerationJobRepository) GetNextQueued(ctx context.Context) (*entity.GenerationJob, error) {
 	query := `
-		SELECT id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
+		SELECT id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
 		FROM generation_jobs
 		WHERE status = 'queued'
 		ORDER BY created_at ASC
@@ -202,6 +205,7 @@ func (r *GenerationJobRepository) GetNextQueued(ctx context.Context) (*entity.Ge
 		&statusStr,
 		&job.CourseID,
 		&job.LessonID,
+		&job.OutlineLessonID,
 		&job.SMETaskID,
 		&job.SubmissionID,
 		&job.ParentJobID,
@@ -231,7 +235,7 @@ func (r *GenerationJobRepository) GetNextQueued(ctx context.Context) (*entity.Ge
 // ListByParentID retrieves all child jobs for a parent job.
 func (r *GenerationJobRepository) ListByParentID(ctx context.Context, parentID uuid.UUID) ([]*entity.GenerationJob, error) {
 	query := `
-		SELECT id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
+		SELECT id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
 		FROM generation_jobs
 		WHERE parent_job_id = $1
 		ORDER BY created_at ASC
@@ -253,6 +257,7 @@ func (r *GenerationJobRepository) ListByParentID(ctx context.Context, parentID u
 			&statusStr,
 			&job.CourseID,
 			&job.LessonID,
+			&job.OutlineLessonID,
 			&job.SMETaskID,
 			&job.SubmissionID,
 			&job.ParentJobID,

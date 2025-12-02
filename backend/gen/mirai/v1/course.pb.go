@@ -2278,6 +2278,202 @@ func (x *GetLibraryResponse) GetLibrary() *Library {
 	return nil
 }
 
+// CreateFolderRequest contains the data for creating a new folder.
+type CreateFolderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	ParentId      *string                `protobuf:"bytes,2,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"` // null for root-level folders
+	Type          FolderType             `protobuf:"varint,3,opt,name=type,proto3,enum=mirai.v1.FolderType" json:"type,omitempty"`     // typically FOLDER_TYPE_FOLDER for user-created folders
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateFolderRequest) Reset() {
+	*x = CreateFolderRequest{}
+	mi := &file_mirai_v1_course_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFolderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFolderRequest) ProtoMessage() {}
+
+func (x *CreateFolderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFolderRequest.ProtoReflect.Descriptor instead.
+func (*CreateFolderRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *CreateFolderRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateFolderRequest) GetParentId() string {
+	if x != nil && x.ParentId != nil {
+		return *x.ParentId
+	}
+	return ""
+}
+
+func (x *CreateFolderRequest) GetType() FolderType {
+	if x != nil {
+		return x.Type
+	}
+	return FolderType_FOLDER_TYPE_UNSPECIFIED
+}
+
+// CreateFolderResponse contains the newly created folder.
+type CreateFolderResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Folder        *Folder                `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateFolderResponse) Reset() {
+	*x = CreateFolderResponse{}
+	mi := &file_mirai_v1_course_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFolderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFolderResponse) ProtoMessage() {}
+
+func (x *CreateFolderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFolderResponse.ProtoReflect.Descriptor instead.
+func (*CreateFolderResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *CreateFolderResponse) GetFolder() *Folder {
+	if x != nil {
+		return x.Folder
+	}
+	return nil
+}
+
+// DeleteFolderRequest contains the folder ID to delete.
+type DeleteFolderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteFolderRequest) Reset() {
+	*x = DeleteFolderRequest{}
+	mi := &file_mirai_v1_course_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteFolderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteFolderRequest) ProtoMessage() {}
+
+func (x *DeleteFolderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteFolderRequest.ProtoReflect.Descriptor instead.
+func (*DeleteFolderRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *DeleteFolderRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// DeleteFolderResponse confirms deletion.
+type DeleteFolderResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteFolderResponse) Reset() {
+	*x = DeleteFolderResponse{}
+	mi := &file_mirai_v1_course_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteFolderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteFolderResponse) ProtoMessage() {}
+
+func (x *DeleteFolderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteFolderResponse.ProtoReflect.Descriptor instead.
+func (*DeleteFolderResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *DeleteFolderResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 // ExportCourseRequest contains the course ID and export format.
 type ExportCourseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2289,7 +2485,7 @@ type ExportCourseRequest struct {
 
 func (x *ExportCourseRequest) Reset() {
 	*x = ExportCourseRequest{}
-	mi := &file_mirai_v1_course_proto_msgTypes[29]
+	mi := &file_mirai_v1_course_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2301,7 +2497,7 @@ func (x *ExportCourseRequest) String() string {
 func (*ExportCourseRequest) ProtoMessage() {}
 
 func (x *ExportCourseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_proto_msgTypes[29]
+	mi := &file_mirai_v1_course_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2314,7 +2510,7 @@ func (x *ExportCourseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportCourseRequest.ProtoReflect.Descriptor instead.
 func (*ExportCourseRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_proto_rawDescGZIP(), []int{29}
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ExportCourseRequest) GetCourseId() string {
@@ -2341,7 +2537,7 @@ type ExportCourseResponse struct {
 
 func (x *ExportCourseResponse) Reset() {
 	*x = ExportCourseResponse{}
-	mi := &file_mirai_v1_course_proto_msgTypes[30]
+	mi := &file_mirai_v1_course_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2353,7 +2549,7 @@ func (x *ExportCourseResponse) String() string {
 func (*ExportCourseResponse) ProtoMessage() {}
 
 func (x *ExportCourseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_proto_msgTypes[30]
+	mi := &file_mirai_v1_course_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2366,7 +2562,7 @@ func (x *ExportCourseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportCourseResponse.ProtoReflect.Descriptor instead.
 func (*ExportCourseResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_proto_rawDescGZIP(), []int{30}
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ExportCourseResponse) GetExport() *CourseExport {
@@ -2386,7 +2582,7 @@ type GetExportStatusRequest struct {
 
 func (x *GetExportStatusRequest) Reset() {
 	*x = GetExportStatusRequest{}
-	mi := &file_mirai_v1_course_proto_msgTypes[31]
+	mi := &file_mirai_v1_course_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2398,7 +2594,7 @@ func (x *GetExportStatusRequest) String() string {
 func (*GetExportStatusRequest) ProtoMessage() {}
 
 func (x *GetExportStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_proto_msgTypes[31]
+	mi := &file_mirai_v1_course_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2411,7 +2607,7 @@ func (x *GetExportStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExportStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetExportStatusRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_proto_rawDescGZIP(), []int{31}
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetExportStatusRequest) GetExportId() string {
@@ -2431,7 +2627,7 @@ type GetExportStatusResponse struct {
 
 func (x *GetExportStatusResponse) Reset() {
 	*x = GetExportStatusResponse{}
-	mi := &file_mirai_v1_course_proto_msgTypes[32]
+	mi := &file_mirai_v1_course_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2443,7 +2639,7 @@ func (x *GetExportStatusResponse) String() string {
 func (*GetExportStatusResponse) ProtoMessage() {}
 
 func (x *GetExportStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_proto_msgTypes[32]
+	mi := &file_mirai_v1_course_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2456,7 +2652,7 @@ func (x *GetExportStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExportStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetExportStatusResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_proto_rawDescGZIP(), []int{32}
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetExportStatusResponse) GetExport() *CourseExport {
@@ -2476,7 +2672,7 @@ type DownloadExportRequest struct {
 
 func (x *DownloadExportRequest) Reset() {
 	*x = DownloadExportRequest{}
-	mi := &file_mirai_v1_course_proto_msgTypes[33]
+	mi := &file_mirai_v1_course_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2488,7 +2684,7 @@ func (x *DownloadExportRequest) String() string {
 func (*DownloadExportRequest) ProtoMessage() {}
 
 func (x *DownloadExportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_proto_msgTypes[33]
+	mi := &file_mirai_v1_course_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2501,7 +2697,7 @@ func (x *DownloadExportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadExportRequest.ProtoReflect.Descriptor instead.
 func (*DownloadExportRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_proto_rawDescGZIP(), []int{33}
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *DownloadExportRequest) GetExportId() string {
@@ -2522,7 +2718,7 @@ type DownloadExportResponse struct {
 
 func (x *DownloadExportResponse) Reset() {
 	*x = DownloadExportResponse{}
-	mi := &file_mirai_v1_course_proto_msgTypes[34]
+	mi := &file_mirai_v1_course_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2534,7 +2730,7 @@ func (x *DownloadExportResponse) String() string {
 func (*DownloadExportResponse) ProtoMessage() {}
 
 func (x *DownloadExportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_proto_msgTypes[34]
+	mi := &file_mirai_v1_course_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2547,7 +2743,7 @@ func (x *DownloadExportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadExportResponse.ProtoReflect.Descriptor instead.
 func (*DownloadExportResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_proto_rawDescGZIP(), []int{34}
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *DownloadExportResponse) GetDownloadUrl() string {
@@ -2574,7 +2770,7 @@ type ListExportsRequest struct {
 
 func (x *ListExportsRequest) Reset() {
 	*x = ListExportsRequest{}
-	mi := &file_mirai_v1_course_proto_msgTypes[35]
+	mi := &file_mirai_v1_course_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2586,7 +2782,7 @@ func (x *ListExportsRequest) String() string {
 func (*ListExportsRequest) ProtoMessage() {}
 
 func (x *ListExportsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_proto_msgTypes[35]
+	mi := &file_mirai_v1_course_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2599,7 +2795,7 @@ func (x *ListExportsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExportsRequest.ProtoReflect.Descriptor instead.
 func (*ListExportsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_proto_rawDescGZIP(), []int{35}
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ListExportsRequest) GetCourseId() string {
@@ -2619,7 +2815,7 @@ type ListExportsResponse struct {
 
 func (x *ListExportsResponse) Reset() {
 	*x = ListExportsResponse{}
-	mi := &file_mirai_v1_course_proto_msgTypes[36]
+	mi := &file_mirai_v1_course_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2631,7 +2827,7 @@ func (x *ListExportsResponse) String() string {
 func (*ListExportsResponse) ProtoMessage() {}
 
 func (x *ListExportsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_proto_msgTypes[36]
+	mi := &file_mirai_v1_course_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2644,7 +2840,7 @@ func (x *ListExportsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExportsResponse.ProtoReflect.Descriptor instead.
 func (*ListExportsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_proto_rawDescGZIP(), []int{36}
+	return file_mirai_v1_course_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListExportsResponse) GetExports() []*CourseExport {
@@ -2853,7 +3049,19 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x11GetLibraryRequest\x122\n" +
 	"\x15include_course_counts\x18\x01 \x01(\bR\x13includeCourseCounts\"A\n" +
 	"\x12GetLibraryResponse\x12+\n" +
-	"\alibrary\x18\x01 \x01(\v2\x11.mirai.v1.LibraryR\alibrary\"b\n" +
+	"\alibrary\x18\x01 \x01(\v2\x11.mirai.v1.LibraryR\alibrary\"\x83\x01\n" +
+	"\x13CreateFolderRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\tparent_id\x18\x02 \x01(\tH\x00R\bparentId\x88\x01\x01\x12(\n" +
+	"\x04type\x18\x03 \x01(\x0e2\x14.mirai.v1.FolderTypeR\x04typeB\f\n" +
+	"\n" +
+	"_parent_id\"@\n" +
+	"\x14CreateFolderResponse\x12(\n" +
+	"\x06folder\x18\x01 \x01(\v2\x10.mirai.v1.FolderR\x06folder\"%\n" +
+	"\x13DeleteFolderRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"0\n" +
+	"\x14DeleteFolderResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"b\n" +
 	"\x13ExportCourseRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12.\n" +
 	"\x06format\x18\x02 \x01(\x0e2\x16.mirai.v1.ExportFormatR\x06format\"F\n" +
@@ -2902,7 +3110,7 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x15EXPORT_STATUS_PENDING\x10\x01\x12\x1c\n" +
 	"\x18EXPORT_STATUS_PROCESSING\x10\x02\x12\x1b\n" +
 	"\x17EXPORT_STATUS_COMPLETED\x10\x03\x12\x18\n" +
-	"\x14EXPORT_STATUS_FAILED\x10\x042\x80\a\n" +
+	"\x14EXPORT_STATUS_FAILED\x10\x042\x9e\b\n" +
 	"\rCourseService\x12J\n" +
 	"\vListCourses\x12\x1c.mirai.v1.ListCoursesRequest\x1a\x1d.mirai.v1.ListCoursesResponse\x12D\n" +
 	"\tGetCourse\x12\x1a.mirai.v1.GetCourseRequest\x1a\x1b.mirai.v1.GetCourseResponse\x12M\n" +
@@ -2912,6 +3120,8 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x12GetFolderHierarchy\x12#.mirai.v1.GetFolderHierarchyRequest\x1a$.mirai.v1.GetFolderHierarchyResponse\x12G\n" +
 	"\n" +
 	"GetLibrary\x12\x1b.mirai.v1.GetLibraryRequest\x1a\x1c.mirai.v1.GetLibraryResponse\x12M\n" +
+	"\fCreateFolder\x12\x1d.mirai.v1.CreateFolderRequest\x1a\x1e.mirai.v1.CreateFolderResponse\x12M\n" +
+	"\fDeleteFolder\x12\x1d.mirai.v1.DeleteFolderRequest\x1a\x1e.mirai.v1.DeleteFolderResponse\x12M\n" +
 	"\fExportCourse\x12\x1d.mirai.v1.ExportCourseRequest\x1a\x1e.mirai.v1.ExportCourseResponse\x12V\n" +
 	"\x0fGetExportStatus\x12 .mirai.v1.GetExportStatusRequest\x1a!.mirai.v1.GetExportStatusResponse\x12S\n" +
 	"\x0eDownloadExport\x12\x1f.mirai.v1.DownloadExportRequest\x1a .mirai.v1.DownloadExportResponse\x12J\n" +
@@ -2931,7 +3141,7 @@ func file_mirai_v1_course_proto_rawDescGZIP() []byte {
 }
 
 var file_mirai_v1_course_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_mirai_v1_course_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
+var file_mirai_v1_course_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_mirai_v1_course_proto_goTypes = []any{
 	(CourseStatus)(0),                  // 0: mirai.v1.CourseStatus
 	(BlockType)(0),                     // 1: mirai.v1.BlockType
@@ -2967,15 +3177,19 @@ var file_mirai_v1_course_proto_goTypes = []any{
 	(*GetFolderHierarchyResponse)(nil), // 31: mirai.v1.GetFolderHierarchyResponse
 	(*GetLibraryRequest)(nil),          // 32: mirai.v1.GetLibraryRequest
 	(*GetLibraryResponse)(nil),         // 33: mirai.v1.GetLibraryResponse
-	(*ExportCourseRequest)(nil),        // 34: mirai.v1.ExportCourseRequest
-	(*ExportCourseResponse)(nil),       // 35: mirai.v1.ExportCourseResponse
-	(*GetExportStatusRequest)(nil),     // 36: mirai.v1.GetExportStatusRequest
-	(*GetExportStatusResponse)(nil),    // 37: mirai.v1.GetExportStatusResponse
-	(*DownloadExportRequest)(nil),      // 38: mirai.v1.DownloadExportRequest
-	(*DownloadExportResponse)(nil),     // 39: mirai.v1.DownloadExportResponse
-	(*ListExportsRequest)(nil),         // 40: mirai.v1.ListExportsRequest
-	(*ListExportsResponse)(nil),        // 41: mirai.v1.ListExportsResponse
-	(*timestamppb.Timestamp)(nil),      // 42: google.protobuf.Timestamp
+	(*CreateFolderRequest)(nil),        // 34: mirai.v1.CreateFolderRequest
+	(*CreateFolderResponse)(nil),       // 35: mirai.v1.CreateFolderResponse
+	(*DeleteFolderRequest)(nil),        // 36: mirai.v1.DeleteFolderRequest
+	(*DeleteFolderResponse)(nil),       // 37: mirai.v1.DeleteFolderResponse
+	(*ExportCourseRequest)(nil),        // 38: mirai.v1.ExportCourseRequest
+	(*ExportCourseResponse)(nil),       // 39: mirai.v1.ExportCourseResponse
+	(*GetExportStatusRequest)(nil),     // 40: mirai.v1.GetExportStatusRequest
+	(*GetExportStatusResponse)(nil),    // 41: mirai.v1.GetExportStatusResponse
+	(*DownloadExportRequest)(nil),      // 42: mirai.v1.DownloadExportRequest
+	(*DownloadExportResponse)(nil),     // 43: mirai.v1.DownloadExportResponse
+	(*ListExportsRequest)(nil),         // 44: mirai.v1.ListExportsRequest
+	(*ListExportsResponse)(nil),        // 45: mirai.v1.ListExportsResponse
+	(*timestamppb.Timestamp)(nil),      // 46: google.protobuf.Timestamp
 }
 var file_mirai_v1_course_proto_depIdxs = []int32{
 	5,  // 0: mirai.v1.Persona.learning_objectives:type_name -> mirai.v1.LearningObjective
@@ -2985,12 +3199,12 @@ var file_mirai_v1_course_proto_depIdxs = []int32{
 	9,  // 4: mirai.v1.CourseSection.lessons:type_name -> mirai.v1.Lesson
 	10, // 5: mirai.v1.CourseContent.sections:type_name -> mirai.v1.CourseSection
 	8,  // 6: mirai.v1.CourseContent.course_blocks:type_name -> mirai.v1.CourseBlock
-	42, // 7: mirai.v1.CourseExport.timestamp:type_name -> google.protobuf.Timestamp
+	46, // 7: mirai.v1.CourseExport.timestamp:type_name -> google.protobuf.Timestamp
 	3,  // 8: mirai.v1.CourseExport.format:type_name -> mirai.v1.ExportFormat
 	4,  // 9: mirai.v1.CourseExport.status:type_name -> mirai.v1.ExportStatus
 	0,  // 10: mirai.v1.CourseMetadata.status:type_name -> mirai.v1.CourseStatus
-	42, // 11: mirai.v1.CourseMetadata.created_at:type_name -> google.protobuf.Timestamp
-	42, // 12: mirai.v1.CourseMetadata.modified_at:type_name -> google.protobuf.Timestamp
+	46, // 11: mirai.v1.CourseMetadata.created_at:type_name -> google.protobuf.Timestamp
+	46, // 12: mirai.v1.CourseMetadata.modified_at:type_name -> google.protobuf.Timestamp
 	0,  // 13: mirai.v1.Course.status:type_name -> mirai.v1.CourseStatus
 	15, // 14: mirai.v1.Course.metadata:type_name -> mirai.v1.CourseMetadata
 	14, // 15: mirai.v1.Course.settings:type_name -> mirai.v1.CourseSettings
@@ -3000,11 +3214,11 @@ var file_mirai_v1_course_proto_depIdxs = []int32{
 	12, // 19: mirai.v1.Course.content:type_name -> mirai.v1.CourseContent
 	13, // 20: mirai.v1.Course.exports:type_name -> mirai.v1.CourseExport
 	0,  // 21: mirai.v1.LibraryEntry.status:type_name -> mirai.v1.CourseStatus
-	42, // 22: mirai.v1.LibraryEntry.created_at:type_name -> google.protobuf.Timestamp
-	42, // 23: mirai.v1.LibraryEntry.modified_at:type_name -> google.protobuf.Timestamp
+	46, // 22: mirai.v1.LibraryEntry.created_at:type_name -> google.protobuf.Timestamp
+	46, // 23: mirai.v1.LibraryEntry.modified_at:type_name -> google.protobuf.Timestamp
 	2,  // 24: mirai.v1.Folder.type:type_name -> mirai.v1.FolderType
 	18, // 25: mirai.v1.Folder.children:type_name -> mirai.v1.Folder
-	42, // 26: mirai.v1.Library.last_updated:type_name -> google.protobuf.Timestamp
+	46, // 26: mirai.v1.Library.last_updated:type_name -> google.protobuf.Timestamp
 	17, // 27: mirai.v1.Library.courses:type_name -> mirai.v1.LibraryEntry
 	18, // 28: mirai.v1.Library.folders:type_name -> mirai.v1.Folder
 	0,  // 29: mirai.v1.ListCoursesRequest.status:type_name -> mirai.v1.CourseStatus
@@ -3026,38 +3240,44 @@ var file_mirai_v1_course_proto_depIdxs = []int32{
 	16, // 45: mirai.v1.UpdateCourseResponse.course:type_name -> mirai.v1.Course
 	18, // 46: mirai.v1.GetFolderHierarchyResponse.folders:type_name -> mirai.v1.Folder
 	19, // 47: mirai.v1.GetLibraryResponse.library:type_name -> mirai.v1.Library
-	3,  // 48: mirai.v1.ExportCourseRequest.format:type_name -> mirai.v1.ExportFormat
-	13, // 49: mirai.v1.ExportCourseResponse.export:type_name -> mirai.v1.CourseExport
-	13, // 50: mirai.v1.GetExportStatusResponse.export:type_name -> mirai.v1.CourseExport
-	42, // 51: mirai.v1.DownloadExportResponse.expires_at:type_name -> google.protobuf.Timestamp
-	13, // 52: mirai.v1.ListExportsResponse.exports:type_name -> mirai.v1.CourseExport
-	20, // 53: mirai.v1.CourseService.ListCourses:input_type -> mirai.v1.ListCoursesRequest
-	22, // 54: mirai.v1.CourseService.GetCourse:input_type -> mirai.v1.GetCourseRequest
-	24, // 55: mirai.v1.CourseService.CreateCourse:input_type -> mirai.v1.CreateCourseRequest
-	26, // 56: mirai.v1.CourseService.UpdateCourse:input_type -> mirai.v1.UpdateCourseRequest
-	28, // 57: mirai.v1.CourseService.DeleteCourse:input_type -> mirai.v1.DeleteCourseRequest
-	30, // 58: mirai.v1.CourseService.GetFolderHierarchy:input_type -> mirai.v1.GetFolderHierarchyRequest
-	32, // 59: mirai.v1.CourseService.GetLibrary:input_type -> mirai.v1.GetLibraryRequest
-	34, // 60: mirai.v1.CourseService.ExportCourse:input_type -> mirai.v1.ExportCourseRequest
-	36, // 61: mirai.v1.CourseService.GetExportStatus:input_type -> mirai.v1.GetExportStatusRequest
-	38, // 62: mirai.v1.CourseService.DownloadExport:input_type -> mirai.v1.DownloadExportRequest
-	40, // 63: mirai.v1.CourseService.ListExports:input_type -> mirai.v1.ListExportsRequest
-	21, // 64: mirai.v1.CourseService.ListCourses:output_type -> mirai.v1.ListCoursesResponse
-	23, // 65: mirai.v1.CourseService.GetCourse:output_type -> mirai.v1.GetCourseResponse
-	25, // 66: mirai.v1.CourseService.CreateCourse:output_type -> mirai.v1.CreateCourseResponse
-	27, // 67: mirai.v1.CourseService.UpdateCourse:output_type -> mirai.v1.UpdateCourseResponse
-	29, // 68: mirai.v1.CourseService.DeleteCourse:output_type -> mirai.v1.DeleteCourseResponse
-	31, // 69: mirai.v1.CourseService.GetFolderHierarchy:output_type -> mirai.v1.GetFolderHierarchyResponse
-	33, // 70: mirai.v1.CourseService.GetLibrary:output_type -> mirai.v1.GetLibraryResponse
-	35, // 71: mirai.v1.CourseService.ExportCourse:output_type -> mirai.v1.ExportCourseResponse
-	37, // 72: mirai.v1.CourseService.GetExportStatus:output_type -> mirai.v1.GetExportStatusResponse
-	39, // 73: mirai.v1.CourseService.DownloadExport:output_type -> mirai.v1.DownloadExportResponse
-	41, // 74: mirai.v1.CourseService.ListExports:output_type -> mirai.v1.ListExportsResponse
-	64, // [64:75] is the sub-list for method output_type
-	53, // [53:64] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	2,  // 48: mirai.v1.CreateFolderRequest.type:type_name -> mirai.v1.FolderType
+	18, // 49: mirai.v1.CreateFolderResponse.folder:type_name -> mirai.v1.Folder
+	3,  // 50: mirai.v1.ExportCourseRequest.format:type_name -> mirai.v1.ExportFormat
+	13, // 51: mirai.v1.ExportCourseResponse.export:type_name -> mirai.v1.CourseExport
+	13, // 52: mirai.v1.GetExportStatusResponse.export:type_name -> mirai.v1.CourseExport
+	46, // 53: mirai.v1.DownloadExportResponse.expires_at:type_name -> google.protobuf.Timestamp
+	13, // 54: mirai.v1.ListExportsResponse.exports:type_name -> mirai.v1.CourseExport
+	20, // 55: mirai.v1.CourseService.ListCourses:input_type -> mirai.v1.ListCoursesRequest
+	22, // 56: mirai.v1.CourseService.GetCourse:input_type -> mirai.v1.GetCourseRequest
+	24, // 57: mirai.v1.CourseService.CreateCourse:input_type -> mirai.v1.CreateCourseRequest
+	26, // 58: mirai.v1.CourseService.UpdateCourse:input_type -> mirai.v1.UpdateCourseRequest
+	28, // 59: mirai.v1.CourseService.DeleteCourse:input_type -> mirai.v1.DeleteCourseRequest
+	30, // 60: mirai.v1.CourseService.GetFolderHierarchy:input_type -> mirai.v1.GetFolderHierarchyRequest
+	32, // 61: mirai.v1.CourseService.GetLibrary:input_type -> mirai.v1.GetLibraryRequest
+	34, // 62: mirai.v1.CourseService.CreateFolder:input_type -> mirai.v1.CreateFolderRequest
+	36, // 63: mirai.v1.CourseService.DeleteFolder:input_type -> mirai.v1.DeleteFolderRequest
+	38, // 64: mirai.v1.CourseService.ExportCourse:input_type -> mirai.v1.ExportCourseRequest
+	40, // 65: mirai.v1.CourseService.GetExportStatus:input_type -> mirai.v1.GetExportStatusRequest
+	42, // 66: mirai.v1.CourseService.DownloadExport:input_type -> mirai.v1.DownloadExportRequest
+	44, // 67: mirai.v1.CourseService.ListExports:input_type -> mirai.v1.ListExportsRequest
+	21, // 68: mirai.v1.CourseService.ListCourses:output_type -> mirai.v1.ListCoursesResponse
+	23, // 69: mirai.v1.CourseService.GetCourse:output_type -> mirai.v1.GetCourseResponse
+	25, // 70: mirai.v1.CourseService.CreateCourse:output_type -> mirai.v1.CreateCourseResponse
+	27, // 71: mirai.v1.CourseService.UpdateCourse:output_type -> mirai.v1.UpdateCourseResponse
+	29, // 72: mirai.v1.CourseService.DeleteCourse:output_type -> mirai.v1.DeleteCourseResponse
+	31, // 73: mirai.v1.CourseService.GetFolderHierarchy:output_type -> mirai.v1.GetFolderHierarchyResponse
+	33, // 74: mirai.v1.CourseService.GetLibrary:output_type -> mirai.v1.GetLibraryResponse
+	35, // 75: mirai.v1.CourseService.CreateFolder:output_type -> mirai.v1.CreateFolderResponse
+	37, // 76: mirai.v1.CourseService.DeleteFolder:output_type -> mirai.v1.DeleteFolderResponse
+	39, // 77: mirai.v1.CourseService.ExportCourse:output_type -> mirai.v1.ExportCourseResponse
+	41, // 78: mirai.v1.CourseService.GetExportStatus:output_type -> mirai.v1.GetExportStatusResponse
+	43, // 79: mirai.v1.CourseService.DownloadExport:output_type -> mirai.v1.DownloadExportResponse
+	45, // 80: mirai.v1.CourseService.ListExports:output_type -> mirai.v1.ListExportsResponse
+	68, // [68:81] is the sub-list for method output_type
+	55, // [55:68] is the sub-list for method input_type
+	55, // [55:55] is the sub-list for extension type_name
+	55, // [55:55] is the sub-list for extension extendee
+	0,  // [0:55] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_course_proto_init() }
@@ -3076,13 +3296,14 @@ func file_mirai_v1_course_proto_init() {
 	file_mirai_v1_course_proto_msgTypes[15].OneofWrappers = []any{}
 	file_mirai_v1_course_proto_msgTypes[19].OneofWrappers = []any{}
 	file_mirai_v1_course_proto_msgTypes[21].OneofWrappers = []any{}
+	file_mirai_v1_course_proto_msgTypes[29].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_course_proto_rawDesc), len(file_mirai_v1_course_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   37,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

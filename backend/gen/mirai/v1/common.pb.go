@@ -252,7 +252,10 @@ type User struct {
 	Role          Role                   `protobuf:"varint,4,opt,name=role,proto3,enum=mirai.v1.Role" json:"role,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	TenantId      *string                `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"` // Tenant for RLS isolation
+	TenantId      *string                `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"`    // Tenant for RLS isolation
+	Email         *string                `protobuf:"bytes,8,opt,name=email,proto3,oneof" json:"email,omitempty"`                          // From Kratos identity
+	FirstName     *string                `protobuf:"bytes,9,opt,name=first_name,json=firstName,proto3,oneof" json:"first_name,omitempty"` // From Kratos identity
+	LastName      *string                `protobuf:"bytes,10,opt,name=last_name,json=lastName,proto3,oneof" json:"last_name,omitempty"`   // From Kratos identity
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -332,6 +335,27 @@ func (x *User) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *User) GetTenantId() string {
 	if x != nil && x.TenantId != nil {
 		return *x.TenantId
+	}
+	return ""
+}
+
+func (x *User) GetEmail() string {
+	if x != nil && x.Email != nil {
+		return *x.Email
+	}
+	return ""
+}
+
+func (x *User) GetFirstName() string {
+	if x != nil && x.FirstName != nil {
+		return *x.FirstName
+	}
+	return ""
+}
+
+func (x *User) GetLastName() string {
+	if x != nil && x.LastName != nil {
+		return *x.LastName
 	}
 	return ""
 }
@@ -571,6 +595,7 @@ type TeamMember struct {
 	Role          TeamRole               `protobuf:"varint,4,opt,name=role,proto3,enum=mirai.v1.TeamRole" json:"role,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	TenantId      *string                `protobuf:"bytes,6,opt,name=tenant_id,json=tenantId,proto3,oneof" json:"tenant_id,omitempty"` // Tenant for RLS isolation
+	User          *User                  `protobuf:"bytes,7,opt,name=user,proto3,oneof" json:"user,omitempty"`                         // Populated user details (name, email)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -647,11 +672,18 @@ func (x *TeamMember) GetTenantId() string {
 	return ""
 }
 
+func (x *TeamMember) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
 var File_mirai_v1_common_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x15mirai/v1/common.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb0\x02\n" +
+	"\x15mirai/v1/common.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb8\x03\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tkratos_id\x18\x02 \x01(\tR\bkratosId\x12\"\n" +
@@ -662,10 +694,19 @@ const file_mirai_v1_common_proto_rawDesc = "" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12 \n" +
-	"\ttenant_id\x18\a \x01(\tH\x01R\btenantId\x88\x01\x01B\r\n" +
+	"\ttenant_id\x18\a \x01(\tH\x01R\btenantId\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\b \x01(\tH\x02R\x05email\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"first_name\x18\t \x01(\tH\x03R\tfirstName\x88\x01\x01\x12 \n" +
+	"\tlast_name\x18\n" +
+	" \x01(\tH\x04R\blastName\x88\x01\x01B\r\n" +
 	"\v_company_idB\f\n" +
 	"\n" +
-	"_tenant_id\"\xd0\x04\n" +
+	"_tenant_idB\b\n" +
+	"\x06_emailB\r\n" +
+	"\v_first_nameB\f\n" +
+	"\n" +
+	"_last_name\"\xd0\x04\n" +
 	"\aCompany\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -701,7 +742,7 @@ const file_mirai_v1_common_proto_rawDesc = "" +
 	"\ttenant_id\x18\a \x01(\tH\x01R\btenantId\x88\x01\x01B\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
-	"_tenant_id\"\xe1\x01\n" +
+	"_tenant_id\"\x93\x02\n" +
 	"\n" +
 	"TeamMember\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
@@ -710,9 +751,11 @@ const file_mirai_v1_common_proto_rawDesc = "" +
 	"\x04role\x18\x04 \x01(\x0e2\x12.mirai.v1.TeamRoleR\x04role\x129\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12 \n" +
-	"\ttenant_id\x18\x06 \x01(\tH\x00R\btenantId\x88\x01\x01B\f\n" +
+	"\ttenant_id\x18\x06 \x01(\tH\x00R\btenantId\x88\x01\x01\x12'\n" +
+	"\x04user\x18\a \x01(\v2\x0e.mirai.v1.UserH\x01R\x04user\x88\x01\x01B\f\n" +
 	"\n" +
-	"_tenant_id*Q\n" +
+	"_tenant_idB\a\n" +
+	"\x05_user*Q\n" +
 	"\x04Plan\x12\x14\n" +
 	"\x10PLAN_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fPLAN_STARTER\x10\x01\x12\f\n" +
@@ -776,11 +819,12 @@ var file_mirai_v1_common_proto_depIdxs = []int32{
 	8,  // 8: mirai.v1.Team.updated_at:type_name -> google.protobuf.Timestamp
 	2,  // 9: mirai.v1.TeamMember.role:type_name -> mirai.v1.TeamRole
 	8,  // 10: mirai.v1.TeamMember.created_at:type_name -> google.protobuf.Timestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	4,  // 11: mirai.v1.TeamMember.user:type_name -> mirai.v1.User
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_common_proto_init() }

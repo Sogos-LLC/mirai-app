@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CancelTaskRequest, CancelTaskResponse, CreateSMERequest, CreateSMEResponse, CreateTaskRequest, CreateTaskResponse, DeleteSMERequest, DeleteSMEResponse, GetKnowledgeRequest, GetKnowledgeResponse, GetSMERequest, GetSMEResponse, GetTaskRequest, GetTaskResponse, GetUploadURLRequest, GetUploadURLResponse, ListSMEsRequest, ListSMEsResponse, ListSubmissionsRequest, ListSubmissionsResponse, ListTasksRequest, ListTasksResponse, RestoreSMERequest, RestoreSMEResponse, SearchKnowledgeRequest, SearchKnowledgeResponse, SubmitContentRequest, SubmitContentResponse, UpdateSMERequest, UpdateSMEResponse, UpdateTaskRequest, UpdateTaskResponse } from "./sme_pb.js";
+import { ApproveSubmissionRequest, ApproveSubmissionResponse, CancelTaskRequest, CancelTaskResponse, CreateSMERequest, CreateSMEResponse, CreateTaskRequest, CreateTaskResponse, DeleteKnowledgeChunkRequest, DeleteKnowledgeChunkResponse, DeleteSMERequest, DeleteSMEResponse, DeleteTaskRequest, DeleteTaskResponse, EnhanceSubmissionContentRequest, EnhanceSubmissionContentResponse, GetKnowledgeRequest, GetKnowledgeResponse, GetSMERequest, GetSMEResponse, GetSubmissionRequest, GetSubmissionResponse, GetTaskRequest, GetTaskResponse, GetUploadURLRequest, GetUploadURLResponse, ListSMEsRequest, ListSMEsResponse, ListSubmissionsRequest, ListSubmissionsResponse, ListTasksRequest, ListTasksResponse, RequestSubmissionChangesRequest, RequestSubmissionChangesResponse, RestoreSMERequest, RestoreSMEResponse, SearchKnowledgeRequest, SearchKnowledgeResponse, SubmitContentRequest, SubmitContentResponse, UpdateKnowledgeChunkRequest, UpdateKnowledgeChunkResponse, UpdateSMERequest, UpdateSMEResponse, UpdateTaskRequest, UpdateTaskResponse } from "./sme_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -188,6 +188,83 @@ export const SMEService = {
       name: "SearchKnowledge",
       I: SearchKnowledgeRequest,
       O: SearchKnowledgeResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetSubmission returns a specific submission by ID.
+     *
+     * @generated from rpc mirai.v1.SMEService.GetSubmission
+     */
+    getSubmission: {
+      name: "GetSubmission",
+      I: GetSubmissionRequest,
+      O: GetSubmissionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ApproveSubmission approves content and creates knowledge chunks.
+     *
+     * @generated from rpc mirai.v1.SMEService.ApproveSubmission
+     */
+    approveSubmission: {
+      name: "ApproveSubmission",
+      I: ApproveSubmissionRequest,
+      O: ApproveSubmissionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * RequestSubmissionChanges sends submission back to submitter with feedback.
+     *
+     * @generated from rpc mirai.v1.SMEService.RequestSubmissionChanges
+     */
+    requestSubmissionChanges: {
+      name: "RequestSubmissionChanges",
+      I: RequestSubmissionChangesRequest,
+      O: RequestSubmissionChangesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * EnhanceSubmissionContent uses AI to summarize or improve content.
+     *
+     * @generated from rpc mirai.v1.SMEService.EnhanceSubmissionContent
+     */
+    enhanceSubmissionContent: {
+      name: "EnhanceSubmissionContent",
+      I: EnhanceSubmissionContentRequest,
+      O: EnhanceSubmissionContentResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * UpdateKnowledgeChunk updates a knowledge chunk's content.
+     *
+     * @generated from rpc mirai.v1.SMEService.UpdateKnowledgeChunk
+     */
+    updateKnowledgeChunk: {
+      name: "UpdateKnowledgeChunk",
+      I: UpdateKnowledgeChunkRequest,
+      O: UpdateKnowledgeChunkResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * DeleteKnowledgeChunk removes a knowledge chunk.
+     *
+     * @generated from rpc mirai.v1.SMEService.DeleteKnowledgeChunk
+     */
+    deleteKnowledgeChunk: {
+      name: "DeleteKnowledgeChunk",
+      I: DeleteKnowledgeChunkRequest,
+      O: DeleteKnowledgeChunkResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * DeleteTask permanently removes a task.
+     *
+     * @generated from rpc mirai.v1.SMEService.DeleteTask
+     */
+    deleteTask: {
+      name: "DeleteTask",
+      I: DeleteTaskRequest,
+      O: DeleteTaskResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -1,19 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye, Filter, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye, Filter, X, Plus, Check, Trash2, MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useGetFoldersQuery, useGetCoursesQuery, type LibraryEntry, type FolderNode } from '@/store/api/apiSlice';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { AIGenerationFlowModal } from '@/components/ai-generation';
+import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import * as courseClient from '@/lib/courseClient';
+
+const MAX_FOLDER_DEPTH = 3;
 
 export default function ContentLibrary() {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<string | undefined>(undefined);
 
   // Connect-query based hooks (wrapped in apiSlice)
-  const { data: folders = [], isLoading: foldersLoading } = useGetFoldersQuery(true);
+  const { data: folders = [], isLoading: foldersLoading, refetch: refetchFolders } = useGetFoldersQuery(true);
   const { data: courses = [], isLoading: coursesLoading } = useGetCoursesQuery();
 
   // Local UI state only
@@ -22,6 +28,29 @@ export default function ContentLibrary() {
   const [searchQuery, setSearchQuery] = useState('');
   const [folderFilteredCourses, setFolderFilteredCourses] = useState<LibraryEntry[] | null>(null);
   const [isFolderSheetOpen, setIsFolderSheetOpen] = useState(false);
+
+  // Folder creation state
+  const [creatingFolderIn, setCreatingFolderIn] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // Folder delete state
+  const [folderToDelete, setFolderToDelete] = useState<{ id: string; name: string; type: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showFolderMenu, setShowFolderMenu] = useState<string | null>(null);
+
+  // Close folder menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showFolderMenu) {
+        setShowFolderMenu(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showFolderMenu]);
 
   // Load courses for selected folder using connect-rpc
   useEffect(() => {
@@ -90,13 +119,106 @@ export default function ContentLibrary() {
   };
 
   const handleCourseClick = (courseId: string) => {
-    router.push(`/course-builder?id=${courseId}&step=4`);
+    setEditingCourseId(courseId);
+    setIsAIModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsAIModalOpen(false);
+    setEditingCourseId(undefined);
+  };
+
+  // Folder creation handlers
+  const handleStartCreateFolder = (parentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCreatingFolderIn(parentId);
+    setNewFolderName('');
+    setCreateError(null);
+    // Expand the parent folder
+    setExpandedFolders(prev => new Set([...prev, parentId]));
+  };
+
+  const handleCancelCreateFolder = () => {
+    setCreatingFolderIn(null);
+    setNewFolderName('');
+    setCreateError(null);
+  };
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim() || !creatingFolderIn) return;
+
+    try {
+      setIsCreating(true);
+      setCreateError(null);
+      await courseClient.createFolder(newFolderName.trim(), creatingFolderIn);
+      // Refetch folders to show the new one
+      await refetchFolders();
+      setCreatingFolderIn(null);
+      setNewFolderName('');
+    } catch (error: any) {
+      console.error('Error creating folder:', error);
+      setCreateError(error.message || 'Failed to create folder');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Folder delete handlers
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await courseClient.deleteFolder(folderToDelete.id);
+      // Refetch folders to reflect deletion
+      await refetchFolders();
+      setFolderToDelete(null);
+      // Clear selection if deleted folder was selected
+      if (selectedFolderId === folderToDelete.id) {
+        setSelectedFolderId(null);
+      }
+    } catch (error: any) {
+      console.error('Error deleting folder:', error);
+      setDeleteError(error.message || 'Failed to delete folder. Make sure the folder is empty.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setFolderToDelete(null);
+    setDeleteError(null);
+  };
+
+  // Check if folder can be deleted (only user-created folders, not system folders)
+  const canDeleteFolder = (folder: FolderNode): boolean => {
+    // Can't delete system folders (Shared, Private, Team root folders)
+    if (folder.type === 'library' || folder.type === 'personal' || folder.type === 'team') {
+      return false;
+    }
+    return true;
+  };
+
+  // Calculate folder depth
+  const getFolderDepth = (folderId: string, folderList: FolderNode[], depth: number = 1): number => {
+    for (const folder of folderList) {
+      if (folder.id === folderId) return depth;
+      if (folder.children) {
+        const found = getFolderDepth(folderId, folder.children, depth + 1);
+        if (found > 0) return found;
+      }
+    }
+    return 0;
   };
 
   const renderFolder = (folder: FolderNode, level = 0) => {
     const isExpanded = expandedFolders.has(folder.id);
     const hasChildren = folder.children && folder.children.length > 0;
     const isSelected = selectedFolderId === folder.id;
+    const currentDepth = level + 1;
+    const canCreateSubfolder = currentDepth < MAX_FOLDER_DEPTH;
+    const isCreatingHere = creatingFolderIn === folder.id;
 
     const getIcon = () => {
       if (folder.type === 'library') return <FolderOpen className="w-5 h-5 text-purple-600" />;
@@ -110,7 +232,7 @@ export default function ContentLibrary() {
       <div key={folder.id}>
         <div
           className={`
-            flex items-center gap-2 py-2 px-3 rounded-lg cursor-pointer transition-colors
+            group flex items-center gap-2 py-2 px-3 rounded-lg cursor-pointer transition-colors
             ${isSelected ? 'bg-white shadow-sm' : 'hover:bg-primary-100'}
           `}
           style={{ paddingLeft: `${level * 20 + 12}px` }}
@@ -121,7 +243,7 @@ export default function ContentLibrary() {
             handleFolderClick(folder.id);
           }}
         >
-          {hasChildren && (
+          {(hasChildren || isCreatingHere) && (
             <button
               className="p-1 -ml-1 text-gray-600 min-w-[32px] min-h-[32px] flex items-center justify-center"
               onClick={(e) => {
@@ -136,6 +258,7 @@ export default function ContentLibrary() {
               )}
             </button>
           )}
+          {!hasChildren && !isCreatingHere && <div className="w-8" />}
           {getIcon()}
           <span className="font-medium text-gray-900 flex-1">{folder.name}</span>
           {folder.courseCount !== undefined && folder.courseCount > 0 && (
@@ -143,11 +266,117 @@ export default function ContentLibrary() {
               {folder.courseCount}
             </span>
           )}
+          {/* New Folder button - only show if depth allows */}
+          {canCreateSubfolder && (
+            <button
+              onClick={(e) => handleStartCreateFolder(folder.id, e)}
+              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary-200 rounded transition-opacity"
+              title="Create subfolder"
+            >
+              <Plus className="w-4 h-4 text-gray-500" />
+            </button>
+          )}
+
+          {/* Three-dot menu for deletable folders */}
+          {canDeleteFolder(folder) && (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowFolderMenu(showFolderMenu === folder.id ? null : folder.id);
+                }}
+                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+                title="Folder options"
+              >
+                <MoreVertical className="w-4 h-4 text-gray-500" />
+              </button>
+
+              {/* Dropdown menu */}
+              {showFolderMenu === folder.id && (
+                <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowFolderMenu(null);
+                      setFolderToDelete({ id: folder.id, name: folder.name, type: folder.type || 'folder' });
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {isExpanded &&
-          hasChildren &&
-          folder.children!.map((child) => renderFolder(child, level + 1))}
+        {/* Children and new folder input */}
+        {(hasChildren || isCreatingHere) && isExpanded && (
+          <div>
+            {folder.children?.map((child) => renderFolder(child, level + 1))}
+
+            {/* New folder input row */}
+            {isCreatingHere && (
+              <div
+                className="flex items-center gap-2 py-2 px-3"
+                style={{ paddingLeft: `${(level + 1) * 20 + 12}px` }}
+              >
+                <div className="w-8" />
+                <Folder className="w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newFolderName.trim()) {
+                      handleCreateFolder();
+                    } else if (e.key === 'Escape') {
+                      handleCancelCreateFolder();
+                    }
+                  }}
+                  placeholder="New folder name"
+                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  autoFocus
+                  disabled={isCreating}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateFolder();
+                  }}
+                  disabled={!newFolderName.trim() || isCreating}
+                  className="p-1 hover:bg-green-100 rounded text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Create folder"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelCreateFolder();
+                  }}
+                  disabled={isCreating}
+                  className="p-1 hover:bg-red-100 rounded text-red-600"
+                  title="Cancel"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Error message */}
+            {isCreatingHere && createError && (
+              <div
+                className="flex items-center gap-2 px-3 py-1 text-sm text-red-600"
+                style={{ paddingLeft: `${(level + 1) * 20 + 12 + 32}px` }}
+              >
+                {createError}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -172,6 +401,9 @@ export default function ContentLibrary() {
   // Folder list content (used in both desktop sidebar and mobile sheet)
   const folderListContent = (
     <div className="space-y-2">
+      <div className="text-xs text-gray-500 px-3 mb-2">
+        Hover over folders to add subfolders (max {MAX_FOLDER_DEPTH} levels)
+      </div>
       {foldersLoading ? (
         <div className="text-center text-gray-600 py-4">Loading folders...</div>
       ) : (
@@ -182,6 +414,13 @@ export default function ContentLibrary() {
 
   return (
     <>
+      {/* AI Generation Flow Modal */}
+      <AIGenerationFlowModal
+        isOpen={isAIModalOpen}
+        onClose={handleCloseModal}
+        courseId={editingCourseId}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
@@ -294,7 +533,7 @@ export default function ContentLibrary() {
                       className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors min-h-[44px]"
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/course-builder?id=${course.id}&step=5`);
+                        router.push(`/course/${course.id}/preview`);
                       }}
                     >
                       <Eye className="w-4 h-4" />
@@ -319,6 +558,59 @@ export default function ContentLibrary() {
           )}
         </div>
       </div>
+
+      {/* Delete Folder Confirmation Modal */}
+      <ResponsiveModal
+        isOpen={!!folderToDelete}
+        onClose={handleCancelDelete}
+        title="Delete Folder"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to delete the folder <strong>"{folderToDelete?.name}"</strong>?
+          </p>
+          <p className="text-sm text-gray-500">
+            This action cannot be undone. The folder must be empty to be deleted.
+          </p>
+
+          {deleteError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {deleteError}
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
+            <button
+              onClick={handleCancelDelete}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-3 lg:py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium min-h-[44px]"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteFolder}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-3 lg:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 min-h-[44px] flex items-center justify-center gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete Folder
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </ResponsiveModal>
     </>
   );
 }

@@ -53,6 +53,12 @@ const (
 	// CourseServiceGetLibraryProcedure is the fully-qualified name of the CourseService's GetLibrary
 	// RPC.
 	CourseServiceGetLibraryProcedure = "/mirai.v1.CourseService/GetLibrary"
+	// CourseServiceCreateFolderProcedure is the fully-qualified name of the CourseService's
+	// CreateFolder RPC.
+	CourseServiceCreateFolderProcedure = "/mirai.v1.CourseService/CreateFolder"
+	// CourseServiceDeleteFolderProcedure is the fully-qualified name of the CourseService's
+	// DeleteFolder RPC.
+	CourseServiceDeleteFolderProcedure = "/mirai.v1.CourseService/DeleteFolder"
 	// CourseServiceExportCourseProcedure is the fully-qualified name of the CourseService's
 	// ExportCourse RPC.
 	CourseServiceExportCourseProcedure = "/mirai.v1.CourseService/ExportCourse"
@@ -83,6 +89,10 @@ type CourseServiceClient interface {
 	GetFolderHierarchy(context.Context, *connect.Request[v1.GetFolderHierarchyRequest]) (*connect.Response[v1.GetFolderHierarchyResponse], error)
 	// GetLibrary returns the full library with courses and folders.
 	GetLibrary(context.Context, *connect.Request[v1.GetLibraryRequest]) (*connect.Response[v1.GetLibraryResponse], error)
+	// CreateFolder creates a new folder in the library hierarchy (max 3 levels deep).
+	CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.CreateFolderResponse], error)
+	// DeleteFolder deletes an empty folder from the library.
+	DeleteFolder(context.Context, *connect.Request[v1.DeleteFolderRequest]) (*connect.Response[v1.DeleteFolderResponse], error)
 	// ExportCourse initiates a course export job.
 	ExportCourse(context.Context, *connect.Request[v1.ExportCourseRequest]) (*connect.Response[v1.ExportCourseResponse], error)
 	// GetExportStatus returns the status of an export job.
@@ -146,6 +156,18 @@ func NewCourseServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(courseServiceMethods.ByName("GetLibrary")),
 			connect.WithClientOptions(opts...),
 		),
+		createFolder: connect.NewClient[v1.CreateFolderRequest, v1.CreateFolderResponse](
+			httpClient,
+			baseURL+CourseServiceCreateFolderProcedure,
+			connect.WithSchema(courseServiceMethods.ByName("CreateFolder")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteFolder: connect.NewClient[v1.DeleteFolderRequest, v1.DeleteFolderResponse](
+			httpClient,
+			baseURL+CourseServiceDeleteFolderProcedure,
+			connect.WithSchema(courseServiceMethods.ByName("DeleteFolder")),
+			connect.WithClientOptions(opts...),
+		),
 		exportCourse: connect.NewClient[v1.ExportCourseRequest, v1.ExportCourseResponse](
 			httpClient,
 			baseURL+CourseServiceExportCourseProcedure,
@@ -182,6 +204,8 @@ type courseServiceClient struct {
 	deleteCourse       *connect.Client[v1.DeleteCourseRequest, v1.DeleteCourseResponse]
 	getFolderHierarchy *connect.Client[v1.GetFolderHierarchyRequest, v1.GetFolderHierarchyResponse]
 	getLibrary         *connect.Client[v1.GetLibraryRequest, v1.GetLibraryResponse]
+	createFolder       *connect.Client[v1.CreateFolderRequest, v1.CreateFolderResponse]
+	deleteFolder       *connect.Client[v1.DeleteFolderRequest, v1.DeleteFolderResponse]
 	exportCourse       *connect.Client[v1.ExportCourseRequest, v1.ExportCourseResponse]
 	getExportStatus    *connect.Client[v1.GetExportStatusRequest, v1.GetExportStatusResponse]
 	downloadExport     *connect.Client[v1.DownloadExportRequest, v1.DownloadExportResponse]
@@ -223,6 +247,16 @@ func (c *courseServiceClient) GetLibrary(ctx context.Context, req *connect.Reque
 	return c.getLibrary.CallUnary(ctx, req)
 }
 
+// CreateFolder calls mirai.v1.CourseService.CreateFolder.
+func (c *courseServiceClient) CreateFolder(ctx context.Context, req *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.CreateFolderResponse], error) {
+	return c.createFolder.CallUnary(ctx, req)
+}
+
+// DeleteFolder calls mirai.v1.CourseService.DeleteFolder.
+func (c *courseServiceClient) DeleteFolder(ctx context.Context, req *connect.Request[v1.DeleteFolderRequest]) (*connect.Response[v1.DeleteFolderResponse], error) {
+	return c.deleteFolder.CallUnary(ctx, req)
+}
+
 // ExportCourse calls mirai.v1.CourseService.ExportCourse.
 func (c *courseServiceClient) ExportCourse(ctx context.Context, req *connect.Request[v1.ExportCourseRequest]) (*connect.Response[v1.ExportCourseResponse], error) {
 	return c.exportCourse.CallUnary(ctx, req)
@@ -259,6 +293,10 @@ type CourseServiceHandler interface {
 	GetFolderHierarchy(context.Context, *connect.Request[v1.GetFolderHierarchyRequest]) (*connect.Response[v1.GetFolderHierarchyResponse], error)
 	// GetLibrary returns the full library with courses and folders.
 	GetLibrary(context.Context, *connect.Request[v1.GetLibraryRequest]) (*connect.Response[v1.GetLibraryResponse], error)
+	// CreateFolder creates a new folder in the library hierarchy (max 3 levels deep).
+	CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.CreateFolderResponse], error)
+	// DeleteFolder deletes an empty folder from the library.
+	DeleteFolder(context.Context, *connect.Request[v1.DeleteFolderRequest]) (*connect.Response[v1.DeleteFolderResponse], error)
 	// ExportCourse initiates a course export job.
 	ExportCourse(context.Context, *connect.Request[v1.ExportCourseRequest]) (*connect.Response[v1.ExportCourseResponse], error)
 	// GetExportStatus returns the status of an export job.
@@ -318,6 +356,18 @@ func NewCourseServiceHandler(svc CourseServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(courseServiceMethods.ByName("GetLibrary")),
 		connect.WithHandlerOptions(opts...),
 	)
+	courseServiceCreateFolderHandler := connect.NewUnaryHandler(
+		CourseServiceCreateFolderProcedure,
+		svc.CreateFolder,
+		connect.WithSchema(courseServiceMethods.ByName("CreateFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
+	courseServiceDeleteFolderHandler := connect.NewUnaryHandler(
+		CourseServiceDeleteFolderProcedure,
+		svc.DeleteFolder,
+		connect.WithSchema(courseServiceMethods.ByName("DeleteFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
 	courseServiceExportCourseHandler := connect.NewUnaryHandler(
 		CourseServiceExportCourseProcedure,
 		svc.ExportCourse,
@@ -358,6 +408,10 @@ func NewCourseServiceHandler(svc CourseServiceHandler, opts ...connect.HandlerOp
 			courseServiceGetFolderHierarchyHandler.ServeHTTP(w, r)
 		case CourseServiceGetLibraryProcedure:
 			courseServiceGetLibraryHandler.ServeHTTP(w, r)
+		case CourseServiceCreateFolderProcedure:
+			courseServiceCreateFolderHandler.ServeHTTP(w, r)
+		case CourseServiceDeleteFolderProcedure:
+			courseServiceDeleteFolderHandler.ServeHTTP(w, r)
 		case CourseServiceExportCourseProcedure:
 			courseServiceExportCourseHandler.ServeHTTP(w, r)
 		case CourseServiceGetExportStatusProcedure:
@@ -401,6 +455,14 @@ func (UnimplementedCourseServiceHandler) GetFolderHierarchy(context.Context, *co
 
 func (UnimplementedCourseServiceHandler) GetLibrary(context.Context, *connect.Request[v1.GetLibraryRequest]) (*connect.Response[v1.GetLibraryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseService.GetLibrary is not implemented"))
+}
+
+func (UnimplementedCourseServiceHandler) CreateFolder(context.Context, *connect.Request[v1.CreateFolderRequest]) (*connect.Response[v1.CreateFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseService.CreateFolder is not implemented"))
+}
+
+func (UnimplementedCourseServiceHandler) DeleteFolder(context.Context, *connect.Request[v1.DeleteFolderRequest]) (*connect.Response[v1.DeleteFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseService.DeleteFolder is not implemented"))
 }
 
 func (UnimplementedCourseServiceHandler) ExportCourse(context.Context, *connect.Request[v1.ExportCourseRequest]) (*connect.Response[v1.ExportCourseResponse], error) {

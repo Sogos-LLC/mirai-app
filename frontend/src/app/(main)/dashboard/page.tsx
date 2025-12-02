@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2, X, PartyPopper, Sparkles } from 'lucide-react';
-import CourseCreationModal from '@/components/dashboard/CourseCreationModal';
+import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2, X, PartyPopper } from 'lucide-react';
 import { AIGenerationFlowModal } from '@/components/ai-generation';
 import { useGetCoursesQuery, useDeleteCourseMutation, type LibraryEntry } from '@/store/api/apiSlice';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -10,8 +9,8 @@ import confetti from 'canvas-confetti';
 import * as courseClient from '@/lib/courseClient';
 
 export default function Dashboard() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -95,26 +94,14 @@ export default function Dashboard() {
     return true;
   });
 
-  const handleEditCourse = async (courseId: string) => {
-    try {
-      // Load the course data to check if it has generated content
-      const course = await courseClient.getCourse(courseId);
+  const handleEditCourse = (courseId: string) => {
+    setEditingCourseId(courseId);
+    setIsAIModalOpen(true);
+  };
 
-      // If course has content (sections or courseBlocks), go directly to editor
-      // Otherwise, go to the course builder wizard
-      const sections = course?.content?.sections || [];
-      const courseBlocks = course?.content?.courseBlocks || [];
-      if (sections.length > 0 || courseBlocks.length > 0) {
-        // Course has been generated, go directly to editor
-        router.push(`/course-builder?id=${courseId}&step=4`);
-      } else {
-        // Course is still in draft/setup phase, go to wizard
-        router.push(`/course-builder?id=${courseId}`);
-      }
-    } catch (error) {
-      // Fallback to wizard if we can't load the course
-      router.push(`/course-builder?id=${courseId}`);
-    }
+  const handleCloseModal = () => {
+    setIsAIModalOpen(false);
+    setEditingCourseId(undefined);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -190,35 +177,21 @@ export default function Dashboard() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Your Dashboard</h2>
             <p className="text-gray-600">Create engaging courses with AI or import existing materials</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => setIsAIModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl"
-            >
-              <Sparkles className="w-5 h-5" />
-              Generate with AI
-            </button>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-lg hover:shadow-xl"
-            >
-              <Plus className="w-5 h-5" />
-              Create Course
-            </button>
-          </div>
+          <button
+            onClick={() => setIsAIModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl"
+          >
+            <Plus className="w-5 h-5" />
+            Create Course
+          </button>
         </div>
       </div>
-
-      {/* Course Creation Modal */}
-      <CourseCreationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
 
       {/* AI Generation Flow Modal */}
       <AIGenerationFlowModal
         isOpen={isAIModalOpen}
-        onClose={() => setIsAIModalOpen(false)}
+        onClose={handleCloseModal}
+        courseId={editingCourseId}
       />
 
       {/* Your Courses Section */}
@@ -347,7 +320,7 @@ export default function Dashboard() {
               Get started by creating your first course using AI prompts or importing existing materials
             </p>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsAIModalOpen(true)}
               className="px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
             >
               Create your first course

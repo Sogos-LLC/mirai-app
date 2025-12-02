@@ -597,7 +597,18 @@ func (s *CourseService) GetFolderHierarchy(ctx context.Context, kratosID uuid.UU
 		return nil, domainerrors.ErrUserNotFound
 	}
 
-	folders, err := s.folderRepo.GetHierarchy(ctx)
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrInternal.WithMessage("user has no tenant")
+	}
+
+	// Ensure default folders exist (Shared and user's Private folder)
+	if err := s.ensureDefaultFolders(ctx, user); err != nil {
+		s.logger.Error("failed to ensure default folders", "error", err)
+		// Continue even if folder creation fails
+	}
+
+	// Pass user ID to filter PERSONAL folders - users only see their own private folder
+	folders, err := s.folderRepo.GetHierarchy(ctx, user.ID)
 	if err != nil {
 		s.logger.Error("failed to get folder hierarchy", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
@@ -631,6 +642,56 @@ func (s *CourseService) GetFolderHierarchy(ctx context.Context, kratosID uuid.UU
 	return result, nil
 }
 
+// ensureDefaultFolders creates default folders (Shared and user's Private) if they don't exist.
+func (s *CourseService) ensureDefaultFolders(ctx context.Context, user *entity.User) error {
+	if user.TenantID == nil {
+		return nil
+	}
+
+	// Check for Shared folder
+	sharedFolder, err := s.folderRepo.GetSharedFolder(ctx, *user.TenantID)
+	if err != nil {
+		return err
+	}
+
+	if sharedFolder == nil {
+		// Create Shared folder
+		sharedFolder = &entity.Folder{
+			TenantID: *user.TenantID,
+			Name:     "Shared",
+			Type:     entity.FolderTypeLibrary,
+		}
+		if err := s.folderRepo.Create(ctx, sharedFolder); err != nil {
+			s.logger.Error("failed to create shared folder", "error", err)
+		} else {
+			s.logger.Info("created shared folder", "folderID", sharedFolder.ID)
+		}
+	}
+
+	// Check for user's Private folder
+	privateFolder, err := s.folderRepo.GetByUserID(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+
+	if privateFolder == nil {
+		// Create Private folder for this user
+		privateFolder = &entity.Folder{
+			TenantID: *user.TenantID,
+			Name:     "Private",
+			Type:     entity.FolderTypePersonal,
+			UserID:   &user.ID,
+		}
+		if err := s.folderRepo.Create(ctx, privateFolder); err != nil {
+			s.logger.Error("failed to create private folder", "error", err, "userID", user.ID)
+		} else {
+			s.logger.Info("created private folder", "folderID", privateFolder.ID, "userID", user.ID)
+		}
+	}
+
+	return nil
+}
+
 // GetLibrary returns the full library.
 func (s *CourseService) GetLibrary(ctx context.Context, kratosID uuid.UUID, includeCounts bool) (*Library, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
@@ -645,8 +706,8 @@ func (s *CourseService) GetLibrary(ctx context.Context, kratosID uuid.UUID, incl
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Get folders
-	folders, err := s.folderRepo.GetHierarchy(ctx)
+	// Get folders - pass user ID to filter PERSONAL folders
+	folders, err := s.folderRepo.GetHierarchy(ctx, user.ID)
 	if err != nil {
 		s.logger.Error("failed to get folder hierarchy", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)

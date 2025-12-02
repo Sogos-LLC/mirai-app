@@ -218,6 +218,12 @@ service CourseService {
   // GetLibrary returns the full library with courses and folders.
   rpc GetLibrary(GetLibraryRequest) returns (GetLibraryResponse);
 
+  // CreateFolder creates a new folder in the library hierarchy (max 3 levels deep).
+  rpc CreateFolder(CreateFolderRequest) returns (CreateFolderResponse);
+
+  // DeleteFolder deletes an empty folder from the library.
+  rpc DeleteFolder(DeleteFolderRequest) returns (DeleteFolderResponse);
+
   // ExportCourse initiates a course export job.
   rpc ExportCourse(ExportCourseRequest) returns (ExportCourseResponse);
 
@@ -313,6 +319,28 @@ message GetLibraryRequest {
 // GetLibraryResponse contains the full library.
 message GetLibraryResponse {
   Library library = 1;
+}
+
+// CreateFolderRequest contains the data for creating a new folder.
+message CreateFolderRequest {
+  string name = 1;
+  optional string parent_id = 2;  // null for root-level folders
+  FolderType type = 3;            // typically FOLDER_TYPE_FOLDER for user-created folders
+}
+
+// CreateFolderResponse contains the newly created folder.
+message CreateFolderResponse {
+  Folder folder = 1;
+}
+
+// DeleteFolderRequest contains the folder ID to delete.
+message DeleteFolderRequest {
+  string id = 1;
+}
+
+// DeleteFolderResponse confirms deletion.
+message DeleteFolderResponse {
+  bool success = 1;
 }
 
 // ExportCourseRequest contains the course ID and export format.

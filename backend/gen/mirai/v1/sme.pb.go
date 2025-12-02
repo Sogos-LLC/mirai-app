@@ -132,13 +132,15 @@ func (SMEStatus) EnumDescriptor() ([]byte, []int) {
 type SMETaskStatus int32
 
 const (
-	SMETaskStatus_SME_TASK_STATUS_UNSPECIFIED SMETaskStatus = 0
-	SMETaskStatus_SME_TASK_STATUS_PENDING     SMETaskStatus = 1 // Assigned, waiting for content
-	SMETaskStatus_SME_TASK_STATUS_SUBMITTED   SMETaskStatus = 2 // Content submitted, awaiting ingestion
-	SMETaskStatus_SME_TASK_STATUS_PROCESSING  SMETaskStatus = 3 // Gemini ingestion in progress
-	SMETaskStatus_SME_TASK_STATUS_COMPLETED   SMETaskStatus = 4 // Successfully processed
-	SMETaskStatus_SME_TASK_STATUS_FAILED      SMETaskStatus = 5 // Ingestion failed
-	SMETaskStatus_SME_TASK_STATUS_CANCELLED   SMETaskStatus = 6 // Task cancelled
+	SMETaskStatus_SME_TASK_STATUS_UNSPECIFIED       SMETaskStatus = 0
+	SMETaskStatus_SME_TASK_STATUS_PENDING           SMETaskStatus = 1 // Assigned, waiting for content
+	SMETaskStatus_SME_TASK_STATUS_SUBMITTED         SMETaskStatus = 2 // Content submitted (legacy)
+	SMETaskStatus_SME_TASK_STATUS_PROCESSING        SMETaskStatus = 3 // Gemini ingestion in progress
+	SMETaskStatus_SME_TASK_STATUS_COMPLETED         SMETaskStatus = 4 // Successfully processed
+	SMETaskStatus_SME_TASK_STATUS_FAILED            SMETaskStatus = 5 // Ingestion failed
+	SMETaskStatus_SME_TASK_STATUS_CANCELLED         SMETaskStatus = 6 // Task cancelled
+	SMETaskStatus_SME_TASK_STATUS_AWAITING_REVIEW   SMETaskStatus = 7 // Content submitted, awaiting assigner review
+	SMETaskStatus_SME_TASK_STATUS_CHANGES_REQUESTED SMETaskStatus = 8 // Sent back to submitter for revision
 )
 
 // Enum value maps for SMETaskStatus.
@@ -151,15 +153,19 @@ var (
 		4: "SME_TASK_STATUS_COMPLETED",
 		5: "SME_TASK_STATUS_FAILED",
 		6: "SME_TASK_STATUS_CANCELLED",
+		7: "SME_TASK_STATUS_AWAITING_REVIEW",
+		8: "SME_TASK_STATUS_CHANGES_REQUESTED",
 	}
 	SMETaskStatus_value = map[string]int32{
-		"SME_TASK_STATUS_UNSPECIFIED": 0,
-		"SME_TASK_STATUS_PENDING":     1,
-		"SME_TASK_STATUS_SUBMITTED":   2,
-		"SME_TASK_STATUS_PROCESSING":  3,
-		"SME_TASK_STATUS_COMPLETED":   4,
-		"SME_TASK_STATUS_FAILED":      5,
-		"SME_TASK_STATUS_CANCELLED":   6,
+		"SME_TASK_STATUS_UNSPECIFIED":       0,
+		"SME_TASK_STATUS_PENDING":           1,
+		"SME_TASK_STATUS_SUBMITTED":         2,
+		"SME_TASK_STATUS_PROCESSING":        3,
+		"SME_TASK_STATUS_COMPLETED":         4,
+		"SME_TASK_STATUS_FAILED":            5,
+		"SME_TASK_STATUS_CANCELLED":         6,
+		"SME_TASK_STATUS_AWAITING_REVIEW":   7,
+		"SME_TASK_STATUS_CHANGES_REQUESTED": 8,
 	}
 )
 
@@ -188,6 +194,56 @@ func (x SMETaskStatus) Number() protoreflect.EnumNumber {
 // Deprecated: Use SMETaskStatus.Descriptor instead.
 func (SMETaskStatus) EnumDescriptor() ([]byte, []int) {
 	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{2}
+}
+
+// EnhanceType for AI content enhancement operations.
+type EnhanceType int32
+
+const (
+	EnhanceType_ENHANCE_TYPE_UNSPECIFIED EnhanceType = 0
+	EnhanceType_ENHANCE_TYPE_SUMMARIZE   EnhanceType = 1 // Create a concise summary
+	EnhanceType_ENHANCE_TYPE_IMPROVE     EnhanceType = 2 // Clean up, clarify, and structure
+)
+
+// Enum value maps for EnhanceType.
+var (
+	EnhanceType_name = map[int32]string{
+		0: "ENHANCE_TYPE_UNSPECIFIED",
+		1: "ENHANCE_TYPE_SUMMARIZE",
+		2: "ENHANCE_TYPE_IMPROVE",
+	}
+	EnhanceType_value = map[string]int32{
+		"ENHANCE_TYPE_UNSPECIFIED": 0,
+		"ENHANCE_TYPE_SUMMARIZE":   1,
+		"ENHANCE_TYPE_IMPROVE":     2,
+	}
+)
+
+func (x EnhanceType) Enum() *EnhanceType {
+	p := new(EnhanceType)
+	*p = x
+	return p
+}
+
+func (x EnhanceType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EnhanceType) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_sme_proto_enumTypes[3].Descriptor()
+}
+
+func (EnhanceType) Type() protoreflect.EnumType {
+	return &file_mirai_v1_sme_proto_enumTypes[3]
+}
+
+func (x EnhanceType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EnhanceType.Descriptor instead.
+func (EnhanceType) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{3}
 }
 
 // ContentType for uploaded materials.
@@ -236,11 +292,11 @@ func (x ContentType) String() string {
 }
 
 func (ContentType) Descriptor() protoreflect.EnumDescriptor {
-	return file_mirai_v1_sme_proto_enumTypes[3].Descriptor()
+	return file_mirai_v1_sme_proto_enumTypes[4].Descriptor()
 }
 
 func (ContentType) Type() protoreflect.EnumType {
-	return &file_mirai_v1_sme_proto_enumTypes[3]
+	return &file_mirai_v1_sme_proto_enumTypes[4]
 }
 
 func (x ContentType) Number() protoreflect.EnumNumber {
@@ -249,7 +305,7 @@ func (x ContentType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ContentType.Descriptor instead.
 func (ContentType) EnumDescriptor() ([]byte, []int) {
-	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{3}
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{4}
 }
 
 // SubjectMatterExpert represents a knowledge source entity.
@@ -570,8 +626,14 @@ type SMETaskSubmission struct {
 	SubmittedByUserId string                 `protobuf:"bytes,11,opt,name=submitted_by_user_id,json=submittedByUserId,proto3" json:"submitted_by_user_id,omitempty"`
 	SubmittedAt       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=submitted_at,json=submittedAt,proto3" json:"submitted_at,omitempty"`
 	ProcessedAt       *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=processed_at,json=processedAt,proto3,oneof" json:"processed_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Review/approval fields
+	ReviewerNotes    *string                `protobuf:"bytes,14,opt,name=reviewer_notes,json=reviewerNotes,proto3,oneof" json:"reviewer_notes,omitempty"`       // Feedback from reviewer
+	ApprovedContent  *string                `protobuf:"bytes,15,opt,name=approved_content,json=approvedContent,proto3,oneof" json:"approved_content,omitempty"` // Final approved text (may differ from original)
+	IsApproved       bool                   `protobuf:"varint,16,opt,name=is_approved,json=isApproved,proto3" json:"is_approved,omitempty"`                     // Whether submission is approved
+	ApprovedAt       *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=approved_at,json=approvedAt,proto3,oneof" json:"approved_at,omitempty"`
+	ApprovedByUserId *string                `protobuf:"bytes,18,opt,name=approved_by_user_id,json=approvedByUserId,proto3,oneof" json:"approved_by_user_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *SMETaskSubmission) Reset() {
@@ -693,6 +755,41 @@ func (x *SMETaskSubmission) GetProcessedAt() *timestamppb.Timestamp {
 		return x.ProcessedAt
 	}
 	return nil
+}
+
+func (x *SMETaskSubmission) GetReviewerNotes() string {
+	if x != nil && x.ReviewerNotes != nil {
+		return *x.ReviewerNotes
+	}
+	return ""
+}
+
+func (x *SMETaskSubmission) GetApprovedContent() string {
+	if x != nil && x.ApprovedContent != nil {
+		return *x.ApprovedContent
+	}
+	return ""
+}
+
+func (x *SMETaskSubmission) GetIsApproved() bool {
+	if x != nil {
+		return x.IsApproved
+	}
+	return false
+}
+
+func (x *SMETaskSubmission) GetApprovedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ApprovedAt
+	}
+	return nil
+}
+
+func (x *SMETaskSubmission) GetApprovedByUserId() string {
+	if x != nil && x.ApprovedByUserId != nil {
+		return *x.ApprovedByUserId
+	}
+	return ""
 }
 
 // SMEKnowledgeChunk represents a unit of distilled knowledge.
@@ -2112,10 +2209,11 @@ func (x *GetUploadURLResponse) GetExpiresAt() *timestamppb.Timestamp {
 type SubmitContentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
-	FilePath      string                 `protobuf:"bytes,3,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"` // S3 path from GetUploadURL
+	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"` // Optional for text submissions
+	FilePath      string                 `protobuf:"bytes,3,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"` // S3 path from GetUploadURL (optional for text)
 	ContentType   ContentType            `protobuf:"varint,4,opt,name=content_type,json=contentType,proto3,enum=mirai.v1.ContentType" json:"content_type,omitempty"`
-	FileSizeBytes int64                  `protobuf:"varint,5,opt,name=file_size_bytes,json=fileSizeBytes,proto3" json:"file_size_bytes,omitempty"`
+	FileSizeBytes int64                  `protobuf:"varint,5,opt,name=file_size_bytes,json=fileSizeBytes,proto3" json:"file_size_bytes,omitempty"` // Optional for text submissions
+	TextContent   *string                `protobuf:"bytes,6,opt,name=text_content,json=textContent,proto3,oneof" json:"text_content,omitempty"`    // Direct text content (for CONTENT_TYPE_TEXT)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2183,6 +2281,13 @@ func (x *SubmitContentRequest) GetFileSizeBytes() int64 {
 		return x.FileSizeBytes
 	}
 	return 0
+}
+
+func (x *SubmitContentRequest) GetTextContent() string {
+	if x != nil && x.TextContent != nil {
+		return *x.TextContent
+	}
+	return ""
 }
 
 // SubmitContentResponse contains the created submission.
@@ -2524,6 +2629,684 @@ func (x *SearchKnowledgeResponse) GetChunks() []*SMEKnowledgeChunk {
 	return nil
 }
 
+// GetSubmissionRequest requests a specific submission.
+type GetSubmissionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubmissionId  string                 `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSubmissionRequest) Reset() {
+	*x = GetSubmissionRequest{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSubmissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSubmissionRequest) ProtoMessage() {}
+
+func (x *GetSubmissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSubmissionRequest.ProtoReflect.Descriptor instead.
+func (*GetSubmissionRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *GetSubmissionRequest) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+// GetSubmissionResponse contains the requested submission.
+type GetSubmissionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Submission    *SMETaskSubmission     `protobuf:"bytes,1,opt,name=submission,proto3" json:"submission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSubmissionResponse) Reset() {
+	*x = GetSubmissionResponse{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSubmissionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSubmissionResponse) ProtoMessage() {}
+
+func (x *GetSubmissionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSubmissionResponse.ProtoReflect.Descriptor instead.
+func (*GetSubmissionResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *GetSubmissionResponse) GetSubmission() *SMETaskSubmission {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
+// ApproveSubmissionRequest approves a submission and creates knowledge.
+type ApproveSubmissionRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SubmissionId    string                 `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	ApprovedContent string                 `protobuf:"bytes,2,opt,name=approved_content,json=approvedContent,proto3" json:"approved_content,omitempty"` // The final content to use (may be edited by reviewer)
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ApproveSubmissionRequest) Reset() {
+	*x = ApproveSubmissionRequest{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveSubmissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveSubmissionRequest) ProtoMessage() {}
+
+func (x *ApproveSubmissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveSubmissionRequest.ProtoReflect.Descriptor instead.
+func (*ApproveSubmissionRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *ApproveSubmissionRequest) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *ApproveSubmissionRequest) GetApprovedContent() string {
+	if x != nil {
+		return x.ApprovedContent
+	}
+	return ""
+}
+
+// ApproveSubmissionResponse contains the approved submission and created knowledge.
+type ApproveSubmissionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Submission    *SMETaskSubmission     `protobuf:"bytes,1,opt,name=submission,proto3" json:"submission,omitempty"`
+	CreatedChunks []*SMEKnowledgeChunk   `protobuf:"bytes,2,rep,name=created_chunks,json=createdChunks,proto3" json:"created_chunks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveSubmissionResponse) Reset() {
+	*x = ApproveSubmissionResponse{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveSubmissionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveSubmissionResponse) ProtoMessage() {}
+
+func (x *ApproveSubmissionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveSubmissionResponse.ProtoReflect.Descriptor instead.
+func (*ApproveSubmissionResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ApproveSubmissionResponse) GetSubmission() *SMETaskSubmission {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
+func (x *ApproveSubmissionResponse) GetCreatedChunks() []*SMEKnowledgeChunk {
+	if x != nil {
+		return x.CreatedChunks
+	}
+	return nil
+}
+
+// RequestSubmissionChangesRequest sends submission back for revision.
+type RequestSubmissionChangesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubmissionId  string                 `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	Feedback      string                 `protobuf:"bytes,2,opt,name=feedback,proto3" json:"feedback,omitempty"` // What needs to change
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestSubmissionChangesRequest) Reset() {
+	*x = RequestSubmissionChangesRequest{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestSubmissionChangesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestSubmissionChangesRequest) ProtoMessage() {}
+
+func (x *RequestSubmissionChangesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestSubmissionChangesRequest.ProtoReflect.Descriptor instead.
+func (*RequestSubmissionChangesRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *RequestSubmissionChangesRequest) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *RequestSubmissionChangesRequest) GetFeedback() string {
+	if x != nil {
+		return x.Feedback
+	}
+	return ""
+}
+
+// RequestSubmissionChangesResponse contains the updated submission.
+type RequestSubmissionChangesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Submission    *SMETaskSubmission     `protobuf:"bytes,1,opt,name=submission,proto3" json:"submission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestSubmissionChangesResponse) Reset() {
+	*x = RequestSubmissionChangesResponse{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestSubmissionChangesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestSubmissionChangesResponse) ProtoMessage() {}
+
+func (x *RequestSubmissionChangesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestSubmissionChangesResponse.ProtoReflect.Descriptor instead.
+func (*RequestSubmissionChangesResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *RequestSubmissionChangesResponse) GetSubmission() *SMETaskSubmission {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
+// EnhanceSubmissionContentRequest requests AI enhancement of content.
+type EnhanceSubmissionContentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubmissionId  string                 `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	EnhanceType   EnhanceType            `protobuf:"varint,2,opt,name=enhance_type,json=enhanceType,proto3,enum=mirai.v1.EnhanceType" json:"enhance_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnhanceSubmissionContentRequest) Reset() {
+	*x = EnhanceSubmissionContentRequest{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnhanceSubmissionContentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnhanceSubmissionContentRequest) ProtoMessage() {}
+
+func (x *EnhanceSubmissionContentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnhanceSubmissionContentRequest.ProtoReflect.Descriptor instead.
+func (*EnhanceSubmissionContentRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *EnhanceSubmissionContentRequest) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *EnhanceSubmissionContentRequest) GetEnhanceType() EnhanceType {
+	if x != nil {
+		return x.EnhanceType
+	}
+	return EnhanceType_ENHANCE_TYPE_UNSPECIFIED
+}
+
+// EnhanceSubmissionContentResponse contains enhanced content.
+type EnhanceSubmissionContentResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EnhancedContent string                 `protobuf:"bytes,1,opt,name=enhanced_content,json=enhancedContent,proto3" json:"enhanced_content,omitempty"`
+	OriginalContent string                 `protobuf:"bytes,2,opt,name=original_content,json=originalContent,proto3" json:"original_content,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *EnhanceSubmissionContentResponse) Reset() {
+	*x = EnhanceSubmissionContentResponse{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnhanceSubmissionContentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnhanceSubmissionContentResponse) ProtoMessage() {}
+
+func (x *EnhanceSubmissionContentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnhanceSubmissionContentResponse.ProtoReflect.Descriptor instead.
+func (*EnhanceSubmissionContentResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *EnhanceSubmissionContentResponse) GetEnhancedContent() string {
+	if x != nil {
+		return x.EnhancedContent
+	}
+	return ""
+}
+
+func (x *EnhanceSubmissionContentResponse) GetOriginalContent() string {
+	if x != nil {
+		return x.OriginalContent
+	}
+	return ""
+}
+
+// UpdateKnowledgeChunkRequest updates a knowledge chunk.
+type UpdateKnowledgeChunkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChunkId       string                 `protobuf:"bytes,1,opt,name=chunk_id,json=chunkId,proto3" json:"chunk_id,omitempty"`
+	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	Topic         *string                `protobuf:"bytes,3,opt,name=topic,proto3,oneof" json:"topic,omitempty"`
+	Keywords      []string               `protobuf:"bytes,4,rep,name=keywords,proto3" json:"keywords,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateKnowledgeChunkRequest) Reset() {
+	*x = UpdateKnowledgeChunkRequest{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateKnowledgeChunkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateKnowledgeChunkRequest) ProtoMessage() {}
+
+func (x *UpdateKnowledgeChunkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateKnowledgeChunkRequest.ProtoReflect.Descriptor instead.
+func (*UpdateKnowledgeChunkRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *UpdateKnowledgeChunkRequest) GetChunkId() string {
+	if x != nil {
+		return x.ChunkId
+	}
+	return ""
+}
+
+func (x *UpdateKnowledgeChunkRequest) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *UpdateKnowledgeChunkRequest) GetTopic() string {
+	if x != nil && x.Topic != nil {
+		return *x.Topic
+	}
+	return ""
+}
+
+func (x *UpdateKnowledgeChunkRequest) GetKeywords() []string {
+	if x != nil {
+		return x.Keywords
+	}
+	return nil
+}
+
+// UpdateKnowledgeChunkResponse contains the updated chunk.
+type UpdateKnowledgeChunkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Chunk         *SMEKnowledgeChunk     `protobuf:"bytes,1,opt,name=chunk,proto3" json:"chunk,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateKnowledgeChunkResponse) Reset() {
+	*x = UpdateKnowledgeChunkResponse{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateKnowledgeChunkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateKnowledgeChunkResponse) ProtoMessage() {}
+
+func (x *UpdateKnowledgeChunkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateKnowledgeChunkResponse.ProtoReflect.Descriptor instead.
+func (*UpdateKnowledgeChunkResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *UpdateKnowledgeChunkResponse) GetChunk() *SMEKnowledgeChunk {
+	if x != nil {
+		return x.Chunk
+	}
+	return nil
+}
+
+// DeleteKnowledgeChunkRequest deletes a knowledge chunk.
+type DeleteKnowledgeChunkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChunkId       string                 `protobuf:"bytes,1,opt,name=chunk_id,json=chunkId,proto3" json:"chunk_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteKnowledgeChunkRequest) Reset() {
+	*x = DeleteKnowledgeChunkRequest{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteKnowledgeChunkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteKnowledgeChunkRequest) ProtoMessage() {}
+
+func (x *DeleteKnowledgeChunkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteKnowledgeChunkRequest.ProtoReflect.Descriptor instead.
+func (*DeleteKnowledgeChunkRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *DeleteKnowledgeChunkRequest) GetChunkId() string {
+	if x != nil {
+		return x.ChunkId
+	}
+	return ""
+}
+
+// DeleteKnowledgeChunkResponse confirms deletion.
+type DeleteKnowledgeChunkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteKnowledgeChunkResponse) Reset() {
+	*x = DeleteKnowledgeChunkResponse{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteKnowledgeChunkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteKnowledgeChunkResponse) ProtoMessage() {}
+
+func (x *DeleteKnowledgeChunkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteKnowledgeChunkResponse.ProtoReflect.Descriptor instead.
+func (*DeleteKnowledgeChunkResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{47}
+}
+
+// DeleteTaskRequest permanently deletes a task.
+type DeleteTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTaskRequest) Reset() {
+	*x = DeleteTaskRequest{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTaskRequest) ProtoMessage() {}
+
+func (x *DeleteTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTaskRequest.ProtoReflect.Descriptor instead.
+func (*DeleteTaskRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *DeleteTaskRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+// DeleteTaskResponse confirms task deletion.
+type DeleteTaskResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTaskResponse) Reset() {
+	*x = DeleteTaskResponse{}
+	mi := &file_mirai_v1_sme_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTaskResponse) ProtoMessage() {}
+
+func (x *DeleteTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_sme_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTaskResponse.ProtoReflect.Descriptor instead.
+func (*DeleteTaskResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_sme_proto_rawDescGZIP(), []int{49}
+}
+
 var File_mirai_v1_sme_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_sme_proto_rawDesc = "" +
@@ -2571,7 +3354,7 @@ const file_mirai_v1_sme_proto_rawDesc = "" +
 	"\n" +
 	"\b_team_idB\v\n" +
 	"\t_due_dateB\x0f\n" +
-	"\r_completed_at\"\xee\x04\n" +
+	"\r_completed_at\"\xb1\a\n" +
 	"\x11SMETaskSubmission\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x17\n" +
@@ -2587,11 +3370,22 @@ const file_mirai_v1_sme_proto_rawDesc = "" +
 	" \x01(\tH\x02R\x0eingestionError\x88\x01\x01\x12/\n" +
 	"\x14submitted_by_user_id\x18\v \x01(\tR\x11submittedByUserId\x12=\n" +
 	"\fsubmitted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt\x12B\n" +
-	"\fprocessed_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampH\x03R\vprocessedAt\x88\x01\x01B\x11\n" +
+	"\fprocessed_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampH\x03R\vprocessedAt\x88\x01\x01\x12*\n" +
+	"\x0ereviewer_notes\x18\x0e \x01(\tH\x04R\rreviewerNotes\x88\x01\x01\x12.\n" +
+	"\x10approved_content\x18\x0f \x01(\tH\x05R\x0fapprovedContent\x88\x01\x01\x12\x1f\n" +
+	"\vis_approved\x18\x10 \x01(\bR\n" +
+	"isApproved\x12@\n" +
+	"\vapproved_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\n" +
+	"approvedAt\x88\x01\x01\x122\n" +
+	"\x13approved_by_user_id\x18\x12 \x01(\tH\aR\x10approvedByUserId\x88\x01\x01B\x11\n" +
 	"\x0f_extracted_textB\r\n" +
 	"\v_ai_summaryB\x12\n" +
 	"\x10_ingestion_errorB\x0f\n" +
-	"\r_processed_at\"\xa6\x02\n" +
+	"\r_processed_atB\x11\n" +
+	"\x0f_reviewer_notesB\x13\n" +
+	"\x11_approved_contentB\x0e\n" +
+	"\f_approved_atB\x16\n" +
+	"\x14_approved_by_user_id\"\xa6\x02\n" +
 	"\x11SMEKnowledgeChunk\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x06sme_id\x18\x02 \x01(\tR\x05smeId\x12(\n" +
@@ -2701,13 +3495,15 @@ const file_mirai_v1_sme_proto_rawDesc = "" +
 	"upload_url\x18\x01 \x01(\tR\tuploadUrl\x12\x1b\n" +
 	"\tfile_path\x18\x02 \x01(\tR\bfilePath\x129\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xcb\x01\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\x84\x02\n" +
 	"\x14SubmitContentRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1b\n" +
 	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1b\n" +
 	"\tfile_path\x18\x03 \x01(\tR\bfilePath\x128\n" +
 	"\fcontent_type\x18\x04 \x01(\x0e2\x15.mirai.v1.ContentTypeR\vcontentType\x12&\n" +
-	"\x0ffile_size_bytes\x18\x05 \x01(\x03R\rfileSizeBytes\"T\n" +
+	"\x0ffile_size_bytes\x18\x05 \x01(\x03R\rfileSizeBytes\x12&\n" +
+	"\ftext_content\x18\x06 \x01(\tH\x00R\vtextContent\x88\x01\x01B\x0f\n" +
+	"\r_text_content\"T\n" +
 	"\x15SubmitContentResponse\x12;\n" +
 	"\n" +
 	"submission\x18\x01 \x01(\v2\x1b.mirai.v1.SMETaskSubmissionR\n" +
@@ -2726,7 +3522,48 @@ const file_mirai_v1_sme_proto_rawDesc = "" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\"N\n" +
 	"\x17SearchKnowledgeResponse\x123\n" +
-	"\x06chunks\x18\x01 \x03(\v2\x1b.mirai.v1.SMEKnowledgeChunkR\x06chunks*O\n" +
+	"\x06chunks\x18\x01 \x03(\v2\x1b.mirai.v1.SMEKnowledgeChunkR\x06chunks\";\n" +
+	"\x14GetSubmissionRequest\x12#\n" +
+	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\"T\n" +
+	"\x15GetSubmissionResponse\x12;\n" +
+	"\n" +
+	"submission\x18\x01 \x01(\v2\x1b.mirai.v1.SMETaskSubmissionR\n" +
+	"submission\"j\n" +
+	"\x18ApproveSubmissionRequest\x12#\n" +
+	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\x12)\n" +
+	"\x10approved_content\x18\x02 \x01(\tR\x0fapprovedContent\"\x9c\x01\n" +
+	"\x19ApproveSubmissionResponse\x12;\n" +
+	"\n" +
+	"submission\x18\x01 \x01(\v2\x1b.mirai.v1.SMETaskSubmissionR\n" +
+	"submission\x12B\n" +
+	"\x0ecreated_chunks\x18\x02 \x03(\v2\x1b.mirai.v1.SMEKnowledgeChunkR\rcreatedChunks\"b\n" +
+	"\x1fRequestSubmissionChangesRequest\x12#\n" +
+	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\x12\x1a\n" +
+	"\bfeedback\x18\x02 \x01(\tR\bfeedback\"_\n" +
+	" RequestSubmissionChangesResponse\x12;\n" +
+	"\n" +
+	"submission\x18\x01 \x01(\v2\x1b.mirai.v1.SMETaskSubmissionR\n" +
+	"submission\"\x80\x01\n" +
+	"\x1fEnhanceSubmissionContentRequest\x12#\n" +
+	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\x128\n" +
+	"\fenhance_type\x18\x02 \x01(\x0e2\x15.mirai.v1.EnhanceTypeR\venhanceType\"x\n" +
+	" EnhanceSubmissionContentResponse\x12)\n" +
+	"\x10enhanced_content\x18\x01 \x01(\tR\x0fenhancedContent\x12)\n" +
+	"\x10original_content\x18\x02 \x01(\tR\x0foriginalContent\"\x93\x01\n" +
+	"\x1bUpdateKnowledgeChunkRequest\x12\x19\n" +
+	"\bchunk_id\x18\x01 \x01(\tR\achunkId\x12\x18\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12\x19\n" +
+	"\x05topic\x18\x03 \x01(\tH\x00R\x05topic\x88\x01\x01\x12\x1a\n" +
+	"\bkeywords\x18\x04 \x03(\tR\bkeywordsB\b\n" +
+	"\x06_topic\"Q\n" +
+	"\x1cUpdateKnowledgeChunkResponse\x121\n" +
+	"\x05chunk\x18\x01 \x01(\v2\x1b.mirai.v1.SMEKnowledgeChunkR\x05chunk\"8\n" +
+	"\x1bDeleteKnowledgeChunkRequest\x12\x19\n" +
+	"\bchunk_id\x18\x01 \x01(\tR\achunkId\"\x1e\n" +
+	"\x1cDeleteKnowledgeChunkResponse\",\n" +
+	"\x11DeleteTaskRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\"\x14\n" +
+	"\x12DeleteTaskResponse*O\n" +
 	"\bSMEScope\x12\x19\n" +
 	"\x15SME_SCOPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10SME_SCOPE_GLOBAL\x10\x01\x12\x12\n" +
@@ -2736,7 +3573,7 @@ const file_mirai_v1_sme_proto_rawDesc = "" +
 	"\x10SME_STATUS_DRAFT\x10\x01\x12\x18\n" +
 	"\x14SME_STATUS_INGESTING\x10\x02\x12\x15\n" +
 	"\x11SME_STATUS_ACTIVE\x10\x03\x12\x17\n" +
-	"\x13SME_STATUS_ARCHIVED\x10\x04*\xe6\x01\n" +
+	"\x13SME_STATUS_ARCHIVED\x10\x04*\xb2\x02\n" +
 	"\rSMETaskStatus\x12\x1f\n" +
 	"\x1bSME_TASK_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SME_TASK_STATUS_PENDING\x10\x01\x12\x1d\n" +
@@ -2744,7 +3581,13 @@ const file_mirai_v1_sme_proto_rawDesc = "" +
 	"\x1aSME_TASK_STATUS_PROCESSING\x10\x03\x12\x1d\n" +
 	"\x19SME_TASK_STATUS_COMPLETED\x10\x04\x12\x1a\n" +
 	"\x16SME_TASK_STATUS_FAILED\x10\x05\x12\x1d\n" +
-	"\x19SME_TASK_STATUS_CANCELLED\x10\x06*\xbb\x01\n" +
+	"\x19SME_TASK_STATUS_CANCELLED\x10\x06\x12#\n" +
+	"\x1fSME_TASK_STATUS_AWAITING_REVIEW\x10\a\x12%\n" +
+	"!SME_TASK_STATUS_CHANGES_REQUESTED\x10\b*a\n" +
+	"\vEnhanceType\x12\x1c\n" +
+	"\x18ENHANCE_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16ENHANCE_TYPE_SUMMARIZE\x10\x01\x12\x18\n" +
+	"\x14ENHANCE_TYPE_IMPROVE\x10\x02*\xbb\x01\n" +
 	"\vContentType\x12\x1c\n" +
 	"\x18CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15CONTENT_TYPE_DOCUMENT\x10\x01\x12\x16\n" +
@@ -2752,7 +3595,7 @@ const file_mirai_v1_sme_proto_rawDesc = "" +
 	"\x12CONTENT_TYPE_VIDEO\x10\x03\x12\x16\n" +
 	"\x12CONTENT_TYPE_AUDIO\x10\x04\x12\x14\n" +
 	"\x10CONTENT_TYPE_URL\x10\x05\x12\x15\n" +
-	"\x11CONTENT_TYPE_TEXT\x10\x062\xa8\t\n" +
+	"\x11CONTENT_TYPE_TEXT\x10\x062\xd5\x0e\n" +
 	"\n" +
 	"SMEService\x12D\n" +
 	"\tCreateSME\x12\x1a.mirai.v1.CreateSMERequest\x1a\x1b.mirai.v1.CreateSMEResponse\x12;\n" +
@@ -2774,7 +3617,15 @@ const file_mirai_v1_sme_proto_rawDesc = "" +
 	"\rSubmitContent\x12\x1e.mirai.v1.SubmitContentRequest\x1a\x1f.mirai.v1.SubmitContentResponse\x12V\n" +
 	"\x0fListSubmissions\x12 .mirai.v1.ListSubmissionsRequest\x1a!.mirai.v1.ListSubmissionsResponse\x12M\n" +
 	"\fGetKnowledge\x12\x1d.mirai.v1.GetKnowledgeRequest\x1a\x1e.mirai.v1.GetKnowledgeResponse\x12V\n" +
-	"\x0fSearchKnowledge\x12 .mirai.v1.SearchKnowledgeRequest\x1a!.mirai.v1.SearchKnowledgeResponseB\x8e\x01\n" +
+	"\x0fSearchKnowledge\x12 .mirai.v1.SearchKnowledgeRequest\x1a!.mirai.v1.SearchKnowledgeResponse\x12P\n" +
+	"\rGetSubmission\x12\x1e.mirai.v1.GetSubmissionRequest\x1a\x1f.mirai.v1.GetSubmissionResponse\x12\\\n" +
+	"\x11ApproveSubmission\x12\".mirai.v1.ApproveSubmissionRequest\x1a#.mirai.v1.ApproveSubmissionResponse\x12q\n" +
+	"\x18RequestSubmissionChanges\x12).mirai.v1.RequestSubmissionChangesRequest\x1a*.mirai.v1.RequestSubmissionChangesResponse\x12q\n" +
+	"\x18EnhanceSubmissionContent\x12).mirai.v1.EnhanceSubmissionContentRequest\x1a*.mirai.v1.EnhanceSubmissionContentResponse\x12e\n" +
+	"\x14UpdateKnowledgeChunk\x12%.mirai.v1.UpdateKnowledgeChunkRequest\x1a&.mirai.v1.UpdateKnowledgeChunkResponse\x12e\n" +
+	"\x14DeleteKnowledgeChunk\x12%.mirai.v1.DeleteKnowledgeChunkRequest\x1a&.mirai.v1.DeleteKnowledgeChunkResponse\x12G\n" +
+	"\n" +
+	"DeleteTask\x12\x1b.mirai.v1.DeleteTaskRequest\x1a\x1c.mirai.v1.DeleteTaskResponseB\x8e\x01\n" +
 	"\fcom.mirai.v1B\bSmeProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -2789,131 +3640,167 @@ func file_mirai_v1_sme_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_sme_proto_rawDescData
 }
 
-var file_mirai_v1_sme_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_mirai_v1_sme_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_mirai_v1_sme_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_mirai_v1_sme_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
 var file_mirai_v1_sme_proto_goTypes = []any{
-	(SMEScope)(0),                   // 0: mirai.v1.SMEScope
-	(SMEStatus)(0),                  // 1: mirai.v1.SMEStatus
-	(SMETaskStatus)(0),              // 2: mirai.v1.SMETaskStatus
-	(ContentType)(0),                // 3: mirai.v1.ContentType
-	(*SubjectMatterExpert)(nil),     // 4: mirai.v1.SubjectMatterExpert
-	(*SMETask)(nil),                 // 5: mirai.v1.SMETask
-	(*SMETaskSubmission)(nil),       // 6: mirai.v1.SMETaskSubmission
-	(*SMEKnowledgeChunk)(nil),       // 7: mirai.v1.SMEKnowledgeChunk
-	(*CreateSMERequest)(nil),        // 8: mirai.v1.CreateSMERequest
-	(*CreateSMEResponse)(nil),       // 9: mirai.v1.CreateSMEResponse
-	(*GetSMERequest)(nil),           // 10: mirai.v1.GetSMERequest
-	(*GetSMEResponse)(nil),          // 11: mirai.v1.GetSMEResponse
-	(*ListSMEsRequest)(nil),         // 12: mirai.v1.ListSMEsRequest
-	(*ListSMEsResponse)(nil),        // 13: mirai.v1.ListSMEsResponse
-	(*UpdateSMERequest)(nil),        // 14: mirai.v1.UpdateSMERequest
-	(*UpdateSMEResponse)(nil),       // 15: mirai.v1.UpdateSMEResponse
-	(*DeleteSMERequest)(nil),        // 16: mirai.v1.DeleteSMERequest
-	(*DeleteSMEResponse)(nil),       // 17: mirai.v1.DeleteSMEResponse
-	(*RestoreSMERequest)(nil),       // 18: mirai.v1.RestoreSMERequest
-	(*RestoreSMEResponse)(nil),      // 19: mirai.v1.RestoreSMEResponse
-	(*CreateTaskRequest)(nil),       // 20: mirai.v1.CreateTaskRequest
-	(*CreateTaskResponse)(nil),      // 21: mirai.v1.CreateTaskResponse
-	(*GetTaskRequest)(nil),          // 22: mirai.v1.GetTaskRequest
-	(*GetTaskResponse)(nil),         // 23: mirai.v1.GetTaskResponse
-	(*ListTasksRequest)(nil),        // 24: mirai.v1.ListTasksRequest
-	(*ListTasksResponse)(nil),       // 25: mirai.v1.ListTasksResponse
-	(*UpdateTaskRequest)(nil),       // 26: mirai.v1.UpdateTaskRequest
-	(*UpdateTaskResponse)(nil),      // 27: mirai.v1.UpdateTaskResponse
-	(*CancelTaskRequest)(nil),       // 28: mirai.v1.CancelTaskRequest
-	(*CancelTaskResponse)(nil),      // 29: mirai.v1.CancelTaskResponse
-	(*GetUploadURLRequest)(nil),     // 30: mirai.v1.GetUploadURLRequest
-	(*GetUploadURLResponse)(nil),    // 31: mirai.v1.GetUploadURLResponse
-	(*SubmitContentRequest)(nil),    // 32: mirai.v1.SubmitContentRequest
-	(*SubmitContentResponse)(nil),   // 33: mirai.v1.SubmitContentResponse
-	(*ListSubmissionsRequest)(nil),  // 34: mirai.v1.ListSubmissionsRequest
-	(*ListSubmissionsResponse)(nil), // 35: mirai.v1.ListSubmissionsResponse
-	(*GetKnowledgeRequest)(nil),     // 36: mirai.v1.GetKnowledgeRequest
-	(*GetKnowledgeResponse)(nil),    // 37: mirai.v1.GetKnowledgeResponse
-	(*SearchKnowledgeRequest)(nil),  // 38: mirai.v1.SearchKnowledgeRequest
-	(*SearchKnowledgeResponse)(nil), // 39: mirai.v1.SearchKnowledgeResponse
-	(*timestamppb.Timestamp)(nil),   // 40: google.protobuf.Timestamp
+	(SMEScope)(0),                            // 0: mirai.v1.SMEScope
+	(SMEStatus)(0),                           // 1: mirai.v1.SMEStatus
+	(SMETaskStatus)(0),                       // 2: mirai.v1.SMETaskStatus
+	(EnhanceType)(0),                         // 3: mirai.v1.EnhanceType
+	(ContentType)(0),                         // 4: mirai.v1.ContentType
+	(*SubjectMatterExpert)(nil),              // 5: mirai.v1.SubjectMatterExpert
+	(*SMETask)(nil),                          // 6: mirai.v1.SMETask
+	(*SMETaskSubmission)(nil),                // 7: mirai.v1.SMETaskSubmission
+	(*SMEKnowledgeChunk)(nil),                // 8: mirai.v1.SMEKnowledgeChunk
+	(*CreateSMERequest)(nil),                 // 9: mirai.v1.CreateSMERequest
+	(*CreateSMEResponse)(nil),                // 10: mirai.v1.CreateSMEResponse
+	(*GetSMERequest)(nil),                    // 11: mirai.v1.GetSMERequest
+	(*GetSMEResponse)(nil),                   // 12: mirai.v1.GetSMEResponse
+	(*ListSMEsRequest)(nil),                  // 13: mirai.v1.ListSMEsRequest
+	(*ListSMEsResponse)(nil),                 // 14: mirai.v1.ListSMEsResponse
+	(*UpdateSMERequest)(nil),                 // 15: mirai.v1.UpdateSMERequest
+	(*UpdateSMEResponse)(nil),                // 16: mirai.v1.UpdateSMEResponse
+	(*DeleteSMERequest)(nil),                 // 17: mirai.v1.DeleteSMERequest
+	(*DeleteSMEResponse)(nil),                // 18: mirai.v1.DeleteSMEResponse
+	(*RestoreSMERequest)(nil),                // 19: mirai.v1.RestoreSMERequest
+	(*RestoreSMEResponse)(nil),               // 20: mirai.v1.RestoreSMEResponse
+	(*CreateTaskRequest)(nil),                // 21: mirai.v1.CreateTaskRequest
+	(*CreateTaskResponse)(nil),               // 22: mirai.v1.CreateTaskResponse
+	(*GetTaskRequest)(nil),                   // 23: mirai.v1.GetTaskRequest
+	(*GetTaskResponse)(nil),                  // 24: mirai.v1.GetTaskResponse
+	(*ListTasksRequest)(nil),                 // 25: mirai.v1.ListTasksRequest
+	(*ListTasksResponse)(nil),                // 26: mirai.v1.ListTasksResponse
+	(*UpdateTaskRequest)(nil),                // 27: mirai.v1.UpdateTaskRequest
+	(*UpdateTaskResponse)(nil),               // 28: mirai.v1.UpdateTaskResponse
+	(*CancelTaskRequest)(nil),                // 29: mirai.v1.CancelTaskRequest
+	(*CancelTaskResponse)(nil),               // 30: mirai.v1.CancelTaskResponse
+	(*GetUploadURLRequest)(nil),              // 31: mirai.v1.GetUploadURLRequest
+	(*GetUploadURLResponse)(nil),             // 32: mirai.v1.GetUploadURLResponse
+	(*SubmitContentRequest)(nil),             // 33: mirai.v1.SubmitContentRequest
+	(*SubmitContentResponse)(nil),            // 34: mirai.v1.SubmitContentResponse
+	(*ListSubmissionsRequest)(nil),           // 35: mirai.v1.ListSubmissionsRequest
+	(*ListSubmissionsResponse)(nil),          // 36: mirai.v1.ListSubmissionsResponse
+	(*GetKnowledgeRequest)(nil),              // 37: mirai.v1.GetKnowledgeRequest
+	(*GetKnowledgeResponse)(nil),             // 38: mirai.v1.GetKnowledgeResponse
+	(*SearchKnowledgeRequest)(nil),           // 39: mirai.v1.SearchKnowledgeRequest
+	(*SearchKnowledgeResponse)(nil),          // 40: mirai.v1.SearchKnowledgeResponse
+	(*GetSubmissionRequest)(nil),             // 41: mirai.v1.GetSubmissionRequest
+	(*GetSubmissionResponse)(nil),            // 42: mirai.v1.GetSubmissionResponse
+	(*ApproveSubmissionRequest)(nil),         // 43: mirai.v1.ApproveSubmissionRequest
+	(*ApproveSubmissionResponse)(nil),        // 44: mirai.v1.ApproveSubmissionResponse
+	(*RequestSubmissionChangesRequest)(nil),  // 45: mirai.v1.RequestSubmissionChangesRequest
+	(*RequestSubmissionChangesResponse)(nil), // 46: mirai.v1.RequestSubmissionChangesResponse
+	(*EnhanceSubmissionContentRequest)(nil),  // 47: mirai.v1.EnhanceSubmissionContentRequest
+	(*EnhanceSubmissionContentResponse)(nil), // 48: mirai.v1.EnhanceSubmissionContentResponse
+	(*UpdateKnowledgeChunkRequest)(nil),      // 49: mirai.v1.UpdateKnowledgeChunkRequest
+	(*UpdateKnowledgeChunkResponse)(nil),     // 50: mirai.v1.UpdateKnowledgeChunkResponse
+	(*DeleteKnowledgeChunkRequest)(nil),      // 51: mirai.v1.DeleteKnowledgeChunkRequest
+	(*DeleteKnowledgeChunkResponse)(nil),     // 52: mirai.v1.DeleteKnowledgeChunkResponse
+	(*DeleteTaskRequest)(nil),                // 53: mirai.v1.DeleteTaskRequest
+	(*DeleteTaskResponse)(nil),               // 54: mirai.v1.DeleteTaskResponse
+	(*timestamppb.Timestamp)(nil),            // 55: google.protobuf.Timestamp
 }
 var file_mirai_v1_sme_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.SubjectMatterExpert.scope:type_name -> mirai.v1.SMEScope
 	1,  // 1: mirai.v1.SubjectMatterExpert.status:type_name -> mirai.v1.SMEStatus
-	40, // 2: mirai.v1.SubjectMatterExpert.created_at:type_name -> google.protobuf.Timestamp
-	40, // 3: mirai.v1.SubjectMatterExpert.updated_at:type_name -> google.protobuf.Timestamp
-	3,  // 4: mirai.v1.SMETask.expected_content_type:type_name -> mirai.v1.ContentType
+	55, // 2: mirai.v1.SubjectMatterExpert.created_at:type_name -> google.protobuf.Timestamp
+	55, // 3: mirai.v1.SubjectMatterExpert.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 4: mirai.v1.SMETask.expected_content_type:type_name -> mirai.v1.ContentType
 	2,  // 5: mirai.v1.SMETask.status:type_name -> mirai.v1.SMETaskStatus
-	40, // 6: mirai.v1.SMETask.due_date:type_name -> google.protobuf.Timestamp
-	40, // 7: mirai.v1.SMETask.created_at:type_name -> google.protobuf.Timestamp
-	40, // 8: mirai.v1.SMETask.updated_at:type_name -> google.protobuf.Timestamp
-	40, // 9: mirai.v1.SMETask.completed_at:type_name -> google.protobuf.Timestamp
-	3,  // 10: mirai.v1.SMETaskSubmission.content_type:type_name -> mirai.v1.ContentType
-	40, // 11: mirai.v1.SMETaskSubmission.submitted_at:type_name -> google.protobuf.Timestamp
-	40, // 12: mirai.v1.SMETaskSubmission.processed_at:type_name -> google.protobuf.Timestamp
-	40, // 13: mirai.v1.SMEKnowledgeChunk.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 14: mirai.v1.CreateSMERequest.scope:type_name -> mirai.v1.SMEScope
-	4,  // 15: mirai.v1.CreateSMEResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
-	4,  // 16: mirai.v1.GetSMEResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
-	0,  // 17: mirai.v1.ListSMEsRequest.scope:type_name -> mirai.v1.SMEScope
-	1,  // 18: mirai.v1.ListSMEsRequest.status:type_name -> mirai.v1.SMEStatus
-	4,  // 19: mirai.v1.ListSMEsResponse.smes:type_name -> mirai.v1.SubjectMatterExpert
-	0,  // 20: mirai.v1.UpdateSMERequest.scope:type_name -> mirai.v1.SMEScope
-	1,  // 21: mirai.v1.UpdateSMERequest.status:type_name -> mirai.v1.SMEStatus
-	4,  // 22: mirai.v1.UpdateSMEResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
-	4,  // 23: mirai.v1.RestoreSMEResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
-	3,  // 24: mirai.v1.CreateTaskRequest.expected_content_type:type_name -> mirai.v1.ContentType
-	40, // 25: mirai.v1.CreateTaskRequest.due_date:type_name -> google.protobuf.Timestamp
-	5,  // 26: mirai.v1.CreateTaskResponse.task:type_name -> mirai.v1.SMETask
-	5,  // 27: mirai.v1.GetTaskResponse.task:type_name -> mirai.v1.SMETask
-	2,  // 28: mirai.v1.ListTasksRequest.status:type_name -> mirai.v1.SMETaskStatus
-	5,  // 29: mirai.v1.ListTasksResponse.tasks:type_name -> mirai.v1.SMETask
-	3,  // 30: mirai.v1.UpdateTaskRequest.expected_content_type:type_name -> mirai.v1.ContentType
-	40, // 31: mirai.v1.UpdateTaskRequest.due_date:type_name -> google.protobuf.Timestamp
-	5,  // 32: mirai.v1.UpdateTaskResponse.task:type_name -> mirai.v1.SMETask
-	5,  // 33: mirai.v1.CancelTaskResponse.task:type_name -> mirai.v1.SMETask
-	3,  // 34: mirai.v1.GetUploadURLRequest.content_type:type_name -> mirai.v1.ContentType
-	40, // 35: mirai.v1.GetUploadURLResponse.expires_at:type_name -> google.protobuf.Timestamp
-	3,  // 36: mirai.v1.SubmitContentRequest.content_type:type_name -> mirai.v1.ContentType
-	6,  // 37: mirai.v1.SubmitContentResponse.submission:type_name -> mirai.v1.SMETaskSubmission
-	6,  // 38: mirai.v1.ListSubmissionsResponse.submissions:type_name -> mirai.v1.SMETaskSubmission
-	4,  // 39: mirai.v1.GetKnowledgeResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
-	7,  // 40: mirai.v1.GetKnowledgeResponse.chunks:type_name -> mirai.v1.SMEKnowledgeChunk
-	7,  // 41: mirai.v1.SearchKnowledgeResponse.chunks:type_name -> mirai.v1.SMEKnowledgeChunk
-	8,  // 42: mirai.v1.SMEService.CreateSME:input_type -> mirai.v1.CreateSMERequest
-	10, // 43: mirai.v1.SMEService.GetSME:input_type -> mirai.v1.GetSMERequest
-	12, // 44: mirai.v1.SMEService.ListSMEs:input_type -> mirai.v1.ListSMEsRequest
-	14, // 45: mirai.v1.SMEService.UpdateSME:input_type -> mirai.v1.UpdateSMERequest
-	16, // 46: mirai.v1.SMEService.DeleteSME:input_type -> mirai.v1.DeleteSMERequest
-	18, // 47: mirai.v1.SMEService.RestoreSME:input_type -> mirai.v1.RestoreSMERequest
-	20, // 48: mirai.v1.SMEService.CreateTask:input_type -> mirai.v1.CreateTaskRequest
-	22, // 49: mirai.v1.SMEService.GetTask:input_type -> mirai.v1.GetTaskRequest
-	24, // 50: mirai.v1.SMEService.ListTasks:input_type -> mirai.v1.ListTasksRequest
-	26, // 51: mirai.v1.SMEService.UpdateTask:input_type -> mirai.v1.UpdateTaskRequest
-	28, // 52: mirai.v1.SMEService.CancelTask:input_type -> mirai.v1.CancelTaskRequest
-	30, // 53: mirai.v1.SMEService.GetUploadURL:input_type -> mirai.v1.GetUploadURLRequest
-	32, // 54: mirai.v1.SMEService.SubmitContent:input_type -> mirai.v1.SubmitContentRequest
-	34, // 55: mirai.v1.SMEService.ListSubmissions:input_type -> mirai.v1.ListSubmissionsRequest
-	36, // 56: mirai.v1.SMEService.GetKnowledge:input_type -> mirai.v1.GetKnowledgeRequest
-	38, // 57: mirai.v1.SMEService.SearchKnowledge:input_type -> mirai.v1.SearchKnowledgeRequest
-	9,  // 58: mirai.v1.SMEService.CreateSME:output_type -> mirai.v1.CreateSMEResponse
-	11, // 59: mirai.v1.SMEService.GetSME:output_type -> mirai.v1.GetSMEResponse
-	13, // 60: mirai.v1.SMEService.ListSMEs:output_type -> mirai.v1.ListSMEsResponse
-	15, // 61: mirai.v1.SMEService.UpdateSME:output_type -> mirai.v1.UpdateSMEResponse
-	17, // 62: mirai.v1.SMEService.DeleteSME:output_type -> mirai.v1.DeleteSMEResponse
-	19, // 63: mirai.v1.SMEService.RestoreSME:output_type -> mirai.v1.RestoreSMEResponse
-	21, // 64: mirai.v1.SMEService.CreateTask:output_type -> mirai.v1.CreateTaskResponse
-	23, // 65: mirai.v1.SMEService.GetTask:output_type -> mirai.v1.GetTaskResponse
-	25, // 66: mirai.v1.SMEService.ListTasks:output_type -> mirai.v1.ListTasksResponse
-	27, // 67: mirai.v1.SMEService.UpdateTask:output_type -> mirai.v1.UpdateTaskResponse
-	29, // 68: mirai.v1.SMEService.CancelTask:output_type -> mirai.v1.CancelTaskResponse
-	31, // 69: mirai.v1.SMEService.GetUploadURL:output_type -> mirai.v1.GetUploadURLResponse
-	33, // 70: mirai.v1.SMEService.SubmitContent:output_type -> mirai.v1.SubmitContentResponse
-	35, // 71: mirai.v1.SMEService.ListSubmissions:output_type -> mirai.v1.ListSubmissionsResponse
-	37, // 72: mirai.v1.SMEService.GetKnowledge:output_type -> mirai.v1.GetKnowledgeResponse
-	39, // 73: mirai.v1.SMEService.SearchKnowledge:output_type -> mirai.v1.SearchKnowledgeResponse
-	58, // [58:74] is the sub-list for method output_type
-	42, // [42:58] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	55, // 6: mirai.v1.SMETask.due_date:type_name -> google.protobuf.Timestamp
+	55, // 7: mirai.v1.SMETask.created_at:type_name -> google.protobuf.Timestamp
+	55, // 8: mirai.v1.SMETask.updated_at:type_name -> google.protobuf.Timestamp
+	55, // 9: mirai.v1.SMETask.completed_at:type_name -> google.protobuf.Timestamp
+	4,  // 10: mirai.v1.SMETaskSubmission.content_type:type_name -> mirai.v1.ContentType
+	55, // 11: mirai.v1.SMETaskSubmission.submitted_at:type_name -> google.protobuf.Timestamp
+	55, // 12: mirai.v1.SMETaskSubmission.processed_at:type_name -> google.protobuf.Timestamp
+	55, // 13: mirai.v1.SMETaskSubmission.approved_at:type_name -> google.protobuf.Timestamp
+	55, // 14: mirai.v1.SMEKnowledgeChunk.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 15: mirai.v1.CreateSMERequest.scope:type_name -> mirai.v1.SMEScope
+	5,  // 16: mirai.v1.CreateSMEResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
+	5,  // 17: mirai.v1.GetSMEResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
+	0,  // 18: mirai.v1.ListSMEsRequest.scope:type_name -> mirai.v1.SMEScope
+	1,  // 19: mirai.v1.ListSMEsRequest.status:type_name -> mirai.v1.SMEStatus
+	5,  // 20: mirai.v1.ListSMEsResponse.smes:type_name -> mirai.v1.SubjectMatterExpert
+	0,  // 21: mirai.v1.UpdateSMERequest.scope:type_name -> mirai.v1.SMEScope
+	1,  // 22: mirai.v1.UpdateSMERequest.status:type_name -> mirai.v1.SMEStatus
+	5,  // 23: mirai.v1.UpdateSMEResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
+	5,  // 24: mirai.v1.RestoreSMEResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
+	4,  // 25: mirai.v1.CreateTaskRequest.expected_content_type:type_name -> mirai.v1.ContentType
+	55, // 26: mirai.v1.CreateTaskRequest.due_date:type_name -> google.protobuf.Timestamp
+	6,  // 27: mirai.v1.CreateTaskResponse.task:type_name -> mirai.v1.SMETask
+	6,  // 28: mirai.v1.GetTaskResponse.task:type_name -> mirai.v1.SMETask
+	2,  // 29: mirai.v1.ListTasksRequest.status:type_name -> mirai.v1.SMETaskStatus
+	6,  // 30: mirai.v1.ListTasksResponse.tasks:type_name -> mirai.v1.SMETask
+	4,  // 31: mirai.v1.UpdateTaskRequest.expected_content_type:type_name -> mirai.v1.ContentType
+	55, // 32: mirai.v1.UpdateTaskRequest.due_date:type_name -> google.protobuf.Timestamp
+	6,  // 33: mirai.v1.UpdateTaskResponse.task:type_name -> mirai.v1.SMETask
+	6,  // 34: mirai.v1.CancelTaskResponse.task:type_name -> mirai.v1.SMETask
+	4,  // 35: mirai.v1.GetUploadURLRequest.content_type:type_name -> mirai.v1.ContentType
+	55, // 36: mirai.v1.GetUploadURLResponse.expires_at:type_name -> google.protobuf.Timestamp
+	4,  // 37: mirai.v1.SubmitContentRequest.content_type:type_name -> mirai.v1.ContentType
+	7,  // 38: mirai.v1.SubmitContentResponse.submission:type_name -> mirai.v1.SMETaskSubmission
+	7,  // 39: mirai.v1.ListSubmissionsResponse.submissions:type_name -> mirai.v1.SMETaskSubmission
+	5,  // 40: mirai.v1.GetKnowledgeResponse.sme:type_name -> mirai.v1.SubjectMatterExpert
+	8,  // 41: mirai.v1.GetKnowledgeResponse.chunks:type_name -> mirai.v1.SMEKnowledgeChunk
+	8,  // 42: mirai.v1.SearchKnowledgeResponse.chunks:type_name -> mirai.v1.SMEKnowledgeChunk
+	7,  // 43: mirai.v1.GetSubmissionResponse.submission:type_name -> mirai.v1.SMETaskSubmission
+	7,  // 44: mirai.v1.ApproveSubmissionResponse.submission:type_name -> mirai.v1.SMETaskSubmission
+	8,  // 45: mirai.v1.ApproveSubmissionResponse.created_chunks:type_name -> mirai.v1.SMEKnowledgeChunk
+	7,  // 46: mirai.v1.RequestSubmissionChangesResponse.submission:type_name -> mirai.v1.SMETaskSubmission
+	3,  // 47: mirai.v1.EnhanceSubmissionContentRequest.enhance_type:type_name -> mirai.v1.EnhanceType
+	8,  // 48: mirai.v1.UpdateKnowledgeChunkResponse.chunk:type_name -> mirai.v1.SMEKnowledgeChunk
+	9,  // 49: mirai.v1.SMEService.CreateSME:input_type -> mirai.v1.CreateSMERequest
+	11, // 50: mirai.v1.SMEService.GetSME:input_type -> mirai.v1.GetSMERequest
+	13, // 51: mirai.v1.SMEService.ListSMEs:input_type -> mirai.v1.ListSMEsRequest
+	15, // 52: mirai.v1.SMEService.UpdateSME:input_type -> mirai.v1.UpdateSMERequest
+	17, // 53: mirai.v1.SMEService.DeleteSME:input_type -> mirai.v1.DeleteSMERequest
+	19, // 54: mirai.v1.SMEService.RestoreSME:input_type -> mirai.v1.RestoreSMERequest
+	21, // 55: mirai.v1.SMEService.CreateTask:input_type -> mirai.v1.CreateTaskRequest
+	23, // 56: mirai.v1.SMEService.GetTask:input_type -> mirai.v1.GetTaskRequest
+	25, // 57: mirai.v1.SMEService.ListTasks:input_type -> mirai.v1.ListTasksRequest
+	27, // 58: mirai.v1.SMEService.UpdateTask:input_type -> mirai.v1.UpdateTaskRequest
+	29, // 59: mirai.v1.SMEService.CancelTask:input_type -> mirai.v1.CancelTaskRequest
+	31, // 60: mirai.v1.SMEService.GetUploadURL:input_type -> mirai.v1.GetUploadURLRequest
+	33, // 61: mirai.v1.SMEService.SubmitContent:input_type -> mirai.v1.SubmitContentRequest
+	35, // 62: mirai.v1.SMEService.ListSubmissions:input_type -> mirai.v1.ListSubmissionsRequest
+	37, // 63: mirai.v1.SMEService.GetKnowledge:input_type -> mirai.v1.GetKnowledgeRequest
+	39, // 64: mirai.v1.SMEService.SearchKnowledge:input_type -> mirai.v1.SearchKnowledgeRequest
+	41, // 65: mirai.v1.SMEService.GetSubmission:input_type -> mirai.v1.GetSubmissionRequest
+	43, // 66: mirai.v1.SMEService.ApproveSubmission:input_type -> mirai.v1.ApproveSubmissionRequest
+	45, // 67: mirai.v1.SMEService.RequestSubmissionChanges:input_type -> mirai.v1.RequestSubmissionChangesRequest
+	47, // 68: mirai.v1.SMEService.EnhanceSubmissionContent:input_type -> mirai.v1.EnhanceSubmissionContentRequest
+	49, // 69: mirai.v1.SMEService.UpdateKnowledgeChunk:input_type -> mirai.v1.UpdateKnowledgeChunkRequest
+	51, // 70: mirai.v1.SMEService.DeleteKnowledgeChunk:input_type -> mirai.v1.DeleteKnowledgeChunkRequest
+	53, // 71: mirai.v1.SMEService.DeleteTask:input_type -> mirai.v1.DeleteTaskRequest
+	10, // 72: mirai.v1.SMEService.CreateSME:output_type -> mirai.v1.CreateSMEResponse
+	12, // 73: mirai.v1.SMEService.GetSME:output_type -> mirai.v1.GetSMEResponse
+	14, // 74: mirai.v1.SMEService.ListSMEs:output_type -> mirai.v1.ListSMEsResponse
+	16, // 75: mirai.v1.SMEService.UpdateSME:output_type -> mirai.v1.UpdateSMEResponse
+	18, // 76: mirai.v1.SMEService.DeleteSME:output_type -> mirai.v1.DeleteSMEResponse
+	20, // 77: mirai.v1.SMEService.RestoreSME:output_type -> mirai.v1.RestoreSMEResponse
+	22, // 78: mirai.v1.SMEService.CreateTask:output_type -> mirai.v1.CreateTaskResponse
+	24, // 79: mirai.v1.SMEService.GetTask:output_type -> mirai.v1.GetTaskResponse
+	26, // 80: mirai.v1.SMEService.ListTasks:output_type -> mirai.v1.ListTasksResponse
+	28, // 81: mirai.v1.SMEService.UpdateTask:output_type -> mirai.v1.UpdateTaskResponse
+	30, // 82: mirai.v1.SMEService.CancelTask:output_type -> mirai.v1.CancelTaskResponse
+	32, // 83: mirai.v1.SMEService.GetUploadURL:output_type -> mirai.v1.GetUploadURLResponse
+	34, // 84: mirai.v1.SMEService.SubmitContent:output_type -> mirai.v1.SubmitContentResponse
+	36, // 85: mirai.v1.SMEService.ListSubmissions:output_type -> mirai.v1.ListSubmissionsResponse
+	38, // 86: mirai.v1.SMEService.GetKnowledge:output_type -> mirai.v1.GetKnowledgeResponse
+	40, // 87: mirai.v1.SMEService.SearchKnowledge:output_type -> mirai.v1.SearchKnowledgeResponse
+	42, // 88: mirai.v1.SMEService.GetSubmission:output_type -> mirai.v1.GetSubmissionResponse
+	44, // 89: mirai.v1.SMEService.ApproveSubmission:output_type -> mirai.v1.ApproveSubmissionResponse
+	46, // 90: mirai.v1.SMEService.RequestSubmissionChanges:output_type -> mirai.v1.RequestSubmissionChangesResponse
+	48, // 91: mirai.v1.SMEService.EnhanceSubmissionContent:output_type -> mirai.v1.EnhanceSubmissionContentResponse
+	50, // 92: mirai.v1.SMEService.UpdateKnowledgeChunk:output_type -> mirai.v1.UpdateKnowledgeChunkResponse
+	52, // 93: mirai.v1.SMEService.DeleteKnowledgeChunk:output_type -> mirai.v1.DeleteKnowledgeChunkResponse
+	54, // 94: mirai.v1.SMEService.DeleteTask:output_type -> mirai.v1.DeleteTaskResponse
+	72, // [72:95] is the sub-list for method output_type
+	49, // [49:72] is the sub-list for method input_type
+	49, // [49:49] is the sub-list for extension type_name
+	49, // [49:49] is the sub-list for extension extendee
+	0,  // [0:49] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_sme_proto_init() }
@@ -2930,13 +3817,15 @@ func file_mirai_v1_sme_proto_init() {
 	file_mirai_v1_sme_proto_msgTypes[16].OneofWrappers = []any{}
 	file_mirai_v1_sme_proto_msgTypes[20].OneofWrappers = []any{}
 	file_mirai_v1_sme_proto_msgTypes[22].OneofWrappers = []any{}
+	file_mirai_v1_sme_proto_msgTypes[28].OneofWrappers = []any{}
+	file_mirai_v1_sme_proto_msgTypes[44].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_sme_proto_rawDesc), len(file_mirai_v1_sme_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   36,
+			NumEnums:      5,
+			NumMessages:   50,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

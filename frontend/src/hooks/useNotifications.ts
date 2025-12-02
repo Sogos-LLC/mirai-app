@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@connectrpc/connect-query';
+import { useQuery, useMutation, createConnectQueryKey } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -72,12 +72,15 @@ export function useMarkAsRead() {
     mutate: async (notificationIds: string[]) => {
       const request = create(MarkAsReadRequestSchema, { notificationIds });
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && (k.includes('listNotifications') || k.includes('getUnreadCount'))
-          ),
-      });
+      // Use type-safe cache invalidation
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: listNotifications, cardinality: undefined }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: getUnreadCount, cardinality: undefined }),
+        }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,
@@ -96,12 +99,15 @@ export function useMarkAllAsRead() {
     mutate: async () => {
       const request = create(MarkAllAsReadRequestSchema, {});
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && (k.includes('listNotifications') || k.includes('getUnreadCount'))
-          ),
-      });
+      // Use type-safe cache invalidation
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: listNotifications, cardinality: undefined }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: getUnreadCount, cardinality: undefined }),
+        }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,
@@ -120,12 +126,15 @@ export function useDeleteNotification() {
     mutate: async (notificationId: string) => {
       const request = create(DeleteNotificationRequestSchema, { notificationId });
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && (k.includes('listNotifications') || k.includes('getUnreadCount'))
-          ),
-      });
+      // Use type-safe cache invalidation
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: listNotifications, cardinality: undefined }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: getUnreadCount, cardinality: undefined }),
+        }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,

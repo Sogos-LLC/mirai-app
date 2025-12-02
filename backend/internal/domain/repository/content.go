@@ -37,6 +37,15 @@ type FolderRepository interface {
 	// GetByID retrieves a folder by its ID.
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Folder, error)
 
+	// GetByTeamID retrieves a folder by team ID.
+	GetByTeamID(ctx context.Context, teamID uuid.UUID) (*entity.Folder, error)
+
+	// GetByUserID retrieves a personal folder by user ID.
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.Folder, error)
+
+	// GetSharedFolder retrieves the shared folder for a tenant.
+	GetSharedFolder(ctx context.Context, tenantID uuid.UUID) (*entity.Folder, error)
+
 	// Update updates a folder.
 	Update(ctx context.Context, folder *entity.Folder) error
 
@@ -47,6 +56,7 @@ type FolderRepository interface {
 	// Pass nil for parentID to get root folders.
 	ListByParent(ctx context.Context, parentID *uuid.UUID) ([]*entity.Folder, error)
 
-	// GetHierarchy retrieves all folders for building nested tree.
-	GetHierarchy(ctx context.Context) ([]*entity.Folder, error)
+	// GetHierarchy retrieves all folders visible to a user for building nested tree.
+	// Filters PERSONAL folders to only show the user's own private folder.
+	GetHierarchy(ctx context.Context, userID uuid.UUID) ([]*entity.Folder, error)
 }

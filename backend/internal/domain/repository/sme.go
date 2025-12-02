@@ -50,6 +50,9 @@ type SMETaskRepository interface {
 
 	// Cancel cancels a pending task.
 	Cancel(ctx context.Context, id uuid.UUID) error
+
+	// Delete permanently deletes a task.
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // SMESubmissionRepository defines the interface for SME task submission data access.
@@ -80,6 +83,12 @@ type SMEKnowledgeRepository interface {
 
 	// Search searches knowledge across SMEs.
 	Search(ctx context.Context, smeIDs []uuid.UUID, query string, limit int) ([]*entity.SMEKnowledgeChunk, error)
+
+	// Update updates a knowledge chunk.
+	Update(ctx context.Context, chunk *entity.SMEKnowledgeChunk) error
+
+	// Delete deletes a knowledge chunk by ID.
+	Delete(ctx context.Context, id uuid.UUID) error
 
 	// DeleteBySMEID deletes all chunks for an SME.
 	DeleteBySMEID(ctx context.Context, smeID uuid.UUID) error

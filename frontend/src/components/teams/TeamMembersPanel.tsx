@@ -14,6 +14,22 @@ const ROLE_LABELS: Record<number, { label: string; color: string }> = {
   2: { label: 'Member', color: 'bg-blue-100 text-blue-800' },
 };
 
+function getInitials(firstName?: string, lastName?: string): string {
+  const first = firstName?.charAt(0).toUpperCase() || '';
+  const last = lastName?.charAt(0).toUpperCase() || '';
+  return first + last || '?';
+}
+
+function getDisplayName(member: TeamMember): string {
+  if (member.user?.firstName || member.user?.lastName) {
+    return `${member.user.firstName || ''} ${member.user.lastName || ''}`.trim();
+  }
+  if (member.user?.email) {
+    return member.user.email;
+  }
+  return `User ${member.userId.slice(0, 8)}...`;
+}
+
 export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
@@ -119,6 +135,8 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
           members.map((member) => {
             const role = ROLE_LABELS[member.role] || ROLE_LABELS[0];
             const isRemoving = removingMemberId === member.userId;
+            const displayName = getDisplayName(member);
+            const initials = getInitials(member.user?.firstName, member.user?.lastName);
 
             return (
               <div
@@ -126,16 +144,25 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
                 className="px-4 py-4 sm:px-6 flex items-center justify-between"
               >
                 <div className="flex items-center">
-                  {/* Avatar placeholder */}
-                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                  {/* Avatar with initials */}
+                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                    {member.user?.firstName || member.user?.lastName ? (
+                      initials
+                    ) : (
+                      <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    )}
                   </div>
                   <div className="ml-4">
                     <div className="text-sm font-medium text-gray-900">
-                      User ID: {member.userId.slice(0, 8)}...
+                      {displayName}
                     </div>
+                    {member.user?.email && displayName !== member.user.email && (
+                      <div className="text-sm text-gray-500">
+                        {member.user.email}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${role.color}`}>
                         {role.label}

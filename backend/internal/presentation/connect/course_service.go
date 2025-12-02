@@ -9,6 +9,7 @@ import (
 	v1 "github.com/sogos/mirai-backend/gen/mirai/v1"
 	"github.com/sogos/mirai-backend/gen/mirai/v1/miraiv1connect"
 	"github.com/sogos/mirai-backend/internal/application/service"
+	"github.com/sogos/mirai-backend/internal/domain/entity"
 )
 
 // CourseServiceServer implements the CourseService Connect handler.
@@ -242,6 +243,64 @@ func (s *CourseServiceServer) GetLibrary(
 	}), nil
 }
 
+// CreateFolder creates a new folder in the library hierarchy (max 3 levels deep).
+func (s *CourseServiceServer) CreateFolder(
+	ctx context.Context,
+	req *connect.Request[v1.CreateFolderRequest],
+) (*connect.Response[v1.CreateFolderResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Convert folder type from proto
+	folderType := folderTypeFromProto(req.Msg.Type)
+
+	// Get parent ID if provided
+	var parentID *string
+	if req.Msg.ParentId != nil && *req.Msg.ParentId != "" {
+		parentID = req.Msg.ParentId
+	}
+
+	folder, err := s.courseService.CreateFolder(ctx, kratosID, req.Msg.Name, parentID, folderType)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.CreateFolderResponse{
+		Folder: entityFolderToProto(folder),
+	}), nil
+}
+
+// DeleteFolder deletes an empty folder from the library.
+func (s *CourseServiceServer) DeleteFolder(
+	ctx context.Context,
+	req *connect.Request[v1.DeleteFolderRequest],
+) (*connect.Response[v1.DeleteFolderResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if err := s.courseService.DeleteFolder(ctx, kratosID, req.Msg.Id); err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.DeleteFolderResponse{
+		Success: true,
+	}), nil
+}
+
 // Conversion helpers
 
 func courseStatusToProto(s service.CourseStatus) v1.CourseStatus {
@@ -285,6 +344,21 @@ func folderTypeToProto(t string) v1.FolderType {
 	}
 }
 
+func folderTypeFromProto(t v1.FolderType) string {
+	switch t {
+	case v1.FolderType_FOLDER_TYPE_LIBRARY:
+		return "library"
+	case v1.FolderType_FOLDER_TYPE_TEAM:
+		return "team"
+	case v1.FolderType_FOLDER_TYPE_PERSONAL:
+		return "personal"
+	case v1.FolderType_FOLDER_TYPE_FOLDER:
+		return "folder"
+	default:
+		return "folder" // Default to folder type for user-created folders
+	}
+}
+
 func libraryEntryToProto(e *service.LibraryEntry) *v1.LibraryEntry {
 	entry := &v1.LibraryEntry{
 		Id:         e.ID,
@@ -312,6 +386,19 @@ func folderToProto(f *service.Folder) *v1.Folder {
 	}
 	if f.Parent != "" {
 		folder.ParentId = &f.Parent
+	}
+	return folder
+}
+
+func entityFolderToProto(f *entity.Folder) *v1.Folder {
+	folder := &v1.Folder{
+		Id:   f.ID.String(),
+		Name: f.Name,
+		Type: folderTypeToProto(string(f.Type)),
+	}
+	if f.ParentID != nil {
+		parentStr := f.ParentID.String()
+		folder.ParentId = &parentStr
 	}
 	return folder
 }

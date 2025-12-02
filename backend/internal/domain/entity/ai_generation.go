@@ -42,10 +42,11 @@ type GenerationJob struct {
 	Status valueobject.GenerationJobStatus
 
 	// References based on job type
-	CourseID     *uuid.UUID
-	LessonID     *uuid.UUID
-	SMETaskID    *uuid.UUID
-	SubmissionID *uuid.UUID
+	CourseID        *uuid.UUID
+	LessonID        *uuid.UUID // References generated_lessons (set after generation)
+	OutlineLessonID *uuid.UUID // References outline_lessons (set before generation)
+	SMETaskID       *uuid.UUID
+	SubmissionID    *uuid.UUID
 
 	// Parent job ID - links child lesson jobs to parent full_course job
 	ParentJobID *uuid.UUID

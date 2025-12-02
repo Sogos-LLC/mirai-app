@@ -64,12 +64,14 @@ func ParseSMEStatus(str string) (SMEStatus, error) {
 type SMETaskStatus string
 
 const (
-	SMETaskStatusPending    SMETaskStatus = "pending"
-	SMETaskStatusSubmitted  SMETaskStatus = "submitted"
-	SMETaskStatusProcessing SMETaskStatus = "processing"
-	SMETaskStatusCompleted  SMETaskStatus = "completed"
-	SMETaskStatusFailed     SMETaskStatus = "failed"
-	SMETaskStatusCancelled  SMETaskStatus = "cancelled"
+	SMETaskStatusPending          SMETaskStatus = "pending"
+	SMETaskStatusSubmitted        SMETaskStatus = "submitted"
+	SMETaskStatusProcessing       SMETaskStatus = "processing"
+	SMETaskStatusCompleted        SMETaskStatus = "completed"
+	SMETaskStatusFailed           SMETaskStatus = "failed"
+	SMETaskStatusCancelled        SMETaskStatus = "cancelled"
+	SMETaskStatusAwaitingReview   SMETaskStatus = "awaiting_review"
+	SMETaskStatusChangesRequested SMETaskStatus = "changes_requested"
 )
 
 func (s SMETaskStatus) String() string {
@@ -79,7 +81,8 @@ func (s SMETaskStatus) String() string {
 func (s SMETaskStatus) IsValid() bool {
 	switch s {
 	case SMETaskStatusPending, SMETaskStatusSubmitted, SMETaskStatusProcessing,
-		SMETaskStatusCompleted, SMETaskStatusFailed, SMETaskStatusCancelled:
+		SMETaskStatusCompleted, SMETaskStatusFailed, SMETaskStatusCancelled,
+		SMETaskStatusAwaitingReview, SMETaskStatusChangesRequested:
 		return true
 	}
 	return false
@@ -124,4 +127,32 @@ func ParseContentType(str string) (ContentType, error) {
 		return "", fmt.Errorf("invalid content type: %s", str)
 	}
 	return c, nil
+}
+
+// EnhanceType for AI content enhancement operations.
+type EnhanceType string
+
+const (
+	EnhanceTypeSummarize EnhanceType = "summarize"
+	EnhanceTypeImprove   EnhanceType = "improve"
+)
+
+func (e EnhanceType) String() string {
+	return string(e)
+}
+
+func (e EnhanceType) IsValid() bool {
+	switch e {
+	case EnhanceTypeSummarize, EnhanceTypeImprove:
+		return true
+	}
+	return false
+}
+
+func ParseEnhanceType(str string) (EnhanceType, error) {
+	e := EnhanceType(str)
+	if !e.IsValid() {
+		return "", fmt.Errorf("invalid enhance type: %s", str)
+	}
+	return e, nil
 }

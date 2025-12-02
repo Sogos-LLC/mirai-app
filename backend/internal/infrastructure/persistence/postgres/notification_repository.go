@@ -3,8 +3,8 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -123,20 +123,22 @@ func (r *NotificationRepository) List(ctx context.Context, userID uuid.UUID, opt
 		argIndex++
 	}
 
-	// Cursor-based pagination
+	// Cursor-based pagination using "timestamp|id" format
 	if opts.Cursor != nil {
-		cursorBytes, err := base64.StdEncoding.DecodeString(*opts.Cursor)
-		if err == nil {
-			cursorTime, err := time.Parse(time.RFC3339Nano, string(cursorBytes))
-			if err == nil {
-				query += fmt.Sprintf(" AND created_at < $%d", argIndex)
-				args = append(args, cursorTime)
-				argIndex++
+		parts := strings.SplitN(*opts.Cursor, "|", 2)
+		if len(parts) == 2 {
+			cursorTime, timeErr := time.Parse(time.RFC3339Nano, parts[0])
+			cursorID, idErr := uuid.Parse(parts[1])
+			if timeErr == nil && idErr == nil {
+				// Use composite comparison for stable pagination
+				query += fmt.Sprintf(" AND (created_at, id) < ($%d, $%d)", argIndex, argIndex+1)
+				args = append(args, cursorTime, cursorID)
+				argIndex += 2
 			}
 		}
 	}
 
-	query += " ORDER BY created_at DESC"
+	query += " ORDER BY created_at DESC, id DESC"
 
 	limit := opts.Limit
 	if limit <= 0 {

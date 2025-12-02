@@ -603,3 +603,206 @@ func (c *Client) renderGenerationFailedEmail(req service.SendGenerationFailedReq
 
 	return buf.String(), nil
 }
+
+// SendOutlineReady sends a notification when course outline is ready for review.
+func (c *Client) SendOutlineReady(ctx context.Context, req service.SendOutlineReadyRequest) error {
+	subject := fmt.Sprintf("Outline Ready for Review: %s", req.CourseTitle)
+
+	body, err := c.renderOutlineReadyEmail(req)
+	if err != nil {
+		return fmt.Errorf("failed to render email template: %w", err)
+	}
+
+	return c.sendEmail(req.To, subject, body)
+}
+
+// renderOutlineReadyEmail renders the outline ready email template.
+func (c *Client) renderOutlineReadyEmail(req service.SendOutlineReadyRequest) (string, error) {
+	const emailTemplate = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Outline Ready</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background-color: #f5f5f5;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="padding: 40px 40px 20px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #7c3aed; font-size: 28px; font-weight: 700;">Mirai</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px;">
+                            <h2 style="margin: 0 0 20px 0; color: #1f2937; font-size: 24px; font-weight: 600; text-align: center;">Course Outline Ready for Review</h2>
+                            <p style="margin: 0 0 20px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                                Hi {{.UserName}},<br><br>
+                                The AI has generated an outline for <strong>{{.CourseTitle}}</strong>. Please review it before we generate the full course content.
+                            </p>
+                            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 16px; font-weight: 600;">Outline Summary</h3>
+                                <table cellspacing="0" cellpadding="0" style="width: 100%;">
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">Sections</td>
+                                        <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">{{.SectionCount}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">Lessons</td>
+                                        <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">{{.LessonCount}}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="padding: 20px 0; text-align: center;">
+                                        <a href="{{.ReviewURL}}" style="display: inline-block; padding: 14px 32px; background-color: #7c3aed; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px;">Review Outline</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; text-align: center;">
+                                You can edit the outline before approving it for full content generation.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px 40px 40px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                                This is an automated notification from Mirai.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`
+
+	tmpl, err := template.New("outline_ready").Parse(emailTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, req); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+// SendCourseComplete sends a notification when full course generation is complete.
+func (c *Client) SendCourseComplete(ctx context.Context, req service.SendCourseCompleteRequest) error {
+	subject := fmt.Sprintf("Course Ready: %s", req.CourseTitle)
+
+	body, err := c.renderCourseCompleteEmail(req)
+	if err != nil {
+		return fmt.Errorf("failed to render email template: %w", err)
+	}
+
+	return c.sendEmail(req.To, subject, body)
+}
+
+// renderCourseCompleteEmail renders the course complete email template with summary.
+func (c *Client) renderCourseCompleteEmail(req service.SendCourseCompleteRequest) (string, error) {
+	// Calculate hours and minutes for display
+	hours := req.TotalDurationMinutes / 60
+	minutes := req.TotalDurationMinutes % 60
+
+	type templateData struct {
+		service.SendCourseCompleteRequest
+		DurationHours   int
+		DurationMinutes int
+	}
+
+	data := templateData{
+		SendCourseCompleteRequest: req,
+		DurationHours:             hours,
+		DurationMinutes:           minutes,
+	}
+
+	const emailTemplate = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Ready</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background-color: #f5f5f5;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="padding: 40px 40px 20px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #7c3aed; font-size: 28px; font-weight: 700;">Mirai</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px;">
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <span style="display: inline-block; background-color: #ecfdf5; color: #059669; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">Course Complete</span>
+                            </div>
+                            <h2 style="margin: 0 0 20px 0; color: #1f2937; font-size: 24px; font-weight: 600; text-align: center;">{{.CourseTitle}}</h2>
+                            <p style="margin: 0 0 20px 0; color: #4b5563; font-size: 16px; line-height: 1.6; text-align: center;">
+                                Hi {{.UserName}},<br><br>
+                                Your course has been fully generated and is ready for review!
+                            </p>
+                            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 16px; font-weight: 600;">Course Summary</h3>
+                                <table cellspacing="0" cellpadding="0" style="width: 100%;">
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">Sections</td>
+                                        <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">{{.SectionCount}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">Lessons</td>
+                                        <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">{{.LessonCount}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">Estimated Duration</td>
+                                        <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">{{if .DurationHours}}{{.DurationHours}}h {{end}}{{.DurationMinutes}}m</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="padding: 20px 0; text-align: center;">
+                                        <a href="{{.CourseURL}}" style="display: inline-block; padding: 14px 32px; background-color: #7c3aed; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px;">Preview Course</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; text-align: center;">
+                                You can edit any content before publishing your course.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px 40px 40px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                                This is an automated notification from Mirai.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`
+
+	tmpl, err := template.New("course_complete").Parse(emailTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}

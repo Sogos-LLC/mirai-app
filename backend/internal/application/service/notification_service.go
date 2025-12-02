@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
@@ -131,11 +132,13 @@ func (s *NotificationService) ListNotifications(ctx context.Context, kratosID uu
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Generate next cursor (use last notification ID)
+	// Generate next cursor using timestamp|id format for proper pagination
 	var nextCursor string
 	if len(notifications) == limit {
 		last := notifications[len(notifications)-1]
-		nextCursor = last.ID.String()
+		nextCursor = fmt.Sprintf("%s|%s",
+			last.CreatedAt.Format(time.RFC3339Nano),
+			last.ID.String())
 	}
 
 	return &ListNotificationsResult{
@@ -288,7 +291,7 @@ type NotifyGenerationCompleteRequest struct {
 	UserName    string // First name for email personalization
 	CourseID    uuid.UUID
 	CourseTitle string
-	ActionURL   string // Relative URL like /courses/{id}/preview
+	ActionURL   string // Relative URL like /content-library?courseId={id}
 	SendEmail   bool
 }
 
@@ -420,7 +423,8 @@ func (s *NotificationService) NotifyCourseComplete(ctx context.Context, userID u
 		}
 	}
 
-	actionURL := fmt.Sprintf("/courses/%s/preview", courseID.String())
+	// Link to course preview page where user can view the generated course
+	actionURL := fmt.Sprintf("/course/%s/preview", courseID.String())
 
 	// Send notification with email if we have it
 	return s.NotifyGenerationComplete(ctx, NotifyGenerationCompleteRequest{
@@ -472,4 +476,104 @@ func (s *NotificationService) NotifyCourseFailed(ctx context.Context, userID uui
 		ActionURL:    actionURL,
 		SendEmail:    userEmail != "",
 	})
+}
+
+// NotifyTaskAssigned sends both in-app notification and email when a task is assigned.
+func (s *NotificationService) NotifyTaskAssigned(ctx context.Context, req NotifyTaskAssignedRequest) error {
+	log := s.logger.With("assigneeUserID", req.AssigneeUserID, "taskID", req.TaskID)
+
+	// Look up assignee user
+	assignee, err := s.userRepo.GetByID(ctx, req.AssigneeUserID)
+	if err != nil || assignee == nil {
+		log.Error("failed to get assignee user", "error", err)
+		return domainerrors.ErrUserNotFound
+	}
+
+	// Look up assigner user for their name
+	assigner, err := s.userRepo.GetByID(ctx, req.AssignerUserID)
+	if err != nil || assigner == nil {
+		log.Error("failed to get assigner user", "error", err)
+		return domainerrors.ErrUserNotFound
+	}
+
+	// Get email and name from Kratos identity
+	var assigneeEmail, assigneeName, assignerName string
+	if s.identityProvider != nil {
+		// Get assignee info
+		assigneeIdentity, err := s.identityProvider.GetIdentity(ctx, assignee.KratosID.String())
+		if err != nil {
+			log.Warn("failed to get assignee identity", "error", err)
+		} else if assigneeIdentity != nil {
+			assigneeEmail = assigneeIdentity.Email
+			assigneeName = assigneeIdentity.FirstName
+			if assigneeIdentity.LastName != "" {
+				assigneeName = assigneeIdentity.FirstName + " " + assigneeIdentity.LastName
+			}
+		}
+
+		// Get assigner name
+		assignerIdentity, err := s.identityProvider.GetIdentity(ctx, assigner.KratosID.String())
+		if err != nil {
+			log.Warn("failed to get assigner identity", "error", err)
+		} else if assignerIdentity != nil {
+			assignerName = assignerIdentity.FirstName
+			if assignerIdentity.LastName != "" {
+				assignerName = assignerIdentity.FirstName + " " + assignerIdentity.LastName
+			}
+		}
+	}
+
+	// Build action URL to view the SME with task context
+	actionURL := fmt.Sprintf("/smes?sme=%s&task=%s", req.SMEID.String(), req.TaskID.String())
+
+	// Create in-app notification
+	notification := &entity.Notification{
+		TenantID:  *assignee.TenantID,
+		UserID:    req.AssigneeUserID,
+		Type:      valueobject.NotificationTypeTaskAssigned,
+		Priority:  valueobject.NotificationPriorityNormal,
+		Title:     "New Task Assigned",
+		Message:   fmt.Sprintf("You've been assigned a task: %s for %s", req.TaskTitle, req.SMEName),
+		ActionURL: &actionURL,
+		TaskID:    &req.TaskID,
+		SMEID:     &req.SMEID,
+	}
+
+	if err := s.notificationRepo.Create(ctx, notification); err != nil {
+		log.Error("failed to create task notification", "error", err)
+		return domainerrors.ErrInternal.WithCause(err)
+	}
+
+	log.Info("task notification created", "notificationID", notification.ID)
+
+	// Send email if we have the email address
+	if assigneeEmail != "" && s.emailProvider != nil {
+		// Format due date if present
+		dueDate := ""
+		if req.DueDate != nil {
+			dueDate = req.DueDate.Format("January 2, 2006")
+		}
+
+		// Build full task URL
+		taskURL := s.baseURL + actionURL
+
+		emailReq := service.SendTaskAssignmentRequest{
+			To:           assigneeEmail,
+			AssigneeName: assigneeName,
+			AssignerName: assignerName,
+			TaskTitle:    req.TaskTitle,
+			SMEName:      req.SMEName,
+			TaskURL:      taskURL,
+			DueDate:      dueDate,
+		}
+
+		if err := s.emailProvider.SendTaskAssignment(ctx, emailReq); err != nil {
+			log.Error("failed to send task assignment email", "error", err)
+			// Don't fail the whole operation if email fails
+		} else {
+			log.Info("task assignment email sent", "to", assigneeEmail)
+		}
+	}
+
+	return nil
 }

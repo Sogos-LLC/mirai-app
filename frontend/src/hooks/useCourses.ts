@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@connectrpc/connect-query';
+import { useQuery, useMutation, createConnectQueryKey } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   listCourses,
@@ -8,9 +8,12 @@ import {
   deleteCourse,
   getFolderHierarchy,
   getLibrary,
+  createFolder,
+  deleteFolder,
 } from '@/gen/mirai/v1/course-CourseService_connectquery';
 import {
   CourseStatus,
+  FolderType,
   type Course,
   type LibraryEntry,
   type Folder,
@@ -18,6 +21,8 @@ import {
   CreateCourseRequestSchema,
   UpdateCourseRequestSchema,
   DeleteCourseRequestSchema,
+  CreateFolderRequestSchema,
+  DeleteFolderRequestSchema,
   CourseSettingsSchema,
   PersonaSchema,
   LearningObjectiveSchema,
@@ -30,7 +35,7 @@ import {
 import { create } from '@bufbuild/protobuf';
 
 // Re-export types for convenience
-export { CourseStatus };
+export { CourseStatus, FolderType };
 export type { Course, LibraryEntry, Folder, Library };
 
 /**
@@ -206,12 +211,12 @@ export function useCreateCourse() {
       });
 
       const result = await mutation.mutateAsync(request);
-      // Invalidate queries to refetch - use partial key matching
-      await queryClient.invalidateQueries({ predicate: (query) =>
-        query.queryKey.some((k) =>
-          typeof k === 'string' && (k.includes('listCourses') || k.includes('getFolderHierarchy') || k.includes('getLibrary'))
-        )
-      });
+      // Use type-safe cache invalidation with createConnectQueryKey
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listCourses, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getFolderHierarchy, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getLibrary, cardinality: undefined }) }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,
@@ -356,12 +361,13 @@ export function useUpdateCourse() {
       });
 
       const result = await mutation.mutateAsync(request);
-      // Invalidate queries to refetch - use partial key matching
-      await queryClient.invalidateQueries({ predicate: (query) =>
-        query.queryKey.some((k) =>
-          typeof k === 'string' && (k.includes('listCourses') || k.includes('getCourse') || k.includes('getFolderHierarchy') || k.includes('getLibrary'))
-        )
-      });
+      // Use type-safe cache invalidation with createConnectQueryKey
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listCourses, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getCourse, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getFolderHierarchy, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getLibrary, cardinality: undefined }) }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,
@@ -380,12 +386,12 @@ export function useDeleteCourse() {
     mutate: async (courseId: string) => {
       const request = create(DeleteCourseRequestSchema, { id: courseId });
       const result = await mutation.mutateAsync(request);
-      // Invalidate queries to refetch - use partial key matching
-      await queryClient.invalidateQueries({ predicate: (query) =>
-        query.queryKey.some((k) =>
-          typeof k === 'string' && (k.includes('listCourses') || k.includes('getFolderHierarchy') || k.includes('getLibrary'))
-        )
-      });
+      // Use type-safe cache invalidation with createConnectQueryKey
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listCourses, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getFolderHierarchy, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getLibrary, cardinality: undefined }) }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,
@@ -422,5 +428,60 @@ export function useGetLibrary(includeCourseCounts: boolean = true) {
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
+  };
+}
+
+/**
+ * Hook to create a new folder.
+ */
+export function useCreateFolder() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(createFolder);
+
+  return {
+    mutate: async (folderData: {
+      name: string;
+      parentId?: string;
+      type?: FolderType;
+    }) => {
+      const request = create(CreateFolderRequestSchema, {
+        name: folderData.name,
+        parentId: folderData.parentId,
+        type: folderData.type ?? FolderType.FOLDER,
+      });
+
+      const result = await mutation.mutateAsync(request);
+      // Invalidate folder-related queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getFolderHierarchy, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getLibrary, cardinality: undefined }) }),
+      ]);
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
+ * Hook to delete a folder.
+ */
+export function useDeleteFolder() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(deleteFolder);
+
+  return {
+    mutate: async (folderId: string) => {
+      const request = create(DeleteFolderRequestSchema, { id: folderId });
+      const result = await mutation.mutateAsync(request);
+      // Invalidate folder-related queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getFolderHierarchy, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getLibrary, cardinality: undefined }) }),
+      ]);
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
   };
 }

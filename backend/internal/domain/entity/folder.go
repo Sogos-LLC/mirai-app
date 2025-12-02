@@ -44,6 +44,8 @@ type Folder struct {
 	Name      string
 	ParentID  *uuid.UUID // nil for root folders
 	Type      FolderType
+	TeamID    *uuid.UUID // For TEAM folders - associates with a team
+	UserID    *uuid.UUID // For PERSONAL folders - associates with a user
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
