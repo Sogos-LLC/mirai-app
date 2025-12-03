@@ -52,3 +52,7 @@ backend/data/
 
 # Generated diagrams
 diagram/
+
+# Other temp docs
+findings.md
+system-improvements.md
