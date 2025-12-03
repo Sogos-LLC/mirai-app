@@ -198,18 +198,25 @@ func (r *GenerationJobRepository) Update(ctx context.Context, job *entity.Genera
 	})
 }
 
-// GetNextQueued retrieves the next queued job for processing.
+// GetNextQueued atomically claims the next queued job for processing.
 // Uses RLS with superadmin context to access jobs across all tenants.
-// The FOR UPDATE SKIP LOCKED ensures only one worker picks up each job.
+// Atomically updates status to 'processing' and sets started_at in a single statement.
+// This prevents race conditions where multiple workers could pick up the same job.
 func (r *GenerationJobRepository) GetNextQueued(ctx context.Context) (*entity.GenerationJob, error) {
 	return RLSQuery(ctx, r.db, func(tx *sql.Tx) (*entity.GenerationJob, error) {
+		// Atomic claim: UPDATE with subquery SELECT FOR UPDATE SKIP LOCKED
+		// This ensures only one worker can claim each job
 		query := `
-			SELECT id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
-			FROM generation_jobs
-			WHERE status = 'queued'
-			ORDER BY created_at ASC
-			LIMIT 1
-			FOR UPDATE SKIP LOCKED
+			UPDATE generation_jobs
+			SET status = 'processing', started_at = NOW()
+			WHERE id = (
+				SELECT id FROM generation_jobs
+				WHERE status = 'queued'
+				ORDER BY created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
 		`
 		job := &entity.GenerationJob{}
 		var typeStr, statusStr string
@@ -240,7 +247,58 @@ func (r *GenerationJobRepository) GetNextQueued(ctx context.Context) (*entity.Ge
 			return nil, nil
 		}
 		if err != nil {
-			return nil, fmt.Errorf("failed to get next queued job: %w", err)
+			return nil, fmt.Errorf("failed to claim next queued job: %w", err)
+		}
+		job.Type, _ = valueobject.ParseGenerationJobType(typeStr)
+		job.Status, _ = valueobject.ParseGenerationJobStatus(statusStr)
+		return job, nil
+	})
+}
+
+// ClaimJobByID atomically claims a specific job by ID for processing.
+// Returns the job if successfully claimed, nil if already processed/claimed.
+// Uses RLS with superadmin context to access jobs across all tenants.
+func (r *GenerationJobRepository) ClaimJobByID(ctx context.Context, id uuid.UUID) (*entity.GenerationJob, error) {
+	return RLSQuery(ctx, r.db, func(tx *sql.Tx) (*entity.GenerationJob, error) {
+		// Atomic claim: UPDATE only if status is 'queued'
+		// This ensures idempotency - if job is already claimed, we get no rows
+		query := `
+			UPDATE generation_jobs
+			SET status = 'processing', started_at = NOW()
+			WHERE id = $1 AND status = 'queued'
+			RETURNING id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at
+		`
+		job := &entity.GenerationJob{}
+		var typeStr, statusStr string
+		err := tx.QueryRowContext(ctx, query, id).Scan(
+			&job.ID,
+			&job.TenantID,
+			&typeStr,
+			&statusStr,
+			&job.CourseID,
+			&job.LessonID,
+			&job.OutlineLessonID,
+			&job.SMETaskID,
+			&job.SubmissionID,
+			&job.ParentJobID,
+			&job.ProgressPercent,
+			&job.ProgressMessage,
+			&job.ResultPath,
+			&job.ErrorMessage,
+			&job.TokensUsed,
+			&job.RetryCount,
+			&job.MaxRetries,
+			&job.CreatedByUserID,
+			&job.CreatedAt,
+			&job.StartedAt,
+			&job.CompletedAt,
+		)
+		if err == sql.ErrNoRows {
+			// Job doesn't exist or is not in 'queued' status (already claimed/processed)
+			return nil, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to claim job by ID: %w", err)
 		}
 		job.Type, _ = valueobject.ParseGenerationJobType(typeStr)
 		job.Status, _ = valueobject.ParseGenerationJobStatus(statusStr)

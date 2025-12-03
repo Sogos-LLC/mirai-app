@@ -33,8 +33,14 @@ type GenerationJobRepository interface {
 	// Update updates a job.
 	Update(ctx context.Context, job *entity.GenerationJob) error
 
-	// GetNextQueued retrieves the next queued job for processing.
+	// GetNextQueued atomically claims the next queued job for processing.
+	// Updates status to 'processing' and sets started_at in one atomic operation.
 	GetNextQueued(ctx context.Context) (*entity.GenerationJob, error)
+
+	// ClaimJobByID atomically claims a specific job by ID for processing.
+	// Returns the job if successfully claimed, nil if already processed/claimed.
+	// Updates status to 'processing' and sets started_at in one atomic operation.
+	ClaimJobByID(ctx context.Context, id uuid.UUID) (*entity.GenerationJob, error)
 
 	// ListByParentID retrieves all child jobs for a parent job.
 	ListByParentID(ctx context.Context, parentID uuid.UUID) ([]*entity.GenerationJob, error)

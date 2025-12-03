@@ -183,6 +183,7 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 
 // ProcessOutlineGenerationJob processes an outline generation job.
 // This is called by the background worker.
+// Note: Job is already claimed as 'processing' with started_at set by GetNextQueued.
 func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, job *entity.GenerationJob) error {
 	log := s.logger.With("jobID", job.ID, "courseID", job.CourseID)
 
@@ -192,14 +193,12 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 		return nil
 	}
 
-	// Mark job as processing
-	now := time.Now()
-	job.Status = valueobject.GenerationJobStatusProcessing
-	job.StartedAt = &now
+	// Job is already marked as 'processing' by GetNextQueued (atomic claim)
+	// Just update the progress message
 	progressMsg := "Gathering SME knowledge..."
 	job.ProgressMessage = &progressMsg
 	if err := s.jobRepo.Update(ctx, job); err != nil {
-		return fmt.Errorf("failed to update job status: %w", err)
+		log.Error("failed to update job progress message", "error", err)
 	}
 
 	// Get generation input
@@ -679,6 +678,7 @@ func (s *AIGenerationService) GenerateLessonContent(ctx context.Context, kratosI
 
 // ProcessLessonGenerationJob processes a lesson content generation job.
 // This is called by the background worker.
+// Note: Job is already claimed as 'processing' with started_at set by GetNextQueued.
 func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, job *entity.GenerationJob) error {
 	log := s.logger.With("jobID", job.ID, "outlineLessonID", job.OutlineLessonID)
 
@@ -688,14 +688,12 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		return nil
 	}
 
-	// Mark job as processing
-	now := time.Now()
-	job.Status = valueobject.GenerationJobStatusProcessing
-	job.StartedAt = &now
+	// Job is already marked as 'processing' by GetNextQueued (atomic claim)
+	// Just update the progress message
 	progressMsg := "Loading lesson context..."
 	job.ProgressMessage = &progressMsg
 	if err := s.jobRepo.Update(ctx, job); err != nil {
-		return fmt.Errorf("failed to update job status: %w", err)
+		log.Error("failed to update job progress message", "error", err)
 	}
 
 	// Get outline lesson using OutlineLessonID (references outline_lessons table)
@@ -1436,7 +1434,7 @@ func (s *AIGenerationService) processNextJob(ctx context.Context) error {
 
 // ProcessJobByID processes a specific generation job by its ID.
 // This is used by the Asynq worker to process a specific job.
-// Sets up tenant context from the job for proper RLS isolation.
+// Uses atomic claim to ensure idempotency - safe if called multiple times.
 func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) error {
 	log := s.logger.With("jobID", jobID)
 
@@ -1446,24 +1444,25 @@ func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) 
 		return fmt.Errorf("invalid job ID: %w", err)
 	}
 
-	// Use superadmin context to fetch the job (before we know its tenant)
+	// Use superadmin context for atomic claim (before we know its tenant)
 	adminCtx := tenant.WithSuperAdmin(ctx, true)
-	job, err := s.jobRepo.GetByID(adminCtx, id)
+
+	// Atomically claim the job - this ensures idempotency
+	// If job is already claimed/processed, this returns nil (no error)
+	job, err := s.jobRepo.ClaimJobByID(adminCtx, id)
 	if err != nil {
-		log.Error("failed to get generation job", "error", err)
+		log.Error("failed to claim generation job", "error", err)
 		return err
 	}
 
 	if job == nil {
-		log.Info("generation job not found, may already be processed")
+		// Job doesn't exist or already claimed/processed - this is expected
+		// with Asynq retries or duplicate deliveries
+		log.Info("job not available for claim, may already be processed")
 		return nil
 	}
 
-	// Only process if status is "queued"
-	if job.Status != valueobject.GenerationJobStatusQueued {
-		log.Info("job not in queued status, skipping", "status", job.Status)
-		return nil
-	}
+	log.Info("job claimed successfully", "type", job.Type)
 
 	// Set up tenant context from the job for RLS isolation
 	// All subsequent operations will be scoped to this tenant
