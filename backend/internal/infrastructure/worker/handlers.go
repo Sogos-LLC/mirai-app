@@ -201,9 +201,11 @@ func (h *Handlers) HandleSMEIngestion(ctx context.Context, t *asynq.Task) error 
 // This is called periodically by the scheduler.
 func (h *Handlers) HandleAIGenerationPoll(ctx context.Context, t *asynq.Task) error {
 	log := h.logger.With("task", worker.TypeAIGenerationPoll)
+	log.Debug("AI generation poll task started")
 
 	// Only process if service is available
 	if h.aiGenService == nil {
+		log.Warn("AI generation service not available, skipping poll")
 		return nil
 	}
 
@@ -215,6 +217,7 @@ func (h *Handlers) HandleAIGenerationPoll(ctx context.Context, t *asynq.Task) er
 		return err
 	}
 
+	log.Debug("AI generation poll task completed")
 	return nil
 }
 

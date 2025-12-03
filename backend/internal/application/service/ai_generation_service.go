@@ -1404,31 +1404,40 @@ func (s *AIGenerationService) ProcessNextQueuedJob(ctx context.Context) error {
 // processNextJob processes the next queued generation job.
 // Sets up tenant context from the job for proper RLS isolation.
 func (s *AIGenerationService) processNextJob(ctx context.Context) error {
+	s.logger.Debug("checking for queued generation jobs")
+
 	// GetNextQueued uses FOR UPDATE SKIP LOCKED and runs with superadmin context
 	// to allow picking up jobs from any tenant
 	adminCtx := tenant.WithSuperAdmin(ctx, true)
 	job, err := s.jobRepo.GetNextQueued(adminCtx)
 	if err != nil {
+		s.logger.Error("failed to get next queued job", "error", err)
 		return err
 	}
 
 	if job == nil {
+		s.logger.Debug("no queued generation jobs found")
 		return nil // No jobs to process
 	}
 
 	// Set up tenant context from the job for RLS isolation
 	// All subsequent operations will be scoped to this tenant
-	tenantCtx := tenant.WithTenantID(ctx, job.TenantID)
+	// IMPORTANT: Build from adminCtx to preserve superadmin flag for worker operations
+	tenantCtx := tenant.WithTenantID(adminCtx, job.TenantID)
 
-	// Only process outline and lesson generation jobs
+	s.logger.Info("processing AI generation job", "jobID", job.ID, "type", job.Type, "tenantID", job.TenantID)
+
+	// Process based on job type
 	switch job.Type {
 	case valueobject.GenerationJobTypeCourseOutline:
 		return s.ProcessOutlineGenerationJob(tenantCtx, job)
 	case valueobject.GenerationJobTypeLessonContent:
 		return s.ProcessLessonGenerationJob(tenantCtx, job)
 	default:
-		// Not a job type this service handles
-		return nil
+		// Unknown/unsupported job type - fail it so it doesn't stay stuck in 'processing'
+		// This handles bad data in DB or enum parse failures from repository
+		s.logger.Error("unknown or invalid job type, marking as failed", "type", job.Type, "jobID", job.ID)
+		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
 	}
 }
 
@@ -1462,11 +1471,12 @@ func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) 
 		return nil
 	}
 
-	log.Info("job claimed successfully", "type", job.Type)
+	log.Info("job claimed successfully", "type", job.Type, "tenantID", job.TenantID)
 
 	// Set up tenant context from the job for RLS isolation
 	// All subsequent operations will be scoped to this tenant
-	tenantCtx := tenant.WithTenantID(ctx, job.TenantID)
+	// IMPORTANT: Build from adminCtx to preserve superadmin flag for worker operations
+	tenantCtx := tenant.WithTenantID(adminCtx, job.TenantID)
 
 	// Process based on job type
 	switch job.Type {
@@ -1475,7 +1485,9 @@ func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) 
 	case valueobject.GenerationJobTypeLessonContent:
 		return s.ProcessLessonGenerationJob(tenantCtx, job)
 	default:
-		log.Warn("unknown job type", "type", job.Type)
-		return nil
+		// Unknown/unsupported job type - fail it so it doesn't stay stuck in 'processing'
+		// This handles bad data in DB or enum parse failures from repository
+		log.Error("unknown or invalid job type, marking as failed", "type", job.Type)
+		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
 	}
 }

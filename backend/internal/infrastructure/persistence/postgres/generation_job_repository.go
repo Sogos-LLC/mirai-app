@@ -92,8 +92,15 @@ func (r *GenerationJobRepository) GetByID(ctx context.Context, id uuid.UUID) (*e
 		if err != nil {
 			return nil, fmt.Errorf("failed to get job: %w", err)
 		}
-		job.Type, _ = valueobject.ParseGenerationJobType(typeStr)
-		job.Status, _ = valueobject.ParseGenerationJobStatus(statusStr)
+		var parseErr error
+		job.Type, parseErr = valueobject.ParseGenerationJobType(typeStr)
+		if parseErr != nil {
+			return nil, fmt.Errorf("failed to parse job type '%s': %w", typeStr, parseErr)
+		}
+		job.Status, parseErr = valueobject.ParseGenerationJobStatus(statusStr)
+		if parseErr != nil {
+			return nil, fmt.Errorf("failed to parse job status '%s': %w", statusStr, parseErr)
+		}
 		return job, nil
 	})
 }
@@ -165,8 +172,15 @@ func (r *GenerationJobRepository) List(ctx context.Context, opts entity.Generati
 			); err != nil {
 				return nil, fmt.Errorf("failed to scan job: %w", err)
 			}
-			job.Type, _ = valueobject.ParseGenerationJobType(typeStr)
-			job.Status, _ = valueobject.ParseGenerationJobStatus(statusStr)
+			var parseErr error
+			job.Type, parseErr = valueobject.ParseGenerationJobType(typeStr)
+			if parseErr != nil {
+				return nil, fmt.Errorf("failed to parse job type '%s': %w", typeStr, parseErr)
+			}
+			job.Status, parseErr = valueobject.ParseGenerationJobStatus(statusStr)
+			if parseErr != nil {
+				return nil, fmt.Errorf("failed to parse job status '%s': %w", statusStr, parseErr)
+			}
 			jobs = append(jobs, job)
 		}
 		return jobs, nil
@@ -249,6 +263,11 @@ func (r *GenerationJobRepository) GetNextQueued(ctx context.Context) (*entity.Ge
 		if err != nil {
 			return nil, fmt.Errorf("failed to claim next queued job: %w", err)
 		}
+		// IMPORTANT: Do NOT return error on parse failure here!
+		// The job is already atomically claimed (status='processing') in the DB.
+		// Returning an error would rollback the transaction, creating a "poison pill"
+		// job that crashes every worker forever. Let the service layer handle bad data
+		// via failJob() which can properly mark it as failed.
 		job.Type, _ = valueobject.ParseGenerationJobType(typeStr)
 		job.Status, _ = valueobject.ParseGenerationJobStatus(statusStr)
 		return job, nil
@@ -300,6 +319,11 @@ func (r *GenerationJobRepository) ClaimJobByID(ctx context.Context, id uuid.UUID
 		if err != nil {
 			return nil, fmt.Errorf("failed to claim job by ID: %w", err)
 		}
+		// IMPORTANT: Do NOT return error on parse failure here!
+		// The job is already atomically claimed (status='processing') in the DB.
+		// Returning an error would rollback the transaction, creating a "poison pill"
+		// job that crashes every worker forever. Let the service layer handle bad data
+		// via failJob() which can properly mark it as failed.
 		job.Type, _ = valueobject.ParseGenerationJobType(typeStr)
 		job.Status, _ = valueobject.ParseGenerationJobStatus(statusStr)
 		return job, nil
@@ -351,8 +375,15 @@ func (r *GenerationJobRepository) ListByParentID(ctx context.Context, parentID u
 			); err != nil {
 				return nil, fmt.Errorf("failed to scan child job: %w", err)
 			}
-			job.Type, _ = valueobject.ParseGenerationJobType(typeStr)
-			job.Status, _ = valueobject.ParseGenerationJobStatus(statusStr)
+			var parseErr error
+			job.Type, parseErr = valueobject.ParseGenerationJobType(typeStr)
+			if parseErr != nil {
+				return nil, fmt.Errorf("failed to parse job type '%s': %w", typeStr, parseErr)
+			}
+			job.Status, parseErr = valueobject.ParseGenerationJobStatus(statusStr)
+			if parseErr != nil {
+				return nil, fmt.Errorf("failed to parse job status '%s': %w", statusStr, parseErr)
+			}
 			jobs = append(jobs, job)
 		}
 		return jobs, nil
