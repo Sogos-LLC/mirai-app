@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# CloudNativePG Database Clusters
+# High-Availability PostgreSQL with synchronous replication
+# Uses local-path storage (NVMe) for maximum IOPS
+# Backups to NAS via MinIO S3
+
+resources:
+  # Mirai Application Database
+  - mirai-cluster.yaml
+  # Kratos Authentication Database
+  - kratos-cluster.yaml
+
+# NOTE: Secret files are gitignored and must be created manually:
+# - mirai-db-credentials.yaml (from template)
+# - kratos-db-credentials.yaml (from template)
+# - backup-credentials.yaml (from template, in mirai namespace)
+# - kratos-backup-credentials.yaml (from template, in kratos namespace)

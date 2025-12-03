@@ -1,0 +1,152 @@
+---
+# CloudNativePG Cluster for Ory Kratos Authentication Database
+# High-Availability PostgreSQL with Zero Data Loss (RPO=0)
+# Leverages 10Gbps/MTU9000 fabric for synchronous replication
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: kratos-db
+  namespace: kratos
+  labels:
+    app.kubernetes.io/name: kratos-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: kratos
+spec:
+  description: "Kratos Authentication Database - HA PostgreSQL Cluster"
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+
+  # 3 instances - one per Mac Mini node for HA
+  instances: 3
+
+  # Primary update strategy
+  primaryUpdateStrategy: unsupervised
+  primaryUpdateMethod: switchover
+
+  # Synchronous replication for Zero Data Loss (RPO=0)
+  minSyncReplicas: 1
+  maxSyncReplicas: 2
+
+  # PostgreSQL configuration
+  postgresql:
+    parameters:
+      # CRITICAL: Synchronous commit for RPO=0
+      synchronous_commit: "on"
+
+      # Performance tuning for Mac Mini (64GB RAM)
+      shared_buffers: "4GB"
+      effective_cache_size: "12GB"
+      maintenance_work_mem: "1GB"
+      work_mem: "256MB"
+
+      # WAL settings for sync replication
+      wal_level: "replica"
+      max_wal_senders: "10"
+      max_replication_slots: "10"
+      wal_keep_size: "1GB"
+
+      # Checkpoints
+      checkpoint_completion_target: "0.9"
+      checkpoint_timeout: "15min"
+
+      # Connection settings
+      max_connections: "100"
+
+      # Logging
+      log_statement: "ddl"
+      log_min_duration_statement: "1000"
+
+    pg_hba:
+      - host all all 10.0.0.0/8 scram-sha-256
+      - host all all 192.168.0.0/16 scram-sha-256
+
+  # Bootstrap configuration
+  bootstrap:
+    initdb:
+      database: kratos
+      owner: kratos
+      secret:
+        name: kratos-db-credentials
+
+  # Storage configuration - LOCAL NVMe via local-path
+  storage:
+    storageClass: local-path
+    size: 10Gi
+
+  # WAL storage on same local-path for performance
+  walStorage:
+    storageClass: local-path
+    size: 2Gi
+
+  # Resource allocation - generous for 64GB Mac Minis
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "6Gi"
+    limits:
+      cpu: "2"
+      memory: "8Gi"
+
+  # Affinity - spread across nodes with tolerations for control-plane
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: required
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
+  # Monitoring
+  monitoring:
+    enablePodMonitor: true
+
+  # Backup configuration - NAS destination for WAL archives
+  backup:
+    barmanObjectStore:
+      destinationPath: "s3://cnpg-backups/kratos"
+      endpointURL: "http://192.168.1.226:9768"
+      s3Credentials:
+        accessKeyId:
+          name: cnpg-backup-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: cnpg-backup-credentials
+          key: ACCESS_SECRET_KEY
+      wal:
+        compression: gzip
+        maxParallel: 2
+      data:
+        compression: gzip
+    retentionPolicy: "7d"
+
+  # Replication settings
+  replicationSlots:
+    highAvailability:
+      enabled: true
+    updateInterval: 30
+
+  # Switchover delay
+  switchoverDelay: 60
+
+  # Stop delay
+  stopDelay: 300
+
+  # Smart shutdown
+  smartShutdownTimeout: 180
+---
+# Kratos DB Credentials Secret Template
+# NOTE: The actual secret should be created separately
+---
+# Scheduled backup - daily full backup to NAS
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: kratos-db-daily-backup
+  namespace: kratos
+spec:
+  schedule: "0 3 * * *"  # 3 AM daily (staggered from mirai)
+  backupOwnerReference: self
+  cluster:
+    name: kratos-db
+  immediate: false
+  suspend: false
