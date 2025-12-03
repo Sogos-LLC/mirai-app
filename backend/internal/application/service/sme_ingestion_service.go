@@ -101,6 +101,44 @@ func (s *SMEIngestionService) ProcessNextJob(ctx context.Context) (bool, error) 
 	return true, nil
 }
 
+// ProcessJobByID processes a specific SME ingestion job by its ID.
+// This is used by the Asynq worker to process a specific job.
+func (s *SMEIngestionService) ProcessJobByID(ctx context.Context, jobID string) error {
+	log := s.logger.With("jobID", jobID)
+
+	id, err := uuid.Parse(jobID)
+	if err != nil {
+		log.Error("invalid job ID", "error", err)
+		return fmt.Errorf("invalid job ID: %w", err)
+	}
+
+	job, err := s.jobRepo.GetByID(ctx, id)
+	if err != nil {
+		log.Error("failed to get generation job", "error", err)
+		return err
+	}
+
+	if job == nil {
+		log.Info("generation job not found, may already be processed")
+		return nil
+	}
+
+	// Only process if status is "queued"
+	if job.Status != valueobject.GenerationJobStatusQueued {
+		log.Info("job not in queued status, skipping", "status", job.Status)
+		return nil
+	}
+
+	// Only process SME ingestion jobs
+	if job.Type != valueobject.GenerationJobTypeSMEIngestion {
+		log.Info("job is not SME ingestion type, skipping", "type", job.Type)
+		return nil
+	}
+
+	// Process the job
+	return s.processIngestionJob(ctx, job)
+}
+
 // processIngestionJob processes a single SME content ingestion job.
 func (s *SMEIngestionService) processIngestionJob(ctx context.Context, job *entity.GenerationJob) error {
 	log := s.logger.With("jobID", job.ID, "submissionID", job.SubmissionID)
@@ -395,7 +433,7 @@ func (s *SMEIngestionService) failJob(ctx context.Context, job *entity.Generatio
 		s.sendFailureNotification(ctx, job, errMsg)
 	}
 
-	return fmt.Errorf(errMsg)
+	return fmt.Errorf("%s", errMsg)
 }
 
 // sendFailureNotification sends notifications when ingestion fails.

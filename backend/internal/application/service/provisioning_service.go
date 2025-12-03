@@ -86,6 +86,46 @@ func (s *ProvisioningService) ProcessPaidRegistrations(ctx context.Context) erro
 	return nil
 }
 
+// ProvisionByCheckoutSession provisions a single account by checkout session ID.
+// This is used by the Asynq worker to process a specific registration.
+func (s *ProvisioningService) ProvisionByCheckoutSession(ctx context.Context, checkoutSessionID string) error {
+	log := s.logger.With("checkoutSessionID", checkoutSessionID)
+
+	// Fetch the pending registration
+	reg, err := s.pendingRegRepo.GetByCheckoutSessionID(ctx, checkoutSessionID)
+	if err != nil {
+		log.Error("failed to get pending registration", "error", err)
+		return err
+	}
+
+	// Check if already provisioned (registration deleted) or failed
+	if reg == nil {
+		log.Info("pending registration not found, may already be provisioned")
+		return nil
+	}
+
+	// Only process if status is "paid" - skip if already provisioning/failed
+	if reg.Status != valueobject.PendingRegistrationStatusPaid {
+		log.Info("registration not in paid status, skipping",
+			"status", reg.Status,
+		)
+		return nil
+	}
+
+	// Provision the account
+	if err := s.provisionAccount(ctx, reg); err != nil {
+		log.Error("failed to provision account", "error", err)
+		// Mark as failed so we don't retry forever
+		reg.MarkAsFailed(err.Error())
+		if updateErr := s.pendingRegRepo.Update(ctx, reg); updateErr != nil {
+			log.Error("failed to mark registration as failed", "error", updateErr)
+		}
+		return err
+	}
+
+	return nil
+}
+
 // provisionAccount creates the full account (identity, company, user) for a paid registration.
 func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.PendingRegistration) error {
 	log := s.logger.With(

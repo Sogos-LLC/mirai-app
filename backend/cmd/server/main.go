@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/logging"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/postgres"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
+	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 	"github.com/sogos/mirai-backend/pkg/httputil"
 
 	// Domain
@@ -218,6 +220,13 @@ func main() {
 	provisioningService := service.NewProvisioningService(pendingRegRepo, tenantRepo, userRepo, companyRepo, kratosClient, emailClient, logger, cfg.FrontendURL)
 	cleanupService := service.NewCleanupService(pendingRegRepo, logger)
 
+	// Initialize Asynq worker client for enqueueing tasks
+	// Strip redis:// prefix if present (Asynq expects host:port format)
+	redisAddr := strings.TrimPrefix(cfg.RedisURL, "redis://")
+	workerClient := worker.NewClient(redisAddr, logger)
+	defer workerClient.Close()
+	logger.Info("Asynq worker client initialized", "redisAddr", redisAddr)
+
 	// Create Connect server mux
 	mux := connectserver.NewServeMux(connectserver.ServerConfig{
 		AuthService:           authService,
@@ -236,6 +245,7 @@ func main() {
 		UserRepo:              userRepo, // For tenant context in auth interceptor
 		Identity:              kratosClient,
 		Payments:              stripeClient,
+		WorkerClient:          workerClient, // For enqueueing background tasks
 		Logger:                logger,
 		AllowedOrigin:         cfg.AllowedOrigin,
 		FrontendURL:           cfg.FrontendURL,
@@ -253,26 +263,25 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Create context for background jobs (cancelled on shutdown)
-	bgCtx, bgCancel := context.WithCancel(context.Background())
+	// Initialize Asynq worker server for processing background tasks
+	workerServer := worker.NewServer(
+		redisAddr,
+		provisioningService,
+		cleanupService,
+		aiGenerationService,
+		smeIngestionService,
+		logger,
+	)
 
-	// Start background job: provision paid registrations every 10 seconds
-	go provisioningService.RunBackground(bgCtx, 10*time.Second)
+	// Start Asynq worker server in goroutine
+	go func() {
+		if err := workerServer.Run(); err != nil {
+			logger.Error("Asynq worker server error", "error", err)
+		}
+	}()
+	logger.Info("Asynq worker server started")
 
-	// Start background job: cleanup expired registrations every hour
-	go cleanupService.RunBackground(bgCtx, 1*time.Hour)
-
-	// Start AI background workers (only if AI services are initialized)
-	if aiGenerationService != nil {
-		go aiGenerationService.RunBackground(bgCtx, 5*time.Second)
-		logger.Info("AI generation worker started")
-	}
-	if smeIngestionService != nil {
-		go smeIngestionService.RunBackground(bgCtx, 5*time.Second)
-		logger.Info("SME ingestion worker started")
-	}
-
-	// Start server in goroutine
+	// Start HTTP server in goroutine
 	go func() {
 		logger.Info("server listening", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -288,8 +297,9 @@ func main() {
 
 	logger.Info("shutting down server")
 
-	// Cancel background jobs
-	bgCancel()
+	// Shutdown Asynq worker server (stops processing new tasks, waits for current tasks)
+	workerServer.Shutdown()
+	logger.Info("Asynq worker server stopped")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

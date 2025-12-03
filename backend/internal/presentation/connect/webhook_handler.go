@@ -9,6 +9,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/application/service"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
+	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 	"github.com/stripe/stripe-go/v76"
 )
 
@@ -17,6 +18,7 @@ type WebhookHandler struct {
 	billingService *service.BillingService
 	pendingRegRepo repository.PendingRegistrationRepository
 	payments       domainservice.PaymentProvider
+	workerClient   *worker.Client
 	logger         domainservice.Logger
 }
 
@@ -25,12 +27,14 @@ func NewWebhookHandler(
 	billingService *service.BillingService,
 	pendingRegRepo repository.PendingRegistrationRepository,
 	payments domainservice.PaymentProvider,
+	workerClient *worker.Client,
 	logger domainservice.Logger,
 ) *WebhookHandler {
 	return &WebhookHandler{
 		billingService: billingService,
 		pendingRegRepo: pendingRegRepo,
 		payments:       payments,
+		workerClient:   workerClient,
 		logger:         logger,
 	}
 }
@@ -118,7 +122,8 @@ func (h *WebhookHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(map[string]bool{"received": true})
 }
 
-// handlePendingRegistrationPayment marks a pending registration as paid after successful checkout.
+// handlePendingRegistrationPayment marks a pending registration as paid after successful checkout
+// and enqueues a provisioning task for background processing.
 func (h *WebhookHandler) handlePendingRegistrationPayment(ctx context.Context, checkoutSessionID, customerID, subscriptionID string) {
 	log := h.logger.With("checkoutSessionID", checkoutSessionID)
 
@@ -152,5 +157,14 @@ func (h *WebhookHandler) handlePendingRegistrationPayment(ctx context.Context, c
 		return
 	}
 
-	log.Info("pending registration marked as paid, will be provisioned shortly", "seatCount", pending.SeatCount)
+	log.Info("pending registration marked as paid", "seatCount", pending.SeatCount)
+
+	// Enqueue provisioning task for background processing
+	if h.workerClient != nil {
+		if err := h.workerClient.EnqueueStripeProvision(checkoutSessionID, customerID, subscriptionID); err != nil {
+			log.Error("failed to enqueue provisioning task", "error", err)
+			// Don't return error - the registration is marked as paid and can still be
+			// picked up by the background worker if it falls back to polling
+		}
+	}
 }

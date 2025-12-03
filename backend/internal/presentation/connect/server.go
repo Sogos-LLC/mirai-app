@@ -8,6 +8,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/application/service"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
+	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 )
 
 // ServerConfig contains all dependencies needed for the Connect server.
@@ -29,6 +30,7 @@ type ServerConfig struct {
 	UserRepo       repository.UserRepository // For tenant context in auth interceptor
 	Identity       domainservice.IdentityProvider
 	Payments       domainservice.PaymentProvider
+	WorkerClient   *worker.Client // For enqueueing background tasks
 	Logger         domainservice.Logger
 	AllowedOrigin  string
 	FrontendURL    string
@@ -145,7 +147,7 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	}
 
 	// Add webhook handler (no interceptors - Stripe handles its own auth)
-	webhookHandler := NewWebhookHandler(cfg.BillingService, cfg.PendingRegRepo, cfg.Payments, cfg.Logger)
+	webhookHandler := NewWebhookHandler(cfg.BillingService, cfg.PendingRegRepo, cfg.Payments, cfg.WorkerClient, cfg.Logger)
 	mux.HandleFunc("/api/v1/billing/webhook", webhookHandler.HandleStripeWebhook)
 
 	// Checkout completion redirect handler

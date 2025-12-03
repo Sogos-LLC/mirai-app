@@ -1300,7 +1300,7 @@ func (s *AIGenerationService) failJob(ctx context.Context, job *entity.Generatio
 		}
 	}
 
-	return fmt.Errorf(errMsg)
+	return fmt.Errorf("%s", errMsg)
 }
 
 // RunBackground starts the background job processing loop.
@@ -1325,6 +1325,12 @@ func (s *AIGenerationService) RunBackground(ctx context.Context, interval time.D
 	}
 }
 
+// ProcessNextQueuedJob processes the next queued generation job.
+// This is called by the Asynq worker scheduler.
+func (s *AIGenerationService) ProcessNextQueuedJob(ctx context.Context) error {
+	return s.processNextJob(ctx)
+}
+
 // processNextJob processes the next queued generation job.
 func (s *AIGenerationService) processNextJob(ctx context.Context) error {
 	job, err := s.jobRepo.GetNextQueued(ctx)
@@ -1344,6 +1350,46 @@ func (s *AIGenerationService) processNextJob(ctx context.Context) error {
 		return s.ProcessLessonGenerationJob(ctx, job)
 	default:
 		// Not a job type this service handles
+		return nil
+	}
+}
+
+// ProcessJobByID processes a specific generation job by its ID.
+// This is used by the Asynq worker to process a specific job.
+func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) error {
+	log := s.logger.With("jobID", jobID)
+
+	id, err := uuid.Parse(jobID)
+	if err != nil {
+		log.Error("invalid job ID", "error", err)
+		return fmt.Errorf("invalid job ID: %w", err)
+	}
+
+	job, err := s.jobRepo.GetByID(ctx, id)
+	if err != nil {
+		log.Error("failed to get generation job", "error", err)
+		return err
+	}
+
+	if job == nil {
+		log.Info("generation job not found, may already be processed")
+		return nil
+	}
+
+	// Only process if status is "queued"
+	if job.Status != valueobject.GenerationJobStatusQueued {
+		log.Info("job not in queued status, skipping", "status", job.Status)
+		return nil
+	}
+
+	// Process based on job type
+	switch job.Type {
+	case valueobject.GenerationJobTypeCourseOutline:
+		return s.ProcessOutlineGenerationJob(ctx, job)
+	case valueobject.GenerationJobTypeLessonContent:
+		return s.ProcessLessonGenerationJob(ctx, job)
+	default:
+		log.Warn("unknown job type", "type", job.Type)
 		return nil
 	}
 }
