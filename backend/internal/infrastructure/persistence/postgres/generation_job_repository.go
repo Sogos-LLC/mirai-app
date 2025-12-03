@@ -212,21 +212,30 @@ func (r *GenerationJobRepository) Update(ctx context.Context, job *entity.Genera
 	})
 }
 
-// GetNextQueued atomically claims the next queued job for processing.
+// GetNextQueued atomically claims the next job for processing.
 // Uses RLS with superadmin context to access jobs across all tenants.
 // Atomically updates status to 'processing' and sets started_at in a single statement.
 // This prevents race conditions where multiple workers could pick up the same job.
+//
+// Implements "Push + Sweep" pattern:
+// - Picks up queued jobs (standard flow)
+// - Also picks up stale 'processing' jobs (crash recovery) - jobs stuck for >10 minutes
 func (r *GenerationJobRepository) GetNextQueued(ctx context.Context) (*entity.GenerationJob, error) {
 	return RLSQuery(ctx, r.db, func(tx *sql.Tx) (*entity.GenerationJob, error) {
 		// Atomic claim: UPDATE with subquery SELECT FOR UPDATE SKIP LOCKED
 		// This ensures only one worker can claim each job
+		// Includes stale job recovery: if a worker crashes, the job stays in 'processing'
+		// forever. This query also picks up jobs stuck in 'processing' for >10 minutes.
 		query := `
 			UPDATE generation_jobs
-			SET status = 'processing', started_at = NOW()
+			SET status = 'processing', started_at = NOW(), retry_count = retry_count + CASE WHEN status = 'processing' THEN 1 ELSE 0 END
 			WHERE id = (
 				SELECT id FROM generation_jobs
 				WHERE status = 'queued'
-				ORDER BY created_at ASC
+				   OR (status = 'processing' AND started_at < NOW() - INTERVAL '10 minutes')
+				ORDER BY
+					CASE WHEN status = 'queued' THEN 0 ELSE 1 END, -- Prefer queued jobs
+					created_at ASC
 				LIMIT 1
 				FOR UPDATE SKIP LOCKED
 			)

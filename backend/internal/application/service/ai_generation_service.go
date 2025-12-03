@@ -44,6 +44,13 @@ type OutlineCompletionNotifier interface {
 	NotifyOutlineFailed(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string, errorMsg string) error
 }
 
+// TaskEnqueuer enqueues background tasks for processing.
+// This enables event-driven job processing (push) in addition to polling (sweep).
+type TaskEnqueuer interface {
+	// EnqueueAIGeneration enqueues an AI generation job for immediate processing.
+	EnqueueAIGeneration(jobID, jobType string) error
+}
+
 // AIGenerationService handles AI-powered content generation.
 type AIGenerationService struct {
 	userRepo            repository.UserRepository
@@ -62,6 +69,7 @@ type AIGenerationService struct {
 	notifier            JobNotifier
 	completionNotifier  CourseCompletionNotifier
 	outlineNotifier     OutlineCompletionNotifier
+	taskEnqueuer        TaskEnqueuer // For event-driven job processing (optional, falls back to polling)
 	logger              service.Logger
 }
 
@@ -83,6 +91,7 @@ func NewAIGenerationService(
 	notifier JobNotifier,
 	completionNotifier CourseCompletionNotifier,
 	outlineNotifier OutlineCompletionNotifier,
+	taskEnqueuer TaskEnqueuer, // Can be nil - falls back to polling
 	logger service.Logger,
 ) *AIGenerationService {
 	return &AIGenerationService{
@@ -102,6 +111,7 @@ func NewAIGenerationService(
 		notifier:            notifier,
 		completionNotifier:  completionNotifier,
 		outlineNotifier:     outlineNotifier,
+		taskEnqueuer:        taskEnqueuer,
 		logger:              logger,
 	}
 }
@@ -189,6 +199,15 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 	}
 
 	log.Info("course outline generation job created", "jobID", job.ID)
+
+	// Push: Enqueue for immediate processing (if task enqueuer available)
+	// Sweep: Poll task will pick it up if enqueue fails or enqueuer is nil
+	if s.taskEnqueuer != nil {
+		if err := s.taskEnqueuer.EnqueueAIGeneration(job.ID.String(), string(job.Type)); err != nil {
+			log.Warn("failed to enqueue job for immediate processing, will be picked up by poll", "error", err)
+		}
+	}
+
 	return &GenerateCourseOutlineResult{Job: job}, nil
 }
 
@@ -695,6 +714,14 @@ func (s *AIGenerationService) GenerateLessonContent(ctx context.Context, kratosI
 	}
 
 	log.Info("lesson content generation job created", "jobID", job.ID)
+
+	// Push: Enqueue for immediate processing (if task enqueuer available)
+	if s.taskEnqueuer != nil {
+		if err := s.taskEnqueuer.EnqueueAIGeneration(job.ID.String(), string(job.Type)); err != nil {
+			log.Warn("failed to enqueue job for immediate processing, will be picked up by poll", "error", err)
+		}
+	}
+
 	return &GenerateLessonContentResult{Job: job}, nil
 }
 
@@ -1185,6 +1212,14 @@ func (s *AIGenerationService) RegenerateComponent(ctx context.Context, kratosID 
 	}
 
 	log.Info("component regeneration job created", "jobID", job.ID, "componentID", req.ComponentID)
+
+	// Push: Enqueue for immediate processing (if task enqueuer available)
+	if s.taskEnqueuer != nil {
+		if err := s.taskEnqueuer.EnqueueAIGeneration(job.ID.String(), string(job.Type)); err != nil {
+			log.Warn("failed to enqueue job for immediate processing, will be picked up by poll", "error", err)
+		}
+	}
+
 	return &RegenerateComponentResult{Job: job}, nil
 }
 

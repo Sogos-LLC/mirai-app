@@ -111,13 +111,15 @@ func (s *Server) Run() error {
 	}
 	s.logger.Info("registered cleanup scheduled task", "schedule", "@every 1h")
 
-	// AI generation polling every 5 seconds
-	_, err = s.scheduler.Register("@every 5s", worker.NewAIGenerationPollTask())
+	// AI generation sweep polling every 5 minutes (crash recovery)
+	// Primary job pickup is event-driven via EnqueueAIGeneration on job creation.
+	// This poll serves as a backup to catch jobs that failed to enqueue or stale jobs.
+	_, err = s.scheduler.Register("@every 5m", worker.NewAIGenerationPollTask())
 	if err != nil {
 		s.logger.Error("failed to register AI generation poll task", "error", err)
 		return err
 	}
-	s.logger.Info("registered AI generation poll task", "schedule", "@every 5s")
+	s.logger.Info("registered AI generation poll task", "schedule", "@every 5m")
 
 	// SME ingestion polling every 5 seconds
 	_, err = s.scheduler.Register("@every 5s", worker.NewSMEIngestionPollTask())

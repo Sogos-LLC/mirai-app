@@ -184,6 +184,13 @@ func main() {
 	smeService := service.NewSMEService(userRepo, companyRepo, teamRepo, smeRepo, smeTaskRepo, smeSubmissionRepo, smeKnowledgeRepo, tenantStorage, notificationService, nil, logger)
 	targetAudienceService := service.NewTargetAudienceService(userRepo, targetAudienceRepo, logger)
 
+	// Initialize Asynq worker client for enqueueing tasks (needed by AI services)
+	// Strip redis:// prefix if present (Asynq expects host:port format)
+	redisAddr := strings.TrimPrefix(cfg.RedisURL, "redis://")
+	workerClient := worker.NewClient(redisAddr, logger)
+	defer workerClient.Close()
+	logger.Info("Asynq worker client initialized", "redisAddr", redisAddr)
+
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
@@ -212,6 +219,7 @@ func main() {
 			notificationService, // For tenant-isolated job notifications
 			notificationService, // For course completion notifications (implements CourseCompletionNotifier)
 			notificationService, // For outline completion notifications (implements OutlineCompletionNotifier)
+			workerClient,        // For event-driven job processing (push)
 			logger,
 		)
 
@@ -237,13 +245,6 @@ func main() {
 	// Background services for deferred account provisioning
 	provisioningService := service.NewProvisioningService(pendingRegRepo, tenantRepo, userRepo, companyRepo, kratosClient, emailClient, logger, cfg.FrontendURL)
 	cleanupService := service.NewCleanupService(pendingRegRepo, logger)
-
-	// Initialize Asynq worker client for enqueueing tasks
-	// Strip redis:// prefix if present (Asynq expects host:port format)
-	redisAddr := strings.TrimPrefix(cfg.RedisURL, "redis://")
-	workerClient := worker.NewClient(redisAddr, logger)
-	defer workerClient.Close()
-	logger.Info("Asynq worker client initialized", "redisAddr", redisAddr)
 
 	// Create Connect server mux
 	mux := connectserver.NewServeMux(connectserver.ServerConfig{
