@@ -52,8 +52,19 @@ func (s *UserService) GetCurrentUser(ctx context.Context, kratosID uuid.UUID) (*
 		return nil, domainerrors.ErrUserNotFound
 	}
 
+	// Fetch identity data from Kratos for name/email
+	var email, firstName, lastName string
+	identity, err := s.identity.GetIdentity(ctx, user.KratosID.String())
+	if err != nil {
+		s.logger.Warn("failed to get identity from Kratos", "kratosID", user.KratosID, "error", err)
+	} else if identity != nil {
+		email = identity.Email
+		firstName = identity.FirstName
+		lastName = identity.LastName
+	}
+
 	response := &dto.UserWithCompanyResponse{
-		User: dto.FromUser(user),
+		User: dto.FromUserWithIdentity(user, email, firstName, lastName),
 	}
 
 	// Get company if user has one
