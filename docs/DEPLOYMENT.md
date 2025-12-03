@@ -1,253 +1,302 @@
-# Mirai Frontend Deployment Guide
+# Mirai Deployment Guide
 
-This guide covers deploying the Mirai frontend to your Kubernetes cluster using GitHub Actions and ArgoCD.
+Complete deployment documentation for the Mirai platform on Kubernetes.
 
-## Prerequisites
+## Architecture Overview
 
-- [x] GitHub repository set up
-- [x] Kubernetes cluster running (Talos)
-- [x] ArgoCD installed and configured
-- [x] Cloudflare Tunnel configured
-- [x] `kubectl` access to your cluster
-
-## Architecture
 ```
-GitHub Push → GitHub Actions → Build Docker Image → Push to GHCR
-                                                           ↓
-                                    ArgoCD detects new image
-                                                           ↓
-                              Pulls from GHCR and deploys to K8s
-                                                           ↓
-                              Cloudflare Tunnel routes traffic
+Code Push → GitHub Actions → Build & Push to GHCR → Update kustomization.yaml
+                                                              ↓
+                                              ArgoCD detects Git change
+                                                              ↓
+                                              PreSync: Run DB migrations
+                                                              ↓
+                                              Deploy via RollingUpdate
+                                                              ↓
+                                              Health checks pass → Live
 ```
 
-## Setup Steps
+## Infrastructure Requirements
 
-### 1. Configure GitHub Container Registry
+| Component | Specification |
+|-----------|--------------|
+| Compute | 3x Mac Mini nodes (Talos Linux) |
+| Network | 10Gbps Thunderbolt mesh (MTU 9000) |
+| Storage | Local NVMe (databases), 6TB NAS (objects/backups) |
+| Container Registry | GitHub Container Registry (GHCR) |
 
-Run the setup script:
-```bash
-./scripts/setup-cicd.sh
+## Deployed Services
+
+| Service | Image | Replicas | Port | Namespace |
+|---------|-------|----------|------|-----------|
+| Backend | `ghcr.io/sogos-llc/mirai-app/mirai-backend` | 3 | 8080 | mirai |
+| Frontend | `ghcr.io/sogos-llc/mirai-app/mirai-frontend` | 3 | 3000 | mirai |
+| Marketing | `ghcr.io/sogos-llc/mirai-app/mirai-marketing` | 3 | 3000 | mirai |
+| PostgreSQL | CloudNativePG (PostgreSQL 16.4) | 3 | 5432 | mirai |
+| Redis | redis:7-alpine | 1 | 6379 | redis |
+| Kratos | Ory Kratos v1.3.0 | Via Helm | 4433/4434 | kratos |
+
+## Kubernetes Manifests
+
+```
+k8s/
+├── kustomization.yaml              # Root kustomization
+├── mirai-data-pvc.yaml             # Application data (10Gi NFS)
+├── minio-secret.yaml.template      # MinIO credentials
+├── backend/
+│   ├── deployment.yaml             # 3 replicas, RollingUpdate
+│   ├── service.yaml                # ClusterIP
+│   ├── kustomization.yaml          # Image tag (GitOps updated)
+│   ├── migration-job.yaml          # ArgoCD PreSync hook
+│   ├── pdb.yaml                    # PodDisruptionBudget
+│   └── networkpolicy-*.yaml        # Egress rules
+├── frontend/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── kustomization.yaml
+│   └── pdb.yaml
+├── frontend-marketing/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── kustomization.yaml
+│   └── pdb.yaml
+├── cnpg/
+│   ├── mirai-cluster.yaml          # 3-node PostgreSQL HA
+│   ├── kratos-cluster.yaml         # Auth database
+│   └── *-credentials.yaml.template # DB secrets
+├── redis/
+│   └── redis-deployment.yaml       # Single instance + PVC
+└── kratos/
+    ├── values.yaml                 # Helm values
+    └── kratos-secret.yaml.template
 ```
 
-This will prompt for your GitHub username and update all necessary files.
+## Deployment Configuration
 
-### 2. Enable GitHub Container Registry
+### Backend Deployment
 
-Your GitHub repository needs the Container registry enabled:
-
-1. Go to your repo on GitHub
-2. Settings → Actions → General
-3. Ensure "Read and write permissions" is selected under "Workflow permissions"
-
-### 3. Push to GitHub
-```bash
-git add .
-git commit -m "Add frontend CI/CD pipeline"
-git push origin main
-```
-
-GitHub Actions will automatically:
-- Build the Docker image
-- Push to `ghcr.io/YOUR_USERNAME/mirai-prototype/mirai-frontend:latest`
-- Tag with branch name and commit SHA
-
-### 4. Verify Docker Image
-
-Check that the image was pushed successfully:
-```bash
-# View the package on GitHub
-# https://github.com/YOUR_USERNAME/mirai-prototype/pkgs/container/mirai-prototype%2Fmirai-frontend
-```
-
-### 5. Deploy with ArgoCD
-```bash
-# Apply the ArgoCD Application
-kubectl apply -f k8s/argocd-frontend-app.yaml
-
-# Check ArgoCD status
-argocd app get mirai-frontend
-
-# Sync manually (first time)
-argocd app sync mirai-frontend
-```
-
-### 6. Configure Cloudflare Tunnel
-
-Update your Cloudflare Tunnel to route to the new service:
-
-**Option A: Using kubectl (if using ConfigMap)**
-```bash
-kubectl edit configmap cloudflared-config
-```
-
-Add:
 ```yaml
-- hostname: mirai.sogos.io
-  service: http://mirai-frontend:80
+# k8s/backend/deployment.yaml highlights
+replicas: 3
+strategy:
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+resources:
+  requests: 100m CPU, 128Mi memory
+  limits: 500m CPU, 256Mi memory
+probes:
+  startup: /health (5s delay, 12 failures allowed)
+  liveness: /health (10s interval)
+  readiness: /health (5s interval)
+security:
+  runAsUser: 10000
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
 ```
 
-**Option B: Using Cloudflare Dashboard**
-1. Go to Zero Trust → Networks → Tunnels
-2. Edit your tunnel
-3. Add public hostname: `mirai.sogos.io` → `http://mirai-frontend:80`
+**Environment Variables** (from secrets):
+- `DATABASE_URL` - PostgreSQL connection string
+- `KRATOS_URL`, `KRATOS_ADMIN_URL` - Identity service
+- `STRIPE_*` - Payment processing (5 vars)
+- `S3_*` - MinIO storage (6 vars)
+- `ENCRYPTION_KEY` - AES-256 for API keys
+- `FRONTEND_URL`, `BACKEND_URL`, `MARKETING_URL`
 
-**Option C: Using Cloudflare CLI**
-```bash
-cloudflared tunnel route dns YOUR_TUNNEL_NAME mirai.sogos.io
+### Frontend Deployment
+
+```yaml
+replicas: 3
+resources:
+  requests: 100m CPU, 256Mi memory
+  limits: 500m CPU, 512Mi memory
+probes:
+  startup/liveness/readiness: /api/health
+security:
+  runAsUser: 1001
 ```
 
-### 7. Verify Deployment
-```bash
-# Check pods
-kubectl get pods -l app=mirai-frontend
+**Environment Variables**:
+- `USE_S3_STORAGE=true`
+- `ENABLE_REDIS_CACHE=true`
+- `REDIS_URL`, `S3_*`, `KRATOS_*` URLs
 
-# Check service
-kubectl get svc mirai-frontend
+### Database Migrations
 
-# Check logs
-kubectl logs -l app=mirai-frontend -f
+Migrations run automatically via ArgoCD PreSync hook:
 
-# Test internal connectivity
-kubectl run curl-test --image=curlimages/curl --rm -it -- \
-  curl http://mirai-frontend:80
-```
-
-### 8. Access the Application
-
-Visit: https://mirai.sogos.io
-
-## Continuous Deployment Workflow
-
-Once set up, the workflow is:
-
-1. **Make changes** to frontend code
-2. **Commit and push** to `main` branch
-3. **GitHub Actions** automatically builds and pushes new image
-4. **ArgoCD** detects new image (within ~3 minutes)
-5. **ArgoCD** deploys to cluster with rolling update
-6. **Changes are live** at https://mirai.sogos.io
-
-## Troubleshooting
-
-### GitHub Actions fails to push image
-
-**Issue**: `denied: permission_denied`
-
-**Solution**: 
-```bash
-# Make package public
-# Go to: github.com/YOUR_USERNAME/mirai-prototype/pkgs/container/mirai-prototype%2Fmirai-frontend/settings
-# Change visibility to Public
-```
-
-### ArgoCD not detecting new images
-
-**Issue**: ArgoCD shows "Synced" but old image
-
-**Solution**:
-```bash
-# Force refresh
-argocd app get mirai-frontend --refresh
-
-# Or enable image updater
-kubectl apply -f - <<EOF
-apiVersion: argoproj.io/v1alpha1
-kind: Application
+```yaml
+# k8s/backend/migration-job.yaml
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: mirai-frontend
-  namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: frontend=ghcr.io/YOUR_USERNAME/mirai-prototype/mirai-frontend
-    argocd-image-updater.argoproj.io/frontend.update-strategy: latest
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
-  # ... rest of spec
-EOF
+  template:
+    spec:
+      containers:
+      - name: migrate
+        command: ["./migrate", "-direction", "up"]
 ```
 
-### Pods not starting
+## Database (CloudNativePG)
 
-**Issue**: `ImagePullBackOff`
+### Mirai Database Cluster
 
-**Solution**:
+```yaml
+# k8s/cnpg/mirai-cluster.yaml
+instances: 3
+postgresql:
+  parameters:
+    synchronous_commit: "on"
+    shared_buffers: "8GB"
+    max_connections: "200"
+storage:
+  size: 20Gi
+  storageClass: local-path  # NVMe
+walStorage:
+  size: 5Gi
+backup:
+  barmanObjectStore:
+    destinationPath: s3://cnpg-backups/mirai
+    endpointURL: http://192.168.1.226:9768
+  retentionPolicy: "7d"
+  schedule: "0 2 * * *"  # Daily 2 AM
+```
+
+**Services Created**:
+- `mirai-db-rw` - Read-write (primary)
+- `mirai-db-ro` - Read-only replicas
+- `mirai-db-r` - Any replica
+
+### Creating Database Secrets
+
 ```bash
-# Check if image exists
-docker pull ghcr.io/YOUR_USERNAME/mirai-prototype/mirai-frontend:latest
-
-# If private, create pull secret
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=ghcr.io \
-  --docker-username=YOUR_USERNAME \
-  --docker-password=YOUR_GITHUB_PAT \
-  --docker-email=YOUR_EMAIL
-
-# Add to deployment
-kubectl patch deployment mirai-frontend -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-secret"}]}}}}'
+# From template
+cp k8s/cnpg/mirai-db-credentials.yaml.template k8s/cnpg/mirai-db-credentials.yaml
+# Edit with actual credentials
+kubectl apply -f k8s/cnpg/mirai-db-credentials.yaml
 ```
 
-### Can't access via Cloudflare Tunnel
+## Secrets Management
 
-**Issue**: 502 Bad Gateway
+Secrets are NOT committed to Git. Create from templates:
 
-**Solution**:
+| Template | Purpose |
+|----------|---------|
+| `k8s/cnpg/mirai-db-credentials.yaml.template` | Database credentials |
+| `k8s/cnpg/backup-credentials.yaml.template` | MinIO backup access |
+| `k8s/minio-secret.yaml.template` | Application MinIO access |
+| `k8s/kratos/kratos-secret.yaml.template` | Kratos secrets |
+| `k8s/backend/stripe-secret.yaml` | Stripe API keys (gitignored) |
+
 ```bash
-# Check cloudflared logs
-kubectl logs -l app=cloudflared --tail=50
-
-# Verify service endpoint
-kubectl get endpoints mirai-frontend
-
-# Test service internally
-kubectl run -it --rm debug --image=curlimages/curl -- \
-  curl -v http://mirai-frontend:80
+# Example: Create MinIO secret
+kubectl create secret generic minio-secret \
+  --from-literal=accesskey=$MINIO_ACCESS_KEY \
+  --from-literal=secretkey=$MINIO_SECRET_KEY \
+  --from-literal=endpoint=http://192.168.1.226:9768 \
+  --from-literal=region=us-east-1
 ```
 
-## Rolling Back
+## Local Development
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Go 1.24+
+- Node.js 18+
+- buf CLI
+
+### Quick Start
+
+```bash
+cd local-dev
+./start.sh
+```
+
+### Local Services (docker-compose.yml)
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| postgres | 5432 | Shared database |
+| kratos | 4433 (public), 4434 (admin) | Authentication |
+| redis | 6379 | Cache & job queue |
+| minio | 9000 (API), 9001 (console) | Object storage |
+| mailpit | 1025 (SMTP), 8025 (web) | Email testing |
+| adminer | 8081 | Database browser |
+| dozzle | 9999 | Docker log viewer |
+
+### Environment Variables
+
+```bash
+# .env.local example
+POSTGRES_PASSWORD=localdev
+KRATOS_DB_PASSWORD=kratoslocal
+MIRAI_DB_PASSWORD=mirailocal
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+```
+
+## Verification Commands
+
+```bash
+# Check all pods
+kubectl get pods -n mirai
+
+# Check database cluster
+kubectl get cluster -n mirai
+
+# View backend logs
+kubectl logs -n mirai -l app=mirai-backend -f
+
+# Check ArgoCD sync status
+argocd app get mirai-backend
+argocd app get mirai-frontend
+argocd app get mirai-marketing
+
+# Test backend health
+kubectl run curl-test --rm -it --image=curlimages/curl -- \
+  curl http://mirai-backend.mirai:8080/health
+
+# Port forward to services
+kubectl port-forward -n mirai svc/mirai-frontend 3000:3000
+kubectl port-forward -n redis svc/redis 6379:6379
+```
+
+## Rollback
+
 ```bash
 # Via ArgoCD
-argocd app rollback mirai-frontend
+argocd app rollback mirai-backend
 
 # Via kubectl
-kubectl rollout undo deployment/mirai-frontend
+kubectl rollout undo deployment/mirai-backend -n mirai
+kubectl rollout undo deployment/mirai-frontend -n mirai
 
 # To specific revision
-kubectl rollout undo deployment/mirai-frontend --to-revision=2
+kubectl rollout history deployment/mirai-backend -n mirai
+kubectl rollout undo deployment/mirai-backend -n mirai --to-revision=5
 ```
 
-## Monitoring
-```bash
-# Watch deployment
-kubectl get pods -l app=mirai-frontend -w
+## Resource Summary
 
-# View logs
-kubectl logs -l app=mirai-frontend -f --tail=100
+| Service | CPU Request | Memory Request | CPU Limit | Memory Limit |
+|---------|-------------|----------------|-----------|--------------|
+| Backend (x3) | 100m | 128Mi | 500m | 256Mi |
+| Frontend (x3) | 100m | 256Mi | 500m | 512Mi |
+| Marketing (x3) | 50m | 128Mi | 200m | 256Mi |
+| Redis | 100m | 256Mi | 500m | 512Mi |
+| PostgreSQL (x3) | 1000m | 12Gi | 4000m | 16Gi |
 
-# ArgoCD UI
-kubectl port-forward svc/argocd-server -n argocd 8080:80
-# Visit: http://localhost:8080
-```
+## Key File Paths
 
-## Advanced: Image Tagging Strategy
-
-By default, images are tagged with:
-- `latest` (on main branch)
-- `main-<sha>` (commit SHA)
-- Branch name (on feature branches)
-
-To use specific versions:
-```yaml
-# In k8s/frontend/deployment.yaml
-image: ghcr.io/YOUR_USERNAME/mirai-prototype/mirai-frontend:main-abc1234
-```
-
-## Cleanup
-```bash
-# Remove ArgoCD application
-kubectl delete application mirai-frontend -n argocd
-
-# Remove Kubernetes resources
-kubectl delete -k k8s/frontend/
-
-# Remove from Cloudflare Tunnel
-# (Remove hostname from tunnel config)
-```
+| File | Purpose |
+|------|---------|
+| `backend/Dockerfile` | Go backend image |
+| `frontend/Dockerfile` | Next.js app image |
+| `frontend/Dockerfile.marketing` | Marketing site image |
+| `.github/workflows/build-*.yml` | CI/CD pipelines |
+| `k8s/*/kustomization.yaml` | Image tags (GitOps) |

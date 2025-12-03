@@ -1,6 +1,6 @@
 # Mirai
 
-A SaaS learning platform for creating and managing team training courses. Built with Next.js, Go, and Ory Kratos authentication, deployed on Kubernetes via GitOps.
+Enterprise SaaS platform for AI-powered course creation, deployed on bare-metal Kubernetes with zero data loss guarantees.
 
 ## Architecture
 
@@ -9,187 +9,172 @@ A SaaS learning platform for creating and managing team training courses. Built 
 │                                           Cloudflare Tunnel                                           │
 ├─────────────────────────┬─────────────────────────┬─────────────────────────┬─────────────────────────┤
 │   get-mirai.sogos.io    │     mirai.sogos.io      │   mirai-api.sogos.io    │   mirai-auth.sogos.io   │
-│     Marketing Site      │      App (Auth'd)       │       Backend API       │       Kratos API        │
+│     Marketing Site      │      App (Auth'd)       │    Connect-RPC API      │       Kratos API        │
 └────────────┬────────────┴────────────┬────────────┴────────────┬────────────┴────────────┬────────────┘
              │                         │                         │                         │
              ▼                         ▼                         ▼                         ▼
       mirai-marketing           mirai-frontend             mirai-backend                 kratos
-         (Next.js)                 (Next.js)                 (Go/Gin)                 (Ory Kratos)
+         (Next.js)                 (Next.js)                   (Go)                   (Ory Kratos)
              │                         │                         │                         │
-             └─────────────────────────┴────────────┬────────────┴─────────────────────────┘
-                                                    ▼
-                                             PostgreSQL (x2)
-                                          (App DB + Kratos DB)
+             │                         │                    ┌────┴────┐                    │
+             │                         │                    │  Asynq  │                    │
+             │                         │                    │ Workers │                    │
+             │                         │                    └────┬────┘                    │
+             └─────────────────────────┴──────────────┬─────────┴─────────────────────────┘
+                                                      ▼
+                                               PostgreSQL (CNPG)
+                                            3-node sync replication
+                                                 RPO=0 (Zero Data Loss)
 ```
 
-## Domains
+## Infrastructure
 
-| Domain | Purpose | Deployment |
-|--------|---------|------------|
-| `get-mirai.sogos.io` | Marketing site, pricing, landing page | `mirai-marketing` |
-| `mirai.sogos.io` | Authenticated app + auth flows | `mirai-frontend` |
-| `mirai-api.sogos.io` | REST API | `mirai-backend` |
-| `mirai-auth.sogos.io` | Ory Kratos authentication API | `kratos` |
+| Component | Specification |
+|-----------|--------------|
+| Compute | 3x Mac Mini (Talos Linux) |
+| Network | 10Gbps Thunderbolt mesh (MTU 9000) |
+| Storage Tier 1 | Local NVMe (database I/O) |
+| Storage Tier 2 | 6TB NAS (MinIO + backups) |
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14 (App Router), Connect-Query, XState v5, Zustand, Tailwind |
+| Backend | Go 1.24, Connect-RPC, Asynq workers |
+| Database | PostgreSQL 16 (CloudNativePG, sync commit) |
+| Auth | Ory Kratos (headless identity) |
+| Cache | Redis 7 (caching + job queue) |
+| Storage | MinIO (S3-compatible) |
+| AI | Google Gemini (per-tenant API keys) |
 
 ## Project Structure
 
 ```
-mirai-app/
-├── frontend/                    # Next.js application
-│   ├── Dockerfile              # Full app build
-│   ├── Dockerfile.marketing    # Marketing-only build
-│   └── src/
-│       ├── app/(main)/         # Authenticated routes
-│       ├── app/(public)/       # Public routes (landing, auth)
-│       ├── components/
-│       ├── lib/kratos/         # Kratos client
-│       ├── middleware.ts       # App routing logic
-│       └── middleware.marketing.ts
-├── backend/                    # Go API
+mirai/
+├── proto/                      # Protobuf definitions (source of truth)
+│   └── mirai/v1/*.proto
+├── frontend/
+│   ├── src/
+│   │   ├── app/(main)/        # Protected routes
+│   │   ├── app/(public)/      # Auth flows, landing
+│   │   ├── gen/               # Generated Connect-Query hooks
+│   │   ├── machines/          # XState flow machines
+│   │   ├── hooks/             # Connect-RPC hooks
+│   │   └── store/zustand/     # UI state only
 │   ├── Dockerfile
-│   ├── cmd/server/            # Entry point
-│   └── internal/
-│       ├── handlers/          # HTTP handlers
-│       ├── middleware/        # Auth middleware
-│       ├── models/            # Data models
-│       └── repository/        # Database layer
-├── k8s/                       # Kubernetes manifests
-│   ├── frontend/              # Main app deployment
-│   ├── frontend-marketing/    # Marketing site deployment
-│   ├── backend/               # API deployment
-│   ├── kratos/                # Ory Kratos Helm values
-│   ├── mirai-db/              # App PostgreSQL
-│   └── redis/                 # Redis caching
-├── docs/                      # Documentation
-│   ├── AUTHENTICATION_ARCHITECTURE.md
-│   ├── DEPLOYMENT.md
-│   ├── GITOPS_WORKFLOW.md
-│   └── ...
-└── .github/workflows/         # CI/CD
-    ├── build-frontend.yml
-    ├── build-marketing.yml
-    └── build-backend.yml
+│   └── Dockerfile.marketing
+├── backend/
+│   ├── cmd/server/            # HTTP + worker entry
+│   ├── internal/
+│   │   ├── application/service/  # Business logic
+│   │   ├── domain/            # Entities, repos, interfaces
+│   │   ├── infrastructure/    # Postgres, Redis, S3, external APIs
+│   │   └── presentation/connect/ # Connect-RPC handlers
+│   ├── migrations/            # SQL migrations
+│   └── gen/                   # Generated protobuf
+├── k8s/
+│   ├── backend/               # Backend deployment
+│   ├── frontend/              # Frontend deployment
+│   ├── frontend-marketing/    # Marketing deployment
+│   ├── cnpg/                  # Database clusters
+│   ├── redis/                 # Redis deployment
+│   └── kratos/                # Auth helm values
+├── .github/workflows/         # CI/CD pipelines
+└── docs/                      # Documentation
 ```
 
-## Tech Stack
+## State Management
 
-| Component | Technology |
-|-----------|------------|
-| Frontend | Next.js 14 (App Router), Redux Toolkit, Tailwind CSS |
-| Backend | Go, Gin framework |
-| Authentication | Ory Kratos (headless auth) |
-| Database | PostgreSQL 15 |
-| Caching | Redis |
-| Storage | MinIO (S3-compatible) |
-| Infrastructure | Kubernetes (Talos), ArgoCD, Cloudflare Tunnel |
+| State Type | Tool | Location |
+|------------|------|----------|
+| Server Data | Connect-Query | Direct hooks in components |
+| Complex Flows | XState | `frontend/src/machines/` |
+| UI State | Zustand | `frontend/src/store/zustand/` |
+| Auth Session | Connect-Query | `whoAmI` endpoint |
 
-## Development
+**Redux is forbidden.** See CLAUDE.md for architecture rules.
 
-### Frontend
+## Local Development
+
 ```bash
-cd frontend
-npm install
-npm run dev
-# Runs on http://localhost:3000
+# Start all services
+cd local-dev
+./start.sh
+
+# Services available:
+# - Frontend: http://localhost:3000
+# - Backend: http://localhost:8080
+# - Kratos: http://localhost:4433
+# - MinIO Console: http://localhost:9001
+# - Mailpit: http://localhost:8025
+# - Adminer: http://localhost:8081
 ```
 
-### Backend
+### Proto Generation
+
 ```bash
-cd backend
-go mod download
-go run cmd/server/main.go
-# Runs on http://localhost:8080
-```
-
-### Environment Variables
-
-Frontend (`frontend/.env.local`):
-```
-KRATOS_PUBLIC_URL=http://localhost:4433
-NEXT_PUBLIC_KRATOS_BROWSER_URL=http://localhost:4433
-NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_LANDING_URL=http://localhost:3001
-```
-
-Backend (`backend/.env`):
-```
-DATABASE_URL=postgres://user:pass@localhost:5432/mirai
-KRATOS_PUBLIC_URL=http://localhost:4433
+cd proto
+buf generate
 ```
 
 ## Deployment
 
-Deployed via GitOps with ArgoCD. Three separate CI/CD pipelines:
+GitOps with ArgoCD. Push to `main` triggers:
 
-### CI/CD Flow
+1. GitHub Actions builds image
+2. Tags with commit SHA
+3. Updates `k8s/*/kustomization.yaml`
+4. ArgoCD syncs automatically
+5. PreSync runs migrations
+6. RollingUpdate deploys (zero-downtime)
 
-```
-Push to main
-     │
-     ├─► build-frontend.yml ─► ghcr.io/.../mirai-frontend ─► k8s/frontend/
-     │
-     ├─► build-marketing.yml ─► ghcr.io/.../mirai-marketing ─► k8s/frontend-marketing/
-     │
-     └─► build-backend.yml ─► ghcr.io/.../mirai-backend ─► k8s/backend/
-                                                                │
-                                                                ▼
-                                                    ArgoCD auto-sync
-```
+### Services
 
-### ArgoCD Applications
+| Service | Replicas | Port |
+|---------|----------|------|
+| mirai-frontend | 3 | 3000 |
+| mirai-backend | 3 | 8080 |
+| mirai-marketing | 3 | 3000 |
+| PostgreSQL (CNPG) | 3 | 5432 |
+| Redis | 1 | 6379 |
 
-- `mirai-frontend` - Main authenticated app
-- `mirai-marketing` - Marketing site
-- `mirai-backend` - Go API
+## Reliability
 
-### High Availability Configuration
-
-All mirai services are configured for high availability:
-
-| Service | Replicas | Topology Spread | PDB |
-|---------|----------|-----------------|-----|
-| mirai-frontend | 3 | Across all nodes | maxUnavailable: 1 |
-| mirai-backend | 3 | Across all nodes | maxUnavailable: 1 |
-| mirai-marketing | 3 | Across all nodes | maxUnavailable: 1 |
-
-Each deployment includes:
-- **Startup probes**: Allow slow container initialization (Next.js cold start)
-- **Readiness probes**: Ensure traffic only routes to healthy pods
-- **Pre-stop hooks**: 10s sleep for graceful connection draining
-- **Rolling updates**: maxSurge=1, maxUnavailable=0 for zero-downtime deploys
-
-### Manual Deploy
-
-```bash
-# Apply all resources
-kubectl apply -k k8s/
-
-# Or individual components
-kubectl apply -k k8s/frontend/
-kubectl apply -k k8s/frontend-marketing/
-kubectl apply -k k8s/backend/
-```
-
-## Authentication Flow
-
-1. User visits `get-mirai.sogos.io` (marketing site)
-2. Clicks "Sign In" → redirected to `mirai.sogos.io/auth/login`
-3. Login form submits to Kratos at `mirai-auth.sogos.io`
-4. On success, session cookie set on `.sogos.io` domain
-5. User redirected to `mirai.sogos.io/dashboard`
-
-Session cookie is shared across all subdomains for SSO.
+- **Synchronous DB Replication**: Writes confirmed by quorum
+- **RPO=0**: Zero data loss via 10G fabric
+- **Presigned Uploads**: Large files bypass app pods
+- **Payment Reconciliation**: Auto-heals Stripe in 15 minutes
+- **Type Safety**: End-to-end from proto definitions
 
 ## Documentation
 
-- [Authentication Architecture](docs/AUTHENTICATION_ARCHITECTURE.md) - Domain setup, auth flows, Kratos config
-- [Deployment Guide](docs/DEPLOYMENT.md) - Kubernetes deployment steps
-- [GitOps Workflow](docs/GITOPS_WORKFLOW.md) - CI/CD pipeline details
-- [Redis Caching](docs/REDIS_CACHING.md) - Caching strategy
-- [MinIO Storage](docs/MINIO_STORAGE.md) - Object storage setup
+| Document | Content |
+|----------|---------|
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Kubernetes setup, secrets, local dev |
+| [GITOPS_WORKFLOW.md](docs/GITOPS_WORKFLOW.md) | CI/CD pipeline, image tagging |
+| [REDIS_CACHING.md](docs/REDIS_CACHING.md) | Cache + Asynq job queue |
+| [MINIO_STORAGE.md](docs/MINIO_STORAGE.md) | Object storage, backups |
+| [NFS_STORAGE_SETUP.md](docs/NFS_STORAGE_SETUP.md) | PVC provisioning |
+| [MOBILE_RESPONSIVE.md](docs/MOBILE_RESPONSIVE.md) | Device detection, layouts |
 
-## Related Repositories
+## Key Commands
 
-- [homelab-platform](https://github.com/sojohnnysaid/homelab-platform) - Platform infrastructure, ArgoCD apps, Cloudflare tunnel config
-- [homelab-talos](https://github.com/sojohnnysaid/homelab-talos) - Talos Linux cluster configuration
+```bash
+# Proto generation
+buf generate
+
+# Backend build check
+cd backend && go build ./...
+
+# Frontend type check
+cd frontend && npm run build
+
+# Kubernetes status
+kubectl get pods -n mirai
+kubectl get cluster -n mirai
+
+# ArgoCD sync
+argocd app sync mirai-backend
+argocd app sync mirai-frontend
+```

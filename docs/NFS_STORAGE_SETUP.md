@@ -1,100 +1,73 @@
-# NFS Storage Setup with Kubernetes and Unraid
+# NFS Storage
 
-This guide documents the complete setup of NFS-based persistent storage using Unraid NAS with Kubernetes (Talos).
-
-## Overview
-
-We have successfully configured:
-- ✅ **MinIO Object Storage** - Working at `http://192.168.1.226:9768` for S3-compatible storage
-- ✅ **NFS Storage** - Dynamic provisioning via NFS Subdir External Provisioner
-- ✅ **Persistent Volume Claims** - Automatic creation and binding for applications
+NFS provides shared file storage for Kubernetes PersistentVolumeClaims backed by Unraid NAS.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Unraid NAS                        │
-│                 192.168.1.226                       │
-│                                                     │
-│  ┌──────────────┐        ┌──────────────────────┐ │
-│  │ MinIO Server │        │  NFS Share: k8s-nfs  │ │
-│  │  Port: 9768  │        │  /mnt/user/k8s-nfs   │ │
-│  │ Bucket:mirai │        │  Export: *           │ │
-│  └──────────────┘        └──────────────────────┘ │
-└─────────────────────────────────────────────────────┘
-           ▲                          ▲
-           │ S3 API                   │ NFS v4
-           │                          │
-┌──────────┴──────────────────────────┴───────────────┐
-│              Kubernetes Cluster (Talos)             │
-│                                                     │
-│  ┌─────────────────┐    ┌──────────────────────┐  │
-│  │ MinIO Secret    │    │ NFS Provisioner Pod  │  │
-│  │ (credentials)   │    │ (Dynamic PV creation)│  │
-│  └─────────────────┘    └──────────────────────┘  │
-│           │                         │              │
-│  ┌────────▼────────────────────────▼────────────┐ │
-│  │          Application Pods (mirai-frontend)    │ │
-│  │  - Uses MinIO for object storage (JSON data)  │ │
-│  │  - Uses NFS PVC for file storage (10Gi)       │ │
-│  └───────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                   Unraid NAS (192.168.1.226)                │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ NFS Share: k8s-nfs                                     │ │
+│  │ Path: /mnt/user/k8s-nfs                                │ │
+│  │ Export: 192.168.1.0/24 or Public                       │ │
+│  └────────────────────────────────────────────────────────┘ │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ NFS v4 (port 2049)
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Kubernetes Cluster                           │
+│                                                              │
+│  ┌────────────────────┐    ┌─────────────────────────────┐ │
+│  │ NFS Provisioner    │───▶│ StorageClass: nfs-client    │ │
+│  │ nfs-provisioner ns │    │ Dynamic PV creation         │ │
+│  └────────────────────┘    └─────────────────────────────┘ │
+│                                        │                     │
+│                                        ▼                     │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ PersistentVolumeClaims                               │   │
+│  │ - mirai-data-pvc (10Gi, default ns)                  │   │
+│  │ - redis-data-pvc (5Gi, redis ns)                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Prerequisites Completed
+## NFS Provisioner
 
-### 1. Unraid NAS Configuration
-- **NFS Service**: Enabled in Settings → NFS Settings
-- **NFS Share**: Created `k8s-nfs` share
-- **Export Settings**:
-  - Export: Yes
-  - Security: Public (or subnet 192.168.1.0/24)
-  - Path: `/mnt/user/k8s-nfs`
+**Namespace**: `nfs-provisioner`
+**Provisioner**: `k8s-sigs.io/nfs-subdir-external-provisioner`
 
-### 2. Network Connectivity
-- NAS accessible at `192.168.1.226`
-- NFS ports open: 111 (RPC), 2049 (NFS)
-- MinIO ports open: 9768 (API), 9769 (Console)
+### Configuration
 
-## Kubernetes Components Deployed
+| Setting | Value |
+|---------|-------|
+| NFS Server | 192.168.1.226 |
+| NFS Path | /mnt/user/k8s-nfs |
+| StorageClass | nfs-client |
 
-### 1. MinIO Configuration
+### Deployment
 
-**Secret Created**: `k8s/minio-secret.yaml`
+**File**: `k8s/nfs-provisioner-deployment.yaml`
+
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: minio-secret
-  namespace: default
-type: Opaque
-stringData:
-  accesskey: "root"
-  secretkey: "$SECRET"  # Actual password stored securely
-  endpoint: "http://192.168.1.226:9768"
-  region: "us-east-1"
+spec:
+  containers:
+  - name: nfs-client-provisioner
+    image: k8s.gcr.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+    env:
+    - name: NFS_SERVER
+      value: "192.168.1.226"
+    - name: NFS_PATH
+      value: "/mnt/user/k8s-nfs"
+    - name: PROVISIONER_NAME
+      value: "k8s-sigs.io/nfs-subdir-external-provisioner"
 ```
 
-### 2. NFS Subdir External Provisioner
-
-**Deployment**: `k8s/nfs-provisioner-deployment.yaml`
-- Namespace: `nfs-provisioner`
-- Provisioner: `k8s-sigs.io/nfs-subdir-external-provisioner`
-- NFS Server: `192.168.1.226`
-- NFS Path: `/mnt/user/k8s-nfs`
-- StorageClass: `nfs-client`
-
-**Status**:
-```bash
-# Provisioner pod is running
-kubectl get pods -n nfs-provisioner
-NAME                                    READY   STATUS    RESTARTS   AGE
-nfs-client-provisioner-654fc5f7-8qvhg   1/1     Running   0          2h
-```
-
-### 3. Storage Class
+## StorageClass
 
 **Name**: `nfs-client`
+
 ```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -102,16 +75,19 @@ metadata:
   name: nfs-client
 provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
 parameters:
-  archiveOnDelete: "true"
+  archiveOnDelete: "true"   # Rename instead of delete
   onDelete: "retain"
 reclaimPolicy: Delete
 allowVolumeExpansion: true
 volumeBindingMode: Immediate
 ```
 
-### 4. Persistent Volume Claims
+## PersistentVolumeClaims
 
-**Application PVC**: `k8s/mirai-data-pvc.yaml`
+### Application Data PVC
+
+**File**: `k8s/mirai-data-pvc.yaml`
+
 ```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -127,59 +103,121 @@ spec:
       storage: 10Gi
 ```
 
-**Status**: ✅ Bound successfully
+### Redis Data PVC
+
+**File**: `k8s/redis/redis-deployment.yaml` (inline)
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data-pvc
+  namespace: redis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs-client
+  resources:
+    requests:
+      storage: 5Gi
+```
+
+## Usage in Deployments
+
+### Mounting NFS PVC
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        volumeMounts:
+        - name: data
+          mountPath: /data
+          subPath: app-name  # Optional: isolate per-app
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: mirai-data-pvc
+```
+
+### Access Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| ReadWriteMany (RWX) | Multiple pods read/write | Shared data |
+| ReadWriteOnce (RWO) | Single pod read/write | Database storage |
+| ReadOnlyMany (ROX) | Multiple pods read-only | Shared configs |
+
+## Unraid NAS Setup
+
+### NFS Service
+
+1. Enable NFS in Settings > NFS Settings
+2. Create share `k8s-nfs` under /mnt/user/
+3. Configure export settings:
+   - Export: Yes
+   - Security: Public or 192.168.1.0/24
+
+### Required Ports
+
+| Port | Protocol | Service |
+|------|----------|---------|
+| 111 | TCP/UDP | RPC Portmapper |
+| 2049 | TCP/UDP | NFS |
+
+## Verification Commands
+
 ```bash
-kubectl get pvc mirai-data-pvc
-NAME             STATUS   VOLUME                                     CAPACITY   ACCESS MODES
-mirai-data-pvc   Bound    pvc-d0b13f71-c0e3-4a1c-9980-49072f5e1aa1   10Gi       RWX
+# Check provisioner
+kubectl get pods -n nfs-provisioner
+
+# List storage classes
+kubectl get sc
+
+# List all PVCs
+kubectl get pvc -A
+
+# Check PVC status
+kubectl describe pvc mirai-data-pvc
+
+# Test NFS connectivity
+showmount -e 192.168.1.226
+
+# Test mount
+kubectl run nfs-test --rm -it --image=busybox -- sh -c "mount -t nfs 192.168.1.226:/mnt/user/k8s-nfs /mnt && ls /mnt"
 ```
 
-## Application Integration
+## Storage Class vs MinIO
 
-### Frontend Deployment with Dual Storage
+| Aspect | NFS (StorageClass) | MinIO (S3) |
+|--------|-------------------|------------|
+| Use Case | File storage, databases | Object storage |
+| Access | POSIX filesystem | S3 API |
+| Multi-pod | Yes (RWX) | Yes (via API) |
+| Cloud Portable | No | Yes (S3 compatible) |
+| Used By | Redis, local caches | Course data, exports |
 
-The application uses both MinIO (object storage) and NFS (file storage):
+## Relationship to Database Storage
 
-**File**: `k8s/frontend/deployment-with-pvc.yaml`
+Databases use **local-path** StorageClass (NVMe), not NFS:
 
-Key features:
-- **MinIO**: Primary storage for JSON data via S3 API
-- **NFS PVC**: Mounted at `/nfs-data` for file storage/backups
-- **Cache**: EmptyDir volume for temporary caching
+| Database | StorageClass | Why |
+|----------|--------------|-----|
+| mirai-db (CNPG) | local-path | Low latency I/O |
+| kratos-db (CNPG) | local-path | Low latency I/O |
 
-Environment variables:
-```yaml
-env:
-- name: USE_S3_STORAGE
-  value: "true"
-- name: S3_ENDPOINT
-  value: "http://192.168.1.226:9768"
-- name: NFS_DATA_PATH
-  value: "/nfs-data"
-- name: ENABLE_NFS_BACKUP
-  value: "true"
-```
+NFS is too slow for database workloads.
 
-Volume mounts:
-```yaml
-volumeMounts:
-- name: nfs-data
-  mountPath: /nfs-data
-  subPath: mirai-frontend
-- name: cache
-  mountPath: /app/.cache
-```
-
-## Usage Examples
-
-### Creating a New PVC
+## Creating New PVCs
 
 ```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: my-app-storage
-  namespace: default
+  namespace: my-namespace
 spec:
   accessModes:
     - ReadWriteMany
@@ -189,138 +227,38 @@ spec:
       storage: 5Gi
 ```
 
-### Mounting in a Deployment
+## Troubleshooting
 
-```yaml
-spec:
-  template:
-    spec:
-      containers:
-      - name: my-app
-        volumeMounts:
-        - name: data
-          mountPath: /data
-      volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: my-app-storage
-```
+### PVC Stuck in Pending
 
-## Testing Storage
-
-### Test MinIO Access
-```bash
-kubectl run minio-test --image=minio/mc:latest --rm -i --restart=Never -- \
-  sh -c 'mc alias set test http://192.168.1.226:9768 root "$PASSWORD" && \
-         mc ls test/mirai/'
-```
-
-### Test NFS PVC Creation
-```bash
-# Create test PVC
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: test-pvc
-spec:
-  accessModes: [ReadWriteMany]
-  storageClassName: nfs-client
-  resources:
-    requests:
-      storage: 1Gi
-EOF
-
-# Check status
-kubectl get pvc test-pvc
-```
-
-## Monitoring and Maintenance
-
-### Check Storage Usage
-
-**MinIO**:
-```bash
-# From MinIO console
-http://192.168.1.226:9769
-# Login with root credentials
-```
-
-**NFS**:
 ```bash
 # Check provisioner logs
 kubectl logs -n nfs-provisioner -l app=nfs-client-provisioner
 
-# List all PVCs
-kubectl get pvc -A
-
-# Check NFS share on Unraid
-# Navigate to Shares → k8s-nfs in Unraid web UI
+# Check events
+kubectl describe pvc <pvc-name>
 ```
 
-### Backup Considerations
+### Mount Failures
 
-1. **MinIO Data**: Located at Unraid work_data share
-2. **NFS Data**: Located at `/mnt/user/k8s-nfs/`
-3. Both can be backed up using Unraid's built-in backup tools
-
-## Troubleshooting
-
-### Issue: PVC Stuck in Pending
 ```bash
-# Check provisioner pod
-kubectl get pods -n nfs-provisioner
-
-# Check logs
-kubectl logs -n nfs-provisioner <provisioner-pod>
-
-# Verify NFS is accessible
-showmount -e 192.168.1.226
-```
-
-### Issue: Mount Failures
-```bash
-# Check NFS service on Unraid
+# Test NFS connectivity
 nc -zv 192.168.1.226 2049
 
-# Verify exports
+# Check exports
 showmount -e 192.168.1.226
 ```
 
-### Issue: Permission Denied
-- Ensure Unraid NFS share has proper permissions
-- Check Security setting is "Public" or includes cluster subnet
-- Verify no root squashing if needed
+### Permission Issues
 
-## Best Practices
+- Verify Unraid share permissions
+- Check Security setting includes cluster subnet
+- Confirm no_root_squash if needed for specific workloads
 
-1. **Use MinIO for**:
-   - Application data (JSON, configurations)
-   - S3-compatible operations
-   - Cloud-portable storage
+## Key Files
 
-2. **Use NFS PVCs for**:
-   - Large file storage
-   - Shared data between pods
-   - Backup/archive storage
-   - Database storage
-
-3. **Storage Classes**:
-   - Keep `nfs-client` for general use
-   - Consider creating specialized classes for different retention policies
-
-4. **Resource Limits**:
-   - Set appropriate storage requests
-   - Monitor usage regularly
-   - Enable volume expansion when needed
-
-## Summary
-
-The storage infrastructure now provides:
-- ✅ **Object Storage**: MinIO for S3-compatible storage
-- ✅ **Block Storage**: NFS-backed PVCs for traditional file storage
-- ✅ **Dynamic Provisioning**: Automatic PV creation via StorageClass
-- ✅ **High Availability**: Data persisted on Unraid NAS
-- ✅ **Scalability**: Easy to expand storage as needed
-
-Both storage solutions are operational and can be used based on application requirements. The MinIO setup is ideal for cloud-native applications, while NFS provides traditional persistent volumes for stateful workloads.
+| File | Purpose |
+|------|---------|
+| `k8s/mirai-data-pvc.yaml` | Application data PVC |
+| `k8s/redis/redis-deployment.yaml` | Redis PVC (inline) |
+| `k8s/nfs-provisioner-deployment.yaml` | NFS provisioner (external repo) |

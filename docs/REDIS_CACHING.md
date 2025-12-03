@@ -1,304 +1,350 @@
-# Redis Caching Implementation for Mirai App
+# Redis Architecture
+
+Redis serves two purposes in Mirai: Asynq job queue and application caching.
 
 ## Overview
 
-This document describes the Redis caching layer implementation that solves race conditions and improves performance for the Mirai application.
-
-## Problems Solved
-
-### 1. Race Conditions with library.json
-- **Issue**: Multiple pods updating library.json simultaneously caused data loss
-- **Solution**: Distributed locking with Redis ensures only one pod can write at a time
-
-### 2. Performance Bottlenecks
-- **Issue**: Every request loaded entire library.json from MinIO (network latency)
-- **Solution**: 5-minute TTL cache reduces MinIO calls by ~90%
-
-### 3. Connection Overhead
-- **Issue**: New S3 connection for every request
-- **Solution**: HTTP agent connection pooling with 50 concurrent connections
-
-## Architecture
-
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   Application Pods                       │
-│                                                          │
-│  ┌──────────────┐        ┌──────────────┐              │
-│  │ Pod 1        │        │ Pod 2        │              │
-│  │              │        │              │              │
-│  └──────┬───────┘        └───────┬──────┘              │
-│         │                        │                      │
-│         └────────┬───────────────┘                      │
-│                  ▼                                       │
-│       ┌─────────────────────┐                          │
-│       │ CachedStorageAdapter│                          │
-│       └─────────┬───────────┘                          │
-│                 │                                       │
-│      ┌──────────▼──────────────┐                      │
-│      │                         │                       │
-│      ▼                         ▼                       │
-│ ┌─────────┐            ┌──────────────┐              │
-│ │  Redis  │            │ S3 Storage   │              │
-│ │  Cache  │            │   Adapter    │              │
-│ └─────────┘            └──────────────┘              │
-│      │                         │                       │
-└──────┼─────────────────────────┼───────────────────────┘
-       │                         │
-       ▼                         ▼
-┌─────────────┐          ┌──────────────┐
-│Redis Server │          │ MinIO Server │
-│   :6379     │          │   :9768      │
-└─────────────┘          └──────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     Application Pods                         │
+│                                                              │
+│  ┌───────────────────┐        ┌───────────────────┐        │
+│  │ Backend           │        │ Frontend          │        │
+│  │ - Asynq Client    │        │ - Redis Cache     │        │
+│  │ - Asynq Server    │        │                   │        │
+│  │ - Redis Cache     │        │                   │        │
+│  └─────────┬─────────┘        └─────────┬─────────┘        │
+│            └──────────────┬─────────────┘                   │
+│                           ▼                                  │
+│                ┌──────────────────┐                         │
+│                │ Redis Service    │                         │
+│                │ redis.redis.svc  │                         │
+│                └──────────────────┘                         │
+└───────────────────────────┼─────────────────────────────────┘
+                            ▼
+                   ┌──────────────────┐
+                   │ Redis Pod        │
+                   │ redis:7-alpine   │
+                   │ :6379            │
+                   └──────────────────┘
 ```
 
-## Components
+## Kubernetes Deployment
 
-### 1. Redis Deployment (`k8s/redis/redis-deployment.yaml`)
+**File**: `k8s/redis/redis-deployment.yaml`
 
-**Configuration**:
-- Namespace: `redis`
-- Memory: 256MB limit with LRU eviction
-- Persistence: 5GB NFS-backed PVC
-- Service: ClusterIP on port 6379
+### Configuration
 
-**Key Settings**:
+| Setting | Value |
+|---------|-------|
+| Image | redis:7-alpine |
+| Namespace | redis |
+| Replicas | 1 |
+| Port | 6379 |
+| Storage | 5Gi NFS PVC |
+
+### Redis Config (ConfigMap)
+
 ```conf
 maxmemory 256mb
 maxmemory-policy allkeys-lru
 save 900 1
+save 300 10
+save 60 10000
 appendonly yes
+appendfsync everysec
 notify-keyspace-events Ex
+databases 16
 ```
 
-### 2. Cache Adapter (`frontend/src/lib/cache/redisCache.ts`)
+### Resource Limits
+
+```yaml
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+```
+
+### Security Context
+
+```yaml
+securityContext:
+  runAsUser: 999
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+  capabilities:
+    drop: ["ALL"]
+```
+
+## Usage 1: Asynq Job Queue (Backend)
+
+### Architecture
+
+Redis-backed job queue for background processing with scheduled tasks.
+
+**Files**:
+- `backend/internal/infrastructure/worker/server.go` - Job server
+- `backend/internal/infrastructure/worker/client.go` - Job enqueueing
+- `backend/internal/domain/worker/tasks.go` - Task definitions
+
+### Queue Configuration
+
+| Queue | Workers | Purpose |
+|-------|---------|---------|
+| critical | 6 | Stripe provisioning |
+| default | 3 | AI/SME generation |
+| low | 1 | Cleanup tasks |
+
+### Job Types
+
+| Type | Queue | Max Retry | Description |
+|------|-------|-----------|-------------|
+| `stripe:provision` | critical | 10 | Account setup after payment |
+| `stripe:reconcile` | critical | 3 | Orphaned payment detection |
+| `cleanup:expired` | low | 1 | Expired registration cleanup |
+| `ai:generation` | default | 3 | Course outline/lesson generation |
+| `sme:ingestion` | default | 3 | SME document processing |
+| `ai:generation:poll` | default | - | Poll queued generation jobs |
+| `sme:ingestion:poll` | default | - | Poll queued ingestion jobs |
+
+### Scheduled Tasks
+
+| Schedule | Task | Purpose |
+|----------|------|---------|
+| Every 15m | `stripe:reconcile` | Catch orphaned payments |
+| Every 1h | `cleanup:expired` | Remove expired registrations |
+| Every 5s | `ai:generation:poll` | Process next AI job |
+| Every 5s | `sme:ingestion:poll` | Process next SME job |
+
+### Connection URL
+
+```go
+// Backend configuration
+// Config stores: redis://redis.redis.svc.cluster.local:6379
+// Asynq expects: redis.redis.svc.cluster.local:6379 (no prefix)
+redisAddr := strings.TrimPrefix(cfg.RedisURL, "redis://")
+workerClient := worker.NewClient(redisAddr, logger)
+```
+
+## Usage 2: Application Cache
+
+### Backend Cache
+
+**File**: `backend/internal/infrastructure/cache/redis.go`
+
+**Interface Methods**:
+
+```go
+Get(ctx, key, v interface{})              // Get with entry metadata
+Set(ctx, key, v, etag string, ttl)        // Store with ETag
+Delete(ctx, key)                          // Remove key
+InvalidatePattern(ctx, pattern)           // Wildcard deletion
+AcquireLock(ctx, key, ttl)                // Distributed lock
+ReleaseLock(ctx, key, lockID)             // Release via Lua script
+```
+
+### Frontend Cache
+
+**File**: `frontend/src/lib/cache/redisCache.ts`
 
 **Features**:
-- Optimistic locking with ETags
-- Distributed locks for critical sections
-- Automatic retry with exponential backoff
-- Connection pooling and reconnection
-- 5-minute default TTL
+- Singleton pattern with lazy initialization
+- Automatic reconnection with exponential backoff (max 3s)
+- Graceful degradation to NoOpCache if Redis unavailable
+- ETag-based optimistic locking
 
-**Key Methods**:
-```typescript
-get<T>(key: string): Promise<CacheEntry<T> | null>
-set<T>(key: string, data: T, etag?: string, ttl?: number): Promise<{success: boolean, newEtag: string}>
-acquireLock(lockKey: string, ttl?: number): Promise<{acquired: boolean, lockId: string}>
-releaseLock(lockKey: string, lockId: string): Promise<boolean>
+### Cache Keys
+
+| Pattern | Purpose |
+|---------|---------|
+| `library:index` | Full library listing |
+| `folders:hierarchy` | Folder structure |
+| `course:{id}` | Individual course content |
+| `folder:{folderId}:courses` | Courses in folder |
+| `courses:all` | All courses listing |
+| `courses:status:{status}` | Filter by status |
+| `courses:tag:{tag}` | Filter by tags |
+
+### Cache Entry Structure
+
+```json
+{
+  "data": "<json.RawMessage>",
+  "etag": "W/\"hash-timestamp\"",
+  "timestamp": 1234567890123,
+  "version": 1
+}
 ```
 
-### 3. Cached Storage Adapter (`frontend/src/lib/storage/cachedStorageAdapter.ts`)
+### TTL Configuration
 
-**Wraps base storage adapter with**:
-- Read-through caching
-- Write-through with cache invalidation
-- Distributed locking for library.json
-- Related cache invalidation
-
-**Cache Keys**:
-- `library:index` - Library index file
-- `course:{id}` - Individual course files
-- `folder:{id}:courses` - Courses in folder
-- `courses:status:{status}` - Courses by status
-
-### 4. S3 Storage Improvements (`frontend/src/lib/storage/s3Storage.ts`)
-
-**Added**:
-- Connection pooling (50 concurrent connections)
-- Keep-alive connections (10 seconds)
-- Automatic retry (3 attempts)
-- Timeout configuration (5 seconds)
-- `deleteObject()` and `objectExists()` methods
+- Default TTL: 300 seconds (5 minutes)
+- Stale data cleanup: 24 hours
 
 ## Environment Variables
 
-### Required for Redis
-```bash
-REDIS_URL=redis://redis.redis.svc.cluster.local:6379
-ENABLE_REDIS_CACHE=true  # Set to false to disable caching
+### Backend
+
+```yaml
+# Set in config defaults (config.go)
+ENABLE_REDIS_CACHE: "true"  # Optional
+REDIS_URL: "redis://redis.redis.svc.cluster.local:6379"
 ```
 
-### Existing MinIO Variables
-```bash
-USE_S3_STORAGE=true
-S3_ENDPOINT=http://192.168.1.226:9768
-S3_BUCKET=mirai
-S3_REGION=us-east-1
-S3_BASE_PATH=data
-S3_ACCESS_KEY=root
-S3_SECRET_KEY=<secret>
+### Frontend
+
+```yaml
+# k8s/frontend/deployment.yaml
+- name: ENABLE_REDIS_CACHE
+  value: "true"
+- name: REDIS_URL
+  value: "redis://redis.redis.svc.cluster.local:6379"
 ```
 
-## How It Works
+## Network Policy
 
-### Read Operation Flow
+**File**: `k8s/backend/networkpolicy-allow-redis.yaml`
 
-1. **Request arrives** at API endpoint
-2. **Check Redis cache** for requested data
-   - Cache HIT → Return cached data (< 5ms)
-   - Cache MISS → Continue to step 3
-3. **Read from MinIO** via S3 adapter
-4. **Store in cache** with 5-minute TTL
-5. **Return data** to client
+Allows egress from `mirai` namespace to `redis` namespace on TCP 6379.
 
-### Write Operation Flow (Critical Files)
+## Local Development
 
-1. **Request to update** library.json
-2. **Acquire distributed lock** (10-second timeout)
-   - Lock acquired → Continue
-   - Lock failed → Retry with backoff
-3. **Read current version** from cache/storage
-4. **Check ETag** for concurrent modifications
-   - ETag matches → Continue
-   - ETag mismatch → Retry from step 2
-5. **Write to MinIO**
-6. **Update cache** with new ETag
-7. **Invalidate related caches**
-8. **Release lock**
+Redis runs via Docker Compose:
 
-### Write Operation Flow (Non-Critical Files)
-
-1. **Write directly to MinIO**
-2. **Delete from cache**
-3. **Invalidate related caches**
-
-## Cache Invalidation Strategy
-
-When a file changes, related caches are invalidated:
-
-- **library.json changes** → Invalidate:
-  - All `courses:*` keys
-  - All `folder:*` keys
-
-- **Course file changes** → Invalidate:
-  - `library:index`
-  - All `courses:*` keys
-  - Related `folder:*` keys
-
-## Performance Improvements
-
-### Before (No Cache)
-- Library load: 200-500ms (MinIO round-trip)
-- Course list: 150-300ms per request
-- Concurrent writes: Data loss possible
-
-### After (With Redis Cache)
-- Library load: 2-5ms (cache hit)
-- Course list: 1-3ms (cache hit)
-- Concurrent writes: Protected by locks
-
-### Metrics
-- **Cache hit ratio**: ~90% after warm-up
-- **MinIO requests reduced**: 10x fewer
-- **Response time improvement**: 50-100x faster for cached data
-- **Race conditions eliminated**: 100% with distributed locking
-
-## Monitoring
-
-### Check Redis Status
-```bash
-kubectl exec -n redis redis-0 -- redis-cli ping
-# Expected: PONG
-
-kubectl exec -n redis redis-0 -- redis-cli info stats
-# Shows hits, misses, connections
+```yaml
+# local-dev/docker-compose.yml
+redis:
+  image: redis:7-alpine
+  container_name: mirai-redis
+  ports:
+    - "6379:6379"
 ```
 
-### View Cache Keys
-```bash
-kubectl exec -n redis redis-0 -- redis-cli keys "*"
-# Shows all cached keys
+Local connection: `localhost:6379`
 
-kubectl exec -n redis redis-0 -- redis-cli ttl "library:index"
-# Shows remaining TTL in seconds
+## Monitoring Commands
+
+### Check Status
+
+```bash
+# Port forward
+kubectl port-forward -n redis svc/redis 6379:6379
+
+# Ping
+redis-cli ping
+# PONG
+
+# Info
+redis-cli info stats
+redis-cli info memory
 ```
 
-### Monitor Memory Usage
+### View Data
+
 ```bash
-kubectl exec -n redis redis-0 -- redis-cli info memory
-# Shows memory statistics
+# List all keys
+redis-cli KEYS "*"
+
+# Check key TTL
+redis-cli TTL "library:index"
+
+# View key type
+redis-cli TYPE "course:123"
+
+# Memory usage
+redis-cli MEMORY USAGE "library:index"
 ```
 
-## Troubleshooting
+### Asynq Inspection
 
-### Issue: Cache not working
-
-**Check Redis connectivity**:
 ```bash
-kubectl exec -it <frontend-pod> -- nc -zv redis.redis.svc.cluster.local 6379
+# Pending tasks
+redis-cli KEYS "asynq:*"
+
+# Queue sizes
+redis-cli LLEN "asynq:queues:critical"
+redis-cli LLEN "asynq:queues:default"
+redis-cli LLEN "asynq:queues:low"
 ```
 
-**Check environment variables**:
-```bash
-kubectl exec <frontend-pod> -- env | grep REDIS
+## Distributed Locking
+
+Both backend and frontend use Redis for distributed locks:
+
+```go
+// Backend (redis.go)
+func (r *RedisCache) AcquireLock(ctx, key string, ttl time.Duration) (bool, string) {
+    lockID := fmt.Sprintf("%d-%s", time.Now().UnixNano(), uuid.New().String()[:8])
+    ok := r.client.SetNX(ctx, "lock:"+key, lockID, ttl).Val()
+    return ok, lockID
+}
+
+func (r *RedisCache) ReleaseLock(ctx, key, lockID string) bool {
+    // Lua script ensures only owner can release
+    script := redis.NewScript(`
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+            return redis.call("del", KEYS[1])
+        else
+            return 0
+        end
+    `)
+    return script.Run(ctx, r.client, []string{"lock:" + key}, lockID).Val() == int64(1)
+}
 ```
 
-### Issue: Lock timeout errors
+**Lock Prefix**: `lock:`
+**Default TTL**: 10 seconds
 
-**Possible causes**:
-- Long-running operations holding locks
-- Too many concurrent writers
+## Graceful Degradation
 
-**Solutions**:
-- Increase lock TTL (currently 10 seconds)
-- Add more replicas to Redis (for HA)
+Both applications handle Redis unavailability:
 
-### Issue: Cache memory full
-
-**Check memory**:
-```bash
-kubectl exec -n redis redis-0 -- redis-cli info memory | grep used_memory_human
-```
-
-**Solutions**:
-- Increase `maxmemory` in ConfigMap
-- Adjust eviction policy
-- Reduce TTL values
-
-## Future Enhancements
-
-1. **Redis Sentinel** for high availability
-2. **Redis Cluster** for horizontal scaling
-3. **Pub/Sub** for real-time cache invalidation
-4. **Metrics export** to Prometheus
-5. **Circuit breaker** for Redis failures
-6. **Write-behind caching** for async writes
-
-## Migration Notes
-
-### To Disable Caching
-Set environment variable:
-```bash
-ENABLE_REDIS_CACHE=false
-```
-
-### To Use Different Redis Instance
-Update environment variable:
-```bash
-REDIS_URL=redis://new-redis-host:6379
-```
-
-### To Adjust TTL
-Modify in `redisCache.ts`:
 ```typescript
-private readonly defaultTTL = 300; // seconds
+// Frontend (redisCache.ts)
+if (process.env.ENABLE_REDIS_CACHE === 'false') {
+    return new NoOpCache();  // Always cache miss
+}
+
+// On connection failure
+client.on('error', () => {
+    // Silently degrades, operations return cache miss
+});
 ```
 
-## Security Considerations
+```go
+// Backend (main.go)
+if cfg.EnableRedisCache && cfg.RedisURL != "" {
+    cache = NewRedisCache(cfg.RedisURL)
+} else {
+    cache = NewNoOpCache()  // Pass-through
+}
+```
 
-1. **No authentication** on Redis (add `requirepass` for production)
-2. **Network policies** to restrict Redis access
-3. **Encryption in transit** (use TLS for production)
-4. **Backup strategy** for Redis persistence
+## Persistence
 
-## Summary
+Redis is configured for durability:
 
-The Redis caching implementation provides:
-- ✅ **Eliminated race conditions** with distributed locking
-- ✅ **100x performance improvement** for cached operations
-- ✅ **Connection pooling** reduces overhead
-- ✅ **Automatic failover** to direct storage on cache failure
-- ✅ **Zero downtime migration** with feature flags
+- **RDB Snapshots**: `save 900 1`, `save 300 10`, `save 60 10000`
+- **AOF**: Enabled with `appendfsync everysec`
+- **Storage**: 5Gi NFS PVC at `/data`
 
-The solution is production-ready and scales horizontally with your application pods.
+Data survives pod restarts.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `k8s/redis/redis-deployment.yaml` | K8s deployment + ConfigMap |
+| `k8s/backend/networkpolicy-allow-redis.yaml` | Network egress policy |
+| `backend/internal/infrastructure/cache/redis.go` | Backend cache implementation |
+| `backend/internal/infrastructure/worker/server.go` | Asynq server + scheduler |
+| `backend/internal/infrastructure/worker/client.go` | Asynq client |
+| `backend/internal/domain/worker/tasks.go` | Task type definitions |
+| `frontend/src/lib/cache/redisCache.ts` | Frontend cache adapter |
+| `local-dev/docker-compose.yml` | Local Redis container |
