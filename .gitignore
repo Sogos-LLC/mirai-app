@@ -56,3 +56,6 @@ diagram/
 # Other temp docs
 findings.md
 system-improvements.md
+
+# Claude Code instructions (user-specific)
+CLAUDE.md
