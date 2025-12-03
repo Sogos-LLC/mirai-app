@@ -27,18 +27,28 @@ This document describes how MinIO provides S3-compatible persistent storage for 
 - **API Port**: `9768`
 - **Console Port**: `9769`
 - **Storage**: 2TB Work Drive
-- **Bucket**: `mirai`
+- **Buckets**:
+  - `mirai` - Application data
+  - `cnpg-backups` - PostgreSQL database backups (7-day retention)
 - **Access**: Root credentials stored in Kubernetes secrets
 
 ### 2. Storage Structure
 ```
-mirai/                          # Main bucket
+mirai/                          # Main bucket - Application data
 └── data/                       # Application data root
     ├── library.json           # Folder hierarchy and metadata
     ├── courses/               # Course content files
     │   ├── course-*.json
     │   └── ...
     └── exports/               # Export directory
+
+cnpg-backups/                   # Database backups bucket
+├── mirai/                      # Mirai PostgreSQL backups
+│   ├── base/                  # Full backups
+│   └── wals/                  # WAL archives
+└── kratos/                     # Kratos PostgreSQL backups
+    ├── base/                  # Full backups
+    └── wals/                  # WAL archives
 ```
 
 ### 3. Application Integration
@@ -153,6 +163,60 @@ mc mirror unraid-minio/mirai ./backup/
 # Restore MinIO data
 mc mirror ./backup/ unraid-minio/mirai
 ```
+
+## CNPG Database Backups
+
+CloudNativePG (CNPG) uses MinIO for PostgreSQL database backups with continuous WAL archiving and scheduled full backups.
+
+### Backup Configuration
+
+| Database | Destination | Retention | Schedule | WAL Compression |
+|----------|-------------|-----------|----------|-----------------|
+| `mirai-db` | `s3://cnpg-backups/mirai` | **7 days** | Daily @ 2:00 AM | gzip |
+| `kratos-db` | `s3://cnpg-backups/kratos` | **7 days** | Daily @ 3:00 AM | gzip |
+
+### Credentials
+
+Both clusters use the `cnpg-backup-credentials` secret in their respective namespaces:
+```yaml
+s3Credentials:
+  accessKeyId:
+    name: cnpg-backup-credentials
+    key: ACCESS_KEY_ID
+  secretAccessKey:
+    name: cnpg-backup-credentials
+    key: ACCESS_SECRET_KEY
+```
+
+### What Gets Backed Up
+
+1. **Full Backups** - Complete database snapshots (daily via `ScheduledBackup`)
+2. **WAL Archives** - Continuous write-ahead log streaming for point-in-time recovery
+
+### Checking Backup Status
+
+```bash
+# List backups for mirai-db
+kubectl get backups -n mirai
+
+# List backups for kratos-db
+kubectl get backups -n kratos
+
+# Check backup contents in MinIO
+mc ls unraid-minio/cnpg-backups/mirai/
+mc ls unraid-minio/cnpg-backups/kratos/
+```
+
+### Retention Policy
+
+CNPG automatically prunes backups older than 7 days (`retentionPolicy: "7d"`). This includes:
+- Full backup files in `base/`
+- WAL segments in `wals/`
+
+### Related Configuration Files
+
+- `k8s/cnpg/mirai-cluster.yaml` - Mirai database cluster with backup config
+- `k8s/cnpg/kratos-cluster.yaml` - Kratos database cluster with backup config
 
 ## Migration Path
 
