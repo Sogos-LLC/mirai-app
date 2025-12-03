@@ -20,6 +20,7 @@ interface GenerationProgressPanelProps {
   progressMessage: string;
   job?: GenerationJob | null;
   onCancel?: () => void;
+  onContinueInBackground?: () => void;
   error?: { message: string } | null;
   onRetry?: () => void;
 }
@@ -38,6 +39,7 @@ export function GenerationProgressPanel({
   progressMessage,
   job,
   onCancel,
+  onContinueInBackground,
   error,
   onRetry,
 }: GenerationProgressPanelProps) {
@@ -258,14 +260,34 @@ export function GenerationProgressPanel({
       </div>
 
       {/* Footer */}
-      {isGenerating && onCancel && (
-        <div className="px-6 py-4 bg-gray-50 border-t flex justify-end">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Cancel Generation
-          </button>
+      {isGenerating && (onCancel || onContinueInBackground) && (
+        <div className="px-6 py-4 bg-gray-50 border-t">
+          {/* Helpful message */}
+          <p className="text-xs text-gray-500 mb-3 text-center">
+            You can continue in the background and we'll notify you when complete.
+          </p>
+          <div className="flex justify-between items-center gap-3">
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel Generation
+              </button>
+            )}
+            {onContinueInBackground && (
+              <button
+                onClick={onContinueInBackground}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Continue in Background
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

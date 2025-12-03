@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
+	"golang.org/x/time/rate"
 	"google.golang.org/genai"
 
 	"github.com/sogos/mirai-backend/internal/domain/service"
@@ -13,13 +15,24 @@ import (
 
 const (
 	// DefaultModel is the default Gemini model to use.
-	DefaultModel = "gemini-2.5-flash"
+	// Using 2.0-flash for better API limits (15 RPM) and larger context window (1M tokens)
+	DefaultModel = "gemini-2.0-flash"
+
+	// Rate limiting constants for Gemini Flash 2.0 free tier
+	// Free tier: 15 RPM (requests per minute), 1M token context
+	defaultRPM          = 15
+	defaultBurstSize    = 5           // Allow small bursts for better UX
+	defaultMaxRetries   = 3           // Max retries on rate limit errors
+	defaultBaseDelay    = 4 * time.Second // Base delay for backoff (60s / 15 RPM)
 )
 
 // Client implements service.AIProvider using Google Gemini.
 type Client struct {
-	client *genai.Client
-	model  string
+	client     *genai.Client
+	model      string
+	limiter    *rate.Limiter
+	maxRetries int
+	baseDelay  time.Duration
 }
 
 // NewClient creates a new Gemini client with the provided API key.
@@ -31,10 +44,87 @@ func NewClient(ctx context.Context, apiKey string) (*Client, error) {
 		return nil, fmt.Errorf("failed to create Gemini client: %w", err)
 	}
 
+	// Create rate limiter: 15 requests per minute with burst of 5
+	// rate.Every(4*time.Second) = 1 token every 4 seconds = 15/minute
+	limiter := rate.NewLimiter(rate.Every(defaultBaseDelay), defaultBurstSize)
+
 	return &Client{
-		client: client,
-		model:  DefaultModel,
+		client:     client,
+		model:      DefaultModel,
+		limiter:    limiter,
+		maxRetries: defaultMaxRetries,
+		baseDelay:  defaultBaseDelay,
 	}, nil
+}
+
+// waitForRateLimit waits for rate limiter permission before making an API call.
+// Returns an error if context is cancelled while waiting.
+func (c *Client) waitForRateLimit(ctx context.Context) error {
+	if err := c.limiter.Wait(ctx); err != nil {
+		if ctx.Err() != nil {
+			return fmt.Errorf("cancelled while waiting for rate limit: %w", ctx.Err())
+		}
+		return fmt.Errorf("rate limit wait failed: %w", err)
+	}
+	return nil
+}
+
+// isRateLimitError checks if an error is a rate limit (429) error.
+func isRateLimitError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "ResourceExhausted") ||
+		strings.Contains(errStr, "429") ||
+		strings.Contains(errStr, "rate limit") ||
+		strings.Contains(errStr, "quota exceeded")
+}
+
+// generateWithRetry executes a generation function with rate limiting and retry logic.
+func (c *Client) generateWithRetry(ctx context.Context, operation string, fn func() (*genai.GenerateContentResponse, error)) (*genai.GenerateContentResponse, error) {
+	var lastErr error
+
+	for attempt := 0; attempt <= c.maxRetries; attempt++ {
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("%s cancelled: %w", operation, ctx.Err())
+		default:
+		}
+
+		// Wait for rate limit permission
+		if err := c.waitForRateLimit(ctx); err != nil {
+			return nil, err
+		}
+
+		// Execute the operation
+		result, err := fn()
+		if err == nil {
+			return result, nil
+		}
+
+		lastErr = err
+
+		// If it's a rate limit error and we have retries left, wait and retry
+		if isRateLimitError(err) && attempt < c.maxRetries {
+			// Exponential backoff: 6s, 12s, 24s
+			delay := c.baseDelay * time.Duration(1<<attempt)
+			select {
+			case <-ctx.Done():
+				return nil, fmt.Errorf("%s cancelled during retry backoff: %w", operation, ctx.Err())
+			case <-time.After(delay):
+				continue
+			}
+		}
+
+		// For non-rate-limit errors, fail immediately
+		if !isRateLimitError(err) {
+			return nil, err
+		}
+	}
+
+	return nil, fmt.Errorf("%s failed after %d retries: %w", operation, c.maxRetries, lastErr)
 }
 
 // TestConnection tests if the API key is valid by making a simple request.
@@ -43,12 +133,14 @@ func (c *Client) TestConnection(ctx context.Context) error {
 		MaxOutputTokens: 10,
 	}
 
-	_, err := c.client.Models.GenerateContent(
-		ctx,
-		c.model,
-		genai.Text("Say 'OK' if you can read this."),
-		config,
-	)
+	_, err := c.generateWithRetry(ctx, "test connection", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(
+			ctx,
+			c.model,
+			genai.Text("Say 'OK' if you can read this."),
+			config,
+		)
+	})
 	if err != nil {
 		return fmt.Errorf("API key validation failed: %w", err)
 	}
@@ -63,6 +155,13 @@ func (c *Client) TestConnection(ctx context.Context) error {
 func (c *Client) GenerateCourseOutline(ctx context.Context, req service.GenerateOutlineRequest) (*service.GenerateOutlineResult, error) {
 	var totalTokensUsed int64
 
+	// Check for cancellation at start
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("outline generation cancelled: %w", ctx.Err())
+	default:
+	}
+
 	// Step 1: Generate sections with lesson titles only
 	sectionsPrompt := buildSectionsOnlyPrompt(req)
 	sectionsConfig := &genai.GenerateContentConfig{
@@ -70,12 +169,14 @@ func (c *Client) GenerateCourseOutline(ctx context.Context, req service.Generate
 		ResponseJsonSchema: sectionsOnlySchema(),
 	}
 
-	sectionsResult, err := c.client.Models.GenerateContent(
-		ctx,
-		c.model,
-		genai.Text(sectionsPrompt),
-		sectionsConfig,
-	)
+	sectionsResult, err := c.generateWithRetry(ctx, "generate sections", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(
+			ctx,
+			c.model,
+			genai.Text(sectionsPrompt),
+			sectionsConfig,
+		)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate sections: %w", err)
 	}
@@ -92,18 +193,27 @@ func (c *Client) GenerateCourseOutline(ctx context.Context, req service.Generate
 	totalLessons := 0
 
 	for i, section := range sectionsResp.Sections {
+		// Check for cancellation before each section
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("outline generation cancelled after %d sections: %w", i, ctx.Err())
+		default:
+		}
+
 		lessonsPrompt := buildSectionLessonsPrompt(req, section.Title, section.Description, section.LessonTitles)
 		lessonsConfig := &genai.GenerateContentConfig{
 			ResponseMIMEType:   "application/json",
 			ResponseJsonSchema: sectionLessonsSchema(),
 		}
 
-		lessonsResult, err := c.client.Models.GenerateContent(
-			ctx,
-			c.model,
-			genai.Text(lessonsPrompt),
-			lessonsConfig,
-		)
+		lessonsResult, err := c.generateWithRetry(ctx, fmt.Sprintf("generate lessons for section %d", i+1), func() (*genai.GenerateContentResponse, error) {
+			return c.client.Models.GenerateContent(
+				ctx,
+				c.model,
+				genai.Text(lessonsPrompt),
+				lessonsConfig,
+			)
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate lessons for section %q: %w", section.Title, err)
 		}
@@ -153,6 +263,13 @@ func (c *Client) GenerateCourseOutline(ctx context.Context, req service.Generate
 
 // GenerateLessonContent generates content for a single lesson.
 func (c *Client) GenerateLessonContent(ctx context.Context, req service.GenerateLessonRequest) (*service.GenerateLessonResult, error) {
+	// Check for cancellation at start
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("lesson generation cancelled: %w", ctx.Err())
+	default:
+	}
+
 	prompt := buildLessonPrompt(req)
 
 	config := &genai.GenerateContentConfig{
@@ -160,12 +277,14 @@ func (c *Client) GenerateLessonContent(ctx context.Context, req service.Generate
 		ResponseJsonSchema: lessonContentSchema(),
 	}
 
-	result, err := c.client.Models.GenerateContent(
-		ctx,
-		c.model,
-		genai.Text(prompt),
-		config,
-	)
+	result, err := c.generateWithRetry(ctx, "generate lesson content", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(
+			ctx,
+			c.model,
+			genai.Text(prompt),
+			config,
+		)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate lesson content: %w", err)
 	}
@@ -199,6 +318,13 @@ func (c *Client) GenerateLessonContent(ctx context.Context, req service.Generate
 
 // RegenerateComponent regenerates a single component with modifications.
 func (c *Client) RegenerateComponent(ctx context.Context, req service.RegenerateComponentRequest) (*service.RegenerateComponentResult, error) {
+	// Check for cancellation at start
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("component regeneration cancelled: %w", ctx.Err())
+	default:
+	}
+
 	prompt := buildRegeneratePrompt(req)
 
 	config := &genai.GenerateContentConfig{
@@ -206,12 +332,14 @@ func (c *Client) RegenerateComponent(ctx context.Context, req service.Regenerate
 		ResponseJsonSchema: componentSchema(req.ComponentType),
 	}
 
-	result, err := c.client.Models.GenerateContent(
-		ctx,
-		c.model,
-		genai.Text(prompt),
-		config,
-	)
+	result, err := c.generateWithRetry(ctx, "regenerate component", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(
+			ctx,
+			c.model,
+			genai.Text(prompt),
+			config,
+		)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to regenerate component: %w", err)
 	}
@@ -224,6 +352,13 @@ func (c *Client) RegenerateComponent(ctx context.Context, req service.Regenerate
 
 // ProcessSMEContent processes and distills knowledge from SME submission.
 func (c *Client) ProcessSMEContent(ctx context.Context, req service.ProcessSMEContentRequest) (*service.ProcessSMEContentResult, error) {
+	// Check for cancellation at start
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("SME content processing cancelled: %w", ctx.Err())
+	default:
+	}
+
 	prompt := buildSMEProcessingPrompt(req)
 
 	config := &genai.GenerateContentConfig{
@@ -231,12 +366,14 @@ func (c *Client) ProcessSMEContent(ctx context.Context, req service.ProcessSMECo
 		ResponseJsonSchema: smeProcessingSchema(),
 	}
 
-	result, err := c.client.Models.GenerateContent(
-		ctx,
-		c.model,
-		genai.Text(prompt),
-		config,
-	)
+	result, err := c.generateWithRetry(ctx, "process SME content", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(
+			ctx,
+			c.model,
+			genai.Text(prompt),
+			config,
+		)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to process SME content: %w", err)
 	}
@@ -959,14 +1096,23 @@ func buildSMEProcessingPrompt(req service.ProcessSMEContentRequest) string {
 
 // SummarizeContent creates a concise summary of the provided content.
 func (c *Client) SummarizeContent(ctx context.Context, content string) (string, error) {
+	// Check for cancellation at start
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("summarization cancelled: %w", ctx.Err())
+	default:
+	}
+
 	prompt := buildSummarizePrompt(content)
 
-	result, err := c.client.Models.GenerateContent(
-		ctx,
-		c.model,
-		genai.Text(prompt),
-		nil,
-	)
+	result, err := c.generateWithRetry(ctx, "summarize content", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(
+			ctx,
+			c.model,
+			genai.Text(prompt),
+			nil,
+		)
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to summarize content: %w", err)
 	}
@@ -976,14 +1122,23 @@ func (c *Client) SummarizeContent(ctx context.Context, content string) (string, 
 
 // ImproveContent improves the provided content by cleaning up, clarifying, and structuring it.
 func (c *Client) ImproveContent(ctx context.Context, content string) (string, error) {
+	// Check for cancellation at start
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("content improvement cancelled: %w", ctx.Err())
+	default:
+	}
+
 	prompt := buildImprovePrompt(content)
 
-	result, err := c.client.Models.GenerateContent(
-		ctx,
-		c.model,
-		genai.Text(prompt),
-		nil,
-	)
+	result, err := c.generateWithRetry(ctx, "improve content", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(
+			ctx,
+			c.model,
+			genai.Text(prompt),
+			nil,
+		)
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to improve content: %w", err)
 	}

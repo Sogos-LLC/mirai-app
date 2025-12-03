@@ -185,6 +185,12 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, job *entity.GenerationJob) error {
 	log := s.logger.With("jobID", job.ID, "courseID", job.CourseID)
 
+	// Check for cancellation at start
+	if s.checkJobCancelled(ctx, job.ID) {
+		log.Info("job already cancelled, skipping processing")
+		return nil
+	}
+
 	// Mark job as processing
 	now := time.Now()
 	job.Status = valueobject.GenerationJobStatusProcessing
@@ -276,6 +282,12 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	job.ProgressMessage = &progressMsg
 	if err := s.jobRepo.Update(ctx, job); err != nil {
 		log.Error("failed to update job progress", "progress", 40, "error", err)
+	}
+
+	// Check for cancellation before expensive AI call
+	if s.checkJobCancelled(ctx, job.ID) {
+		log.Info("job cancelled before AI generation")
+		return s.markJobCancelled(ctx, job)
 	}
 
 	// Generate outline with AI
@@ -669,6 +681,12 @@ func (s *AIGenerationService) GenerateLessonContent(ctx context.Context, kratosI
 func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, job *entity.GenerationJob) error {
 	log := s.logger.With("jobID", job.ID, "outlineLessonID", job.OutlineLessonID)
 
+	// Check for cancellation at start (e.g., parent job was cancelled)
+	if s.checkJobCancelled(ctx, job.ID) {
+		log.Info("job already cancelled, skipping processing")
+		return nil
+	}
+
 	// Mark job as processing
 	now := time.Now()
 	job.Status = valueobject.GenerationJobStatusProcessing
@@ -749,6 +767,12 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 	job.ProgressMessage = &progressMsg
 	if err := s.jobRepo.Update(ctx, job); err != nil {
 		log.Error("failed to update job progress", "progress", 30, "error", err)
+	}
+
+	// Check for cancellation before expensive AI call
+	if s.checkJobCancelled(ctx, job.ID) {
+		log.Info("job cancelled before AI generation")
+		return s.markJobCancelled(ctx, job)
 	}
 
 	// Get tenant-specific AI provider
@@ -1188,6 +1212,7 @@ func (s *AIGenerationService) ListJobs(ctx context.Context, kratosID uuid.UUID, 
 }
 
 // CancelJob cancels a queued or processing job.
+// If the job is a parent job (e.g., full_course), it also cascades cancellation to all child jobs.
 func (s *AIGenerationService) CancelJob(ctx context.Context, kratosID uuid.UUID, jobID uuid.UUID) (*entity.GenerationJob, error) {
 	log := s.logger.With("kratosID", kratosID, "jobID", jobID)
 
@@ -1205,11 +1230,37 @@ func (s *AIGenerationService) CancelJob(ctx context.Context, kratosID uuid.UUID,
 		return nil, domainerrors.ErrInvalidInput.WithMessage("can only cancel queued or processing jobs")
 	}
 
-	job.Status = valueobject.GenerationJobStatusCancelled
 	now := time.Now()
+	cancelMsg := "Cancelled by user"
+
+	// If this is a parent job (full_course), cancel all child jobs first
+	if job.Type == valueobject.GenerationJobTypeFullCourse {
+		children, err := s.jobRepo.ListByParentID(ctx, jobID)
+		if err == nil {
+			cancelledChildren := 0
+			for _, child := range children {
+				// Only cancel queued or processing children
+				if child.Status == valueobject.GenerationJobStatusQueued ||
+					child.Status == valueobject.GenerationJobStatusProcessing {
+					child.Status = valueobject.GenerationJobStatusCancelled
+					child.CompletedAt = &now
+					childMsg := "Cancelled: parent job cancelled"
+					child.ProgressMessage = &childMsg
+					if err := s.jobRepo.Update(ctx, child); err != nil {
+						log.Warn("failed to cancel child job", "childJobID", child.ID, "error", err)
+					} else {
+						cancelledChildren++
+					}
+				}
+			}
+			log.Info("cancelled child jobs", "count", cancelledChildren, "total", len(children))
+		}
+	}
+
+	// Cancel the main job
+	job.Status = valueobject.GenerationJobStatusCancelled
 	job.CompletedAt = &now
-	msg := "Cancelled by user"
-	job.ProgressMessage = &msg
+	job.ProgressMessage = &cancelMsg
 
 	if err := s.jobRepo.Update(ctx, job); err != nil {
 		log.Error("failed to cancel job", "error", err)
@@ -1301,6 +1352,40 @@ func (s *AIGenerationService) failJob(ctx context.Context, job *entity.Generatio
 	}
 
 	return fmt.Errorf("%s", errMsg)
+}
+
+// checkJobCancelled checks if a job has been cancelled by re-fetching its status from the database.
+// Returns true if the job was cancelled, false otherwise.
+// This should be called at key points during long-running operations to allow early termination.
+func (s *AIGenerationService) checkJobCancelled(ctx context.Context, jobID uuid.UUID) bool {
+	// Check context cancellation first
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+	}
+
+	// Check job status in database
+	currentJob, err := s.jobRepo.GetByID(ctx, jobID)
+	if err != nil {
+		return false // Can't determine, assume not cancelled
+	}
+	return currentJob.Status == valueobject.GenerationJobStatusCancelled
+}
+
+// markJobCancelled marks a job as cancelled if it was cancelled during processing.
+func (s *AIGenerationService) markJobCancelled(ctx context.Context, job *entity.GenerationJob) error {
+	job.Status = valueobject.GenerationJobStatusCancelled
+	now := time.Now()
+	job.CompletedAt = &now
+	msg := "Cancelled during processing"
+	job.ProgressMessage = &msg
+
+	if err := s.jobRepo.Update(ctx, job); err != nil {
+		s.logger.Error("failed to mark job as cancelled", "jobID", job.ID, "error", err)
+		return err
+	}
+	return nil
 }
 
 // RunBackground starts the background job processing loop.

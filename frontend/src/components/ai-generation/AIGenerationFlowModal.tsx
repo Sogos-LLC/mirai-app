@@ -567,6 +567,7 @@ export function AIGenerationFlowModal({ isOpen, onClose, courseId: initialCourse
             progressMessage={context.progressMessage}
             job={context.outlineJob}
             onCancel={handleCancel}
+            onContinueInBackground={handleNavigateAway}
             error={context.error ? { message: context.error.message } : null}
             onRetry={handleRetry}
           />
@@ -591,6 +592,7 @@ export function AIGenerationFlowModal({ isOpen, onClose, courseId: initialCourse
             progressMessage={context.progressMessage}
             job={context.lessonJob}
             onCancel={handleCancel}
+            onContinueInBackground={handleNavigateAway}
             error={context.error ? { message: context.error.message } : null}
             onRetry={handleRetry}
           />
