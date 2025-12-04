@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@connectrpc/connect-query';
+import { useQuery, useMutation, createConnectQueryKey } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { create } from '@bufbuild/protobuf';
 import {
@@ -16,6 +16,10 @@ import {
   getGeneratedLesson,
   listGeneratedLessons,
 } from '@/gen/mirai/v1/ai_generation-AIGenerationService_connectquery';
+import {
+  listNotifications,
+  getUnreadCount,
+} from '@/gen/mirai/v1/notification-NotificationService_connectquery';
 import {
   GenerationJobType,
   GenerationJobStatus,
@@ -57,6 +61,20 @@ export type {
 };
 
 /**
+ * Helper to invalidate all job-related queries.
+ * This ensures the UI updates after job mutations.
+ */
+async function invalidateJobQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listJobs, cardinality: undefined }) }),
+    queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getJob, cardinality: undefined }) }),
+    // Also invalidate notifications since job completion creates notifications
+    queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listNotifications, cardinality: undefined }) }),
+    queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getUnreadCount, cardinality: undefined }) }),
+  ]);
+}
+
+/**
  * Hook to generate a course outline.
  */
 export function useGenerateCourseOutline() {
@@ -82,12 +100,7 @@ export function useGenerateCourseOutline() {
       });
 
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && k.includes('listJobs')
-          ),
-      });
+      await invalidateJobQueries(queryClient);
       return result;
     },
     isLoading: mutation.isPending,
@@ -128,12 +141,10 @@ export function useApproveCourseOutline() {
       });
 
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && (k.includes('getCourseOutline') || k.includes('listJobs'))
-          ),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getCourseOutline, cardinality: undefined }) }),
+        invalidateJobQueries(queryClient),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,
@@ -157,12 +168,7 @@ export function useRejectCourseOutline() {
       });
 
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && k.includes('getCourseOutline')
-          ),
-      });
+      await queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getCourseOutline, cardinality: undefined }) });
       return result;
     },
     isLoading: mutation.isPending,
@@ -186,12 +192,7 @@ export function useUpdateCourseOutline() {
       });
 
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && k.includes('getCourseOutline')
-          ),
-      });
+      await queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getCourseOutline, cardinality: undefined }) });
       return result;
     },
     isLoading: mutation.isPending,
@@ -214,12 +215,7 @@ export function useGenerateLessonContent() {
       });
 
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && k.includes('listJobs')
-          ),
-      });
+      await invalidateJobQueries(queryClient);
       return result;
     },
     isLoading: mutation.isPending,
@@ -239,12 +235,7 @@ export function useGenerateAllLessons() {
       const request = create(GenerateAllLessonsRequestSchema, { courseId });
 
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && k.includes('listJobs')
-          ),
-      });
+      await invalidateJobQueries(queryClient);
       return result;
     },
     isLoading: mutation.isPending,
@@ -274,12 +265,10 @@ export function useRegenerateComponent() {
       });
 
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && (k.includes('listJobs') || k.includes('getGeneratedLesson'))
-          ),
-      });
+      await Promise.all([
+        invalidateJobQueries(queryClient),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getGeneratedLesson, cardinality: undefined }) }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,
@@ -359,12 +348,7 @@ export function useCancelJob() {
     mutate: async (jobId: string) => {
       const request = create(CancelJobRequestSchema, { jobId });
       const result = await mutation.mutateAsync(request);
-      await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey.some((k) =>
-            typeof k === 'string' && (k.includes('listJobs') || k.includes('getJob'))
-          ),
-      });
+      await invalidateJobQueries(queryClient);
       return result;
     },
     isLoading: mutation.isPending,
@@ -410,16 +394,25 @@ export function useListGeneratedLessons(courseId: string | undefined) {
 
 /**
  * Hook to get active generation jobs (queued or processing).
- * Polls every 30 seconds to check for active jobs.
- * Useful for showing "generation in progress" banners on dashboard.
+ * Uses adaptive polling: 3 seconds when jobs are active, 30 seconds when idle.
+ * Useful for showing "generation in progress" in notification panel.
  */
 export function useActiveGenerationJobs() {
   // Fetch jobs that are queued or processing
   // We query without a specific status filter and filter client-side
   // because the backend may not support querying multiple statuses at once
   const query = useQuery(listJobs, {}, {
-    // Poll every 30 seconds to stay updated
-    refetchInterval: 30000,
+    // Adaptive polling: faster when jobs are active, slower when idle
+    refetchInterval: (data) => {
+      const jobs = data.state.data?.jobs ?? [];
+      const hasActive = jobs.some(
+        (job: GenerationJob) =>
+          job.status === GenerationJobStatus.QUEUED ||
+          job.status === GenerationJobStatus.PROCESSING
+      );
+      // Poll every 3 seconds when active, every 30 seconds when idle
+      return hasActive ? 3000 : 30000;
+    },
   });
 
   const activeJobs = (query.data?.jobs ?? []).filter(
