@@ -21,6 +21,22 @@ spec:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
         effect: NoSchedule
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - 169.254.20.10
+          - 10.96.0.10
+        searches:
+          - mirai.svc.cluster.local
+          - svc.cluster.local
+          - cluster.local
+        options:
+          - name: ndots
+            value: "2"
+          - name: timeout
+            value: "3"
+          - name: attempts
+            value: "5"
       containers:
       - name: migrate
         image: ghcr.io/sogos-llc/mirai-app/mirai-backend:latest
