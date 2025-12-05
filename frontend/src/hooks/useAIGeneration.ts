@@ -7,7 +7,6 @@ import {
   approveCourseOutline,
   rejectCourseOutline,
   updateCourseOutline,
-  generateLessonContent,
   generateAllLessons,
   regenerateComponent,
   getJob,
@@ -36,7 +35,6 @@ import {
   ApproveCourseOutlineRequestSchema,
   RejectCourseOutlineRequestSchema,
   UpdateCourseOutlineRequestSchema,
-  GenerateLessonContentRequestSchema,
   GenerateAllLessonsRequestSchema,
   RegenerateComponentRequestSchema,
   CancelJobRequestSchema,
@@ -201,29 +199,6 @@ export function useUpdateCourseOutline() {
 }
 
 /**
- * Hook to generate lesson content.
- */
-export function useGenerateLessonContent() {
-  const queryClient = useQueryClient();
-  const mutation = useMutation(generateLessonContent);
-
-  return {
-    mutate: async (courseId: string, outlineLessonId: string) => {
-      const request = create(GenerateLessonContentRequestSchema, {
-        courseId,
-        outlineLessonId,
-      });
-
-      const result = await mutation.mutateAsync(request);
-      await invalidateJobQueries(queryClient);
-      return result;
-    },
-    isLoading: mutation.isPending,
-    error: mutation.error,
-  };
-}
-
-/**
  * Hook to generate all lessons for a course.
  */
 export function useGenerateAllLessons() {
@@ -309,28 +284,6 @@ export function useGetJob(
 
   return {
     data: query.data?.job,
-    isLoading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
-  };
-}
-
-/**
- * Hook to list generation jobs.
- */
-export function useListJobs(filters?: {
-  type?: GenerationJobType;
-  status?: GenerationJobStatus;
-  courseId?: string;
-}) {
-  const query = useQuery(listJobs, {
-    type: filters?.type,
-    status: filters?.status,
-    courseId: filters?.courseId,
-  });
-
-  return {
-    data: query.data?.jobs ?? [],
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,

@@ -580,6 +580,10 @@ func generationJobToProto(job *entity.GenerationJob) *v1.GenerationJob {
 		s := job.SubmissionID.String()
 		proto.SubmissionId = &s
 	}
+	if job.ParentJobID != nil {
+		s := job.ParentJobID.String()
+		proto.ParentJobId = &s
+	}
 	if job.StartedAt != nil {
 		proto.StartedAt = timestamppb.New(*job.StartedAt)
 	}

@@ -14,7 +14,6 @@ const JOB_TYPE_LABELS: Record<number, string> = {
   [GenerationJobType.UNSPECIFIED]: 'Generation',
   [GenerationJobType.COURSE_OUTLINE]: 'Course Outline',
   [GenerationJobType.FULL_COURSE]: 'Full Course',
-  [GenerationJobType.LESSON_CONTENT]: 'Lesson Content',
   [GenerationJobType.COMPONENT_REGEN]: 'Component',
   [GenerationJobType.SME_INGESTION]: 'SME Ingestion',
 };
