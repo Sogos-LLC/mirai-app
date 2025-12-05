@@ -19,6 +19,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/stripe"
 	"github.com/sogos/mirai-backend/internal/infrastructure/logging"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/postgres"
+	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 	"github.com/sogos/mirai-backend/pkg/httputil"
@@ -163,6 +164,26 @@ func main() {
 	// WARNING: Only use for non-tenant-specific data
 	globalCache := cache.NewGlobalCache(baseCache)
 
+	// Initialize Redis pub/sub for real-time notifications
+	var notificationPubSub pubsub.Publisher
+	var notificationSubscriber pubsub.Subscriber
+	if cfg.RedisURL != "" {
+		redisPubSub, err := pubsub.NewRedisPubSub(pubsub.RedisConfig{URL: cfg.RedisURL}, logger)
+		if err != nil {
+			logger.Warn("failed to initialize Redis pub/sub, real-time notifications disabled", "error", err)
+			notificationPubSub = pubsub.NewNoOpPubSub()
+			notificationSubscriber = pubsub.NewNoOpPubSub()
+		} else {
+			notificationPubSub = redisPubSub
+			notificationSubscriber = redisPubSub
+			logger.Info("Redis pub/sub initialized for real-time notifications")
+		}
+	} else {
+		notificationPubSub = pubsub.NewNoOpPubSub()
+		notificationSubscriber = pubsub.NewNoOpPubSub()
+		logger.Warn("Redis URL not configured, real-time notifications disabled")
+	}
+
 	// Initialize encryptor for API key encryption (optional for development)
 	var encryptor *crypto.Encryptor
 	if cfg.EncryptionKey != "" {
@@ -187,7 +208,7 @@ func main() {
 	courseService := service.NewCourseService(courseRepo, folderRepo, userRepo, tenantStorage, tenantCache, logger)
 
 	// Notification service (created first for dependency injection)
-	notificationService := service.NewNotificationService(userRepo, notificationRepo, kratosClient, emailClient, cfg.FrontendURL, logger)
+	notificationService := service.NewNotificationService(userRepo, notificationRepo, kratosClient, emailClient, notificationPubSub, cfg.FrontendURL, logger)
 
 	// SME and Target Audience services
 	// Note: enhancer is nil initially, will be set when AI services are available
@@ -258,27 +279,28 @@ func main() {
 
 	// Create Connect server mux
 	mux := connectserver.NewServeMux(connectserver.ServerConfig{
-		AuthService:           authService,
-		UserService:           userService,
-		CompanyService:        companyService,
-		TeamService:           teamService,
-		BillingService:        billingService,
-		InvitationService:     invitationService,
-		CourseService:         courseService,
-		SMEService:            smeService,
-		TargetAudienceService: targetAudienceService,
-		TenantSettingsService: tenantSettingsService,
-		NotificationService:   notificationService,
-		AIGenerationService:   aiGenerationService,
-		PendingRegRepo:        pendingRegRepo,
-		UserRepo:              userRepo,    // For tenant context in auth interceptor
-		Cache:                 globalCache, // For caching user tenant mappings (not tenant-scoped)
-		Identity:              kratosClient,
-		Payments:              stripeClient,
-		WorkerClient:          workerClient, // For enqueueing background tasks
-		Logger:                logger,
-		AllowedOrigin:         cfg.AllowedOrigin,
-		FrontendURL:           cfg.FrontendURL,
+		AuthService:            authService,
+		UserService:            userService,
+		CompanyService:         companyService,
+		TeamService:            teamService,
+		BillingService:         billingService,
+		InvitationService:      invitationService,
+		CourseService:          courseService,
+		SMEService:             smeService,
+		TargetAudienceService:  targetAudienceService,
+		TenantSettingsService:  tenantSettingsService,
+		NotificationService:    notificationService,
+		AIGenerationService:    aiGenerationService,
+		PendingRegRepo:         pendingRegRepo,
+		UserRepo:               userRepo,               // For tenant context in auth interceptor
+		Cache:                  globalCache,            // For caching user tenant mappings (not tenant-scoped)
+		NotificationSubscriber: notificationSubscriber, // For real-time notification streaming
+		Identity:               kratosClient,
+		Payments:               stripeClient,
+		WorkerClient:           workerClient, // For enqueueing background tasks
+		Logger:                 logger,
+		AllowedOrigin:          cfg.AllowedOrigin,
+		FrontendURL:            cfg.FrontendURL,
 	})
 
 	// Wrap with CORS middleware

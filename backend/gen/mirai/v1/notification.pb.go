@@ -143,6 +143,59 @@ func (NotificationPriority) EnumDescriptor() ([]byte, []int) {
 	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{1}
 }
 
+// NotificationEventType for real-time streaming events.
+type NotificationEventType int32
+
+const (
+	NotificationEventType_NOTIFICATION_EVENT_TYPE_UNSPECIFIED NotificationEventType = 0
+	NotificationEventType_NOTIFICATION_EVENT_TYPE_CREATED     NotificationEventType = 1 // New notification created
+	NotificationEventType_NOTIFICATION_EVENT_TYPE_READ        NotificationEventType = 2 // Notification marked as read
+	NotificationEventType_NOTIFICATION_EVENT_TYPE_DELETED     NotificationEventType = 3 // Notification deleted
+)
+
+// Enum value maps for NotificationEventType.
+var (
+	NotificationEventType_name = map[int32]string{
+		0: "NOTIFICATION_EVENT_TYPE_UNSPECIFIED",
+		1: "NOTIFICATION_EVENT_TYPE_CREATED",
+		2: "NOTIFICATION_EVENT_TYPE_READ",
+		3: "NOTIFICATION_EVENT_TYPE_DELETED",
+	}
+	NotificationEventType_value = map[string]int32{
+		"NOTIFICATION_EVENT_TYPE_UNSPECIFIED": 0,
+		"NOTIFICATION_EVENT_TYPE_CREATED":     1,
+		"NOTIFICATION_EVENT_TYPE_READ":        2,
+		"NOTIFICATION_EVENT_TYPE_DELETED":     3,
+	}
+)
+
+func (x NotificationEventType) Enum() *NotificationEventType {
+	p := new(NotificationEventType)
+	*p = x
+	return p
+}
+
+func (x NotificationEventType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NotificationEventType) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_notification_proto_enumTypes[2].Descriptor()
+}
+
+func (NotificationEventType) Type() protoreflect.EnumType {
+	return &file_mirai_v1_notification_proto_enumTypes[2]
+}
+
+func (x NotificationEventType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NotificationEventType.Descriptor instead.
+func (NotificationEventType) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{2}
+}
+
 // Notification represents a user notification.
 type Notification struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
@@ -310,6 +363,98 @@ func (x *Notification) GetReadAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// SubscribeNotificationsRequest initiates a streaming subscription.
+// User ID is derived from auth context.
+type SubscribeNotificationsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubscribeNotificationsRequest) Reset() {
+	*x = SubscribeNotificationsRequest{}
+	mi := &file_mirai_v1_notification_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeNotificationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeNotificationsRequest) ProtoMessage() {}
+
+func (x *SubscribeNotificationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_notification_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeNotificationsRequest.ProtoReflect.Descriptor instead.
+func (*SubscribeNotificationsRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{1}
+}
+
+// SubscribeNotificationsResponse represents a real-time notification event.
+// Each message in the stream contains an event type and the notification payload.
+type SubscribeNotificationsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventType     NotificationEventType  `protobuf:"varint,1,opt,name=event_type,json=eventType,proto3,enum=mirai.v1.NotificationEventType" json:"event_type,omitempty"`
+	Notification  *Notification          `protobuf:"bytes,2,opt,name=notification,proto3" json:"notification,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubscribeNotificationsResponse) Reset() {
+	*x = SubscribeNotificationsResponse{}
+	mi := &file_mirai_v1_notification_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeNotificationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeNotificationsResponse) ProtoMessage() {}
+
+func (x *SubscribeNotificationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_notification_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeNotificationsResponse.ProtoReflect.Descriptor instead.
+func (*SubscribeNotificationsResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SubscribeNotificationsResponse) GetEventType() NotificationEventType {
+	if x != nil {
+		return x.EventType
+	}
+	return NotificationEventType_NOTIFICATION_EVENT_TYPE_UNSPECIFIED
+}
+
+func (x *SubscribeNotificationsResponse) GetNotification() *Notification {
+	if x != nil {
+		return x.Notification
+	}
+	return nil
+}
+
 // ListNotificationsRequest contains filters.
 type ListNotificationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -323,7 +468,7 @@ type ListNotificationsRequest struct {
 
 func (x *ListNotificationsRequest) Reset() {
 	*x = ListNotificationsRequest{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[1]
+	mi := &file_mirai_v1_notification_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -335,7 +480,7 @@ func (x *ListNotificationsRequest) String() string {
 func (*ListNotificationsRequest) ProtoMessage() {}
 
 func (x *ListNotificationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[1]
+	mi := &file_mirai_v1_notification_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -348,7 +493,7 @@ func (x *ListNotificationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListNotificationsRequest.ProtoReflect.Descriptor instead.
 func (*ListNotificationsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{1}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListNotificationsRequest) GetUnreadOnly() bool {
@@ -391,7 +536,7 @@ type ListNotificationsResponse struct {
 
 func (x *ListNotificationsResponse) Reset() {
 	*x = ListNotificationsResponse{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[2]
+	mi := &file_mirai_v1_notification_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -403,7 +548,7 @@ func (x *ListNotificationsResponse) String() string {
 func (*ListNotificationsResponse) ProtoMessage() {}
 
 func (x *ListNotificationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[2]
+	mi := &file_mirai_v1_notification_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -416,7 +561,7 @@ func (x *ListNotificationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListNotificationsResponse.ProtoReflect.Descriptor instead.
 func (*ListNotificationsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{2}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListNotificationsResponse) GetNotifications() []*Notification {
@@ -449,7 +594,7 @@ type GetUnreadCountRequest struct {
 
 func (x *GetUnreadCountRequest) Reset() {
 	*x = GetUnreadCountRequest{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[3]
+	mi := &file_mirai_v1_notification_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -461,7 +606,7 @@ func (x *GetUnreadCountRequest) String() string {
 func (*GetUnreadCountRequest) ProtoMessage() {}
 
 func (x *GetUnreadCountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[3]
+	mi := &file_mirai_v1_notification_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -474,7 +619,7 @@ func (x *GetUnreadCountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUnreadCountRequest.ProtoReflect.Descriptor instead.
 func (*GetUnreadCountRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{3}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{5}
 }
 
 // GetUnreadCountResponse contains the count.
@@ -487,7 +632,7 @@ type GetUnreadCountResponse struct {
 
 func (x *GetUnreadCountResponse) Reset() {
 	*x = GetUnreadCountResponse{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[4]
+	mi := &file_mirai_v1_notification_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -499,7 +644,7 @@ func (x *GetUnreadCountResponse) String() string {
 func (*GetUnreadCountResponse) ProtoMessage() {}
 
 func (x *GetUnreadCountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[4]
+	mi := &file_mirai_v1_notification_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -512,7 +657,7 @@ func (x *GetUnreadCountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUnreadCountResponse.ProtoReflect.Descriptor instead.
 func (*GetUnreadCountResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{4}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetUnreadCountResponse) GetCount() int32 {
@@ -532,7 +677,7 @@ type MarkAsReadRequest struct {
 
 func (x *MarkAsReadRequest) Reset() {
 	*x = MarkAsReadRequest{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[5]
+	mi := &file_mirai_v1_notification_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -544,7 +689,7 @@ func (x *MarkAsReadRequest) String() string {
 func (*MarkAsReadRequest) ProtoMessage() {}
 
 func (x *MarkAsReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[5]
+	mi := &file_mirai_v1_notification_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -557,7 +702,7 @@ func (x *MarkAsReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkAsReadRequest.ProtoReflect.Descriptor instead.
 func (*MarkAsReadRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{5}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *MarkAsReadRequest) GetNotificationIds() []string {
@@ -577,7 +722,7 @@ type MarkAsReadResponse struct {
 
 func (x *MarkAsReadResponse) Reset() {
 	*x = MarkAsReadResponse{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[6]
+	mi := &file_mirai_v1_notification_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -589,7 +734,7 @@ func (x *MarkAsReadResponse) String() string {
 func (*MarkAsReadResponse) ProtoMessage() {}
 
 func (x *MarkAsReadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[6]
+	mi := &file_mirai_v1_notification_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -602,7 +747,7 @@ func (x *MarkAsReadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkAsReadResponse.ProtoReflect.Descriptor instead.
 func (*MarkAsReadResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{6}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *MarkAsReadResponse) GetMarkedCount() int32 {
@@ -621,7 +766,7 @@ type MarkAllAsReadRequest struct {
 
 func (x *MarkAllAsReadRequest) Reset() {
 	*x = MarkAllAsReadRequest{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[7]
+	mi := &file_mirai_v1_notification_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -633,7 +778,7 @@ func (x *MarkAllAsReadRequest) String() string {
 func (*MarkAllAsReadRequest) ProtoMessage() {}
 
 func (x *MarkAllAsReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[7]
+	mi := &file_mirai_v1_notification_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -646,7 +791,7 @@ func (x *MarkAllAsReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkAllAsReadRequest.ProtoReflect.Descriptor instead.
 func (*MarkAllAsReadRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{7}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{9}
 }
 
 // MarkAllAsReadResponse confirms the operation.
@@ -659,7 +804,7 @@ type MarkAllAsReadResponse struct {
 
 func (x *MarkAllAsReadResponse) Reset() {
 	*x = MarkAllAsReadResponse{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[8]
+	mi := &file_mirai_v1_notification_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +816,7 @@ func (x *MarkAllAsReadResponse) String() string {
 func (*MarkAllAsReadResponse) ProtoMessage() {}
 
 func (x *MarkAllAsReadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[8]
+	mi := &file_mirai_v1_notification_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +829,7 @@ func (x *MarkAllAsReadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkAllAsReadResponse.ProtoReflect.Descriptor instead.
 func (*MarkAllAsReadResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{8}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *MarkAllAsReadResponse) GetMarkedCount() int32 {
@@ -704,7 +849,7 @@ type DeleteNotificationRequest struct {
 
 func (x *DeleteNotificationRequest) Reset() {
 	*x = DeleteNotificationRequest{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[9]
+	mi := &file_mirai_v1_notification_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -716,7 +861,7 @@ func (x *DeleteNotificationRequest) String() string {
 func (*DeleteNotificationRequest) ProtoMessage() {}
 
 func (x *DeleteNotificationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[9]
+	mi := &file_mirai_v1_notification_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -729,7 +874,7 @@ func (x *DeleteNotificationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteNotificationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteNotificationRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{9}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteNotificationRequest) GetNotificationId() string {
@@ -748,7 +893,7 @@ type DeleteNotificationResponse struct {
 
 func (x *DeleteNotificationResponse) Reset() {
 	*x = DeleteNotificationResponse{}
-	mi := &file_mirai_v1_notification_proto_msgTypes[10]
+	mi := &file_mirai_v1_notification_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -760,7 +905,7 @@ func (x *DeleteNotificationResponse) String() string {
 func (*DeleteNotificationResponse) ProtoMessage() {}
 
 func (x *DeleteNotificationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_notification_proto_msgTypes[10]
+	mi := &file_mirai_v1_notification_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -773,7 +918,7 @@ func (x *DeleteNotificationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteNotificationResponse.ProtoReflect.Descriptor instead.
 func (*DeleteNotificationResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{10}
+	return file_mirai_v1_notification_proto_rawDescGZIP(), []int{12}
 }
 
 var File_mirai_v1_notification_proto protoreflect.FileDescriptor
@@ -810,7 +955,12 @@ const file_mirai_v1_notification_proto_rawDesc = "" +
 	"\a_sme_idB\r\n" +
 	"\v_action_urlB\n" +
 	"\n" +
-	"\b_read_at\"\xcc\x01\n" +
+	"\b_read_at\"\x1f\n" +
+	"\x1dSubscribeNotificationsRequest\"\x9c\x01\n" +
+	"\x1eSubscribeNotificationsResponse\x12>\n" +
+	"\n" +
+	"event_type\x18\x01 \x01(\x0e2\x1f.mirai.v1.NotificationEventTypeR\teventType\x12:\n" +
+	"\fnotification\x18\x02 \x01(\v2\x16.mirai.v1.NotificationR\fnotification\"\xcc\x01\n" +
 	"\x18ListNotificationsRequest\x12$\n" +
 	"\vunread_only\x18\x01 \x01(\bH\x00R\n" +
 	"unreadOnly\x88\x01\x01\x123\n" +
@@ -854,14 +1004,20 @@ const file_mirai_v1_notification_proto_rawDesc = "" +
 	"!NOTIFICATION_PRIORITY_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19NOTIFICATION_PRIORITY_LOW\x10\x01\x12 \n" +
 	"\x1cNOTIFICATION_PRIORITY_NORMAL\x10\x02\x12\x1e\n" +
-	"\x1aNOTIFICATION_PRIORITY_HIGH\x10\x032\xc4\x03\n" +
+	"\x1aNOTIFICATION_PRIORITY_HIGH\x10\x03*\xac\x01\n" +
+	"\x15NotificationEventType\x12'\n" +
+	"#NOTIFICATION_EVENT_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fNOTIFICATION_EVENT_TYPE_CREATED\x10\x01\x12 \n" +
+	"\x1cNOTIFICATION_EVENT_TYPE_READ\x10\x02\x12#\n" +
+	"\x1fNOTIFICATION_EVENT_TYPE_DELETED\x10\x032\xb3\x04\n" +
 	"\x13NotificationService\x12\\\n" +
 	"\x11ListNotifications\x12\".mirai.v1.ListNotificationsRequest\x1a#.mirai.v1.ListNotificationsResponse\x12S\n" +
 	"\x0eGetUnreadCount\x12\x1f.mirai.v1.GetUnreadCountRequest\x1a .mirai.v1.GetUnreadCountResponse\x12G\n" +
 	"\n" +
 	"MarkAsRead\x12\x1b.mirai.v1.MarkAsReadRequest\x1a\x1c.mirai.v1.MarkAsReadResponse\x12P\n" +
 	"\rMarkAllAsRead\x12\x1e.mirai.v1.MarkAllAsReadRequest\x1a\x1f.mirai.v1.MarkAllAsReadResponse\x12_\n" +
-	"\x12DeleteNotification\x12#.mirai.v1.DeleteNotificationRequest\x1a$.mirai.v1.DeleteNotificationResponseB\x97\x01\n" +
+	"\x12DeleteNotification\x12#.mirai.v1.DeleteNotificationRequest\x1a$.mirai.v1.DeleteNotificationResponse\x12m\n" +
+	"\x16SubscribeNotifications\x12'.mirai.v1.SubscribeNotificationsRequest\x1a(.mirai.v1.SubscribeNotificationsResponse0\x01B\x97\x01\n" +
 	"\fcom.mirai.v1B\x11NotificationProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -876,46 +1032,53 @@ func file_mirai_v1_notification_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_notification_proto_rawDescData
 }
 
-var file_mirai_v1_notification_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_mirai_v1_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_mirai_v1_notification_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_mirai_v1_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_mirai_v1_notification_proto_goTypes = []any{
-	(NotificationType)(0),              // 0: mirai.v1.NotificationType
-	(NotificationPriority)(0),          // 1: mirai.v1.NotificationPriority
-	(*Notification)(nil),               // 2: mirai.v1.Notification
-	(*ListNotificationsRequest)(nil),   // 3: mirai.v1.ListNotificationsRequest
-	(*ListNotificationsResponse)(nil),  // 4: mirai.v1.ListNotificationsResponse
-	(*GetUnreadCountRequest)(nil),      // 5: mirai.v1.GetUnreadCountRequest
-	(*GetUnreadCountResponse)(nil),     // 6: mirai.v1.GetUnreadCountResponse
-	(*MarkAsReadRequest)(nil),          // 7: mirai.v1.MarkAsReadRequest
-	(*MarkAsReadResponse)(nil),         // 8: mirai.v1.MarkAsReadResponse
-	(*MarkAllAsReadRequest)(nil),       // 9: mirai.v1.MarkAllAsReadRequest
-	(*MarkAllAsReadResponse)(nil),      // 10: mirai.v1.MarkAllAsReadResponse
-	(*DeleteNotificationRequest)(nil),  // 11: mirai.v1.DeleteNotificationRequest
-	(*DeleteNotificationResponse)(nil), // 12: mirai.v1.DeleteNotificationResponse
-	(*timestamppb.Timestamp)(nil),      // 13: google.protobuf.Timestamp
+	(NotificationType)(0),                  // 0: mirai.v1.NotificationType
+	(NotificationPriority)(0),              // 1: mirai.v1.NotificationPriority
+	(NotificationEventType)(0),             // 2: mirai.v1.NotificationEventType
+	(*Notification)(nil),                   // 3: mirai.v1.Notification
+	(*SubscribeNotificationsRequest)(nil),  // 4: mirai.v1.SubscribeNotificationsRequest
+	(*SubscribeNotificationsResponse)(nil), // 5: mirai.v1.SubscribeNotificationsResponse
+	(*ListNotificationsRequest)(nil),       // 6: mirai.v1.ListNotificationsRequest
+	(*ListNotificationsResponse)(nil),      // 7: mirai.v1.ListNotificationsResponse
+	(*GetUnreadCountRequest)(nil),          // 8: mirai.v1.GetUnreadCountRequest
+	(*GetUnreadCountResponse)(nil),         // 9: mirai.v1.GetUnreadCountResponse
+	(*MarkAsReadRequest)(nil),              // 10: mirai.v1.MarkAsReadRequest
+	(*MarkAsReadResponse)(nil),             // 11: mirai.v1.MarkAsReadResponse
+	(*MarkAllAsReadRequest)(nil),           // 12: mirai.v1.MarkAllAsReadRequest
+	(*MarkAllAsReadResponse)(nil),          // 13: mirai.v1.MarkAllAsReadResponse
+	(*DeleteNotificationRequest)(nil),      // 14: mirai.v1.DeleteNotificationRequest
+	(*DeleteNotificationResponse)(nil),     // 15: mirai.v1.DeleteNotificationResponse
+	(*timestamppb.Timestamp)(nil),          // 16: google.protobuf.Timestamp
 }
 var file_mirai_v1_notification_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.Notification.type:type_name -> mirai.v1.NotificationType
 	1,  // 1: mirai.v1.Notification.priority:type_name -> mirai.v1.NotificationPriority
-	13, // 2: mirai.v1.Notification.created_at:type_name -> google.protobuf.Timestamp
-	13, // 3: mirai.v1.Notification.read_at:type_name -> google.protobuf.Timestamp
-	0,  // 4: mirai.v1.ListNotificationsRequest.type:type_name -> mirai.v1.NotificationType
-	2,  // 5: mirai.v1.ListNotificationsResponse.notifications:type_name -> mirai.v1.Notification
-	3,  // 6: mirai.v1.NotificationService.ListNotifications:input_type -> mirai.v1.ListNotificationsRequest
-	5,  // 7: mirai.v1.NotificationService.GetUnreadCount:input_type -> mirai.v1.GetUnreadCountRequest
-	7,  // 8: mirai.v1.NotificationService.MarkAsRead:input_type -> mirai.v1.MarkAsReadRequest
-	9,  // 9: mirai.v1.NotificationService.MarkAllAsRead:input_type -> mirai.v1.MarkAllAsReadRequest
-	11, // 10: mirai.v1.NotificationService.DeleteNotification:input_type -> mirai.v1.DeleteNotificationRequest
-	4,  // 11: mirai.v1.NotificationService.ListNotifications:output_type -> mirai.v1.ListNotificationsResponse
-	6,  // 12: mirai.v1.NotificationService.GetUnreadCount:output_type -> mirai.v1.GetUnreadCountResponse
-	8,  // 13: mirai.v1.NotificationService.MarkAsRead:output_type -> mirai.v1.MarkAsReadResponse
-	10, // 14: mirai.v1.NotificationService.MarkAllAsRead:output_type -> mirai.v1.MarkAllAsReadResponse
-	12, // 15: mirai.v1.NotificationService.DeleteNotification:output_type -> mirai.v1.DeleteNotificationResponse
-	11, // [11:16] is the sub-list for method output_type
-	6,  // [6:11] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	16, // 2: mirai.v1.Notification.created_at:type_name -> google.protobuf.Timestamp
+	16, // 3: mirai.v1.Notification.read_at:type_name -> google.protobuf.Timestamp
+	2,  // 4: mirai.v1.SubscribeNotificationsResponse.event_type:type_name -> mirai.v1.NotificationEventType
+	3,  // 5: mirai.v1.SubscribeNotificationsResponse.notification:type_name -> mirai.v1.Notification
+	0,  // 6: mirai.v1.ListNotificationsRequest.type:type_name -> mirai.v1.NotificationType
+	3,  // 7: mirai.v1.ListNotificationsResponse.notifications:type_name -> mirai.v1.Notification
+	6,  // 8: mirai.v1.NotificationService.ListNotifications:input_type -> mirai.v1.ListNotificationsRequest
+	8,  // 9: mirai.v1.NotificationService.GetUnreadCount:input_type -> mirai.v1.GetUnreadCountRequest
+	10, // 10: mirai.v1.NotificationService.MarkAsRead:input_type -> mirai.v1.MarkAsReadRequest
+	12, // 11: mirai.v1.NotificationService.MarkAllAsRead:input_type -> mirai.v1.MarkAllAsReadRequest
+	14, // 12: mirai.v1.NotificationService.DeleteNotification:input_type -> mirai.v1.DeleteNotificationRequest
+	4,  // 13: mirai.v1.NotificationService.SubscribeNotifications:input_type -> mirai.v1.SubscribeNotificationsRequest
+	7,  // 14: mirai.v1.NotificationService.ListNotifications:output_type -> mirai.v1.ListNotificationsResponse
+	9,  // 15: mirai.v1.NotificationService.GetUnreadCount:output_type -> mirai.v1.GetUnreadCountResponse
+	11, // 16: mirai.v1.NotificationService.MarkAsRead:output_type -> mirai.v1.MarkAsReadResponse
+	13, // 17: mirai.v1.NotificationService.MarkAllAsRead:output_type -> mirai.v1.MarkAllAsReadResponse
+	15, // 18: mirai.v1.NotificationService.DeleteNotification:output_type -> mirai.v1.DeleteNotificationResponse
+	5,  // 19: mirai.v1.NotificationService.SubscribeNotifications:output_type -> mirai.v1.SubscribeNotificationsResponse
+	14, // [14:20] is the sub-list for method output_type
+	8,  // [8:14] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_notification_proto_init() }
@@ -924,15 +1087,15 @@ func file_mirai_v1_notification_proto_init() {
 		return
 	}
 	file_mirai_v1_notification_proto_msgTypes[0].OneofWrappers = []any{}
-	file_mirai_v1_notification_proto_msgTypes[1].OneofWrappers = []any{}
-	file_mirai_v1_notification_proto_msgTypes[2].OneofWrappers = []any{}
+	file_mirai_v1_notification_proto_msgTypes[3].OneofWrappers = []any{}
+	file_mirai_v1_notification_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_notification_proto_rawDesc), len(file_mirai_v1_notification_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   11,
+			NumEnums:      3,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

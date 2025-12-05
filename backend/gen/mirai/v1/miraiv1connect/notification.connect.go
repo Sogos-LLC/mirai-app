@@ -48,6 +48,9 @@ const (
 	// NotificationServiceDeleteNotificationProcedure is the fully-qualified name of the
 	// NotificationService's DeleteNotification RPC.
 	NotificationServiceDeleteNotificationProcedure = "/mirai.v1.NotificationService/DeleteNotification"
+	// NotificationServiceSubscribeNotificationsProcedure is the fully-qualified name of the
+	// NotificationService's SubscribeNotifications RPC.
+	NotificationServiceSubscribeNotificationsProcedure = "/mirai.v1.NotificationService/SubscribeNotifications"
 )
 
 // NotificationServiceClient is a client for the mirai.v1.NotificationService service.
@@ -62,6 +65,9 @@ type NotificationServiceClient interface {
 	MarkAllAsRead(context.Context, *connect.Request[v1.MarkAllAsReadRequest]) (*connect.Response[v1.MarkAllAsReadResponse], error)
 	// DeleteNotification deletes a notification.
 	DeleteNotification(context.Context, *connect.Request[v1.DeleteNotificationRequest]) (*connect.Response[v1.DeleteNotificationResponse], error)
+	// SubscribeNotifications opens a server-streaming connection for real-time notification events.
+	// Events are pushed when notifications are created, read, or deleted.
+	SubscribeNotifications(context.Context, *connect.Request[v1.SubscribeNotificationsRequest]) (*connect.ServerStreamForClient[v1.SubscribeNotificationsResponse], error)
 }
 
 // NewNotificationServiceClient constructs a client for the mirai.v1.NotificationService service. By
@@ -105,16 +111,23 @@ func NewNotificationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(notificationServiceMethods.ByName("DeleteNotification")),
 			connect.WithClientOptions(opts...),
 		),
+		subscribeNotifications: connect.NewClient[v1.SubscribeNotificationsRequest, v1.SubscribeNotificationsResponse](
+			httpClient,
+			baseURL+NotificationServiceSubscribeNotificationsProcedure,
+			connect.WithSchema(notificationServiceMethods.ByName("SubscribeNotifications")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // notificationServiceClient implements NotificationServiceClient.
 type notificationServiceClient struct {
-	listNotifications  *connect.Client[v1.ListNotificationsRequest, v1.ListNotificationsResponse]
-	getUnreadCount     *connect.Client[v1.GetUnreadCountRequest, v1.GetUnreadCountResponse]
-	markAsRead         *connect.Client[v1.MarkAsReadRequest, v1.MarkAsReadResponse]
-	markAllAsRead      *connect.Client[v1.MarkAllAsReadRequest, v1.MarkAllAsReadResponse]
-	deleteNotification *connect.Client[v1.DeleteNotificationRequest, v1.DeleteNotificationResponse]
+	listNotifications      *connect.Client[v1.ListNotificationsRequest, v1.ListNotificationsResponse]
+	getUnreadCount         *connect.Client[v1.GetUnreadCountRequest, v1.GetUnreadCountResponse]
+	markAsRead             *connect.Client[v1.MarkAsReadRequest, v1.MarkAsReadResponse]
+	markAllAsRead          *connect.Client[v1.MarkAllAsReadRequest, v1.MarkAllAsReadResponse]
+	deleteNotification     *connect.Client[v1.DeleteNotificationRequest, v1.DeleteNotificationResponse]
+	subscribeNotifications *connect.Client[v1.SubscribeNotificationsRequest, v1.SubscribeNotificationsResponse]
 }
 
 // ListNotifications calls mirai.v1.NotificationService.ListNotifications.
@@ -142,6 +155,11 @@ func (c *notificationServiceClient) DeleteNotification(ctx context.Context, req 
 	return c.deleteNotification.CallUnary(ctx, req)
 }
 
+// SubscribeNotifications calls mirai.v1.NotificationService.SubscribeNotifications.
+func (c *notificationServiceClient) SubscribeNotifications(ctx context.Context, req *connect.Request[v1.SubscribeNotificationsRequest]) (*connect.ServerStreamForClient[v1.SubscribeNotificationsResponse], error) {
+	return c.subscribeNotifications.CallServerStream(ctx, req)
+}
+
 // NotificationServiceHandler is an implementation of the mirai.v1.NotificationService service.
 type NotificationServiceHandler interface {
 	// ListNotifications returns notifications for the current user.
@@ -154,6 +172,9 @@ type NotificationServiceHandler interface {
 	MarkAllAsRead(context.Context, *connect.Request[v1.MarkAllAsReadRequest]) (*connect.Response[v1.MarkAllAsReadResponse], error)
 	// DeleteNotification deletes a notification.
 	DeleteNotification(context.Context, *connect.Request[v1.DeleteNotificationRequest]) (*connect.Response[v1.DeleteNotificationResponse], error)
+	// SubscribeNotifications opens a server-streaming connection for real-time notification events.
+	// Events are pushed when notifications are created, read, or deleted.
+	SubscribeNotifications(context.Context, *connect.Request[v1.SubscribeNotificationsRequest], *connect.ServerStream[v1.SubscribeNotificationsResponse]) error
 }
 
 // NewNotificationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -193,6 +214,12 @@ func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...conne
 		connect.WithSchema(notificationServiceMethods.ByName("DeleteNotification")),
 		connect.WithHandlerOptions(opts...),
 	)
+	notificationServiceSubscribeNotificationsHandler := connect.NewServerStreamHandler(
+		NotificationServiceSubscribeNotificationsProcedure,
+		svc.SubscribeNotifications,
+		connect.WithSchema(notificationServiceMethods.ByName("SubscribeNotifications")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.NotificationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case NotificationServiceListNotificationsProcedure:
@@ -205,6 +232,8 @@ func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...conne
 			notificationServiceMarkAllAsReadHandler.ServeHTTP(w, r)
 		case NotificationServiceDeleteNotificationProcedure:
 			notificationServiceDeleteNotificationHandler.ServeHTTP(w, r)
+		case NotificationServiceSubscribeNotificationsProcedure:
+			notificationServiceSubscribeNotificationsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -232,4 +261,8 @@ func (UnimplementedNotificationServiceHandler) MarkAllAsRead(context.Context, *c
 
 func (UnimplementedNotificationServiceHandler) DeleteNotification(context.Context, *connect.Request[v1.DeleteNotificationRequest]) (*connect.Response[v1.DeleteNotificationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.NotificationService.DeleteNotification is not implemented"))
+}
+
+func (UnimplementedNotificationServiceHandler) SubscribeNotifications(context.Context, *connect.Request[v1.SubscribeNotificationsRequest], *connect.ServerStream[v1.SubscribeNotificationsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.NotificationService.SubscribeNotifications is not implemented"))
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/infrastructure/cache"
+	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 )
 
@@ -27,15 +28,16 @@ type ServerConfig struct {
 	NotificationService   *service.NotificationService
 	AIGenerationService   *service.AIGenerationService
 
-	PendingRegRepo repository.PendingRegistrationRepository
-	UserRepo       repository.UserRepository // For tenant context in auth interceptor
-	Cache          cache.Cache               // For caching user tenant mappings
-	Identity       domainservice.IdentityProvider
-	Payments       domainservice.PaymentProvider
-	WorkerClient   *worker.Client // For enqueueing background tasks
-	Logger         domainservice.Logger
-	AllowedOrigin  string
-	FrontendURL    string
+	PendingRegRepo         repository.PendingRegistrationRepository
+	UserRepo               repository.UserRepository // For tenant context in auth interceptor
+	Cache                  cache.Cache               // For caching user tenant mappings
+	NotificationSubscriber pubsub.Subscriber         // For real-time notification streaming
+	Identity               domainservice.IdentityProvider
+	Payments               domainservice.PaymentProvider
+	WorkerClient           *worker.Client // For enqueueing background tasks
+	Logger                 domainservice.Logger
+	AllowedOrigin          string
+	FrontendURL            string
 }
 
 // NewServeMux creates a new HTTP mux with all Connect service handlers.
@@ -130,10 +132,10 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 		mux.Handle(path, handler)
 	}
 
-	// NotificationService - user notifications
-	if cfg.NotificationService != nil {
+	// NotificationService - user notifications with real-time streaming
+	if cfg.NotificationService != nil && cfg.NotificationSubscriber != nil {
 		path, handler = miraiv1connect.NewNotificationServiceHandler(
-			NewNotificationServiceServer(cfg.NotificationService),
+			NewNotificationServiceServer(cfg.NotificationService, cfg.NotificationSubscriber),
 			interceptors,
 		)
 		mux.Handle(path, handler)

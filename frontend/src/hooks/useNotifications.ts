@@ -8,6 +8,7 @@ import {
   markAllAsRead,
   deleteNotification,
 } from '@/gen/mirai/v1/notification-NotificationService_connectquery';
+// Note: Real-time updates are handled by useNotificationStream hook via Connect-RPC server streaming
 import {
   NotificationType,
   type Notification,
@@ -22,6 +23,7 @@ export type { Notification };
 
 /**
  * Hook to list notifications with optional filters.
+ * Real-time updates are handled by useNotificationStream.
  */
 export function useListNotifications(options?: {
   unreadOnly?: boolean;
@@ -32,9 +34,6 @@ export function useListNotifications(options?: {
     unreadOnly: options?.unreadOnly,
     limit: options?.limit ?? 50,
     cursor: options?.cursor,
-  }, {
-    // Poll at same interval as useUnreadCount to keep badge and list in sync
-    refetchInterval: 30000,
   });
 
   return {
@@ -49,37 +48,16 @@ export function useListNotifications(options?: {
 
 /**
  * Hook to get unread notification count.
+ * Real-time updates are handled by useNotificationStream.
  */
 export function useUnreadCount() {
-  const query = useQuery(getUnreadCount, {}, {
-    // Refetch every 30 seconds for real-time updates
-    refetchInterval: 30000,
-  });
+  const query = useQuery(getUnreadCount, {});
 
   return {
     count: query.data?.count ?? 0,
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
-  };
-}
-
-/**
- * Hook to refetch all notification data.
- * Use this when opening the notification panel for immediate updates.
- */
-export function useRefetchNotifications() {
-  const queryClient = useQueryClient();
-
-  return async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({ schema: listNotifications, cardinality: undefined }),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({ schema: getUnreadCount, cardinality: undefined }),
-      }),
-    ]);
   };
 }
 

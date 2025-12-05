@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/notification.proto.
  */
 export const file_mirai_v1_notification: GenFile = /*@__PURE__*/
-  fileDesc("ChttaXJhaS92MS9ub3RpZmljYXRpb24ucHJvdG8SCG1pcmFpLnYxIvoDCgxOb3RpZmljYXRpb24SCgoCaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEg8KB3VzZXJfaWQYAyABKAkSKAoEdHlwZRgEIAEoDjIaLm1pcmFpLnYxLk5vdGlmaWNhdGlvblR5cGUSMAoIcHJpb3JpdHkYBSABKA4yHi5taXJhaS52MS5Ob3RpZmljYXRpb25Qcmlvcml0eRINCgV0aXRsZRgGIAEoCRIPCgdtZXNzYWdlGAcgASgJEhYKCWNvdXJzZV9pZBgIIAEoCUgAiAEBEhMKBmpvYl9pZBgJIAEoCUgBiAEBEhQKB3Rhc2tfaWQYCiABKAlIAogBARITCgZzbWVfaWQYCyABKAlIA4gBARIXCgphY3Rpb25fdXJsGAwgASgJSASIAQESDAoEcmVhZBgNIAEoCBISCgplbWFpbF9zZW50GA4gASgIEi4KCmNyZWF0ZWRfYXQYDyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKB3JlYWRfYXQYECABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAWIAQFCDAoKX2NvdXJzZV9pZEIJCgdfam9iX2lkQgoKCF90YXNrX2lkQgkKB19zbWVfaWRCDQoLX2FjdGlvbl91cmxCCgoIX3JlYWRfYXQiqwEKGExpc3ROb3RpZmljYXRpb25zUmVxdWVzdBIYCgt1bnJlYWRfb25seRgBIAEoCEgAiAEBEi0KBHR5cGUYAiABKA4yGi5taXJhaS52MS5Ob3RpZmljYXRpb25UeXBlSAGIAQESDQoFbGltaXQYAyABKAUSEwoGY3Vyc29yGAQgASgJSAKIAQFCDgoMX3VucmVhZF9vbmx5QgcKBV90eXBlQgkKB19jdXJzb3IiiQEKGUxpc3ROb3RpZmljYXRpb25zUmVzcG9uc2USLQoNbm90aWZpY2F0aW9ucxgBIAMoCzIWLm1pcmFpLnYxLk5vdGlmaWNhdGlvbhIYCgtuZXh0X2N1cnNvchgCIAEoCUgAiAEBEhMKC3RvdGFsX2NvdW50GAMgASgFQg4KDF9uZXh0X2N1cnNvciIXChVHZXRVbnJlYWRDb3VudFJlcXVlc3QiJwoWR2V0VW5yZWFkQ291bnRSZXNwb25zZRINCgVjb3VudBgBIAEoBSItChFNYXJrQXNSZWFkUmVxdWVzdBIYChBub3RpZmljYXRpb25faWRzGAEgAygJIioKEk1hcmtBc1JlYWRSZXNwb25zZRIUCgxtYXJrZWRfY291bnQYASABKAUiFgoUTWFya0FsbEFzUmVhZFJlcXVlc3QiLQoVTWFya0FsbEFzUmVhZFJlc3BvbnNlEhQKDG1hcmtlZF9jb3VudBgBIAEoBSI0ChlEZWxldGVOb3RpZmljYXRpb25SZXF1ZXN0EhcKD25vdGlmaWNhdGlvbl9pZBgBIAEoCSIcChpEZWxldGVOb3RpZmljYXRpb25SZXNwb25zZSr0AgoQTm90aWZpY2F0aW9uVHlwZRIhCh1OT1RJRklDQVRJT05fVFlQRV9VTlNQRUNJRklFRBAAEiMKH05PVElGSUNBVElPTl9UWVBFX1RBU0tfQVNTSUdORUQQARIjCh9OT1RJRklDQVRJT05fVFlQRV9UQVNLX0RVRV9TT09OEAISKAokTk9USUZJQ0FUSU9OX1RZUEVfSU5HRVNUSU9OX0NPTVBMRVRFEAMSJgoiTk9USUZJQ0FUSU9OX1RZUEVfSU5HRVNUSU9OX0ZBSUxFRBAEEiMKH05PVElGSUNBVElPTl9UWVBFX09VVExJTkVfUkVBRFkQBRIpCiVOT1RJRklDQVRJT05fVFlQRV9HRU5FUkFUSU9OX0NPTVBMRVRFEAYSJwojTk9USUZJQ0FUSU9OX1RZUEVfR0VORVJBVElPTl9GQUlMRUQQBxIoCiROT1RJRklDQVRJT05fVFlQRV9BUFBST1ZBTF9SRVFVRVNURUQQCCqeAQoUTm90aWZpY2F0aW9uUHJpb3JpdHkSJQohTk9USUZJQ0FUSU9OX1BSSU9SSVRZX1VOU1BFQ0lGSUVEEAASHQoZTk9USUZJQ0FUSU9OX1BSSU9SSVRZX0xPVxABEiAKHE5PVElGSUNBVElPTl9QUklPUklUWV9OT1JNQUwQAhIeChpOT1RJRklDQVRJT05fUFJJT1JJVFlfSElHSBADMsQDChNOb3RpZmljYXRpb25TZXJ2aWNlElwKEUxpc3ROb3RpZmljYXRpb25zEiIubWlyYWkudjEuTGlzdE5vdGlmaWNhdGlvbnNSZXF1ZXN0GiMubWlyYWkudjEuTGlzdE5vdGlmaWNhdGlvbnNSZXNwb25zZRJTCg5HZXRVbnJlYWRDb3VudBIfLm1pcmFpLnYxLkdldFVucmVhZENvdW50UmVxdWVzdBogLm1pcmFpLnYxLkdldFVucmVhZENvdW50UmVzcG9uc2USRwoKTWFya0FzUmVhZBIbLm1pcmFpLnYxLk1hcmtBc1JlYWRSZXF1ZXN0GhwubWlyYWkudjEuTWFya0FzUmVhZFJlc3BvbnNlElAKDU1hcmtBbGxBc1JlYWQSHi5taXJhaS52MS5NYXJrQWxsQXNSZWFkUmVxdWVzdBofLm1pcmFpLnYxLk1hcmtBbGxBc1JlYWRSZXNwb25zZRJfChJEZWxldGVOb3RpZmljYXRpb24SIy5taXJhaS52MS5EZWxldGVOb3RpZmljYXRpb25SZXF1ZXN0GiQubWlyYWkudjEuRGVsZXRlTm90aWZpY2F0aW9uUmVzcG9uc2VClwEKDGNvbS5taXJhaS52MUIRTm90aWZpY2F0aW9uUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("ChttaXJhaS92MS9ub3RpZmljYXRpb24ucHJvdG8SCG1pcmFpLnYxIvoDCgxOb3RpZmljYXRpb24SCgoCaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEg8KB3VzZXJfaWQYAyABKAkSKAoEdHlwZRgEIAEoDjIaLm1pcmFpLnYxLk5vdGlmaWNhdGlvblR5cGUSMAoIcHJpb3JpdHkYBSABKA4yHi5taXJhaS52MS5Ob3RpZmljYXRpb25Qcmlvcml0eRINCgV0aXRsZRgGIAEoCRIPCgdtZXNzYWdlGAcgASgJEhYKCWNvdXJzZV9pZBgIIAEoCUgAiAEBEhMKBmpvYl9pZBgJIAEoCUgBiAEBEhQKB3Rhc2tfaWQYCiABKAlIAogBARITCgZzbWVfaWQYCyABKAlIA4gBARIXCgphY3Rpb25fdXJsGAwgASgJSASIAQESDAoEcmVhZBgNIAEoCBISCgplbWFpbF9zZW50GA4gASgIEi4KCmNyZWF0ZWRfYXQYDyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKB3JlYWRfYXQYECABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAWIAQFCDAoKX2NvdXJzZV9pZEIJCgdfam9iX2lkQgoKCF90YXNrX2lkQgkKB19zbWVfaWRCDQoLX2FjdGlvbl91cmxCCgoIX3JlYWRfYXQiHwodU3Vic2NyaWJlTm90aWZpY2F0aW9uc1JlcXVlc3QigwEKHlN1YnNjcmliZU5vdGlmaWNhdGlvbnNSZXNwb25zZRIzCgpldmVudF90eXBlGAEgASgOMh8ubWlyYWkudjEuTm90aWZpY2F0aW9uRXZlbnRUeXBlEiwKDG5vdGlmaWNhdGlvbhgCIAEoCzIWLm1pcmFpLnYxLk5vdGlmaWNhdGlvbiKrAQoYTGlzdE5vdGlmaWNhdGlvbnNSZXF1ZXN0EhgKC3VucmVhZF9vbmx5GAEgASgISACIAQESLQoEdHlwZRgCIAEoDjIaLm1pcmFpLnYxLk5vdGlmaWNhdGlvblR5cGVIAYgBARINCgVsaW1pdBgDIAEoBRITCgZjdXJzb3IYBCABKAlIAogBAUIOCgxfdW5yZWFkX29ubHlCBwoFX3R5cGVCCQoHX2N1cnNvciKJAQoZTGlzdE5vdGlmaWNhdGlvbnNSZXNwb25zZRItCg1ub3RpZmljYXRpb25zGAEgAygLMhYubWlyYWkudjEuTm90aWZpY2F0aW9uEhgKC25leHRfY3Vyc29yGAIgASgJSACIAQESEwoLdG90YWxfY291bnQYAyABKAVCDgoMX25leHRfY3Vyc29yIhcKFUdldFVucmVhZENvdW50UmVxdWVzdCInChZHZXRVbnJlYWRDb3VudFJlc3BvbnNlEg0KBWNvdW50GAEgASgFIi0KEU1hcmtBc1JlYWRSZXF1ZXN0EhgKEG5vdGlmaWNhdGlvbl9pZHMYASADKAkiKgoSTWFya0FzUmVhZFJlc3BvbnNlEhQKDG1hcmtlZF9jb3VudBgBIAEoBSIWChRNYXJrQWxsQXNSZWFkUmVxdWVzdCItChVNYXJrQWxsQXNSZWFkUmVzcG9uc2USFAoMbWFya2VkX2NvdW50GAEgASgFIjQKGURlbGV0ZU5vdGlmaWNhdGlvblJlcXVlc3QSFwoPbm90aWZpY2F0aW9uX2lkGAEgASgJIhwKGkRlbGV0ZU5vdGlmaWNhdGlvblJlc3BvbnNlKvQCChBOb3RpZmljYXRpb25UeXBlEiEKHU5PVElGSUNBVElPTl9UWVBFX1VOU1BFQ0lGSUVEEAASIwofTk9USUZJQ0FUSU9OX1RZUEVfVEFTS19BU1NJR05FRBABEiMKH05PVElGSUNBVElPTl9UWVBFX1RBU0tfRFVFX1NPT04QAhIoCiROT1RJRklDQVRJT05fVFlQRV9JTkdFU1RJT05fQ09NUExFVEUQAxImCiJOT1RJRklDQVRJT05fVFlQRV9JTkdFU1RJT05fRkFJTEVEEAQSIwofTk9USUZJQ0FUSU9OX1RZUEVfT1VUTElORV9SRUFEWRAFEikKJU5PVElGSUNBVElPTl9UWVBFX0dFTkVSQVRJT05fQ09NUExFVEUQBhInCiNOT1RJRklDQVRJT05fVFlQRV9HRU5FUkFUSU9OX0ZBSUxFRBAHEigKJE5PVElGSUNBVElPTl9UWVBFX0FQUFJPVkFMX1JFUVVFU1RFRBAIKp4BChROb3RpZmljYXRpb25Qcmlvcml0eRIlCiFOT1RJRklDQVRJT05fUFJJT1JJVFlfVU5TUEVDSUZJRUQQABIdChlOT1RJRklDQVRJT05fUFJJT1JJVFlfTE9XEAESIAocTk9USUZJQ0FUSU9OX1BSSU9SSVRZX05PUk1BTBACEh4KGk5PVElGSUNBVElPTl9QUklPUklUWV9ISUdIEAMqrAEKFU5vdGlmaWNhdGlvbkV2ZW50VHlwZRInCiNOT1RJRklDQVRJT05fRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEiMKH05PVElGSUNBVElPTl9FVkVOVF9UWVBFX0NSRUFURUQQARIgChxOT1RJRklDQVRJT05fRVZFTlRfVFlQRV9SRUFEEAISIwofTk9USUZJQ0FUSU9OX0VWRU5UX1RZUEVfREVMRVRFRBADMrMEChNOb3RpZmljYXRpb25TZXJ2aWNlElwKEUxpc3ROb3RpZmljYXRpb25zEiIubWlyYWkudjEuTGlzdE5vdGlmaWNhdGlvbnNSZXF1ZXN0GiMubWlyYWkudjEuTGlzdE5vdGlmaWNhdGlvbnNSZXNwb25zZRJTCg5HZXRVbnJlYWRDb3VudBIfLm1pcmFpLnYxLkdldFVucmVhZENvdW50UmVxdWVzdBogLm1pcmFpLnYxLkdldFVucmVhZENvdW50UmVzcG9uc2USRwoKTWFya0FzUmVhZBIbLm1pcmFpLnYxLk1hcmtBc1JlYWRSZXF1ZXN0GhwubWlyYWkudjEuTWFya0FzUmVhZFJlc3BvbnNlElAKDU1hcmtBbGxBc1JlYWQSHi5taXJhaS52MS5NYXJrQWxsQXNSZWFkUmVxdWVzdBofLm1pcmFpLnYxLk1hcmtBbGxBc1JlYWRSZXNwb25zZRJfChJEZWxldGVOb3RpZmljYXRpb24SIy5taXJhaS52MS5EZWxldGVOb3RpZmljYXRpb25SZXF1ZXN0GiQubWlyYWkudjEuRGVsZXRlTm90aWZpY2F0aW9uUmVzcG9uc2USbQoWU3Vic2NyaWJlTm90aWZpY2F0aW9ucxInLm1pcmFpLnYxLlN1YnNjcmliZU5vdGlmaWNhdGlvbnNSZXF1ZXN0GigubWlyYWkudjEuU3Vic2NyaWJlTm90aWZpY2F0aW9uc1Jlc3BvbnNlMAFClwEKDGNvbS5taXJhaS52MUIRTm90aWZpY2F0aW9uUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * Notification represents a user notification.
@@ -113,6 +113,47 @@ export const NotificationSchema: GenMessage<Notification> = /*@__PURE__*/
   messageDesc(file_mirai_v1_notification, 0);
 
 /**
+ * SubscribeNotificationsRequest initiates a streaming subscription.
+ * User ID is derived from auth context.
+ *
+ * @generated from message mirai.v1.SubscribeNotificationsRequest
+ */
+export type SubscribeNotificationsRequest = Message<"mirai.v1.SubscribeNotificationsRequest"> & {
+};
+
+/**
+ * Describes the message mirai.v1.SubscribeNotificationsRequest.
+ * Use `create(SubscribeNotificationsRequestSchema)` to create a new message.
+ */
+export const SubscribeNotificationsRequestSchema: GenMessage<SubscribeNotificationsRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_notification, 1);
+
+/**
+ * SubscribeNotificationsResponse represents a real-time notification event.
+ * Each message in the stream contains an event type and the notification payload.
+ *
+ * @generated from message mirai.v1.SubscribeNotificationsResponse
+ */
+export type SubscribeNotificationsResponse = Message<"mirai.v1.SubscribeNotificationsResponse"> & {
+  /**
+   * @generated from field: mirai.v1.NotificationEventType event_type = 1;
+   */
+  eventType: NotificationEventType;
+
+  /**
+   * @generated from field: mirai.v1.Notification notification = 2;
+   */
+  notification?: Notification;
+};
+
+/**
+ * Describes the message mirai.v1.SubscribeNotificationsResponse.
+ * Use `create(SubscribeNotificationsResponseSchema)` to create a new message.
+ */
+export const SubscribeNotificationsResponseSchema: GenMessage<SubscribeNotificationsResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_notification, 2);
+
+/**
  * ListNotificationsRequest contains filters.
  *
  * @generated from message mirai.v1.ListNotificationsRequest
@@ -148,7 +189,7 @@ export type ListNotificationsRequest = Message<"mirai.v1.ListNotificationsReques
  * Use `create(ListNotificationsRequestSchema)` to create a new message.
  */
 export const ListNotificationsRequestSchema: GenMessage<ListNotificationsRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 1);
+  messageDesc(file_mirai_v1_notification, 3);
 
 /**
  * ListNotificationsResponse contains notifications.
@@ -179,7 +220,7 @@ export type ListNotificationsResponse = Message<"mirai.v1.ListNotificationsRespo
  * Use `create(ListNotificationsResponseSchema)` to create a new message.
  */
 export const ListNotificationsResponseSchema: GenMessage<ListNotificationsResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 2);
+  messageDesc(file_mirai_v1_notification, 4);
 
 /**
  * GetUnreadCountRequest is empty.
@@ -194,7 +235,7 @@ export type GetUnreadCountRequest = Message<"mirai.v1.GetUnreadCountRequest"> & 
  * Use `create(GetUnreadCountRequestSchema)` to create a new message.
  */
 export const GetUnreadCountRequestSchema: GenMessage<GetUnreadCountRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 3);
+  messageDesc(file_mirai_v1_notification, 5);
 
 /**
  * GetUnreadCountResponse contains the count.
@@ -213,7 +254,7 @@ export type GetUnreadCountResponse = Message<"mirai.v1.GetUnreadCountResponse"> 
  * Use `create(GetUnreadCountResponseSchema)` to create a new message.
  */
 export const GetUnreadCountResponseSchema: GenMessage<GetUnreadCountResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 4);
+  messageDesc(file_mirai_v1_notification, 6);
 
 /**
  * MarkAsReadRequest contains notification IDs to mark.
@@ -232,7 +273,7 @@ export type MarkAsReadRequest = Message<"mirai.v1.MarkAsReadRequest"> & {
  * Use `create(MarkAsReadRequestSchema)` to create a new message.
  */
 export const MarkAsReadRequestSchema: GenMessage<MarkAsReadRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 5);
+  messageDesc(file_mirai_v1_notification, 7);
 
 /**
  * MarkAsReadResponse confirms the operation.
@@ -251,7 +292,7 @@ export type MarkAsReadResponse = Message<"mirai.v1.MarkAsReadResponse"> & {
  * Use `create(MarkAsReadResponseSchema)` to create a new message.
  */
 export const MarkAsReadResponseSchema: GenMessage<MarkAsReadResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 6);
+  messageDesc(file_mirai_v1_notification, 8);
 
 /**
  * MarkAllAsReadRequest marks all as read.
@@ -266,7 +307,7 @@ export type MarkAllAsReadRequest = Message<"mirai.v1.MarkAllAsReadRequest"> & {
  * Use `create(MarkAllAsReadRequestSchema)` to create a new message.
  */
 export const MarkAllAsReadRequestSchema: GenMessage<MarkAllAsReadRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 7);
+  messageDesc(file_mirai_v1_notification, 9);
 
 /**
  * MarkAllAsReadResponse confirms the operation.
@@ -285,7 +326,7 @@ export type MarkAllAsReadResponse = Message<"mirai.v1.MarkAllAsReadResponse"> & 
  * Use `create(MarkAllAsReadResponseSchema)` to create a new message.
  */
 export const MarkAllAsReadResponseSchema: GenMessage<MarkAllAsReadResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 8);
+  messageDesc(file_mirai_v1_notification, 10);
 
 /**
  * DeleteNotificationRequest contains the ID to delete.
@@ -304,7 +345,7 @@ export type DeleteNotificationRequest = Message<"mirai.v1.DeleteNotificationRequ
  * Use `create(DeleteNotificationRequestSchema)` to create a new message.
  */
 export const DeleteNotificationRequestSchema: GenMessage<DeleteNotificationRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 9);
+  messageDesc(file_mirai_v1_notification, 11);
 
 /**
  * DeleteNotificationResponse confirms deletion.
@@ -319,7 +360,7 @@ export type DeleteNotificationResponse = Message<"mirai.v1.DeleteNotificationRes
  * Use `create(DeleteNotificationResponseSchema)` to create a new message.
  */
 export const DeleteNotificationResponseSchema: GenMessage<DeleteNotificationResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_notification, 10);
+  messageDesc(file_mirai_v1_notification, 12);
 
 /**
  * NotificationType categorizes notifications.
@@ -429,6 +470,45 @@ export const NotificationPrioritySchema: GenEnum<NotificationPriority> = /*@__PU
   enumDesc(file_mirai_v1_notification, 1);
 
 /**
+ * NotificationEventType for real-time streaming events.
+ *
+ * @generated from enum mirai.v1.NotificationEventType
+ */
+export enum NotificationEventType {
+  /**
+   * @generated from enum value: NOTIFICATION_EVENT_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * New notification created
+   *
+   * @generated from enum value: NOTIFICATION_EVENT_TYPE_CREATED = 1;
+   */
+  CREATED = 1,
+
+  /**
+   * Notification marked as read
+   *
+   * @generated from enum value: NOTIFICATION_EVENT_TYPE_READ = 2;
+   */
+  READ = 2,
+
+  /**
+   * Notification deleted
+   *
+   * @generated from enum value: NOTIFICATION_EVENT_TYPE_DELETED = 3;
+   */
+  DELETED = 3,
+}
+
+/**
+ * Describes the enum mirai.v1.NotificationEventType.
+ */
+export const NotificationEventTypeSchema: GenEnum<NotificationEventType> = /*@__PURE__*/
+  enumDesc(file_mirai_v1_notification, 2);
+
+/**
  * NotificationService handles notification operations.
  *
  * @generated from service mirai.v1.NotificationService
@@ -483,6 +563,17 @@ export const NotificationService: GenService<{
     methodKind: "unary";
     input: typeof DeleteNotificationRequestSchema;
     output: typeof DeleteNotificationResponseSchema;
+  },
+  /**
+   * SubscribeNotifications opens a server-streaming connection for real-time notification events.
+   * Events are pushed when notifications are created, read, or deleted.
+   *
+   * @generated from rpc mirai.v1.NotificationService.SubscribeNotifications
+   */
+  subscribeNotifications: {
+    methodKind: "server_streaming";
+    input: typeof SubscribeNotificationsRequestSchema;
+    output: typeof SubscribeNotificationsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_mirai_v1_notification, 0);

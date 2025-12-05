@@ -12,17 +12,25 @@ import (
 	"github.com/sogos/mirai-backend/internal/application/service"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 )
 
 // NotificationServiceServer implements the NotificationService Connect handler.
 type NotificationServiceServer struct {
 	miraiv1connect.UnimplementedNotificationServiceHandler
 	notificationService *service.NotificationService
+	subscriber          pubsub.Subscriber
 }
 
 // NewNotificationServiceServer creates a new NotificationServiceServer.
-func NewNotificationServiceServer(notificationService *service.NotificationService) *NotificationServiceServer {
-	return &NotificationServiceServer{notificationService: notificationService}
+func NewNotificationServiceServer(
+	notificationService *service.NotificationService,
+	subscriber pubsub.Subscriber,
+) *NotificationServiceServer {
+	return &NotificationServiceServer{
+		notificationService: notificationService,
+		subscriber:          subscriber,
+	}
 }
 
 // ListNotifications returns notifications for the current user.
@@ -172,6 +180,58 @@ func (s *NotificationServiceServer) DeleteNotification(
 	}
 
 	return connect.NewResponse(&v1.DeleteNotificationResponse{}), nil
+}
+
+// SubscribeNotifications opens a server-streaming connection for real-time notification events.
+func (s *NotificationServiceServer) SubscribeNotifications(
+	ctx context.Context,
+	req *connect.Request[v1.SubscribeNotificationsRequest],
+	stream *connect.ServerStream[v1.SubscribeNotificationsResponse],
+) error {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Get user ID from kratos ID
+	userID, err := s.notificationService.GetUserIDByKratosID(ctx, kratosID)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Subscribe to Redis channel for this user
+	eventCh, cleanup, err := s.subscriber.SubscribeUserEvents(ctx, userID)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	defer cleanup()
+
+	// Forward events to client stream
+	for {
+		select {
+		case <-ctx.Done():
+			// Client disconnected or context cancelled
+			return nil
+		case event, ok := <-eventCh:
+			if !ok {
+				// Channel closed
+				return nil
+			}
+			// Send event to client
+			resp := &v1.SubscribeNotificationsResponse{
+				EventType:    event.EventType,
+				Notification: event.Notification,
+			}
+			if err := stream.Send(resp); err != nil {
+				return err
+			}
+		}
+	}
 }
 
 // Helper functions for proto conversion

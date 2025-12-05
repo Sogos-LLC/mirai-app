@@ -1,7 +1,6 @@
 'use client';
 
 import { useUIStore } from '@/store/zustand';
-import { useRefetchNotifications } from '@/hooks/useNotifications';
 
 interface NotificationBellProps {
   unreadCount: number;
@@ -10,19 +9,10 @@ interface NotificationBellProps {
 export function NotificationBell({ unreadCount }: NotificationBellProps) {
   const isPanelOpen = useUIStore((s) => s.notification.isPanelOpen);
   const toggleNotificationPanel = useUIStore((s) => s.toggleNotificationPanel);
-  const refetchNotifications = useRefetchNotifications();
-
-  const handleClick = () => {
-    // Refetch notifications when opening the panel for immediate updates
-    if (!isPanelOpen) {
-      refetchNotifications();
-    }
-    toggleNotificationPanel();
-  };
 
   return (
     <button
-      onClick={handleClick}
+      onClick={toggleNotificationPanel}
       className={`
         relative p-2 rounded-full transition-colors
         ${isPanelOpen ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}

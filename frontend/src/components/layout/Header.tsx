@@ -14,6 +14,7 @@ import {
   useMarkAllAsRead,
   useDeleteNotification,
 } from '@/hooks/useNotifications';
+import { useNotificationStream } from '@/hooks/useNotificationStream';
 import { useActiveGenerationJobs, useCancelJob } from '@/hooks/useAIGeneration';
 
 interface HeaderProps {
@@ -23,6 +24,9 @@ interface HeaderProps {
 export default function Header({ title }: HeaderProps) {
   const toggleMobileSidebar = useUIStore((s) => s.toggleMobileSidebar);
   const isMobile = useIsMobile();
+
+  // Establish real-time notification streaming connection
+  useNotificationStream();
 
   // Notification hooks (RTK Query / Connect Query)
   const { count: unreadCount } = useUnreadCount();

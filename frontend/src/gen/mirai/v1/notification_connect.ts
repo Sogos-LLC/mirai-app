@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { DeleteNotificationRequest, DeleteNotificationResponse, GetUnreadCountRequest, GetUnreadCountResponse, ListNotificationsRequest, ListNotificationsResponse, MarkAllAsReadRequest, MarkAllAsReadResponse, MarkAsReadRequest, MarkAsReadResponse } from "./notification_pb.js";
+import { DeleteNotificationRequest, DeleteNotificationResponse, GetUnreadCountRequest, GetUnreadCountResponse, ListNotificationsRequest, ListNotificationsResponse, MarkAllAsReadRequest, MarkAllAsReadResponse, MarkAsReadRequest, MarkAsReadResponse, SubscribeNotificationsRequest, SubscribeNotificationsResponse } from "./notification_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -68,6 +68,18 @@ export const NotificationService = {
       I: DeleteNotificationRequest,
       O: DeleteNotificationResponse,
       kind: MethodKind.Unary,
+    },
+    /**
+     * SubscribeNotifications opens a server-streaming connection for real-time notification events.
+     * Events are pushed when notifications are created, read, or deleted.
+     *
+     * @generated from rpc mirai.v1.NotificationService.SubscribeNotifications
+     */
+    subscribeNotifications: {
+      name: "SubscribeNotifications",
+      I: SubscribeNotificationsRequest,
+      O: SubscribeNotificationsResponse,
+      kind: MethodKind.ServerStreaming,
     },
   }
 } as const;

@@ -6,11 +6,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	v1 "github.com/sogos/mirai-backend/gen/mirai/v1"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	domainerrors "github.com/sogos/mirai-backend/internal/domain/errors"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // NotificationService handles notification management.
@@ -19,6 +22,7 @@ type NotificationService struct {
 	notificationRepo repository.NotificationRepository
 	identityProvider service.IdentityProvider
 	emailProvider    service.EmailProvider
+	publisher        pubsub.Publisher
 	baseURL          string
 	logger           service.Logger
 }
@@ -29,6 +33,7 @@ func NewNotificationService(
 	notificationRepo repository.NotificationRepository,
 	identityProvider service.IdentityProvider,
 	emailProvider service.EmailProvider,
+	publisher pubsub.Publisher,
 	baseURL string,
 	logger service.Logger,
 ) *NotificationService {
@@ -37,6 +42,7 @@ func NewNotificationService(
 		notificationRepo: notificationRepo,
 		identityProvider: identityProvider,
 		emailProvider:    emailProvider,
+		publisher:        publisher,
 		baseURL:          baseURL,
 		logger:           logger,
 	}
@@ -90,6 +96,9 @@ func (s *NotificationService) CreateNotification(ctx context.Context, req Create
 		log.Error("failed to create notification", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
+
+	// Publish event for real-time delivery
+	s.publishNotificationEvent(ctx, req.UserID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_CREATED, notification)
 
 	log.Info("notification created", "notificationID", notification.ID)
 	return notification, nil
@@ -164,6 +173,16 @@ func (s *NotificationService) GetUnreadCount(ctx context.Context, kratosID uuid.
 	return count, nil
 }
 
+// GetUserIDByKratosID returns the user's internal ID from their Kratos ID.
+// Used for subscribing to real-time notifications.
+func (s *NotificationService) GetUserIDByKratosID(ctx context.Context, kratosID uuid.UUID) (uuid.UUID, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return uuid.Nil, domainerrors.ErrUserNotFound
+	}
+	return user.ID, nil
+}
+
 // MarkAsRead marks notifications as read.
 func (s *NotificationService) MarkAsRead(ctx context.Context, kratosID uuid.UUID, notificationIDs []uuid.UUID) (int, error) {
 	log := s.logger.With("kratosID", kratosID, "count", len(notificationIDs))
@@ -179,6 +198,17 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, kratosID uuid.UUID
 		return 0, domainerrors.ErrInternal.WithCause(err)
 	}
 
+	// Publish READ events for real-time updates
+	if s.publisher != nil && count > 0 {
+		for _, notifID := range notificationIDs {
+			notification, err := s.notificationRepo.GetByID(ctx, notifID)
+			if err != nil || notification == nil {
+				continue
+			}
+			s.publishNotificationEvent(ctx, user.ID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_READ, notification)
+		}
+	}
+
 	log.Info("notifications marked as read", "markedCount", count)
 	return count, nil
 }
@@ -192,10 +222,26 @@ func (s *NotificationService) MarkAllAsRead(ctx context.Context, kratosID uuid.U
 		return 0, domainerrors.ErrUserNotFound
 	}
 
+	// Fetch unread notifications before marking (for publishing events)
+	var unreadNotifications []*entity.Notification
+	if s.publisher != nil {
+		opts := entity.NotificationListOptions{
+			Limit:      100, // Reasonable limit for bulk operation
+			UnreadOnly: true,
+		}
+		unreadNotifications, _, _ = s.notificationRepo.List(ctx, user.ID, opts)
+	}
+
 	count, err := s.notificationRepo.MarkAllAsRead(ctx, user.ID)
 	if err != nil {
 		log.Error("failed to mark all notifications as read", "error", err)
 		return 0, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Publish READ events for real-time updates
+	for _, notification := range unreadNotifications {
+		notification.Read = true // Update in-memory state
+		s.publishNotificationEvent(ctx, user.ID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_READ, notification)
 	}
 
 	log.Info("all notifications marked as read", "markedCount", count)
@@ -211,7 +257,7 @@ func (s *NotificationService) DeleteNotification(ctx context.Context, kratosID u
 		return domainerrors.ErrUserNotFound
 	}
 
-	// Verify ownership
+	// Verify ownership and get notification for event publishing
 	notification, err := s.notificationRepo.GetByID(ctx, notificationID)
 	if err != nil || notification == nil {
 		return domainerrors.ErrNotificationNotFound
@@ -225,6 +271,9 @@ func (s *NotificationService) DeleteNotification(ctx context.Context, kratosID u
 		log.Error("failed to delete notification", "error", err)
 		return domainerrors.ErrInternal.WithCause(err)
 	}
+
+	// Publish DELETED event for real-time updates
+	s.publishNotificationEvent(ctx, user.ID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_DELETED, notification)
 
 	log.Info("notification deleted")
 	return nil
@@ -272,6 +321,10 @@ func (s *NotificationService) SendNotification(ctx context.Context, notification
 		s.logger.Error("failed to send notification", "error", err)
 		return domainerrors.ErrInternal.WithCause(err)
 	}
+
+	// Publish event for real-time delivery
+	s.publishNotificationEvent(ctx, notification.UserID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_CREATED, notification)
+
 	return nil
 }
 
@@ -544,6 +597,9 @@ func (s *NotificationService) NotifyTaskAssigned(ctx context.Context, req Notify
 		return domainerrors.ErrInternal.WithCause(err)
 	}
 
+	// Publish event for real-time delivery
+	s.publishNotificationEvent(ctx, req.AssigneeUserID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_CREATED, notification)
+
 	log.Info("task notification created", "notificationID", notification.ID)
 
 	// Send email if we have the email address
@@ -707,4 +763,110 @@ func (s *NotificationService) NotifyOutlineFailed(ctx context.Context, userID uu
 	}
 
 	return nil
+}
+
+// publishNotificationEvent publishes a notification event to Redis for real-time delivery.
+// This is fire-and-forget - errors are logged but don't fail the operation.
+func (s *NotificationService) publishNotificationEvent(ctx context.Context, userID uuid.UUID, eventType v1.NotificationEventType, notification *entity.Notification) {
+	if s.publisher == nil {
+		return
+	}
+
+	event := &pubsub.NotificationEvent{
+		EventType:    eventType,
+		Notification: notificationToProto(notification),
+	}
+
+	if err := s.publisher.PublishNotificationEvent(ctx, userID, event); err != nil {
+		s.logger.Warn("failed to publish notification event",
+			"error", err,
+			"userID", userID,
+			"eventType", eventType.String(),
+		)
+	}
+}
+
+// notificationToProto converts an entity.Notification to a v1.Notification proto.
+func notificationToProto(n *entity.Notification) *v1.Notification {
+	if n == nil {
+		return nil
+	}
+
+	proto := &v1.Notification{
+		Id:        n.ID.String(),
+		TenantId:  n.TenantID.String(),
+		UserId:    n.UserID.String(),
+		Type:      notificationTypeToProto(n.Type),
+		Priority:  notificationPriorityToProto(n.Priority),
+		Title:     n.Title,
+		Message:   n.Message,
+		Read:      n.Read,
+		EmailSent: n.EmailSent,
+	}
+
+	if n.CourseID != nil {
+		s := n.CourseID.String()
+		proto.CourseId = &s
+	}
+	if n.JobID != nil {
+		s := n.JobID.String()
+		proto.JobId = &s
+	}
+	if n.TaskID != nil {
+		s := n.TaskID.String()
+		proto.TaskId = &s
+	}
+	if n.SMEID != nil {
+		s := n.SMEID.String()
+		proto.SmeId = &s
+	}
+	if n.ActionURL != nil {
+		proto.ActionUrl = n.ActionURL
+	}
+	if !n.CreatedAt.IsZero() {
+		proto.CreatedAt = timestamppb.New(n.CreatedAt)
+	}
+	if n.ReadAt != nil {
+		proto.ReadAt = timestamppb.New(*n.ReadAt)
+	}
+
+	return proto
+}
+
+// notificationTypeToProto converts a domain NotificationType to proto.
+func notificationTypeToProto(t valueobject.NotificationType) v1.NotificationType {
+	switch t {
+	case valueobject.NotificationTypeTaskAssigned:
+		return v1.NotificationType_NOTIFICATION_TYPE_TASK_ASSIGNED
+	case valueobject.NotificationTypeTaskDueSoon:
+		return v1.NotificationType_NOTIFICATION_TYPE_TASK_DUE_SOON
+	case valueobject.NotificationTypeIngestionComplete:
+		return v1.NotificationType_NOTIFICATION_TYPE_INGESTION_COMPLETE
+	case valueobject.NotificationTypeIngestionFailed:
+		return v1.NotificationType_NOTIFICATION_TYPE_INGESTION_FAILED
+	case valueobject.NotificationTypeOutlineReady:
+		return v1.NotificationType_NOTIFICATION_TYPE_OUTLINE_READY
+	case valueobject.NotificationTypeGenerationComplete:
+		return v1.NotificationType_NOTIFICATION_TYPE_GENERATION_COMPLETE
+	case valueobject.NotificationTypeGenerationFailed:
+		return v1.NotificationType_NOTIFICATION_TYPE_GENERATION_FAILED
+	case valueobject.NotificationTypeApprovalRequested:
+		return v1.NotificationType_NOTIFICATION_TYPE_APPROVAL_REQUESTED
+	default:
+		return v1.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED
+	}
+}
+
+// notificationPriorityToProto converts a domain NotificationPriority to proto.
+func notificationPriorityToProto(p valueobject.NotificationPriority) v1.NotificationPriority {
+	switch p {
+	case valueobject.NotificationPriorityLow:
+		return v1.NotificationPriority_NOTIFICATION_PRIORITY_LOW
+	case valueobject.NotificationPriorityNormal:
+		return v1.NotificationPriority_NOTIFICATION_PRIORITY_NORMAL
+	case valueobject.NotificationPriorityHigh:
+		return v1.NotificationPriority_NOTIFICATION_PRIORITY_HIGH
+	default:
+		return v1.NotificationPriority_NOTIFICATION_PRIORITY_UNSPECIFIED
+	}
 }

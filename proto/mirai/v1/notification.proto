@@ -25,6 +25,14 @@ enum NotificationPriority {
   NOTIFICATION_PRIORITY_HIGH = 3;
 }
 
+// NotificationEventType for real-time streaming events.
+enum NotificationEventType {
+  NOTIFICATION_EVENT_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_EVENT_TYPE_CREATED = 1;    // New notification created
+  NOTIFICATION_EVENT_TYPE_READ = 2;       // Notification marked as read
+  NOTIFICATION_EVENT_TYPE_DELETED = 3;    // Notification deleted
+}
+
 // Notification represents a user notification.
 message Notification {
   string id = 1;
@@ -53,6 +61,17 @@ message Notification {
   optional google.protobuf.Timestamp read_at = 16;
 }
 
+// SubscribeNotificationsRequest initiates a streaming subscription.
+// User ID is derived from auth context.
+message SubscribeNotificationsRequest {}
+
+// SubscribeNotificationsResponse represents a real-time notification event.
+// Each message in the stream contains an event type and the notification payload.
+message SubscribeNotificationsResponse {
+  NotificationEventType event_type = 1;
+  Notification notification = 2;
+}
+
 // NotificationService handles notification operations.
 service NotificationService {
   // ListNotifications returns notifications for the current user.
@@ -69,6 +88,10 @@ service NotificationService {
 
   // DeleteNotification deletes a notification.
   rpc DeleteNotification(DeleteNotificationRequest) returns (DeleteNotificationResponse);
+
+  // SubscribeNotifications opens a server-streaming connection for real-time notification events.
+  // Events are pushed when notifications are created, read, or deleted.
+  rpc SubscribeNotifications(SubscribeNotificationsRequest) returns (stream SubscribeNotificationsResponse);
 }
 
 // ListNotificationsRequest contains filters.
