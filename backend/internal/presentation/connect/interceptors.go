@@ -92,7 +92,7 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		// Look up user to get tenant ID for RLS
 		// First check cache, then fall back to database lookup
 		if i.userRepo != nil {
-			cacheKey := "user:tenant:" + kratosID
+			cacheKey := cache.GlobalCacheKeys.UserTenantMapping(kratosID)
 			var tenantID uuid.UUID
 			var found bool
 

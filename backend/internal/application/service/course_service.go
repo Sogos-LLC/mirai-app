@@ -541,8 +541,8 @@ func (s *CourseService) UpdateCourse(ctx context.Context, kratosID uuid.UUID, id
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Invalidate cache
-	_ = s.cache.Delete(ctx, cache.CacheKeys.Course(id))
+	// Invalidate cache (TenantCache automatically prefixes keys with tenant:{id}:)
+	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Course(id))
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
 
 	log.Info("course updated")
@@ -615,8 +615,8 @@ func (s *CourseService) DeleteCourse(ctx context.Context, kratosID uuid.UUID, id
 		// Don't fail the operation - the DB record is already deleted
 	}
 
-	// Invalidate cache
-	_ = s.cache.Delete(ctx, cache.CacheKeys.Course(id))
+	// Invalidate cache (TenantCache automatically prefixes keys with tenant:{id}:)
+	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Course(id))
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
 	_ = s.cache.InvalidatePattern(ctx, "folder:*")
 
