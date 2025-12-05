@@ -5,4 +5,5 @@ resources:
 - frontend
 - backend
 - redis/redis-deployment.yaml
+- redis/asynqmon-deployment.yaml
 - mirai-db
