@@ -1,6 +1,7 @@
 'use client';
 
 import { useUIStore } from '@/store/zustand';
+import { useRefetchNotifications } from '@/hooks/useNotifications';
 
 interface NotificationBellProps {
   unreadCount: number;
@@ -9,8 +10,13 @@ interface NotificationBellProps {
 export function NotificationBell({ unreadCount }: NotificationBellProps) {
   const isPanelOpen = useUIStore((s) => s.notification.isPanelOpen);
   const toggleNotificationPanel = useUIStore((s) => s.toggleNotificationPanel);
+  const refetchNotifications = useRefetchNotifications();
 
   const handleClick = () => {
+    // Refetch notifications when opening the panel for immediate updates
+    if (!isPanelOpen) {
+      refetchNotifications();
+    }
     toggleNotificationPanel();
   };
 

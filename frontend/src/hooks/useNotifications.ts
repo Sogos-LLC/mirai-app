@@ -32,6 +32,9 @@ export function useListNotifications(options?: {
     unreadOnly: options?.unreadOnly,
     limit: options?.limit ?? 50,
     cursor: options?.cursor,
+  }, {
+    // Poll at same interval as useUnreadCount to keep badge and list in sync
+    refetchInterval: 30000,
   });
 
   return {
@@ -58,6 +61,25 @@ export function useUnreadCount() {
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
+  };
+}
+
+/**
+ * Hook to refetch all notification data.
+ * Use this when opening the notification panel for immediate updates.
+ */
+export function useRefetchNotifications() {
+  const queryClient = useQueryClient();
+
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: listNotifications, cardinality: undefined }),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: getUnreadCount, cardinality: undefined }),
+      }),
+    ]);
   };
 }
 
