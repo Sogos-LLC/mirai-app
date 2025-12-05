@@ -44,18 +44,12 @@ export function useNotificationStream() {
         case NotificationEventType.CREATED:
         case NotificationEventType.READ:
         case NotificationEventType.DELETED:
-          // Invalidate both queries to trigger refetch with fresh data
+          // Invalidate both list and count queries
           queryClient.invalidateQueries({
-            queryKey: createConnectQueryKey({
-              schema: listNotifications,
-              cardinality: undefined,
-            }),
+            queryKey: createConnectQueryKey({ schema: listNotifications, cardinality: undefined }),
           });
           queryClient.invalidateQueries({
-            queryKey: createConnectQueryKey({
-              schema: getUnreadCount,
-              cardinality: undefined,
-            }),
+            queryKey: createConnectQueryKey({ schema: getUnreadCount, cardinality: undefined }),
           });
           break;
       }
