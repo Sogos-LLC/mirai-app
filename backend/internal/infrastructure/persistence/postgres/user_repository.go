@@ -23,120 +23,28 @@ func NewUserRepository(db *sql.DB) repository.UserRepository {
 
 // Create creates a new user.
 func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
-	query := `
-		INSERT INTO users (tenant_id, kratos_id, company_id, role)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, created_at, updated_at
-	`
-	return r.db.QueryRowContext(ctx, query, user.TenantID, user.KratosID, user.CompanyID, user.Role.String()).
-		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+	return RLSExec(ctx, r.db, func(tx *sql.Tx) error {
+		query := `
+			INSERT INTO users (tenant_id, kratos_id, company_id, role)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id, created_at, updated_at
+		`
+		return tx.QueryRowContext(ctx, query, user.TenantID, user.KratosID, user.CompanyID, user.Role.String()).
+			Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+	})
 }
 
 // GetByID retrieves a user by their ID.
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
-	query := `
-		SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
-		FROM users
-		WHERE id = $1
-	`
-	user := &entity.User{}
-	var roleStr string
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&user.ID,
-		&user.TenantID,
-		&user.KratosID,
-		&user.CompanyID,
-		&roleStr,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
-	}
-	user.Role = valueobject.Role(roleStr)
-	return user, nil
-}
-
-// GetByKratosID retrieves a user by their Kratos identity ID.
-func (r *UserRepository) GetByKratosID(ctx context.Context, kratosID uuid.UUID) (*entity.User, error) {
-	query := `
-		SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
-		FROM users
-		WHERE kratos_id = $1
-	`
-	user := &entity.User{}
-	var roleStr string
-	err := r.db.QueryRowContext(ctx, query, kratosID).Scan(
-		&user.ID,
-		&user.TenantID,
-		&user.KratosID,
-		&user.CompanyID,
-		&roleStr,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
-	}
-	user.Role = valueobject.Role(roleStr)
-	return user, nil
-}
-
-// GetOwnerByCompanyID retrieves the admin user of a company.
-// Note: This now looks for 'admin' role instead of deprecated 'owner'.
-func (r *UserRepository) GetOwnerByCompanyID(ctx context.Context, companyID uuid.UUID) (*entity.User, error) {
-	query := `
-		SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
-		FROM users
-		WHERE company_id = $1 AND role = 'admin'
-		LIMIT 1
-	`
-	user := &entity.User{}
-	var roleStr string
-	err := r.db.QueryRowContext(ctx, query, companyID).Scan(
-		&user.ID,
-		&user.TenantID,
-		&user.KratosID,
-		&user.CompanyID,
-		&roleStr,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get owner: %w", err)
-	}
-	user.Role = valueobject.Role(roleStr)
-	return user, nil
-}
-
-// ListByCompanyID retrieves all users in a company.
-func (r *UserRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUID) ([]*entity.User, error) {
-	query := `
-		SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
-		FROM users
-		WHERE company_id = $1
-		ORDER BY created_at DESC
-	`
-	rows, err := r.db.QueryContext(ctx, query, companyID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list users: %w", err)
-	}
-	defer rows.Close()
-
-	var users []*entity.User
-	for rows.Next() {
+	return RLSQuery(ctx, r.db, func(tx *sql.Tx) (*entity.User, error) {
+		query := `
+			SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
+			FROM users
+			WHERE id = $1
+		`
 		user := &entity.User{}
 		var roleStr string
-		if err := rows.Scan(
+		err := tx.QueryRowContext(ctx, query, id).Scan(
 			&user.ID,
 			&user.TenantID,
 			&user.KratosID,
@@ -144,23 +52,130 @@ func (r *UserRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUI
 			&roleStr,
 			&user.CreatedAt,
 			&user.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan user: %w", err)
+		)
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user: %w", err)
 		}
 		user.Role = valueobject.Role(roleStr)
-		users = append(users, user)
-	}
-	return users, nil
+		return user, nil
+	})
+}
+
+// GetByKratosID retrieves a user by their Kratos identity ID.
+// Note: This method is called by the auth interceptor with superadmin context
+// to look up users before tenant context is established. The RLS wrapper
+// respects the superadmin flag and sets app.is_superadmin=true accordingly.
+func (r *UserRepository) GetByKratosID(ctx context.Context, kratosID uuid.UUID) (*entity.User, error) {
+	return RLSQuery(ctx, r.db, func(tx *sql.Tx) (*entity.User, error) {
+		query := `
+			SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
+			FROM users
+			WHERE kratos_id = $1
+		`
+		user := &entity.User{}
+		var roleStr string
+		err := tx.QueryRowContext(ctx, query, kratosID).Scan(
+			&user.ID,
+			&user.TenantID,
+			&user.KratosID,
+			&user.CompanyID,
+			&roleStr,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user: %w", err)
+		}
+		user.Role = valueobject.Role(roleStr)
+		return user, nil
+	})
+}
+
+// GetOwnerByCompanyID retrieves the admin user of a company.
+// Note: This now looks for 'admin' role instead of deprecated 'owner'.
+func (r *UserRepository) GetOwnerByCompanyID(ctx context.Context, companyID uuid.UUID) (*entity.User, error) {
+	return RLSQuery(ctx, r.db, func(tx *sql.Tx) (*entity.User, error) {
+		query := `
+			SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
+			FROM users
+			WHERE company_id = $1 AND role = 'admin'
+			LIMIT 1
+		`
+		user := &entity.User{}
+		var roleStr string
+		err := tx.QueryRowContext(ctx, query, companyID).Scan(
+			&user.ID,
+			&user.TenantID,
+			&user.KratosID,
+			&user.CompanyID,
+			&roleStr,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to get owner: %w", err)
+		}
+		user.Role = valueobject.Role(roleStr)
+		return user, nil
+	})
+}
+
+// ListByCompanyID retrieves all users in a company.
+func (r *UserRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUID) ([]*entity.User, error) {
+	return RLSQuery(ctx, r.db, func(tx *sql.Tx) ([]*entity.User, error) {
+		query := `
+			SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at
+			FROM users
+			WHERE company_id = $1
+			ORDER BY created_at DESC
+		`
+		rows, err := tx.QueryContext(ctx, query, companyID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list users: %w", err)
+		}
+		defer rows.Close()
+
+		var users []*entity.User
+		for rows.Next() {
+			user := &entity.User{}
+			var roleStr string
+			if err := rows.Scan(
+				&user.ID,
+				&user.TenantID,
+				&user.KratosID,
+				&user.CompanyID,
+				&roleStr,
+				&user.CreatedAt,
+				&user.UpdatedAt,
+			); err != nil {
+				return nil, fmt.Errorf("failed to scan user: %w", err)
+			}
+			user.Role = valueobject.Role(roleStr)
+			users = append(users, user)
+		}
+		return users, nil
+	})
 }
 
 // Update updates a user.
 func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
-	query := `
-		UPDATE users
-		SET company_id = $1, role = $2, updated_at = NOW()
-		WHERE id = $3
-		RETURNING updated_at
-	`
-	return r.db.QueryRowContext(ctx, query, user.CompanyID, user.Role.String(), user.ID).
-		Scan(&user.UpdatedAt)
+	return RLSExec(ctx, r.db, func(tx *sql.Tx) error {
+		query := `
+			UPDATE users
+			SET company_id = $1, role = $2, updated_at = NOW()
+			WHERE id = $3
+			RETURNING updated_at
+		`
+		return tx.QueryRowContext(ctx, query, user.CompanyID, user.Role.String(), user.ID).
+			Scan(&user.UpdatedAt)
+	})
 }
