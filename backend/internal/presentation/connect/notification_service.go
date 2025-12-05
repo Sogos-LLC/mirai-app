@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -211,12 +212,25 @@ func (s *NotificationServiceServer) SubscribeNotifications(
 	}
 	defer cleanup()
 
+	// Heartbeat ticker to keep connection alive through Cloudflare (100s timeout)
+	// Send a keep-alive every 30 seconds
+	heartbeat := time.NewTicker(30 * time.Second)
+	defer heartbeat.Stop()
+
 	// Forward events to client stream
 	for {
 		select {
 		case <-ctx.Done():
 			// Client disconnected or context cancelled
 			return nil
+		case <-heartbeat.C:
+			// Send heartbeat (empty event with UNSPECIFIED type) to keep connection alive
+			resp := &v1.SubscribeNotificationsResponse{
+				EventType: v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_UNSPECIFIED,
+			}
+			if err := stream.Send(resp); err != nil {
+				return err
+			}
 		case event, ok := <-eventCh:
 			if !ok {
 				// Channel closed
