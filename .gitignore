@@ -51,6 +51,7 @@ local-dev/.dev-pids
 local-dev/envoy/certs/
 backend/.env.local
 backend/data/
+backend/main
 
 # Generated diagrams
 diagram/
