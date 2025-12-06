@@ -256,10 +256,13 @@ echo -e "  Backend PID: $BACKEND_PID"
 # Give backend a moment to start
 sleep 2
 
-# Start frontend on port 3000
-echo -e "${BLUE}Starting Next.js frontend...${NC}"
+# Build and start frontend in production mode (avoids HMR stream interruptions)
+echo -e "${BLUE}Building Next.js frontend...${NC}"
 cd "$PROJECT_ROOT/frontend"
-PORT=3000 npm run dev &
+npm run build
+
+echo -e "${BLUE}Starting Next.js frontend (production mode)...${NC}"
+PORT=3000 npm run start &
 FRONTEND_PID=$!
 echo $FRONTEND_PID >> "$PID_FILE"
 echo -e "  Frontend PID: $FRONTEND_PID"
