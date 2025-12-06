@@ -145,10 +145,26 @@ services:
       dockerfile: Dockerfile.marketing
       args:
         BUILD_TIME: local-dev
-        NEXT_PUBLIC_APP_URL: http://localhost:3000
+        NEXT_PUBLIC_APP_URL: https://localhost:8443
     container_name: mirai-marketing
     ports:
       - "3001:3000"
+    networks:
+      - mirai-local
+
+  # Envoy - HTTP/2 reverse proxy for local development
+  # Provides HTTP/2 support for Connect-RPC streaming (browsers require TLS for HTTP/2)
+  envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    container_name: mirai-envoy
+    ports:
+      - "8443:8443"   # HTTPS/HTTP2 API (use this for frontend)
+      - "9901:9901"   # Envoy admin interface
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./envoy/certs:/etc/envoy/certs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - mirai-local
 
@@ -176,6 +192,20 @@ services:
       ADMINER_DESIGN: dracula
     depends_on:
       postgres:
+        condition: service_healthy
+    networks:
+      - mirai-local
+
+  # Asynqmon - Asynq job queue dashboard
+  asynqmon:
+    image: hibiken/asynqmon:latest
+    container_name: mirai-asynqmon
+    ports:
+      - "8082:8080"
+    environment:
+      REDIS_ADDR: redis:6379
+    depends_on:
+      redis:
         condition: service_healthy
     networks:
       - mirai-local

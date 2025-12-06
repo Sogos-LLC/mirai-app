@@ -133,6 +133,13 @@ set -a
 source "$SCRIPT_DIR/.env"
 set +a
 
+# Generate TLS certificates for Envoy if they don't exist
+if [ ! -f "$SCRIPT_DIR/envoy/certs/server.crt" ] || [ ! -f "$SCRIPT_DIR/envoy/certs/server.key" ]; then
+    echo -e "${BLUE}Generating TLS certificates for HTTP/2 proxy...${NC}"
+    chmod +x "$SCRIPT_DIR/envoy/generate-certs.sh"
+    "$SCRIPT_DIR/envoy/generate-certs.sh"
+fi
+
 # Start Docker services
 echo -e "${BLUE}Starting Docker services...${NC}"
 cd "$SCRIPT_DIR"
@@ -199,6 +206,15 @@ if [ ! -f "$PROJECT_ROOT/frontend/.env.local" ]; then
     cp "$PROJECT_ROOT/frontend/.env.local.example" "$PROJECT_ROOT/frontend/.env.local"
 fi
 
+# Check if frontend .env.local is using the old direct endpoints (should use Envoy proxy)
+if grep -q "NEXT_PUBLIC_API_URL=http://localhost:8080" "$PROJECT_ROOT/frontend/.env.local" 2>/dev/null; then
+    echo -e "${YELLOW}WARNING: Your frontend/.env.local is using old direct endpoints${NC}"
+    echo -e "${YELLOW}         Updating to use Envoy proxy for HTTP/2 support...${NC}"
+    cp "$PROJECT_ROOT/frontend/.env.local.example" "$PROJECT_ROOT/frontend/.env.local"
+    echo -e "${GREEN}Updated frontend/.env.local to use Envoy proxy${NC}"
+    echo ""
+fi
+
 # Clear PID file
 > "$PID_FILE"
 
@@ -211,10 +227,10 @@ PORT=8080 \
 DATABASE_URL="postgres://mirai:mirailocal@localhost:5432/mirai?sslmode=disable" \
 KRATOS_URL="http://localhost:4433" \
 KRATOS_ADMIN_URL="http://localhost:4434" \
-ALLOWED_ORIGIN="http://localhost:3000" \
-FRONTEND_URL="http://localhost:3000" \
+ALLOWED_ORIGIN="https://localhost:8443" \
+FRONTEND_URL="https://localhost:8443" \
 MARKETING_URL="http://localhost:3001" \
-BACKEND_URL="http://localhost:8080" \
+BACKEND_URL="https://localhost:8443" \
 COOKIE_SECURE="false" \
 STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-}" \
 STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-}" \
@@ -223,7 +239,7 @@ STRIPE_PRO_PRICE_ID="${STRIPE_PRO_PRICE_ID:-}" \
 SMTP_HOST="localhost" \
 SMTP_PORT="1025" \
 SMTP_FROM="noreply@mirai.local" \
-REDIS_URL="localhost:6379" \
+REDIS_URL="redis://localhost:6379" \
 S3_ENDPOINT="http://localhost:9000" \
 S3_REGION="us-east-1" \
 S3_BUCKET="mirai" \
@@ -231,6 +247,7 @@ S3_BASE_PATH="data" \
 S3_ACCESS_KEY="${MINIO_ACCESS_KEY:-minioadmin}" \
 S3_SECRET_KEY="${MINIO_SECRET_KEY:-minioadmin}" \
 ENCRYPTION_KEY="${ENCRYPTION_KEY:-2b14371652d14b51182e6fa2bf3d782ee06029729fcac805475041eb950c6590}" \
+ENABLE_H2C="true" \
 go run ./cmd/server/main.go &
 BACKEND_PID=$!
 echo $BACKEND_PID >> "$PID_FILE"
@@ -252,16 +269,23 @@ echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}  Development servers are running!   ${NC}"
 echo -e "${GREEN}======================================${NC}"
 echo ""
-echo -e "  ${BLUE}Frontend:${NC}      http://localhost:3000"
+echo -e "  ${GREEN}>>> Access the app at: ${YELLOW}https://localhost:8443${NC} <<<"
+echo ""
+echo -e "  ${BLUE}Envoy Proxy:${NC}   https://localhost:8443 (HTTP/2, all services)"
 echo -e "  ${BLUE}Marketing:${NC}     http://localhost:3001"
+echo ""
+echo -e "  ${GREEN}--- Direct Access (for debugging) ---${NC}"
+echo -e "  ${BLUE}Frontend:${NC}      http://localhost:3000"
 echo -e "  ${BLUE}Backend API:${NC}   http://localhost:8080"
 echo -e "  ${BLUE}Kratos Auth:${NC}   http://localhost:4433"
 echo ""
 echo -e "  ${GREEN}--- Monitoring ---${NC}"
 echo -e "  ${BLUE}Dozzle Logs:${NC}   http://localhost:9999"
 echo -e "  ${BLUE}Adminer DB:${NC}    http://localhost:8081"
+echo -e "  ${BLUE}Asynqmon:${NC}      http://localhost:8082"
 echo -e "  ${BLUE}Mailpit:${NC}       http://localhost:8025"
 echo -e "  ${BLUE}MinIO Console:${NC} http://localhost:9001"
+echo -e "  ${BLUE}Envoy Admin:${NC}   http://localhost:9901"
 echo ""
 echo -e "  ${GREEN}--- Credentials ---${NC}"
 echo -e "  ${BLUE}Adminer (Mirai DB):${NC}"
@@ -275,6 +299,8 @@ echo ""
 echo -e "  Press ${YELLOW}Ctrl+C${NC} to stop all services"
 echo ""
 echo -e "  ${YELLOW}Tip:${NC} Use ${BLUE}./start.sh --rebuild${NC} to rebuild Docker images"
+echo -e "  ${YELLOW}Note:${NC} First visit to https://localhost:8443 will show a certificate warning."
+echo -e "        Accept the self-signed certificate to enable HTTP/2 streaming."
 echo ""
 echo -e "${YELLOW}======================================${NC}"
 echo -e "${YELLOW}  IMPORTANT: Stripe Webhooks         ${NC}"

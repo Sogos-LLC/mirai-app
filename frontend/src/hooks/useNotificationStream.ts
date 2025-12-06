@@ -95,6 +95,13 @@ export function useNotificationStream() {
         return;
       }
 
+      // Don't retry on authentication errors - user needs to log in
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (errorMessage.includes('unauthenticated') || errorMessage.includes('authentication required')) {
+        console.log('Notification stream: not authenticated, waiting for login');
+        return;
+      }
+
       console.error('Notification stream error:', err);
       scheduleReconnect();
     }

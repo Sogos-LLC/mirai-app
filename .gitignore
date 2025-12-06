@@ -22,6 +22,7 @@ dist/
 credentials.json
 *.key
 *.pem
+*.crt
 
 # IDE
 .idea/
@@ -47,6 +48,7 @@ coverage/
 # Local development
 local-dev/.env
 local-dev/.dev-pids
+local-dev/envoy/certs/
 backend/.env.local
 backend/data/
 

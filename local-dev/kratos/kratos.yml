@@ -4,10 +4,11 @@ dsn: postgres://kratos:kratoslocal@postgres:5432/kratos?sslmode=disable
 
 serve:
   public:
-    base_url: http://localhost:4433
+    base_url: https://localhost:8443/api/kratos
     cors:
       enabled: true
       allowed_origins:
+        - https://localhost:8443
         - http://localhost:3000
         - http://127.0.0.1:3000
       allowed_methods:
@@ -31,8 +32,9 @@ serve:
     base_url: http://localhost:4434
 
 selfservice:
-  default_browser_return_url: http://localhost:3000/dashboard
+  default_browser_return_url: https://localhost:8443/dashboard
   allowed_return_urls:
+    - https://localhost:8443
     - http://localhost:3000
 
   methods:
@@ -45,40 +47,40 @@ selfservice:
 
   flows:
     error:
-      ui_url: http://localhost:3000/auth/error
+      ui_url: https://localhost:8443/auth/error
 
     settings:
-      ui_url: http://localhost:3000/auth/settings
+      ui_url: https://localhost:8443/auth/settings
       privileged_session_max_age: 15m
 
     recovery:
       enabled: true
-      ui_url: http://localhost:3000/auth/recovery
+      ui_url: https://localhost:8443/auth/recovery
       use: code
 
     verification:
       enabled: true
-      ui_url: http://localhost:3000/auth/verification
+      ui_url: https://localhost:8443/auth/verification
       use: code
       after:
-        default_browser_return_url: http://localhost:3000/dashboard
+        default_browser_return_url: https://localhost:8443/dashboard
 
     logout:
       after:
-        default_browser_return_url: http://localhost:3000/auth/login
+        default_browser_return_url: https://localhost:8443/auth/login
 
     login:
-      ui_url: http://localhost:3000/auth/login
+      ui_url: https://localhost:8443/auth/login
       lifespan: 10m
 
     registration:
-      ui_url: http://localhost:3000/auth/registration
+      ui_url: https://localhost:8443/auth/registration
       lifespan: 10m
       after:
         password:
           hooks:
             - hook: session
-        default_browser_return_url: http://localhost:3000/dashboard
+        default_browser_return_url: https://localhost:8443/dashboard
 
 log:
   level: debug
