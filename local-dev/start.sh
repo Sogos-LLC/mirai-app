@@ -133,11 +133,11 @@ set -a
 source "$SCRIPT_DIR/.env"
 set +a
 
-# Generate TLS certificates for Envoy if they don't exist
-if [ ! -f "$SCRIPT_DIR/envoy/certs/server.crt" ] || [ ! -f "$SCRIPT_DIR/envoy/certs/server.key" ]; then
+# Generate TLS certificates for HAProxy if they don't exist
+if [ ! -f "$SCRIPT_DIR/haproxy/certs/server.pem" ]; then
     echo -e "${BLUE}Generating TLS certificates for HTTP/2 proxy...${NC}"
-    chmod +x "$SCRIPT_DIR/envoy/generate-certs.sh"
-    "$SCRIPT_DIR/envoy/generate-certs.sh"
+    chmod +x "$SCRIPT_DIR/haproxy/generate-certs.sh"
+    "$SCRIPT_DIR/haproxy/generate-certs.sh"
 fi
 
 # Start Docker services
@@ -206,12 +206,12 @@ if [ ! -f "$PROJECT_ROOT/frontend/.env.local" ]; then
     cp "$PROJECT_ROOT/frontend/.env.local.example" "$PROJECT_ROOT/frontend/.env.local"
 fi
 
-# Check if frontend .env.local is using the old direct endpoints (should use Envoy proxy)
+# Check if frontend .env.local is using the old direct endpoints (should use HAProxy proxy)
 if grep -q "NEXT_PUBLIC_API_URL=http://localhost:8080" "$PROJECT_ROOT/frontend/.env.local" 2>/dev/null; then
     echo -e "${YELLOW}WARNING: Your frontend/.env.local is using old direct endpoints${NC}"
-    echo -e "${YELLOW}         Updating to use Envoy proxy for HTTP/2 support...${NC}"
+    echo -e "${YELLOW}         Updating to use HAProxy proxy for HTTP/2 support...${NC}"
     cp "$PROJECT_ROOT/frontend/.env.local.example" "$PROJECT_ROOT/frontend/.env.local"
-    echo -e "${GREEN}Updated frontend/.env.local to use Envoy proxy${NC}"
+    echo -e "${GREEN}Updated frontend/.env.local to use HAProxy proxy${NC}"
     echo ""
 fi
 
@@ -271,7 +271,7 @@ echo -e "${GREEN}======================================${NC}"
 echo ""
 echo -e "  ${GREEN}>>> Access the app at: ${YELLOW}https://localhost:8443${NC} <<<"
 echo ""
-echo -e "  ${BLUE}Envoy Proxy:${NC}   https://localhost:8443 (HTTP/2, all services)"
+echo -e "  ${BLUE}HAProxy:${NC}       https://localhost:8443 (HTTP/2, all services)"
 echo -e "  ${BLUE}Marketing:${NC}     http://localhost:3001"
 echo ""
 echo -e "  ${GREEN}--- Direct Access (for debugging) ---${NC}"
@@ -285,7 +285,7 @@ echo -e "  ${BLUE}Adminer DB:${NC}    http://localhost:8081"
 echo -e "  ${BLUE}Asynqmon:${NC}      http://localhost:8082"
 echo -e "  ${BLUE}Mailpit:${NC}       http://localhost:8025"
 echo -e "  ${BLUE}MinIO Console:${NC} http://localhost:9001"
-echo -e "  ${BLUE}Envoy Admin:${NC}   http://localhost:9901"
+echo -e "  ${BLUE}HAProxy Stats:${NC} http://localhost:8404"
 echo ""
 echo -e "  ${GREEN}--- Credentials ---${NC}"
 echo -e "  ${BLUE}Adminer (Mirai DB):${NC}"

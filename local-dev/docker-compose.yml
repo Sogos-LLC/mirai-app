@@ -152,17 +152,17 @@ services:
     networks:
       - mirai-local
 
-  # Envoy - HTTP/2 reverse proxy for local development
+  # HAProxy - HTTP/2 reverse proxy for local development
   # Provides HTTP/2 support for Connect-RPC streaming (browsers require TLS for HTTP/2)
-  envoy:
-    image: envoyproxy/envoy:v1.31-latest
-    container_name: mirai-envoy
+  haproxy:
+    image: haproxy:2.9-alpine
+    container_name: mirai-haproxy
     ports:
       - "8443:8443"   # HTTPS/HTTP2 API (use this for frontend)
-      - "9901:9901"   # Envoy admin interface
+      - "8404:8404"   # HAProxy stats UI
     volumes:
-      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
-      - ./envoy/certs:/etc/envoy/certs:ro
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./haproxy/certs:/etc/haproxy/certs:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
