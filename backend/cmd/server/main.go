@@ -22,6 +22,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/stripe"
 	"github.com/sogos/mirai-backend/internal/infrastructure/logging"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/postgres"
+	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/sqlc"
 	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
@@ -59,34 +60,34 @@ func main() {
 	logger.Info("connected to database")
 
 	// Initialize repositories (pass the embedded *sql.DB)
-	tenantRepo := postgres.NewTenantRepository(db.DB)
-	userRepo := postgres.NewUserRepository(db.DB)
-	companyRepo := postgres.NewCompanyRepository(db.DB)
-	teamRepo := postgres.NewTeamRepository(db.DB)
-	invitationRepo := postgres.NewInvitationRepository(db.DB)
-	pendingRegRepo := postgres.NewPendingRegistrationRepository(db.DB)
-	courseRepo := postgres.NewCourseRepository(db.DB)
-	folderRepo := postgres.NewFolderRepository(db.DB)
+	tenantRepo := sqlc.NewTenantRepository(db.DB)
+	userRepo := sqlc.NewUserRepository(db.DB)
+	companyRepo := sqlc.NewCompanyRepository(db.DB)
+	teamRepo := sqlc.NewTeamRepository(db.DB)
+	invitationRepo := sqlc.NewInvitationRepository(db.DB)
+	pendingRegRepo := sqlc.NewPendingRegistrationRepository(db.DB)
+	courseRepo := sqlc.NewCourseRepository(db.DB)
+	folderRepo := sqlc.NewFolderRepository(db.DB)
 
 	// SME repositories
-	smeRepo := postgres.NewSMERepository(db.DB)
-	smeTaskRepo := postgres.NewSMETaskRepository(db.DB)
-	smeSubmissionRepo := postgres.NewSMESubmissionRepository(db.DB)
-	smeKnowledgeRepo := postgres.NewSMEKnowledgeRepository(db.DB)
+	smeRepo := sqlc.NewSMERepository(db.DB)
+	smeTaskRepo := sqlc.NewSMETaskRepository(db.DB)
+	smeSubmissionRepo := sqlc.NewSMESubmissionRepository(db.DB)
+	smeKnowledgeRepo := sqlc.NewSMEKnowledgeRepository(db.DB)
 
 	// Target Audience repository
-	targetAudienceRepo := postgres.NewTargetAudienceRepository(db.DB)
+	targetAudienceRepo := sqlc.NewTargetAudienceRepository(db.DB)
 
 	// AI & Generation repositories
-	aiSettingsRepo := postgres.NewTenantAISettingsRepository(db.DB)
-	notificationRepo := postgres.NewNotificationRepository(db.DB)
-	outlineRepo := postgres.NewCourseOutlineRepository(db.DB)
-	sectionRepo := postgres.NewOutlineSectionRepository(db.DB)
-	lessonRepo := postgres.NewOutlineLessonRepository(db.DB)
-	genLessonRepo := postgres.NewGeneratedLessonRepository(db.DB)
-	componentRepo := postgres.NewLessonComponentRepository(db.DB)
-	genInputRepo := postgres.NewCourseGenerationInputRepository(db.DB)
-	generationJobRepo := postgres.NewGenerationJobRepository(db.DB, cfg.StaleJobTimeoutMinutes)
+	aiSettingsRepo := sqlc.NewTenantAISettingsRepository(db.DB)
+	notificationRepo := sqlc.NewNotificationRepository(db.DB)
+	outlineRepo := sqlc.NewCourseOutlineRepository(db.DB)
+	sectionRepo := sqlc.NewOutlineSectionRepository(db.DB)
+	lessonRepo := sqlc.NewOutlineLessonRepository(db.DB)
+	genLessonRepo := sqlc.NewGeneratedLessonRepository(db.DB)
+	componentRepo := sqlc.NewLessonComponentRepository(db.DB)
+	genInputRepo := sqlc.NewCourseGenerationInputRepository(db.DB)
+	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
 
 	// Initialize shared HTTP client
 	httpClient := httputil.NewClient()
