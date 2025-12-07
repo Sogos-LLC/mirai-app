@@ -14,7 +14,10 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:smoke": "playwright test e2e/smoke/",
-    "test:e2e:flows": "playwright test e2e/flows/"
+    "test:e2e:flows": "playwright test e2e/flows/",
+    "test:e2e:local": "playwright test e2e/local-dev.spec.ts",
+    "test:e2e:local:headed": "playwright test e2e/local-dev.spec.ts --headed",
+    "test:e2e:local:ui": "playwright test e2e/local-dev.spec.ts --ui"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.922.0",
