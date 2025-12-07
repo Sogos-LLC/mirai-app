@@ -81,13 +81,19 @@ if ! k3d cluster list | grep -q "${CLUSTER_NAME}"; then
     exit 0
 fi
 
+# Kill any running port-forwards
+log_info "Stopping any running port-forwards..."
+pkill -f "port-forward.*traefik.*9000" 2>/dev/null || true
+pkill -f "port-forward.*mirai" 2>/dev/null || true
+
 # Delete the cluster
 log_info "Deleting cluster '${CLUSTER_NAME}'..."
 k3d cluster delete "${CLUSTER_NAME}"
 
 # Clean up any lingering Docker resources
 log_info "Cleaning up Docker resources..."
-docker system prune -f --volumes --filter "label=app=k3d" --filter "label=k3d.cluster=${CLUSTER_NAME}" 2>/dev/null || true
+docker volume rm $(docker volume ls -q --filter "label=app=k3d" 2>/dev/null) 2>/dev/null || true
+docker network rm k3d-${CLUSTER_NAME} 2>/dev/null || true
 
 log_success "Cluster deleted successfully"
 echo ""
