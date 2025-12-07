@@ -51,8 +51,6 @@ export const GenerationJobSchema = z.object({
   status: z.nativeEnum(GenerationJobStatus),
   courseId: z.string().optional(),
   lessonId: z.string().optional(),
-  smeTaskId: z.string().optional(),
-  submissionId: z.string().optional(),
   progressPercent: z.number().int(),
   progressMessage: z.string().optional(),
   resultPath: z.string().optional(),
@@ -91,7 +89,6 @@ export type OutlineLesson = z.infer<typeof OutlineLessonSchema>;
  * @generated from message mirai.v1.ComponentAlignment
  */
 export const ComponentAlignmentSchema = z.object({
-  smeChunkIds: z.array(z.string()),
   learningObjectiveIds: z.array(z.string()),
 });
 
@@ -148,8 +145,6 @@ export type QuizOption = z.infer<typeof QuizOptionSchema>;
  */
 export const CourseGenerationInputSchema = z.object({
   courseId: z.string(),
-  smeIds: z.array(z.string()),
-  targetAudienceIds: z.array(z.string()),
   desiredOutcome: z.string(),
   additionalContext: z.string().optional(),
 });

@@ -39,12 +39,18 @@ message CheckEmailResponse {
 message RegisterRequest {
   // User credentials
   string email = 1 [(buf.validate.field).string.email = true];
-  string password = 2 [(buf.validate.field).string = {min_len: 8, max_len: 128}];
+  string password = 2 [(buf.validate.field).string = {
+    min_len: 8
+    max_len: 128
+  }];
   string first_name = 3 [(buf.validate.field).string.min_len = 1];
   string last_name = 4 [(buf.validate.field).string.min_len = 1];
 
   // Company info
-  string company_name = 5 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  string company_name = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
   optional string industry = 6;
   optional string team_size = 7;
 
@@ -67,7 +73,10 @@ message RegisterResponse {
 
 // OnboardRequest represents the onboarding payload for existing users.
 message OnboardRequest {
-  string company_name = 1 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  string company_name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
   optional string industry = 2;
   optional string team_size = 3;
   Plan plan = 4 [(buf.validate.field).enum.defined_only = true];

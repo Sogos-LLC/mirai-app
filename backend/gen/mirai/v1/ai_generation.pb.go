@@ -27,7 +27,6 @@ type GenerationJobType int32
 
 const (
 	GenerationJobType_GENERATION_JOB_TYPE_UNSPECIFIED     GenerationJobType = 0
-	GenerationJobType_GENERATION_JOB_TYPE_SME_INGESTION   GenerationJobType = 1 // Process SME content submissions
 	GenerationJobType_GENERATION_JOB_TYPE_COURSE_OUTLINE  GenerationJobType = 2 // Generate course outline
 	GenerationJobType_GENERATION_JOB_TYPE_LESSON_CONTENT  GenerationJobType = 3 // Generate content for a lesson
 	GenerationJobType_GENERATION_JOB_TYPE_COMPONENT_REGEN GenerationJobType = 4 // Regenerate single component
@@ -38,7 +37,6 @@ const (
 var (
 	GenerationJobType_name = map[int32]string{
 		0: "GENERATION_JOB_TYPE_UNSPECIFIED",
-		1: "GENERATION_JOB_TYPE_SME_INGESTION",
 		2: "GENERATION_JOB_TYPE_COURSE_OUTLINE",
 		3: "GENERATION_JOB_TYPE_LESSON_CONTENT",
 		4: "GENERATION_JOB_TYPE_COMPONENT_REGEN",
@@ -46,7 +44,6 @@ var (
 	}
 	GenerationJobType_value = map[string]int32{
 		"GENERATION_JOB_TYPE_UNSPECIFIED":     0,
-		"GENERATION_JOB_TYPE_SME_INGESTION":   1,
 		"GENERATION_JOB_TYPE_COURSE_OUTLINE":  2,
 		"GENERATION_JOB_TYPE_LESSON_CONTENT":  3,
 		"GENERATION_JOB_TYPE_COMPONENT_REGEN": 4,
@@ -317,10 +314,8 @@ type GenerationJob struct {
 	Type     GenerationJobType      `protobuf:"varint,3,opt,name=type,proto3,enum=mirai.v1.GenerationJobType" json:"type,omitempty"`
 	Status   GenerationJobStatus    `protobuf:"varint,4,opt,name=status,proto3,enum=mirai.v1.GenerationJobStatus" json:"status,omitempty"`
 	// References based on job type
-	CourseId     *string `protobuf:"bytes,5,opt,name=course_id,json=courseId,proto3,oneof" json:"course_id,omitempty"`
-	LessonId     *string `protobuf:"bytes,6,opt,name=lesson_id,json=lessonId,proto3,oneof" json:"lesson_id,omitempty"`
-	SmeTaskId    *string `protobuf:"bytes,7,opt,name=sme_task_id,json=smeTaskId,proto3,oneof" json:"sme_task_id,omitempty"`
-	SubmissionId *string `protobuf:"bytes,8,opt,name=submission_id,json=submissionId,proto3,oneof" json:"submission_id,omitempty"`
+	CourseId *string `protobuf:"bytes,5,opt,name=course_id,json=courseId,proto3,oneof" json:"course_id,omitempty"`
+	LessonId *string `protobuf:"bytes,6,opt,name=lesson_id,json=lessonId,proto3,oneof" json:"lesson_id,omitempty"`
 	// Progress tracking
 	ProgressPercent int32   `protobuf:"varint,9,opt,name=progress_percent,json=progressPercent,proto3" json:"progress_percent,omitempty"`
 	ProgressMessage *string `protobuf:"bytes,10,opt,name=progress_message,json=progressMessage,proto3,oneof" json:"progress_message,omitempty"`
@@ -410,20 +405,6 @@ func (x *GenerationJob) GetCourseId() string {
 func (x *GenerationJob) GetLessonId() string {
 	if x != nil && x.LessonId != nil {
 		return *x.LessonId
-	}
-	return ""
-}
-
-func (x *GenerationJob) GetSmeTaskId() string {
-	if x != nil && x.SmeTaskId != nil {
-		return *x.SmeTaskId
-	}
-	return ""
-}
-
-func (x *GenerationJob) GetSubmissionId() string {
-	if x != nil && x.SubmissionId != nil {
-		return *x.SubmissionId
 	}
 	return ""
 }
@@ -982,7 +963,6 @@ func (x *LessonComponent) GetAlignment() *ComponentAlignment {
 // ComponentAlignment tracks what knowledge/objectives a component addresses.
 type ComponentAlignment struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
-	SmeChunkIds          []string               `protobuf:"bytes,1,rep,name=sme_chunk_ids,json=smeChunkIds,proto3" json:"sme_chunk_ids,omitempty"`
 	LearningObjectiveIds []string               `protobuf:"bytes,2,rep,name=learning_objective_ids,json=learningObjectiveIds,proto3" json:"learning_objective_ids,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
@@ -1016,13 +996,6 @@ func (x *ComponentAlignment) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ComponentAlignment.ProtoReflect.Descriptor instead.
 func (*ComponentAlignment) Descriptor() ([]byte, []int) {
 	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *ComponentAlignment) GetSmeChunkIds() []string {
-	if x != nil {
-		return x.SmeChunkIds
-	}
-	return nil
 }
 
 func (x *ComponentAlignment) GetLearningObjectiveIds() []string {
@@ -1349,8 +1322,6 @@ func (x *QuizOption) GetText() string {
 type CourseGenerationInput struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	CourseId          string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
-	SmeIds            []string               `protobuf:"bytes,2,rep,name=sme_ids,json=smeIds,proto3" json:"sme_ids,omitempty"`                                        // SMEs to use as knowledge sources
-	TargetAudienceIds []string               `protobuf:"bytes,3,rep,name=target_audience_ids,json=targetAudienceIds,proto3" json:"target_audience_ids,omitempty"`     // Target audience templates
 	DesiredOutcome    string                 `protobuf:"bytes,4,opt,name=desired_outcome,json=desiredOutcome,proto3" json:"desired_outcome,omitempty"`                // What learners should achieve
 	AdditionalContext *string                `protobuf:"bytes,5,opt,name=additional_context,json=additionalContext,proto3,oneof" json:"additional_context,omitempty"` // Extra context/instructions
 	unknownFields     protoimpl.UnknownFields
@@ -1392,20 +1363,6 @@ func (x *CourseGenerationInput) GetCourseId() string {
 		return x.CourseId
 	}
 	return ""
-}
-
-func (x *CourseGenerationInput) GetSmeIds() []string {
-	if x != nil {
-		return x.SmeIds
-	}
-	return nil
-}
-
-func (x *CourseGenerationInput) GetTargetAudienceIds() []string {
-	if x != nil {
-		return x.TargetAudienceIds
-	}
-	return nil
 }
 
 func (x *CourseGenerationInput) GetDesiredOutcome() string {
@@ -2692,22 +2649,20 @@ var File_mirai_v1_ai_generation_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\n" +
-	"\x1cmirai/v1/ai_generation.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x81\b\n" +
+	"\x1cmirai/v1/ai_generation.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x90\a\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12/\n" +
 	"\x04type\x18\x03 \x01(\x0e2\x1b.mirai.v1.GenerationJobTypeR\x04type\x125\n" +
 	"\x06status\x18\x04 \x01(\x0e2\x1d.mirai.v1.GenerationJobStatusR\x06status\x12 \n" +
 	"\tcourse_id\x18\x05 \x01(\tH\x00R\bcourseId\x88\x01\x01\x12 \n" +
-	"\tlesson_id\x18\x06 \x01(\tH\x01R\blessonId\x88\x01\x01\x12#\n" +
-	"\vsme_task_id\x18\a \x01(\tH\x02R\tsmeTaskId\x88\x01\x01\x12(\n" +
-	"\rsubmission_id\x18\b \x01(\tH\x03R\fsubmissionId\x88\x01\x01\x12)\n" +
+	"\tlesson_id\x18\x06 \x01(\tH\x01R\blessonId\x88\x01\x01\x12)\n" +
 	"\x10progress_percent\x18\t \x01(\x05R\x0fprogressPercent\x12.\n" +
 	"\x10progress_message\x18\n" +
-	" \x01(\tH\x04R\x0fprogressMessage\x88\x01\x01\x12$\n" +
-	"\vresult_path\x18\v \x01(\tH\x05R\n" +
+	" \x01(\tH\x02R\x0fprogressMessage\x88\x01\x01\x12$\n" +
+	"\vresult_path\x18\v \x01(\tH\x03R\n" +
 	"resultPath\x88\x01\x01\x12(\n" +
-	"\rerror_message\x18\f \x01(\tH\x06R\ferrorMessage\x88\x01\x01\x12\x1f\n" +
+	"\rerror_message\x18\f \x01(\tH\x04R\ferrorMessage\x88\x01\x01\x12\x1f\n" +
 	"\vtokens_used\x18\r \x01(\x03R\n" +
 	"tokensUsed\x12\x1f\n" +
 	"\vretry_count\x18\x0e \x01(\x05R\n" +
@@ -2718,15 +2673,13 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12>\n" +
 	"\n" +
-	"started_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\aR\tstartedAt\x88\x01\x01\x12B\n" +
-	"\fcompleted_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampH\bR\vcompletedAt\x88\x01\x01\x12'\n" +
-	"\rparent_job_id\x18\x14 \x01(\tH\tR\vparentJobId\x88\x01\x01B\f\n" +
+	"started_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\x05R\tstartedAt\x88\x01\x01\x12B\n" +
+	"\fcompleted_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\vcompletedAt\x88\x01\x01\x12'\n" +
+	"\rparent_job_id\x18\x14 \x01(\tH\aR\vparentJobId\x88\x01\x01B\f\n" +
 	"\n" +
 	"_course_idB\f\n" +
 	"\n" +
-	"_lesson_idB\x0e\n" +
-	"\f_sme_task_idB\x10\n" +
-	"\x0e_submission_idB\x13\n" +
+	"_lesson_idB\x13\n" +
 	"\x11_progress_messageB\x0e\n" +
 	"\f_result_pathB\x10\n" +
 	"\x0e_error_messageB\r\n" +
@@ -2783,9 +2736,8 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\fcontent_json\x18\x04 \x01(\tR\vcontentJson\x12?\n" +
 	"\talignment\x18\x05 \x01(\v2\x1c.mirai.v1.ComponentAlignmentH\x00R\talignment\x88\x01\x01B\f\n" +
 	"\n" +
-	"_alignment\"n\n" +
-	"\x12ComponentAlignment\x12\"\n" +
-	"\rsme_chunk_ids\x18\x01 \x03(\tR\vsmeChunkIds\x124\n" +
+	"_alignment\"J\n" +
+	"\x12ComponentAlignment\x124\n" +
 	"\x16learning_objective_ids\x18\x02 \x03(\tR\x14learningObjectiveIds\"?\n" +
 	"\vTextContent\x12\x12\n" +
 	"\x04html\x18\x01 \x01(\tR\x04html\x12\x1c\n" +
@@ -2812,11 +2764,9 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\n" +
 	"QuizOption\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04text\x18\x02 \x01(\tR\x04text\"\xf1\x01\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\xa8\x01\n" +
 	"\x15CourseGenerationInput\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x17\n" +
-	"\asme_ids\x18\x02 \x03(\tR\x06smeIds\x12.\n" +
-	"\x13target_audience_ids\x18\x03 \x03(\tR\x11targetAudienceIds\x12'\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12'\n" +
 	"\x0fdesired_outcome\x18\x04 \x01(\tR\x0edesiredOutcome\x122\n" +
 	"\x12additional_context\x18\x05 \x01(\tH\x00R\x11additionalContext\x88\x01\x01B\x15\n" +
 	"\x13_additional_context\"U\n" +
@@ -2892,10 +2842,9 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\x1bListGeneratedLessonsRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"S\n" +
 	"\x1cListGeneratedLessonsResponse\x123\n" +
-	"\alessons\x18\x01 \x03(\v2\x19.mirai.v1.GeneratedLessonR\alessons*\xfd\x01\n" +
+	"\alessons\x18\x01 \x03(\v2\x19.mirai.v1.GeneratedLessonR\alessons*\xd6\x01\n" +
 	"\x11GenerationJobType\x12#\n" +
-	"\x1fGENERATION_JOB_TYPE_UNSPECIFIED\x10\x00\x12%\n" +
-	"!GENERATION_JOB_TYPE_SME_INGESTION\x10\x01\x12&\n" +
+	"\x1fGENERATION_JOB_TYPE_UNSPECIFIED\x10\x00\x12&\n" +
 	"\"GENERATION_JOB_TYPE_COURSE_OUTLINE\x10\x02\x12&\n" +
 	"\"GENERATION_JOB_TYPE_LESSON_CONTENT\x10\x03\x12'\n" +
 	"#GENERATION_JOB_TYPE_COMPONENT_REGEN\x10\x04\x12#\n" +

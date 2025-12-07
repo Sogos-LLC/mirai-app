@@ -16,7 +16,7 @@ message TenantAISettings {
   string tenant_id = 1;
 
   AIProvider provider = 2;
-  bool api_key_configured = 3;     // True if key is set (never expose actual key)
+  bool api_key_configured = 3; // True if key is set (never expose actual key)
 
   // Usage tracking
   int64 total_tokens_used = 4;
@@ -56,7 +56,7 @@ message GetAISettingsResponse {
 // SetAPIKeyRequest contains the API key to set.
 message SetAPIKeyRequest {
   AIProvider provider = 1;
-  string api_key = 2;             // Plain text, will be encrypted server-side
+  string api_key = 2; // Plain text, will be encrypted server-side
 }
 
 // SetAPIKeyResponse confirms the key was set.

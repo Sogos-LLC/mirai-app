@@ -7,11 +7,10 @@ import "google/protobuf/timestamp.proto";
 // GenerationJobType represents the type of AI generation job.
 enum GenerationJobType {
   GENERATION_JOB_TYPE_UNSPECIFIED = 0;
-  GENERATION_JOB_TYPE_SME_INGESTION = 1;      // Process SME content submissions
-  GENERATION_JOB_TYPE_COURSE_OUTLINE = 2;     // Generate course outline
-  GENERATION_JOB_TYPE_LESSON_CONTENT = 3;     // Generate content for a lesson
-  GENERATION_JOB_TYPE_COMPONENT_REGEN = 4;    // Regenerate single component
-  GENERATION_JOB_TYPE_FULL_COURSE = 5;        // Parent job tracking all lesson generation
+  GENERATION_JOB_TYPE_COURSE_OUTLINE = 2; // Generate course outline
+  GENERATION_JOB_TYPE_LESSON_CONTENT = 3; // Generate content for a lesson
+  GENERATION_JOB_TYPE_COMPONENT_REGEN = 4; // Regenerate single component
+  GENERATION_JOB_TYPE_FULL_COURSE = 5; // Parent job tracking all lesson generation
 }
 
 // GenerationJobStatus represents job state.
@@ -72,15 +71,13 @@ message GenerationJob {
   // References based on job type
   optional string course_id = 5;
   optional string lesson_id = 6;
-  optional string sme_task_id = 7;
-  optional string submission_id = 8;
 
   // Progress tracking
   int32 progress_percent = 9;
   optional string progress_message = 10;
 
   // Results
-  optional string result_path = 11;      // S3 path to result JSON
+  optional string result_path = 11; // S3 path to result JSON
   optional string error_message = 12;
 
   // Token usage for billing
@@ -132,8 +129,8 @@ message OutlineLesson {
   int32 order = 4;
   int32 estimated_duration_minutes = 5;
   repeated string learning_objectives = 6;
-  bool is_last_in_section = 7;           // Flag for segue generation
-  bool is_last_in_course = 8;            // Flag for course conclusion
+  bool is_last_in_section = 7; // Flag for segue generation
+  bool is_last_in_course = 8; // Flag for course conclusion
 }
 
 // GeneratedLesson contains full lesson content.
@@ -146,7 +143,7 @@ message GeneratedLesson {
   string title = 5;
   repeated LessonComponent components = 6;
 
-  optional string segue_text = 7;        // Transition to next lesson
+  optional string segue_text = 7; // Transition to next lesson
 
   google.protobuf.Timestamp generated_at = 8;
 }
@@ -166,7 +163,6 @@ message LessonComponent {
 
 // ComponentAlignment tracks what knowledge/objectives a component addresses.
 message ComponentAlignment {
-  repeated string sme_chunk_ids = 1;
   repeated string learning_objective_ids = 2;
 }
 
@@ -192,7 +188,7 @@ message ImageContent {
 // QuizContent for quiz/knowledge check components.
 message QuizContent {
   string question = 1;
-  string question_type = 2;              // multiple_choice, true_false
+  string question_type = 2; // multiple_choice, true_false
   repeated QuizOption options = 3;
   string correct_answer_id = 4;
   string explanation = 5;
@@ -209,10 +205,8 @@ message QuizOption {
 // CourseGenerationInput captures inputs for AI course generation.
 message CourseGenerationInput {
   string course_id = 1;
-  repeated string sme_ids = 2;                    // SMEs to use as knowledge sources
-  repeated string target_audience_ids = 3;        // Target audience templates
-  string desired_outcome = 4;                     // What learners should achieve
-  optional string additional_context = 5;         // Extra context/instructions
+  string desired_outcome = 4; // What learners should achieve
+  optional string additional_context = 5; // Extra context/instructions
 }
 
 // AIGenerationService handles AI generation operations.
@@ -270,7 +264,7 @@ message GenerateCourseOutlineResponse {
 // GetCourseOutlineRequest fetches the outline for a course.
 message GetCourseOutlineRequest {
   string course_id = 1;
-  optional int32 version = 2;     // If not specified, returns latest
+  optional int32 version = 2; // If not specified, returns latest
 }
 
 // GetCourseOutlineResponse contains the outline.
@@ -339,7 +333,7 @@ message RegenerateComponentRequest {
   string course_id = 1;
   string lesson_id = 2;
   string component_id = 3;
-  string modification_prompt = 4;     // Instructions for regeneration
+  string modification_prompt = 4; // Instructions for regeneration
 }
 
 // RegenerateComponentResponse returns the job ID.

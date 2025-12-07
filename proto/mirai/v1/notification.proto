@@ -7,14 +7,10 @@ import "google/protobuf/timestamp.proto";
 // NotificationType categorizes notifications.
 enum NotificationType {
   NOTIFICATION_TYPE_UNSPECIFIED = 0;
-  NOTIFICATION_TYPE_TASK_ASSIGNED = 1;           // SME task assigned to user
-  NOTIFICATION_TYPE_TASK_DUE_SOON = 2;           // Task due date approaching
-  NOTIFICATION_TYPE_INGESTION_COMPLETE = 3;      // SME content ingestion finished
-  NOTIFICATION_TYPE_INGESTION_FAILED = 4;        // SME content ingestion failed
-  NOTIFICATION_TYPE_OUTLINE_READY = 5;           // Course outline generation complete
-  NOTIFICATION_TYPE_GENERATION_COMPLETE = 6;     // Course content generation complete
-  NOTIFICATION_TYPE_GENERATION_FAILED = 7;       // Course generation failed
-  NOTIFICATION_TYPE_APPROVAL_REQUESTED = 8;      // Content awaiting approval
+  NOTIFICATION_TYPE_OUTLINE_READY = 5; // Course outline generation complete
+  NOTIFICATION_TYPE_GENERATION_COMPLETE = 6; // Course content generation complete
+  NOTIFICATION_TYPE_GENERATION_FAILED = 7; // Course generation failed
+  NOTIFICATION_TYPE_APPROVAL_REQUESTED = 8; // Content awaiting approval
 }
 
 // NotificationPriority indicates urgency.
@@ -28,10 +24,10 @@ enum NotificationPriority {
 // NotificationEventType for real-time streaming events.
 enum NotificationEventType {
   NOTIFICATION_EVENT_TYPE_UNSPECIFIED = 0;
-  NOTIFICATION_EVENT_TYPE_CREATED = 1;    // New notification created
-  NOTIFICATION_EVENT_TYPE_READ = 2;       // Notification marked as read
-  NOTIFICATION_EVENT_TYPE_DELETED = 3;    // Notification deleted
-  NOTIFICATION_EVENT_TYPE_KEEPALIVE = 4;  // Keepalive to prevent proxy timeout
+  NOTIFICATION_EVENT_TYPE_CREATED = 1; // New notification created
+  NOTIFICATION_EVENT_TYPE_READ = 2; // Notification marked as read
+  NOTIFICATION_EVENT_TYPE_DELETED = 3; // Notification deleted
+  NOTIFICATION_EVENT_TYPE_KEEPALIVE = 4; // Keepalive to prevent proxy timeout
 }
 
 // Notification represents a user notification.
@@ -49,8 +45,6 @@ message Notification {
   // Optional references for navigation
   optional string course_id = 8;
   optional string job_id = 9;
-  optional string task_id = 10;
-  optional string sme_id = 11;
 
   // Action URL for frontend navigation
   optional string action_url = 12;
@@ -99,14 +93,14 @@ service NotificationService {
 message ListNotificationsRequest {
   optional bool unread_only = 1;
   optional NotificationType type = 2;
-  int32 limit = 3;                    // Max results (default 50)
-  optional string cursor = 4;         // For pagination
+  int32 limit = 3; // Max results (default 50)
+  optional string cursor = 4; // For pagination
 }
 
 // ListNotificationsResponse contains notifications.
 message ListNotificationsResponse {
   repeated Notification notifications = 1;
-  optional string next_cursor = 2;    // For pagination
+  optional string next_cursor = 2; // For pagination
   int32 total_count = 3;
 }
 
