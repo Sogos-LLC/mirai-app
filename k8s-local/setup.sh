@@ -64,14 +64,47 @@ log_info "Project root: ${PROJECT_ROOT}"
 # Step 1: Check prerequisites
 log_info "Step 1/17: Checking prerequisites..."
 
-command -v docker >/dev/null 2>&1 || { log_error "docker is required but not installed. Install Docker Desktop."; exit 1; }
-command -v k3d >/dev/null 2>&1 || { log_error "k3d is required but not installed. Run: brew install k3d"; exit 1; }
-command -v kubectl >/dev/null 2>&1 || { log_error "kubectl is required but not installed. Run: brew install kubectl"; exit 1; }
-command -v helm >/dev/null 2>&1 || { log_error "helm is required but not installed. Run: brew install helm"; exit 1; }
-command -v mkcert >/dev/null 2>&1 || { log_error "mkcert is required but not installed. Run: brew install mkcert"; exit 1; }
+MISSING_DEPS=()
+
+if ! command -v docker >/dev/null 2>&1; then
+    MISSING_DEPS+=("docker - Install Docker Desktop from https://docker.com/products/docker-desktop")
+fi
+
+if ! command -v k3d >/dev/null 2>&1; then
+    MISSING_DEPS+=("k3d - Run: brew install k3d")
+fi
+
+if ! command -v kubectl >/dev/null 2>&1; then
+    MISSING_DEPS+=("kubectl - Run: brew install kubectl")
+fi
+
+if ! command -v helm >/dev/null 2>&1; then
+    MISSING_DEPS+=("helm - Run: brew install helm")
+fi
+
+if ! command -v mkcert >/dev/null 2>&1; then
+    MISSING_DEPS+=("mkcert - Run: brew install mkcert")
+fi
+
+if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+    log_error "Missing required dependencies:"
+    echo ""
+    for dep in "${MISSING_DEPS[@]}"; do
+        echo -e "  ${RED}✗${NC} $dep"
+    done
+    echo ""
+    log_info "Install all missing dependencies with:"
+    echo -e "  ${YELLOW}brew install k3d kubectl helm mkcert${NC}"
+    echo ""
+    exit 1
+fi
 
 # Check Docker is running
-docker info >/dev/null 2>&1 || { log_error "Docker daemon is not running. Please start Docker Desktop."; exit 1; }
+if ! docker info >/dev/null 2>&1; then
+    log_error "Docker daemon is not running."
+    log_info "Please start Docker Desktop and try again."
+    exit 1
+fi
 
 log_success "All prerequisites satisfied"
 
