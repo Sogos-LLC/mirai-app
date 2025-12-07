@@ -9,7 +9,12 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:smoke": "playwright test e2e/smoke/",
+    "test:e2e:flows": "playwright test e2e/flows/"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.922.0",
@@ -40,6 +45,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/canvas-confetti": "^1.9.0",
