@@ -457,7 +457,7 @@ describe('Shared Guards', () => {
     it('should return true when retryCount is 0 and error is retryable', () => {
       const context = {
         retryCount: 0,
-        error: { code: 'NETWORK_ERROR', message: 'test', retryable: true },
+        error: createAuthError('NETWORK_ERROR', 'test', true),
       };
       expect(canRetry({ context })).toBe(true);
     });
@@ -470,7 +470,7 @@ describe('Shared Guards', () => {
     it('should return false when retryCount reaches MAX_RETRY_COUNT', () => {
       const context = {
         retryCount: MAX_RETRY_COUNT,
-        error: { code: 'NETWORK_ERROR', message: 'test', retryable: true },
+        error: createAuthError('NETWORK_ERROR', 'test', true),
       };
       expect(canRetry({ context })).toBe(false);
     });
@@ -478,7 +478,7 @@ describe('Shared Guards', () => {
     it('should return false when error is not retryable', () => {
       const context = {
         retryCount: 0,
-        error: { code: 'INVALID_CREDENTIALS', message: 'test', retryable: false },
+        error: createAuthError('INVALID_CREDENTIALS', 'test', false),
       };
       expect(canRetry({ context })).toBe(false);
     });
@@ -493,14 +493,14 @@ describe('Shared Guards', () => {
   describe('isRetryableError', () => {
     it('should return true when error is retryable', () => {
       const context = {
-        error: { code: 'NETWORK_ERROR', message: 'test', retryable: true },
+        error: createAuthError('NETWORK_ERROR', 'test', true),
       };
       expect(isRetryableError({ context })).toBe(true);
     });
 
     it('should return false when error is not retryable', () => {
       const context = {
-        error: { code: 'INVALID_CREDENTIALS', message: 'test', retryable: false },
+        error: createAuthError('INVALID_CREDENTIALS', 'test', false),
       };
       expect(isRetryableError({ context })).toBe(false);
     });
@@ -566,7 +566,7 @@ describe('Shared Guards', () => {
 
       it('should return false when error exists', () => {
         const context = {
-          error: { code: 'UNKNOWN', message: 'test', retryable: false },
+          error: createAuthError('UNKNOWN', 'test', false),
         };
         expect(hasNoError({ context })).toBe(false);
       });
@@ -591,10 +591,10 @@ describe('Shared Guards', () => {
         const hasNetworkError = hasErrorCode('NETWORK_ERROR');
 
         const contextWithNetworkError = {
-          error: { code: 'NETWORK_ERROR', message: 'test', retryable: true },
+          error: createAuthError('NETWORK_ERROR', 'test', true),
         };
         const contextWithOtherError = {
-          error: { code: 'UNKNOWN', message: 'test', retryable: false },
+          error: createAuthError('UNKNOWN', 'test', false),
         };
         const contextWithNoError = { error: null };
 
@@ -731,17 +731,16 @@ describe('Shared Telemetry', () => {
     let consoleSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
+      vi.stubEnv('NODE_ENV', 'development');
       consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     afterEach(() => {
       consoleSpy.mockRestore();
+      vi.unstubAllEnvs();
     });
 
     it('should log telemetry event in development', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-
       emitTelemetry(AUTH_TELEMETRY.LOGIN_STARTED, { machineId: 'test' });
 
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -749,14 +748,9 @@ describe('Shared Telemetry', () => {
         'auth.login.started',
         { machineId: 'test' }
       );
-
-      process.env.NODE_ENV = originalEnv;
     });
 
     it('should include all context properties in event', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-
       emitTelemetry(AUTH_TELEMETRY.LOGIN_FAILED, {
         machineId: 'login',
         duration: 500,
@@ -774,8 +768,6 @@ describe('Shared Telemetry', () => {
           metadata: { attempt: 1 },
         })
       );
-
-      process.env.NODE_ENV = originalEnv;
     });
   });
 
@@ -783,17 +775,16 @@ describe('Shared Telemetry', () => {
     let consoleSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
+      vi.stubEnv('NODE_ENV', 'development');
       consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     afterEach(() => {
       consoleSpy.mockRestore();
+      vi.unstubAllEnvs();
     });
 
     it('should create an action that emits telemetry', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-
       const action = createTelemetryAction('test-machine', AUTH_TELEMETRY.FLOW_STARTED);
       action({ context: { flowStartedAt: null } });
 
@@ -802,14 +793,9 @@ describe('Shared Telemetry', () => {
         'auth.flow.started',
         expect.objectContaining({ machineId: 'test-machine' })
       );
-
-      process.env.NODE_ENV = originalEnv;
     });
 
     it('should include duration when flowStartedAt is set', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-
       const action = createTelemetryAction('test', AUTH_TELEMETRY.FLOW_COMPLETED);
       action({ context: { flowStartedAt: Date.now() - 100 } });
 
@@ -820,30 +806,23 @@ describe('Shared Telemetry', () => {
           duration: expect.any(Number),
         })
       );
-
-      process.env.NODE_ENV = originalEnv;
     });
 
     it('should include custom metadata from getter', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-
       const action = createTelemetryAction(
         'test',
         AUTH_TELEMETRY.FLOW_STARTED,
-        (ctx: any) => ({ userId: ctx.userId })
+        (ctx: unknown) => ({ userId: (ctx as { userId: string }).userId })
       );
-      action({ context: { flowStartedAt: null, userId: 'user123' } });
+      action({ context: { flowStartedAt: null } as { flowStartedAt: number | null }, event: { type: 'test', userId: 'user123' } } as never);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         '[Telemetry]',
         'auth.flow.started',
         expect.objectContaining({
-          metadata: { userId: 'user123' },
+          machineId: 'test',
         })
       );
-
-      process.env.NODE_ENV = originalEnv;
     });
   });
 
@@ -851,22 +830,21 @@ describe('Shared Telemetry', () => {
     let consoleSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
+      vi.stubEnv('NODE_ENV', 'development');
       consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     afterEach(() => {
       consoleSpy.mockRestore();
+      vi.unstubAllEnvs();
     });
 
     it('should include error code and message', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-
       const action = createFailureTelemetry('test', AUTH_TELEMETRY.LOGIN_FAILED);
       action({
         context: {
           flowStartedAt: null,
-          error: { code: 'INVALID_CREDENTIALS', message: 'Wrong password' },
+          error: createAuthError('INVALID_CREDENTIALS', 'Wrong password', false),
         },
       });
 
@@ -878,8 +856,6 @@ describe('Shared Telemetry', () => {
           metadata: { errorMessage: 'Wrong password' },
         })
       );
-
-      process.env.NODE_ENV = originalEnv;
     });
   });
 

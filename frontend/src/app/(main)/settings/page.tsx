@@ -22,12 +22,12 @@ function AISettingsContainer() {
   const testApiKey = useTestAPIKey();
   const removeApiKey = useRemoveAPIKey();
 
-  const handleSetApiKey = async (_provider: AIProvider, apiKey: string) => {
-    await setApiKey.mutate(apiKey);
+  const handleSetApiKey = async (provider: AIProvider, apiKey: string) => {
+    await setApiKey.mutate(provider, apiKey);
   };
 
-  const handleTestApiKey = async (_provider: AIProvider, apiKey: string) => {
-    const result = await testApiKey.mutate(apiKey);
+  const handleTestApiKey = async (provider: AIProvider, apiKey: string) => {
+    const result = await testApiKey.mutate(provider, apiKey);
     return {
       valid: result.valid,
       errorMessage: result.errorMessage,

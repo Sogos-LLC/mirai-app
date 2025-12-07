@@ -49,8 +49,8 @@ export function useSetAPIKey() {
   const mutation = useMutation(setAPIKey);
 
   return {
-    mutate: async (apiKey: string) => {
-      const request = create(SetAPIKeyRequestSchema, { apiKey });
+    mutate: async (provider: AIProvider, apiKey: string) => {
+      const request = create(SetAPIKeyRequestSchema, { provider, apiKey });
       const result = await mutation.mutateAsync(request);
       // Invalidate AI settings query using the proper connect-query key
       await Promise.all([
@@ -104,8 +104,8 @@ export function useTestAPIKey() {
   const mutation = useMutation(testAPIKey);
 
   return {
-    mutate: async (apiKey: string) => {
-      const request = create(TestAPIKeyRequestSchema, { apiKey });
+    mutate: async (provider: AIProvider, apiKey: string) => {
+      const request = create(TestAPIKeyRequestSchema, { provider, apiKey });
       return await mutation.mutateAsync(request);
     },
     isLoading: mutation.isPending,

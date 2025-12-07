@@ -17,13 +17,18 @@ import {
 } from '@/gen/mirai/v1/ai_generation_pb';
 
 import type {
-  CourseBlock,
+  CourseBlock as ProtoCourseBlock,
   CourseSection,
   Lesson,
   BlockAlignment,
-  BlockType,
-} from '@/schemas/course.schema';
-import { BlockType as ProtoBlockType } from '@/gen/mirai/v1/course_pb';
+} from '@/gen/mirai/v1/course_zod';
+import { BlockType } from '@/gen/mirai/v1/course_pb';
+
+/**
+ * Extended CourseBlock with frontend-specific lessonId field
+ * for tracking which lesson a block belongs to in the UI
+ */
+type CourseBlock = ProtoCourseBlock & { lessonId?: string };
 
 // Content type interfaces matching ComponentRenderer expectations
 interface TextContent {
@@ -98,7 +103,7 @@ export function lessonComponentToCourseBlock(
       });
       return {
         ...baseBlock,
-        type: 'text' as BlockType,
+        type: BlockType.TEXT,
         content: content.html || content.plaintext || '',
       };
     }
@@ -110,7 +115,7 @@ export function lessonComponentToCourseBlock(
       });
       return {
         ...baseBlock,
-        type: 'heading' as BlockType,
+        type: BlockType.HEADING,
         content: content.text || '',
       };
     }
@@ -127,7 +132,7 @@ export function lessonComponentToCourseBlock(
       </figure>`;
       return {
         ...baseBlock,
-        type: 'text' as BlockType,
+        type: BlockType.TEXT,
         content: figureHtml,
       };
     }
@@ -137,7 +142,7 @@ export function lessonComponentToCourseBlock(
       // The content is already in the expected QuizContent format
       return {
         ...baseBlock,
-        type: 'knowledgeCheck' as BlockType,
+        type: BlockType.KNOWLEDGE_CHECK,
         content: component.contentJson,
       };
     }
@@ -147,7 +152,7 @@ export function lessonComponentToCourseBlock(
       console.warn(`Unknown component type: ${component.type}`);
       return {
         ...baseBlock,
-        type: 'text' as BlockType,
+        type: BlockType.TEXT,
         content: `[Unknown component type: ${component.type}]`,
       };
   }
@@ -272,21 +277,10 @@ export function validateQuizContent(contentJson: string): boolean {
 }
 
 /**
- * Convert string block type to proto numeric enum value
+ * BlockType is now already the proto enum, so we just return it directly
  */
 function blockTypeToProto(type: BlockType): number {
-  switch (type) {
-    case 'heading':
-      return ProtoBlockType.HEADING; // 1
-    case 'text':
-      return ProtoBlockType.TEXT; // 2
-    case 'interactive':
-      return ProtoBlockType.INTERACTIVE; // 3
-    case 'knowledgeCheck':
-      return ProtoBlockType.KNOWLEDGE_CHECK; // 4
-    default:
-      return ProtoBlockType.UNSPECIFIED; // 0
-  }
+  return type;
 }
 
 /**
