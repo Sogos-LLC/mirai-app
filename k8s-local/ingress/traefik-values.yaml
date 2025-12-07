@@ -1,0 +1,87 @@
+# Traefik Helm Chart Values for Mirai k3d Local Development
+# Install with: helm install traefik traefik/traefik -f traefik-values.yaml -n kube-system
+
+# Deployment configuration
+deployment:
+  enabled: true
+  replicas: 1
+  podAnnotations: {}
+
+# Install CRDs (IngressRoute, Middleware, etc.)
+ingressRoute:
+  dashboard:
+    enabled: true
+    # Access via: kubectl port-forward -n kube-system svc/traefik 9000:9000
+    # Then open http://localhost:9000/dashboard/
+
+# Configure logs for debugging
+logs:
+  general:
+    level: INFO
+  access:
+    enabled: true
+
+# Configure ports/entrypoints
+ports:
+  web:
+    port: 8000
+    exposedPort: 80
+    protocol: TCP
+  websecure:
+    port: 8443
+    exposedPort: 443
+    protocol: TCP
+    tls:
+      enabled: true
+  traefik:
+    port: 9000
+    exposedPort: 9000
+    protocol: TCP
+
+# Service configuration - use LoadBalancer for k3d
+service:
+  enabled: true
+  type: LoadBalancer
+  annotations: {}
+  # k3d will assign this a localhost IP automatically
+
+# Enable dashboard access
+api:
+  dashboard: true
+  insecure: true  # Allow HTTP access for local dev
+
+# Pilot (anonymous usage statistics)
+pilot:
+  enabled: false
+
+# Global redirect from HTTP to HTTPS
+globalArguments:
+  - "--global.checknewversion=false"
+  - "--global.sendanonymoususage=false"
+
+# Enable provider for CRDs (IngressRoute, Middleware, etc.)
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+    allowExternalNameServices: true
+  kubernetesIngress:
+    enabled: false  # Use only CRD-based IngressRoutes
+
+# Resource limits for local dev
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+
+# Enable access logs for debugging
+additionalArguments:
+  - "--accesslog=true"
+  - "--log.level=INFO"
+
+# Disable SSL verification for local development
+serversTransport:
+  insecureSkipVerify: true

@@ -1,0 +1,95 @@
+---
+# Redirect HTTP to HTTPS for all routes
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: https-redirect
+  namespace: mirai
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+
+---
+# CORS middleware for API requests
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: api-cors
+  namespace: mirai
+spec:
+  headers:
+    accessControlAllowMethods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "PATCH"
+      - "DELETE"
+      - "OPTIONS"
+    accessControlAllowHeaders:
+      - "Content-Type"
+      - "Authorization"
+      - "Connect-Protocol-Version"
+      - "Connect-Timeout-Ms"
+      - "X-User-Agent"
+    accessControlAllowOriginList:
+      - "https://mirai.local"
+      - "https://get-mirai.local"
+      - "http://mirai.local"
+      - "http://get-mirai.local"
+    accessControlAllowCredentials: true
+    accessControlMaxAge: 100
+    addVaryHeader: true
+
+---
+# CORS middleware for Kratos (authentication service)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: kratos-cors
+  namespace: mirai
+spec:
+  headers:
+    accessControlAllowMethods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "PATCH"
+      - "DELETE"
+      - "OPTIONS"
+    accessControlAllowHeaders:
+      - "Content-Type"
+      - "Authorization"
+      - "Cookie"
+      - "X-Session-Token"
+    accessControlAllowOriginList:
+      - "https://mirai.local"
+      - "https://get-mirai.local"
+      - "http://mirai.local"
+      - "http://get-mirai.local"
+    accessControlAllowCredentials: true
+    accessControlMaxAge: 100
+    addVaryHeader: true
+    accessControlExposeHeaders:
+      - "Set-Cookie"
+
+---
+# Security headers middleware
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers
+  namespace: mirai
+spec:
+  headers:
+    browserXssFilter: true
+    contentTypeNosniff: true
+    frameDeny: false
+    sslRedirect: false  # Handled by https-redirect middleware
+    stsIncludeSubdomains: false
+    stsPreload: false
+    stsSeconds: 0  # Don't enforce HSTS in local dev
+    customFrameOptionsValue: "SAMEORIGIN"
+    customResponseHeaders:
+      X-Powered-By: ""
+      Server: ""
