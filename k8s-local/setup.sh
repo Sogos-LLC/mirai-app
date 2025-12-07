@@ -281,42 +281,69 @@ kubectl wait --for=condition=Ready pod -l app=mirai-frontend -n mirai --timeout=
 log_info "  Waiting for marketing..."
 kubectl wait --for=condition=Ready pod -l app=mirai-marketing -n mirai --timeout=120s 2>/dev/null || log_warning "Marketing may still be starting"
 
+# Configure /etc/hosts automatically
+log_info "Configuring /etc/hosts..."
+HOSTS_ENTRY="127.0.0.1 mirai.local get-mirai.local auth.mirai.local api.mirai.local minio.mirai.local mailpit.mirai.local"
+
+if grep -q "mirai.local" /etc/hosts; then
+    log_success "/etc/hosts already configured"
+else
+    log_info "Adding mirai.local entries to /etc/hosts (requires sudo)..."
+    echo "$HOSTS_ENTRY" | sudo tee -a /etc/hosts > /dev/null
+    log_success "/etc/hosts configured"
+fi
+
 # Final success message
 echo ""
 log_success "======================================"
 log_success "Mirai k3d cluster setup complete!"
 log_success "======================================"
 echo ""
-log_info "Cluster details:"
-echo "  Cluster name: mirai-local"
-echo "  Namespace: mirai"
-echo "  Context: k3d-mirai-local"
+
+# Show cluster status
+log_info "Cluster Status:"
 echo ""
-log_info "Access URLs (add to /etc/hosts):"
-echo "  127.0.0.1 mirai.local"
-echo "  127.0.0.1 auth.mirai.local"
-echo "  127.0.0.1 api.mirai.local"
-echo "  127.0.0.1 minio.mirai.local"
-echo "  127.0.0.1 mailpit.mirai.local"
+kubectl get pods -n mirai -o wide
 echo ""
+
 log_info "Application URLs:"
-echo "  Frontend:  https://mirai.local"
-echo "  Auth:      https://auth.mirai.local"
-echo "  API:       https://api.mirai.local"
-echo "  MinIO:     https://minio.mirai.local"
-echo "  Mailpit:   https://mailpit.mirai.local"
+echo "  Frontend:   https://mirai.local"
+echo "  Marketing:  https://get-mirai.local"
+echo "  Auth:       https://auth.mirai.local"
+echo "  API:        https://api.mirai.local"
+echo "  Mailpit:    https://mailpit.mirai.local (email testing)"
 echo ""
-log_info "Next steps:"
-echo "  1. Add the hosts entries above to your /etc/hosts file"
-echo "  2. Visit https://mirai.local in your browser"
-echo "  3. Use ./status.sh to check cluster status"
-echo "  4. Use ./logs.sh to view application logs"
+
+# Start Traefik dashboard in background
+log_info "Starting Traefik dashboard..."
+kubectl port-forward -n kube-system svc/traefik 9000:9000 >/dev/null 2>&1 &
+TRAEFIK_PID=$!
+echo "  Dashboard: http://localhost:9000/dashboard/"
+echo "  (running in background, PID: $TRAEFIK_PID)"
 echo ""
-log_info "Useful commands:"
-echo "  Stop cluster:     ./stop.sh"
-echo "  Start cluster:    ./start.sh"
-echo "  View status:      ./status.sh"
-echo "  View logs:        ./logs.sh [service]"
-echo "  Rebuild images:   ./build-local.sh [service]"
-echo "  Full reset:       ./reset.sh"
+
+# Open browser
+if command -v open >/dev/null 2>&1; then
+    log_info "Opening Traefik dashboard in browser..."
+    sleep 2
+    open "http://localhost:9000/dashboard/"
+fi
+
+# k9s recommendation
+echo ""
+if command -v k9s >/dev/null 2>&1; then
+    log_success "k9s is installed! Launch with:"
+    echo -e "  ${GREEN}k9s --context k3d-mirai-local${NC}"
+else
+    log_info "Recommended: Install k9s for a better cluster UI"
+    echo -e "  ${YELLOW}brew install k9s${NC}"
+    echo "  Then run: k9s --context k3d-mirai-local"
+fi
+
+echo ""
+log_info "Quick commands:"
+echo "  ./status.sh       - View cluster status"
+echo "  ./logs.sh backend - View backend logs"
+echo "  ./stop.sh         - Stop cluster"
+echo "  ./reset.sh        - Full reset"
 echo ""

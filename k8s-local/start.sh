@@ -32,7 +32,11 @@ log_error() {
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     echo "Mirai k3d Cluster Start Script"
     echo ""
-    echo "Usage: ./start.sh"
+    echo "Usage: ./start.sh [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --k9s    Launch k9s after starting (if installed)"
+    echo "  -h       Show this help"
     echo ""
     echo "This script starts a stopped k3d cluster and verifies all services are running."
     echo "If the cluster doesn't exist, you'll need to run ./setup.sh first."
@@ -40,6 +44,12 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 CLUSTER_NAME="mirai-local"
+LAUNCH_K9S=false
+
+# Parse arguments
+if [[ "${1:-}" == "--k9s" ]]; then
+    LAUNCH_K9S=true
+fi
 
 log_info "Starting Mirai k3d cluster..."
 
@@ -54,7 +64,7 @@ fi
 CLUSTER_STATUS=$(k3d cluster list | grep "${CLUSTER_NAME}" | awk '{print $2}' || echo "unknown")
 
 if [[ "${CLUSTER_STATUS}" == *"running"* ]]; then
-    log_warning "Cluster '${CLUSTER_NAME}' is already running"
+    log_success "Cluster '${CLUSTER_NAME}' is already running"
 else
     log_info "Starting cluster '${CLUSTER_NAME}'..."
     k3d cluster start "${CLUSTER_NAME}"
@@ -67,60 +77,92 @@ kubectl wait --for=condition=Ready nodes --all --timeout=60s
 log_success "Nodes are ready"
 
 # Wait for core system pods
-log_info "Waiting for core system pods..."
+log_info "Waiting for Traefik..."
 kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=traefik -n kube-system --timeout=60s 2>/dev/null || log_warning "Traefik may still be starting"
-log_success "System pods ready"
 
-# Check infrastructure pods
-log_info "Checking infrastructure pods..."
-sleep 5
+# Wait for infrastructure (with correct labels)
+log_info "Waiting for infrastructure..."
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=postgres -n mirai --timeout=60s 2>/dev/null || log_warning "PostgreSQL starting..."
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=redis -n mirai --timeout=60s 2>/dev/null || log_warning "Redis starting..."
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=minio -n mirai --timeout=60s 2>/dev/null || log_warning "MinIO starting..."
 
-INFRA_READY=true
+# Wait for Kratos
+log_info "Waiting for Kratos..."
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=kratos -n mirai --timeout=60s 2>/dev/null || log_warning "Kratos starting..."
 
-kubectl wait --for=condition=Ready pod -l app=postgres -n mirai --timeout=60s 2>/dev/null || { log_warning "PostgreSQL not ready yet"; INFRA_READY=false; }
-kubectl wait --for=condition=Ready pod -l app=redis -n mirai --timeout=60s 2>/dev/null || { log_warning "Redis not ready yet"; INFRA_READY=false; }
-kubectl wait --for=condition=Ready pod -l app=minio -n mirai --timeout=60s 2>/dev/null || { log_warning "MinIO not ready yet"; INFRA_READY=false; }
+# Wait for apps
+log_info "Waiting for applications..."
+kubectl wait --for=condition=Ready pod -l app=mirai-backend -n mirai --timeout=30s 2>/dev/null || log_warning "Backend starting..."
+kubectl wait --for=condition=Ready pod -l app=mirai-frontend -n mirai --timeout=30s 2>/dev/null || log_warning "Frontend starting..."
+kubectl wait --for=condition=Ready pod -l app=mirai-marketing -n mirai --timeout=30s 2>/dev/null || log_warning "Marketing starting..."
 
-if [[ "${INFRA_READY}" == "true" ]]; then
-    log_success "Infrastructure pods ready"
-else
-    log_warning "Some infrastructure pods are still starting. This is normal, please wait a moment."
-fi
-
-# Check Kratos
-log_info "Checking Kratos pods..."
-kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=kratos -n mirai --timeout=60s 2>/dev/null || log_warning "Kratos not ready yet"
-
-# Check application pods
-log_info "Checking application pods..."
-APP_READY=true
-
-kubectl wait --for=condition=Ready pod -l app=mirai-backend -n mirai --timeout=30s 2>/dev/null || { log_warning "Backend not ready yet"; APP_READY=false; }
-kubectl wait --for=condition=Ready pod -l app=mirai-frontend -n mirai --timeout=30s 2>/dev/null || { log_warning "Frontend not ready yet"; APP_READY=false; }
-kubectl wait --for=condition=Ready pod -l app=mirai-marketing -n mirai --timeout=30s 2>/dev/null || { log_warning "Marketing not ready yet"; APP_READY=false; }
-
-if [[ "${APP_READY}" == "true" ]]; then
-    log_success "Application pods ready"
-else
-    log_warning "Some application pods are still starting. Run './status.sh' to check progress."
-fi
-
-# Display cluster information
+# Display cluster status
 echo ""
 log_success "======================================"
 log_success "Mirai k3d cluster is running!"
 log_success "======================================"
 echo ""
-log_info "Access URLs:"
-echo "  Frontend:  https://mirai.local"
-echo "  Auth:      https://auth.mirai.local"
-echo "  API:       https://api.mirai.local"
-echo "  MinIO:     https://minio.mirai.local"
-echo "  Mailpit:   https://mailpit.mirai.local"
+
+# Show pod status
+log_info "Cluster Status:"
 echo ""
-log_info "Useful commands:"
-echo "  View status:      ./status.sh"
-echo "  View logs:        ./logs.sh [service]"
-echo "  Stop cluster:     ./stop.sh"
-echo "  Rebuild images:   ./build-local.sh [service]"
+kubectl get pods -n mirai --no-headers | while read line; do
+    NAME=$(echo "$line" | awk '{print $1}')
+    READY=$(echo "$line" | awk '{print $2}')
+    STATUS=$(echo "$line" | awk '{print $3}')
+    if [[ "$STATUS" == "Running" ]]; then
+        echo -e "  ${GREEN}✓${NC} $NAME ($READY)"
+    else
+        echo -e "  ${YELLOW}○${NC} $NAME ($STATUS)"
+    fi
+done
+echo ""
+
+# Start Traefik dashboard in background
+log_info "Starting Traefik dashboard..."
+# Kill any existing port-forward
+pkill -f "port-forward.*traefik.*9000" 2>/dev/null || true
+kubectl port-forward -n kube-system svc/traefik 9000:9000 >/dev/null 2>&1 &
+TRAEFIK_PID=$!
+echo "  Dashboard: http://localhost:9000/dashboard/"
+echo ""
+
+log_info "Application URLs:"
+echo "  Frontend:   https://mirai.local"
+echo "  Marketing:  https://get-mirai.local"
+echo "  Auth:       https://auth.mirai.local"
+echo "  API:        https://api.mirai.local"
+echo "  Mailpit:    https://mailpit.mirai.local"
+echo ""
+
+# Open Traefik dashboard
+if command -v open >/dev/null 2>&1; then
+    sleep 1
+    open "http://localhost:9000/dashboard/"
+fi
+
+# k9s handling
+if [[ "${LAUNCH_K9S}" == "true" ]]; then
+    if command -v k9s >/dev/null 2>&1; then
+        log_info "Launching k9s..."
+        exec k9s --context k3d-mirai-local -n mirai
+    else
+        log_warning "k9s not installed. Install with: brew install k9s"
+    fi
+else
+    if command -v k9s >/dev/null 2>&1; then
+        log_info "Launch cluster UI with:"
+        echo -e "  ${GREEN}k9s --context k3d-mirai-local${NC}"
+        echo "  or run: ./start.sh --k9s"
+    else
+        log_info "Recommended: Install k9s for cluster UI"
+        echo -e "  ${YELLOW}brew install k9s${NC}"
+    fi
+fi
+
+echo ""
+log_info "Quick commands:"
+echo "  ./status.sh       - View full status"
+echo "  ./logs.sh backend - View logs"
+echo "  ./stop.sh         - Stop cluster"
 echo ""
