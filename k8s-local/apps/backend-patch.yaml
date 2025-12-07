@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mirai-backend
+spec:
+  # Single replica for local development
+  replicas: 1
+
+  # Remove production-specific constraints
+  minReadySeconds: 5
+
+  template:
+    spec:
+      # Remove production tolerations and topology constraints for local k3d
+      tolerations: null
+      topologySpreadConstraints: null
+
+      # Simplified DNS for local k3d cluster
+      dnsPolicy: ClusterFirst
+      dnsConfig: null
+
+      containers:
+      - name: backend
+        # Use local images with Never pull policy
+        imagePullPolicy: Never
+
+        # Reduced resources for local development
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+
+        # Override environment variables for local development
+        env:
+        - name: PORT
+          value: "8080"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mirai-db-secret
+              key: dsn
+        - name: KRATOS_URL
+          value: "http://kratos-public.kratos.svc.cluster.local:80"
+        - name: KRATOS_ADMIN_URL
+          value: "http://kratos-admin.kratos.svc.cluster.local:80"
+        - name: ALLOWED_ORIGIN
+          value: "https://mirai.local"
+        - name: FRONTEND_URL
+          value: "https://mirai.local"
+        - name: MARKETING_URL
+          value: "https://marketing.mirai.local"
+        - name: BACKEND_URL
+          value: "https://api.mirai.local"
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mirai-stripe-secret
+              key: secret-key
+        - name: STRIPE_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: mirai-stripe-secret
+              key: webhook-secret
+        - name: STRIPE_STARTER_PRICE_ID
+          valueFrom:
+            secretKeyRef:
+              name: mirai-stripe-secret
+              key: starter-price-id
+        - name: STRIPE_PRO_PRICE_ID
+          valueFrom:
+            secretKeyRef:
+              name: mirai-stripe-secret
+              key: pro-price-id
+        - name: SMTP_HOST
+          value: "mailpit.mailpit.svc.cluster.local"
+        - name: SMTP_PORT
+          value: "1025"
+        - name: SMTP_FROM
+          value: "noreply@mirai.local"
+        - name: S3_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: endpoint
+        - name: S3_REGION
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: region
+        - name: S3_BUCKET
+          value: "mirai"
+        - name: S3_BASE_PATH
+          value: "data"
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: secretkey
+        - name: GIN_MODE
+          value: "debug"
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mirai-encryption-secret
+              key: encryption-key
+
+        # Faster startup probes for local development
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 3
+          failureThreshold: 10
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5

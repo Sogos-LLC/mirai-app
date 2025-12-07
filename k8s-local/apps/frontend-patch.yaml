@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mirai-frontend
+spec:
+  # Single replica for local development
+  replicas: 1
+
+  # Remove production-specific constraints
+  minReadySeconds: 5
+
+  template:
+    spec:
+      # Remove production tolerations and topology constraints for local k3d
+      tolerations: null
+      topologySpreadConstraints: null
+
+      containers:
+      - name: mirai-frontend
+        # Use local images with Never pull policy
+        imagePullPolicy: Never
+
+        # Reduced resources for local development
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+        # Override environment variables for local development
+        env:
+        # MinIO configuration (local)
+        - name: USE_S3_STORAGE
+          value: "true"
+        - name: S3_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: endpoint
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: secretkey
+        - name: S3_BUCKET
+          value: "mirai"
+        - name: S3_REGION
+          value: "us-east-1"
+        - name: S3_BASE_PATH
+          value: "data"
+        # Redis caching configuration
+        - name: ENABLE_REDIS_CACHE
+          value: "true"
+        - name: REDIS_URL
+          value: "redis://redis.mirai.svc.cluster.local:6379"
+        # Ory Kratos authentication configuration (local URLs)
+        - name: KRATOS_PUBLIC_URL
+          value: "http://kratos-public.kratos.svc.cluster.local:80"
+        - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
+          value: "https://auth.mirai.local"
+        - name: NEXT_PUBLIC_API_URL
+          value: "https://api.mirai.local"
+        - name: NEXT_PUBLIC_APP_URL
+          value: "https://mirai.local"
+        - name: NEXT_PUBLIC_LANDING_URL
+          value: "https://marketing.mirai.local"
+
+        # Faster startup probes for local development
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 3
+          failureThreshold: 10
+
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5

@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mirai
+
+# Reference production manifests as base
+resources:
+- ../../k8s/frontend
+- ../../k8s/frontend-marketing
+- ../../k8s/backend
+
+# Strategic merge patches for local development
+patches:
+- path: backend-patch.yaml
+  target:
+    kind: Deployment
+    name: mirai-backend
+- path: frontend-patch.yaml
+  target:
+    kind: Deployment
+    name: mirai-frontend
+- path: marketing-patch.yaml
+  target:
+    kind: Deployment
+    name: mirai-marketing
+
+# Override images for local development
+images:
+- name: ghcr.io/sogos-llc/mirai-app/mirai-backend
+  newName: mirai-backend
+  newTag: local
+- name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
+  newName: mirai-frontend
+  newTag: local
+- name: ghcr.io/sogos-llc/mirai-app/mirai-marketing
+  newName: mirai-marketing
+  newTag: local
+
+# Add local development labels
+labels:
+- pairs:
+    environment: local
+    managed-by: kustomize
