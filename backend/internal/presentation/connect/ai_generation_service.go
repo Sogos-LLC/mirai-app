@@ -50,19 +50,7 @@ func (s *AIGenerationServiceServer) GenerateCourseOutline(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	smeIDs := make([]uuid.UUID, 0, len(input.SmeIds))
-	for _, id := range input.SmeIds {
-		if uid, err := uuid.Parse(id); err == nil {
-			smeIDs = append(smeIDs, uid)
-		}
-	}
-
-	targetAudienceIDs := make([]uuid.UUID, 0, len(input.TargetAudienceIds))
-	for _, id := range input.TargetAudienceIds {
-		if uid, err := uuid.Parse(id); err == nil {
-			targetAudienceIDs = append(targetAudienceIDs, uid)
-		}
-	}
+	// SME and TargetAudience removed in Phase 3
 
 	var additionalContext string
 	if input.AdditionalContext != nil {
@@ -71,8 +59,6 @@ func (s *AIGenerationServiceServer) GenerateCourseOutline(
 
 	serviceReq := service.GenerateCourseOutlineRequest{
 		CourseID:          courseID,
-		SMEIDs:            smeIDs,
-		TargetAudienceIDs: targetAudienceIDs,
 		DesiredOutcome:    input.DesiredOutcome,
 		AdditionalContext: additionalContext,
 	}
@@ -572,14 +558,7 @@ func generationJobToProto(job *entity.GenerationJob) *v1.GenerationJob {
 		s := job.LessonID.String()
 		proto.LessonId = &s
 	}
-	if job.SMETaskID != nil {
-		s := job.SMETaskID.String()
-		proto.SmeTaskId = &s
-	}
-	if job.SubmissionID != nil {
-		s := job.SubmissionID.String()
-		proto.SubmissionId = &s
-	}
+	// SMETaskID and SubmissionID removed in Phase 3
 	if job.ParentJobID != nil {
 		s := job.ParentJobID.String()
 		proto.ParentJobId = &s
@@ -703,7 +682,6 @@ func lessonComponentToProto(comp *entity.LessonComponent) *v1.LessonComponent {
 
 	if comp.SMEChunkIDs != nil || comp.LearningObjectiveIDs != nil {
 		proto.Alignment = &v1.ComponentAlignment{
-			SmeChunkIds:          uuidsToStrings(comp.SMEChunkIDs),
 			LearningObjectiveIds: comp.LearningObjectiveIDs,
 		}
 	}
@@ -724,8 +702,6 @@ func uuidsToStrings(ids []uuid.UUID) []string {
 
 func generationJobTypeToProto(t valueobject.GenerationJobType) v1.GenerationJobType {
 	switch t {
-	case valueobject.GenerationJobTypeSMEIngestion:
-		return v1.GenerationJobType_GENERATION_JOB_TYPE_SME_INGESTION
 	case valueobject.GenerationJobTypeCourseOutline:
 		return v1.GenerationJobType_GENERATION_JOB_TYPE_COURSE_OUTLINE
 	case valueobject.GenerationJobTypeLessonContent:
@@ -739,8 +715,6 @@ func generationJobTypeToProto(t valueobject.GenerationJobType) v1.GenerationJobT
 
 func protoToGenerationJobType(t v1.GenerationJobType) valueobject.GenerationJobType {
 	switch t {
-	case v1.GenerationJobType_GENERATION_JOB_TYPE_SME_INGESTION:
-		return valueobject.GenerationJobTypeSMEIngestion
 	case v1.GenerationJobType_GENERATION_JOB_TYPE_COURSE_OUTLINE:
 		return valueobject.GenerationJobTypeCourseOutline
 	case v1.GenerationJobType_GENERATION_JOB_TYPE_LESSON_CONTENT:
@@ -748,7 +722,7 @@ func protoToGenerationJobType(t v1.GenerationJobType) valueobject.GenerationJobT
 	case v1.GenerationJobType_GENERATION_JOB_TYPE_COMPONENT_REGEN:
 		return valueobject.GenerationJobTypeComponentRegen
 	default:
-		return valueobject.GenerationJobTypeSMEIngestion
+		return valueobject.GenerationJobTypeCourseOutline
 	}
 }
 

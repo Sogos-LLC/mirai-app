@@ -25,7 +25,6 @@ func NewServer(
 	provisioningService *appservice.ProvisioningService,
 	cleanupService *appservice.CleanupService,
 	aiGenService *appservice.AIGenerationService,
-	smeIngestionService *appservice.SMEIngestionService,
 	workerClient *Client,
 	logger domainservice.Logger,
 ) *Server {
@@ -38,7 +37,7 @@ func NewServer(
 			// Priority queues - higher number = higher priority
 			Queues: map[string]int{
 				worker.QueueCritical: 6, // Provisioning gets most workers
-				worker.QueueDefault:  3, // AI/SME tasks
+				worker.QueueDefault:  3, // AI tasks
 				worker.QueueLow:      1, // Cleanup tasks
 			},
 			// Log errors
@@ -64,7 +63,6 @@ func NewServer(
 		provisioningService,
 		cleanupService,
 		aiGenService,
-		smeIngestionService,
 		workerClient,
 		logger,
 	)
@@ -75,9 +73,7 @@ func NewServer(
 	mux.HandleFunc(worker.TypeStripeReconcile, handlers.HandleStripeReconcile)
 	mux.HandleFunc(worker.TypeCleanupExpired, handlers.HandleCleanupExpired)
 	mux.HandleFunc(worker.TypeAIGeneration, handlers.HandleAIGeneration)
-	mux.HandleFunc(worker.TypeSMEIngestion, handlers.HandleSMEIngestion)
 	mux.HandleFunc(worker.TypeAIGenerationPoll, handlers.HandleAIGenerationPoll)
-	mux.HandleFunc(worker.TypeSMEIngestionPoll, handlers.HandleSMEIngestionPoll)
 
 	return &Server{
 		server:    server,
@@ -120,14 +116,6 @@ func (s *Server) Run() error {
 		return err
 	}
 	s.logger.Info("registered AI generation poll task", "schedule", "@every 5m")
-
-	// SME ingestion polling every 5 seconds
-	_, err = s.scheduler.Register("@every 5s", worker.NewSMEIngestionPollTask())
-	if err != nil {
-		s.logger.Error("failed to register SME ingestion poll task", "error", err)
-		return err
-	}
-	s.logger.Info("registered SME ingestion poll task", "schedule", "@every 5s")
 
 	// Start the scheduler in a goroutine
 	go func() {

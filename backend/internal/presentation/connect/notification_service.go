@@ -294,28 +294,14 @@ func notificationToProto(notif *entity.Notification) *v1.Notification {
 		s := notif.JobID.String()
 		result.JobId = &s
 	}
-	if notif.TaskID != nil {
-		s := notif.TaskID.String()
-		result.TaskId = &s
-	}
-	if notif.SMEID != nil {
-		s := notif.SMEID.String()
-		result.SmeId = &s
-	}
+	// TaskID and SMEID removed in Phase 3
 
 	return result
 }
 
 func notificationTypeToProto(t valueobject.NotificationType) v1.NotificationType {
 	switch t {
-	case valueobject.NotificationTypeTaskAssigned:
-		return v1.NotificationType_NOTIFICATION_TYPE_TASK_ASSIGNED
-	case valueobject.NotificationTypeTaskDueSoon:
-		return v1.NotificationType_NOTIFICATION_TYPE_TASK_DUE_SOON
-	case valueobject.NotificationTypeIngestionComplete:
-		return v1.NotificationType_NOTIFICATION_TYPE_INGESTION_COMPLETE
-	case valueobject.NotificationTypeIngestionFailed:
-		return v1.NotificationType_NOTIFICATION_TYPE_INGESTION_FAILED
+	// SME-related notification types removed in Phase 3
 	case valueobject.NotificationTypeOutlineReady:
 		return v1.NotificationType_NOTIFICATION_TYPE_OUTLINE_READY
 	case valueobject.NotificationTypeGenerationComplete:

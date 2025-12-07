@@ -22,8 +22,6 @@ type ServerConfig struct {
 	BillingService        *service.BillingService
 	InvitationService     *service.InvitationService
 	CourseService         *service.CourseService
-	SMEService            *service.SMEService
-	TargetAudienceService *service.TargetAudienceService
 	TenantSettingsService *service.TenantSettingsService
 	NotificationService   *service.NotificationService
 	AIGenerationService   *service.AIGenerationService
@@ -100,24 +98,6 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	if cfg.CourseService != nil {
 		path, handler = miraiv1connect.NewCourseServiceHandler(
 			NewCourseServiceServer(cfg.CourseService),
-			interceptors,
-		)
-		mux.Handle(path, handler)
-	}
-
-	// SMEService - subject matter expert management
-	if cfg.SMEService != nil {
-		path, handler = miraiv1connect.NewSMEServiceHandler(
-			NewSMEServiceServer(cfg.SMEService),
-			interceptors,
-		)
-		mux.Handle(path, handler)
-	}
-
-	// TargetAudienceService - target audience templates
-	if cfg.TargetAudienceService != nil {
-		path, handler = miraiv1connect.NewTargetAudienceServiceHandler(
-			NewTargetAudienceServiceServer(cfg.TargetAudienceService),
 			interceptors,
 		)
 		mux.Handle(path, handler)

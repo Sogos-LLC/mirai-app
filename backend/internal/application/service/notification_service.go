@@ -61,7 +61,6 @@ type CreateNotificationRequest struct {
 	CourseID *uuid.UUID
 	JobID    *uuid.UUID
 	TaskID   *uuid.UUID
-	SMEID    *uuid.UUID
 }
 
 // CreateNotification creates a new notification for a user.
@@ -89,7 +88,6 @@ func (s *NotificationService) CreateNotification(ctx context.Context, req Create
 		CourseID:  req.CourseID,
 		JobID:     req.JobID,
 		TaskID:    req.TaskID,
-		SMEID:     req.SMEID,
 	}
 
 	if err := s.notificationRepo.Create(ctx, notification); err != nil {
@@ -531,108 +529,8 @@ func (s *NotificationService) NotifyCourseFailed(ctx context.Context, userID uui
 	})
 }
 
-// NotifyTaskAssigned sends both in-app notification and email when a task is assigned.
-func (s *NotificationService) NotifyTaskAssigned(ctx context.Context, req NotifyTaskAssignedRequest) error {
-	log := s.logger.With("assigneeUserID", req.AssigneeUserID, "taskID", req.TaskID)
-
-	// Look up assignee user
-	assignee, err := s.userRepo.GetByID(ctx, req.AssigneeUserID)
-	if err != nil || assignee == nil {
-		log.Error("failed to get assignee user", "error", err)
-		return domainerrors.ErrUserNotFound
-	}
-
-	// Look up assigner user for their name
-	assigner, err := s.userRepo.GetByID(ctx, req.AssignerUserID)
-	if err != nil || assigner == nil {
-		log.Error("failed to get assigner user", "error", err)
-		return domainerrors.ErrUserNotFound
-	}
-
-	// Get email and name from Kratos identity
-	var assigneeEmail, assigneeName, assignerName string
-	if s.identityProvider != nil {
-		// Get assignee info
-		assigneeIdentity, err := s.identityProvider.GetIdentity(ctx, assignee.KratosID.String())
-		if err != nil {
-			log.Warn("failed to get assignee identity", "error", err)
-		} else if assigneeIdentity != nil {
-			assigneeEmail = assigneeIdentity.Email
-			assigneeName = assigneeIdentity.FirstName
-			if assigneeIdentity.LastName != "" {
-				assigneeName = assigneeIdentity.FirstName + " " + assigneeIdentity.LastName
-			}
-		}
-
-		// Get assigner name
-		assignerIdentity, err := s.identityProvider.GetIdentity(ctx, assigner.KratosID.String())
-		if err != nil {
-			log.Warn("failed to get assigner identity", "error", err)
-		} else if assignerIdentity != nil {
-			assignerName = assignerIdentity.FirstName
-			if assignerIdentity.LastName != "" {
-				assignerName = assignerIdentity.FirstName + " " + assignerIdentity.LastName
-			}
-		}
-	}
-
-	// Build action URL to view the SME with task context
-	actionURL := fmt.Sprintf("/smes?sme=%s&task=%s", req.SMEID.String(), req.TaskID.String())
-
-	// Create in-app notification
-	notification := &entity.Notification{
-		TenantID:  *assignee.TenantID,
-		UserID:    req.AssigneeUserID,
-		Type:      valueobject.NotificationTypeTaskAssigned,
-		Priority:  valueobject.NotificationPriorityNormal,
-		Title:     "New Task Assigned",
-		Message:   fmt.Sprintf("You've been assigned a task: %s for %s", req.TaskTitle, req.SMEName),
-		ActionURL: &actionURL,
-		TaskID:    &req.TaskID,
-		SMEID:     &req.SMEID,
-	}
-
-	if err := s.notificationRepo.Create(ctx, notification); err != nil {
-		log.Error("failed to create task notification", "error", err)
-		return domainerrors.ErrInternal.WithCause(err)
-	}
-
-	// Publish event for real-time delivery
-	s.publishNotificationEvent(ctx, req.AssigneeUserID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_CREATED, notification)
-
-	log.Info("task notification created", "notificationID", notification.ID)
-
-	// Send email if we have the email address
-	if assigneeEmail != "" && s.emailProvider != nil {
-		// Format due date if present
-		dueDate := ""
-		if req.DueDate != nil {
-			dueDate = req.DueDate.Format("January 2, 2006")
-		}
-
-		// Build full task URL
-		taskURL := s.baseURL + actionURL
-
-		emailReq := service.SendTaskAssignmentRequest{
-			To:           assigneeEmail,
-			AssigneeName: assigneeName,
-			AssignerName: assignerName,
-			TaskTitle:    req.TaskTitle,
-			SMEName:      req.SMEName,
-			TaskURL:      taskURL,
-			DueDate:      dueDate,
-		}
-
-		if err := s.emailProvider.SendTaskAssignment(ctx, emailReq); err != nil {
-			log.Error("failed to send task assignment email", "error", err)
-			// Don't fail the whole operation if email fails
-		} else {
-			log.Info("task assignment email sent", "to", assigneeEmail)
-		}
-	}
-
-	return nil
-}
+// NotifyTaskAssigned was removed as part of SME cleanup (Phase 3)
+// The entire SME task assignment workflow has been removed.
 
 // NotifyOutlineReady sends both in-app notification and email when course outline is generated.
 // Implements OutlineCompletionNotifier interface for AIGenerationService.
@@ -814,11 +712,9 @@ func notificationToProto(n *entity.Notification) *v1.Notification {
 	}
 	if n.TaskID != nil {
 		s := n.TaskID.String()
-		proto.TaskId = &s
-	}
-	if n.SMEID != nil {
-		s := n.SMEID.String()
-		proto.SmeId = &s
+		// Note: TaskId field was removed from proto in Phase 1/2
+		// Keeping the domain field for backward compatibility but not mapping to proto
+		_ = s
 	}
 	if n.ActionURL != nil {
 		proto.ActionUrl = n.ActionURL
@@ -836,14 +732,15 @@ func notificationToProto(n *entity.Notification) *v1.Notification {
 // notificationTypeToProto converts a domain NotificationType to proto.
 func notificationTypeToProto(t valueobject.NotificationType) v1.NotificationType {
 	switch t {
-	case valueobject.NotificationTypeTaskAssigned:
-		return v1.NotificationType_NOTIFICATION_TYPE_TASK_ASSIGNED
-	case valueobject.NotificationTypeTaskDueSoon:
-		return v1.NotificationType_NOTIFICATION_TYPE_TASK_DUE_SOON
-	case valueobject.NotificationTypeIngestionComplete:
-		return v1.NotificationType_NOTIFICATION_TYPE_INGESTION_COMPLETE
-	case valueobject.NotificationTypeIngestionFailed:
-		return v1.NotificationType_NOTIFICATION_TYPE_INGESTION_FAILED
+	// SME-related notification types removed in Phase 1/2
+	// case valueobject.NotificationTypeTaskAssigned:
+	// 	return v1.NotificationType_NOTIFICATION_TYPE_TASK_ASSIGNED
+	// case valueobject.NotificationTypeTaskDueSoon:
+	// 	return v1.NotificationType_NOTIFICATION_TYPE_TASK_DUE_SOON
+	// case valueobject.NotificationTypeIngestionComplete:
+	// 	return v1.NotificationType_NOTIFICATION_TYPE_INGESTION_COMPLETE
+	// case valueobject.NotificationTypeIngestionFailed:
+	// 	return v1.NotificationType_NOTIFICATION_TYPE_INGESTION_FAILED
 	case valueobject.NotificationTypeOutlineReady:
 		return v1.NotificationType_NOTIFICATION_TYPE_OUTLINE_READY
 	case valueobject.NotificationTypeGenerationComplete:

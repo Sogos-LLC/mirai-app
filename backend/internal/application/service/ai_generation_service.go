@@ -53,32 +53,26 @@ type TaskEnqueuer interface {
 
 // AIGenerationService handles AI-powered content generation.
 type AIGenerationService struct {
-	userRepo            repository.UserRepository
-	smeRepo             repository.SMERepository
-	smeKnowledgeRepo    repository.SMEKnowledgeRepository
-	audienceRepo        repository.TargetAudienceRepository
-	jobRepo             repository.GenerationJobRepository
-	outlineRepo         repository.CourseOutlineRepository
-	sectionRepo         repository.OutlineSectionRepository
-	lessonRepo          repository.OutlineLessonRepository
-	genLessonRepo       repository.GeneratedLessonRepository
-	componentRepo       repository.LessonComponentRepository
-	genInputRepo        repository.CourseGenerationInputRepository
-	aiSettingsRepo      repository.TenantAISettingsRepository
-	aiProviderFactory   AIProviderFactory
-	notifier            JobNotifier
-	completionNotifier  CourseCompletionNotifier
-	outlineNotifier     OutlineCompletionNotifier
-	taskEnqueuer        TaskEnqueuer // For event-driven job processing (optional, falls back to polling)
-	logger              service.Logger
+	userRepo           repository.UserRepository
+	jobRepo            repository.GenerationJobRepository
+	outlineRepo        repository.CourseOutlineRepository
+	sectionRepo        repository.OutlineSectionRepository
+	lessonRepo         repository.OutlineLessonRepository
+	genLessonRepo      repository.GeneratedLessonRepository
+	componentRepo      repository.LessonComponentRepository
+	genInputRepo       repository.CourseGenerationInputRepository
+	aiSettingsRepo     repository.TenantAISettingsRepository
+	aiProviderFactory  AIProviderFactory
+	notifier           JobNotifier
+	completionNotifier CourseCompletionNotifier
+	outlineNotifier    OutlineCompletionNotifier
+	taskEnqueuer       TaskEnqueuer // For event-driven job processing (optional, falls back to polling)
+	logger             service.Logger
 }
 
 // NewAIGenerationService creates a new AI generation service.
 func NewAIGenerationService(
 	userRepo repository.UserRepository,
-	smeRepo repository.SMERepository,
-	smeKnowledgeRepo repository.SMEKnowledgeRepository,
-	audienceRepo repository.TargetAudienceRepository,
 	jobRepo repository.GenerationJobRepository,
 	outlineRepo repository.CourseOutlineRepository,
 	sectionRepo repository.OutlineSectionRepository,
@@ -95,24 +89,21 @@ func NewAIGenerationService(
 	logger service.Logger,
 ) *AIGenerationService {
 	return &AIGenerationService{
-		userRepo:            userRepo,
-		smeRepo:             smeRepo,
-		smeKnowledgeRepo:    smeKnowledgeRepo,
-		audienceRepo:        audienceRepo,
-		jobRepo:             jobRepo,
-		outlineRepo:         outlineRepo,
-		sectionRepo:         sectionRepo,
-		lessonRepo:          lessonRepo,
-		genLessonRepo:       genLessonRepo,
-		componentRepo:       componentRepo,
-		genInputRepo:        genInputRepo,
-		aiSettingsRepo:      aiSettingsRepo,
-		aiProviderFactory:   aiProviderFactory,
-		notifier:            notifier,
-		completionNotifier:  completionNotifier,
-		outlineNotifier:     outlineNotifier,
-		taskEnqueuer:        taskEnqueuer,
-		logger:              logger,
+		userRepo:           userRepo,
+		jobRepo:            jobRepo,
+		outlineRepo:        outlineRepo,
+		sectionRepo:        sectionRepo,
+		lessonRepo:         lessonRepo,
+		genLessonRepo:      genLessonRepo,
+		componentRepo:      componentRepo,
+		genInputRepo:       genInputRepo,
+		aiSettingsRepo:     aiSettingsRepo,
+		aiProviderFactory:  aiProviderFactory,
+		notifier:           notifier,
+		completionNotifier: completionNotifier,
+		outlineNotifier:    outlineNotifier,
+		taskEnqueuer:       taskEnqueuer,
+		logger:             logger,
 	}
 }
 
@@ -120,8 +111,6 @@ func NewAIGenerationService(
 type GenerateCourseOutlineRequest struct {
 	CourseID          uuid.UUID
 	CourseTitle       string
-	SMEIDs            []uuid.UUID
-	TargetAudienceIDs []uuid.UUID
 	DesiredOutcome    string
 	AdditionalContext string
 }
@@ -144,32 +133,14 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
-	// Validate SMEs exist and user has access
-	for _, smeID := range req.SMEIDs {
-		sme, err := s.smeRepo.GetByID(ctx, smeID)
-		if err != nil || sme == nil {
-			return nil, domainerrors.ErrSMENotFound
-		}
-	}
-
-	// Validate target audiences exist
-	for _, audienceID := range req.TargetAudienceIDs {
-		audience, err := s.audienceRepo.GetByID(ctx, audienceID)
-		if err != nil || audience == nil {
-			return nil, domainerrors.ErrTargetAudienceNotFound
-		}
-	}
-
 	// Store generation input
 	genInput := &entity.CourseGenerationInput{
-		ID:                uuid.New(),
-		TenantID:          *user.TenantID,
-		CourseID:          req.CourseID,
-		SMEIDs:            req.SMEIDs,
-		TargetAudienceIDs: req.TargetAudienceIDs,
-		DesiredOutcome:    req.DesiredOutcome,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		ID:             uuid.New(),
+		TenantID:       *user.TenantID,
+		CourseID:       req.CourseID,
+		DesiredOutcome: req.DesiredOutcome,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 	if req.AdditionalContext != "" {
 		genInput.AdditionalContext = &req.AdditionalContext
@@ -225,7 +196,7 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 
 	// Job is already marked as 'processing' by GetNextQueued (atomic claim)
 	// Just update the progress message
-	progressMsg := "Gathering SME knowledge..."
+	progressMsg := "Preparing course generation..."
 	job.ProgressMessage = &progressMsg
 	if err := s.jobRepo.Update(ctx, job); err != nil {
 		log.Error("failed to update job progress message", "error", err)
@@ -235,75 +206,6 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	genInput, err := s.genInputRepo.GetByCourseID(ctx, *job.CourseID)
 	if err != nil || genInput == nil {
 		return s.failJob(ctx, job, "failed to get generation input")
-	}
-
-	// Gather SME knowledge
-	smeKnowledge := make([]service.SMEKnowledgeInput, 0, len(genInput.SMEIDs))
-	for _, smeID := range genInput.SMEIDs {
-		sme, err := s.smeRepo.GetByID(ctx, smeID)
-		if err != nil || sme == nil {
-			continue
-		}
-
-		chunks, err := s.smeKnowledgeRepo.ListBySMEID(ctx, smeID)
-		if err != nil {
-			log.Warn("failed to get SME knowledge chunks", "smeID", smeID, "error", err)
-			continue
-		}
-
-		chunkTexts := make([]string, len(chunks))
-		keywords := make([]string, 0)
-		for i, chunk := range chunks {
-			chunkTexts[i] = chunk.Content
-			keywords = append(keywords, chunk.Keywords...)
-		}
-
-		summary := ""
-		if sme.KnowledgeSummary != nil {
-			summary = *sme.KnowledgeSummary
-		}
-
-		smeKnowledge = append(smeKnowledge, service.SMEKnowledgeInput{
-			SMEName:  sme.Name,
-			Domain:   sme.Domain,
-			Summary:  summary,
-			Chunks:   chunkTexts,
-			Keywords: keywords,
-		})
-	}
-
-	if len(smeKnowledge) == 0 {
-		return s.failJob(ctx, job, "no SME knowledge available")
-	}
-
-	// Update progress
-	job.ProgressPercent = 20
-	progressMsg = "Analyzing target audience..."
-	job.ProgressMessage = &progressMsg
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to update job progress", "progress", 20, "error", err)
-	}
-
-	// Get target audience
-	var targetAudience service.TargetAudienceInput
-	if len(genInput.TargetAudienceIDs) > 0 {
-		audience, err := s.audienceRepo.GetByID(ctx, genInput.TargetAudienceIDs[0])
-		if err == nil && audience != nil {
-			targetAudience = service.TargetAudienceInput{
-				Role:            audience.Role,
-				ExperienceLevel: string(audience.ExperienceLevel),
-				LearningGoals:   audience.LearningGoals,
-				Prerequisites:   audience.Prerequisites,
-				Challenges:      audience.Challenges,
-				Motivations:     audience.Motivations,
-			}
-			if audience.IndustryContext != nil {
-				targetAudience.IndustryContext = *audience.IndustryContext
-			}
-			if audience.TypicalBackground != nil {
-				targetAudience.TypicalBackground = *audience.TypicalBackground
-			}
-		}
 	}
 
 	// Update progress
@@ -336,8 +238,8 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	outlineResult, err := aiProvider.GenerateCourseOutline(ctx, service.GenerateOutlineRequest{
 		CourseTitle:       "", // Will be fetched or passed
 		DesiredOutcome:    genInput.DesiredOutcome,
-		SMEKnowledge:      smeKnowledge,
-		TargetAudience:    targetAudience,
+		SMEKnowledge:      []service.SMEKnowledgeInput{}, // Empty since SME removed
+		TargetAudience:    service.TargetAudienceInput{}, // Empty since target audience removed
 		AdditionalContext: additionalContext,
 	})
 	if err != nil {
@@ -764,53 +666,10 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		return s.failJob(ctx, job, "section not found")
 	}
 
-	// Get generation input for SME knowledge and audience
+	// Get generation input (may contain additional context)
 	genInput, err := s.genInputRepo.GetByCourseID(ctx, *job.CourseID)
 	if err != nil || genInput == nil {
 		return s.failJob(ctx, job, "generation input not found")
-	}
-
-	// Gather SME knowledge (similar to outline generation)
-	smeKnowledge := make([]service.SMEKnowledgeInput, 0)
-	for _, smeID := range genInput.SMEIDs {
-		sme, err := s.smeRepo.GetByID(ctx, smeID)
-		if err != nil || sme == nil {
-			continue
-		}
-
-		chunks, _ := s.smeKnowledgeRepo.ListBySMEID(ctx, smeID)
-		chunkTexts := make([]string, len(chunks))
-		for i, chunk := range chunks {
-			chunkTexts[i] = chunk.Content
-		}
-
-		summary := ""
-		if sme.KnowledgeSummary != nil {
-			summary = *sme.KnowledgeSummary
-		}
-
-		smeKnowledge = append(smeKnowledge, service.SMEKnowledgeInput{
-			SMEName: sme.Name,
-			Domain:  sme.Domain,
-			Summary: summary,
-			Chunks:  chunkTexts,
-		})
-	}
-
-	// Get target audience
-	var targetAudience service.TargetAudienceInput
-	if len(genInput.TargetAudienceIDs) > 0 {
-		audience, _ := s.audienceRepo.GetByID(ctx, genInput.TargetAudienceIDs[0])
-		if audience != nil {
-			targetAudience = service.TargetAudienceInput{
-				Role:            audience.Role,
-				ExperienceLevel: string(audience.ExperienceLevel),
-				LearningGoals:   audience.LearningGoals,
-				Prerequisites:   audience.Prerequisites,
-				Challenges:      audience.Challenges,
-				Motivations:     audience.Motivations,
-			}
-		}
 	}
 
 	// Update progress
@@ -841,8 +700,8 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		LessonTitle:        outlineLesson.Title,
 		LessonDescription:  outlineLesson.Description,
 		LearningObjectives: outlineLesson.LearningObjectives,
-		SMEKnowledge:       smeKnowledge,
-		TargetAudience:     targetAudience,
+		SMEKnowledge:       []service.SMEKnowledgeInput{}, // Empty since SME removed
+		TargetAudience:     service.TargetAudienceInput{}, // Empty since target audience removed
 		IsLastInSection:    outlineLesson.IsLastInSection,
 		IsLastInCourse:     outlineLesson.IsLastInCourse,
 	})

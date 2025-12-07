@@ -12,15 +12,13 @@ const (
 	TypeStripeReconcile  = "stripe:reconcile" // Scheduled reconciliation for orphaned payments
 	TypeCleanupExpired   = "cleanup:expired"
 	TypeAIGeneration     = "ai:generation"
-	TypeSMEIngestion     = "sme:ingestion"
 	TypeAIGenerationPoll = "ai:generation:poll" // Scheduled polling task
-	TypeSMEIngestionPoll = "sme:ingestion:poll" // Scheduled polling task
 )
 
 // Queue names for priority handling
 const (
 	QueueCritical = "critical" // Provisioning tasks
-	QueueDefault  = "default"  // AI/SME tasks
+	QueueDefault  = "default"  // AI tasks
 	QueueLow      = "low"      // Cleanup tasks
 )
 
@@ -35,11 +33,6 @@ type StripeProvisionPayload struct {
 type AIGenerationPayload struct {
 	JobID   string `json:"job_id"`
 	JobType string `json:"job_type"` // "outline" or "lesson"
-}
-
-// SMEIngestionPayload contains data for SME document ingestion jobs
-type SMEIngestionPayload struct {
-	JobID string `json:"job_id"`
 }
 
 // NewStripeProvisionTask creates a new Stripe provisioning task
@@ -72,17 +65,6 @@ func NewAIGenerationTask(jobID, jobType string) (*asynq.Task, error) {
 	return asynq.NewTask(TypeAIGeneration, payload, asynq.Queue(QueueDefault), asynq.MaxRetry(3)), nil
 }
 
-// NewSMEIngestionTask creates a new SME ingestion task
-func NewSMEIngestionTask(jobID string) (*asynq.Task, error) {
-	payload, err := json.Marshal(SMEIngestionPayload{
-		JobID: jobID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return asynq.NewTask(TypeSMEIngestion, payload, asynq.Queue(QueueDefault), asynq.MaxRetry(3)), nil
-}
-
 // NewCleanupExpiredTask creates a new cleanup task (no payload needed)
 func NewCleanupExpiredTask() *asynq.Task {
 	return asynq.NewTask(TypeCleanupExpired, nil, asynq.Queue(QueueLow), asynq.MaxRetry(1))
@@ -91,9 +73,4 @@ func NewCleanupExpiredTask() *asynq.Task {
 // NewAIGenerationPollTask creates a new AI generation polling task (scheduled)
 func NewAIGenerationPollTask() *asynq.Task {
 	return asynq.NewTask(TypeAIGenerationPoll, nil, asynq.Queue(QueueDefault), asynq.MaxRetry(1))
-}
-
-// NewSMEIngestionPollTask creates a new SME ingestion polling task (scheduled)
-func NewSMEIngestionPollTask() *asynq.Task {
-	return asynq.NewTask(TypeSMEIngestionPoll, nil, asynq.Queue(QueueDefault), asynq.MaxRetry(1))
 }

@@ -79,27 +79,4 @@ func (c *Client) EnqueueAIGeneration(jobID, jobType string) error {
 	return nil
 }
 
-// EnqueueSMEIngestion enqueues an SME ingestion task.
-func (c *Client) EnqueueSMEIngestion(jobID string) error {
-	task, err := worker.NewSMEIngestionTask(jobID)
-	if err != nil {
-		c.logger.Error("failed to create SME ingestion task", "error", err)
-		return err
-	}
-
-	info, err := c.client.Enqueue(task)
-	if err != nil {
-		c.logger.Error("failed to enqueue SME ingestion task",
-			"jobID", jobID,
-			"error", err,
-		)
-		return err
-	}
-
-	c.logger.Info("enqueued SME ingestion task",
-		"taskID", info.ID,
-		"queue", info.Queue,
-		"jobID", jobID,
-	)
-	return nil
-}
+// EnqueueSMEIngestion was removed as part of SME cleanup (Phase 3)

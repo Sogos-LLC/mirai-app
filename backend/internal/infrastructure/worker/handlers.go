@@ -18,7 +18,6 @@ type Handlers struct {
 	provisioningService *appservice.ProvisioningService
 	cleanupService      *appservice.CleanupService
 	aiGenService        *appservice.AIGenerationService
-	smeIngestionService *appservice.SMEIngestionService
 	workerClient        *Client
 	logger              domainservice.Logger
 }
@@ -28,7 +27,6 @@ func NewHandlers(
 	provisioningService *appservice.ProvisioningService,
 	cleanupService *appservice.CleanupService,
 	aiGenService *appservice.AIGenerationService,
-	smeIngestionService *appservice.SMEIngestionService,
 	workerClient *Client,
 	logger domainservice.Logger,
 ) *Handlers {
@@ -36,7 +34,6 @@ func NewHandlers(
 		provisioningService: provisioningService,
 		cleanupService:      cleanupService,
 		aiGenService:        aiGenService,
-		smeIngestionService: smeIngestionService,
 		workerClient:        workerClient,
 		logger:              logger,
 	}
@@ -179,31 +176,6 @@ func (h *Handlers) HandleAIGeneration(ctx context.Context, t *asynq.Task) error 
 	return nil
 }
 
-// HandleSMEIngestion processes an SME document ingestion task.
-// This is called when a document needs to be processed for SME content.
-func (h *Handlers) HandleSMEIngestion(ctx context.Context, t *asynq.Task) error {
-	var payload worker.SMEIngestionPayload
-	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal payload: %w", asynq.SkipRetry)
-	}
-
-	log := h.logger.With(
-		"task", worker.TypeSMEIngestion,
-		"jobID", payload.JobID,
-	)
-	log.Info("processing SME ingestion task")
-
-	// Call the SME ingestion service to process this specific job
-	err := h.smeIngestionService.ProcessJobByID(ctx, payload.JobID)
-	if err != nil {
-		log.Error("failed to process SME ingestion job", "error", err)
-		return err
-	}
-
-	log.Info("SME ingestion job completed")
-	return nil
-}
-
 // HandleAIGenerationPoll processes AI generation jobs by polling the database.
 // This is called periodically by the scheduler.
 func (h *Handlers) HandleAIGenerationPoll(ctx context.Context, t *asynq.Task) error {
@@ -225,25 +197,5 @@ func (h *Handlers) HandleAIGenerationPoll(ctx context.Context, t *asynq.Task) er
 	}
 
 	log.Debug("AI generation poll task completed")
-	return nil
-}
-
-// HandleSMEIngestionPoll processes SME ingestion jobs by polling the database.
-// This is called periodically by the scheduler.
-func (h *Handlers) HandleSMEIngestionPoll(ctx context.Context, t *asynq.Task) error {
-	log := h.logger.With("task", worker.TypeSMEIngestionPoll)
-
-	// Only process if service is available
-	if h.smeIngestionService == nil {
-		return nil
-	}
-
-	// Process next queued job (uses FOR UPDATE SKIP LOCKED in DB)
-	_, err := h.smeIngestionService.ProcessNextJob(ctx)
-	if err != nil {
-		log.Error("failed to process SME ingestion job", "error", err)
-		return err
-	}
-
 	return nil
 }

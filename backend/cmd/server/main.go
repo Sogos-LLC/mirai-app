@@ -69,15 +69,6 @@ func main() {
 	courseRepo := sqlc.NewCourseRepository(db.DB)
 	folderRepo := sqlc.NewFolderRepository(db.DB)
 
-	// SME repositories
-	smeRepo := sqlc.NewSMERepository(db.DB)
-	smeTaskRepo := sqlc.NewSMETaskRepository(db.DB)
-	smeSubmissionRepo := sqlc.NewSMESubmissionRepository(db.DB)
-	smeKnowledgeRepo := sqlc.NewSMEKnowledgeRepository(db.DB)
-
-	// Target Audience repository
-	targetAudienceRepo := sqlc.NewTargetAudienceRepository(db.DB)
-
 	// AI & Generation repositories
 	aiSettingsRepo := sqlc.NewTenantAISettingsRepository(db.DB)
 	notificationRepo := sqlc.NewNotificationRepository(db.DB)
@@ -214,11 +205,6 @@ func main() {
 	// Notification service (created first for dependency injection)
 	notificationService := service.NewNotificationService(userRepo, notificationRepo, kratosClient, emailClient, notificationPubSub, cfg.FrontendURL, logger)
 
-	// SME and Target Audience services
-	// Note: enhancer is nil initially, will be set when AI services are available
-	smeService := service.NewSMEService(userRepo, companyRepo, teamRepo, smeRepo, smeTaskRepo, smeSubmissionRepo, smeKnowledgeRepo, tenantStorage, notificationService, nil, logger)
-	targetAudienceService := service.NewTargetAudienceService(userRepo, targetAudienceRepo, logger)
-
 	// Initialize Asynq worker client for enqueueing tasks (needed by AI services)
 	// Strip redis:// prefix if present (Asynq expects host:port format)
 	redisAddr := strings.TrimPrefix(cfg.RedisURL, "redis://")
@@ -229,7 +215,6 @@ func main() {
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
-	var smeIngestionService *service.SMEIngestionService
 	if encryptor != nil {
 		tenantSettingsService = service.NewTenantSettingsService(userRepo, aiSettingsRepo, encryptor, logger)
 
@@ -239,9 +224,6 @@ func main() {
 		// AI Generation service
 		aiGenerationService = service.NewAIGenerationService(
 			userRepo,
-			smeRepo,
-			smeKnowledgeRepo,
-			targetAudienceRepo,
 			generationJobRepo,
 			outlineRepo,
 			sectionRepo,
@@ -258,20 +240,6 @@ func main() {
 			logger,
 		)
 
-		// SME Ingestion service
-		smeIngestionService = service.NewSMEIngestionService(
-			smeRepo,
-			smeTaskRepo,
-			smeSubmissionRepo,
-			smeKnowledgeRepo,
-			generationJobRepo,
-			aiSettingsRepo,
-			tenantStorage,
-			geminiProviderFactory,
-			notificationService,
-			logger,
-		)
-
 		logger.Info("AI services initialized")
 	} else {
 		logger.Warn("AI services not initialized (encryption key required)")
@@ -284,17 +252,15 @@ func main() {
 	// Create Connect server mux
 	mux := connectserver.NewServeMux(connectserver.ServerConfig{
 		AuthService:            authService,
-		UserService:            userService,
-		CompanyService:         companyService,
-		TeamService:            teamService,
-		BillingService:         billingService,
-		InvitationService:      invitationService,
-		CourseService:          courseService,
-		SMEService:             smeService,
-		TargetAudienceService:  targetAudienceService,
-		TenantSettingsService:  tenantSettingsService,
-		NotificationService:    notificationService,
-		AIGenerationService:    aiGenerationService,
+		UserService:           userService,
+		CompanyService:        companyService,
+		TeamService:           teamService,
+		BillingService:        billingService,
+		InvitationService:     invitationService,
+		CourseService:         courseService,
+		TenantSettingsService: tenantSettingsService,
+		NotificationService:   notificationService,
+		AIGenerationService:   aiGenerationService,
 		PendingRegRepo:         pendingRegRepo,
 		UserRepo:               userRepo,               // For tenant context in auth interceptor
 		Cache:                  globalCache,            // For caching user tenant mappings (not tenant-scoped)
@@ -332,7 +298,6 @@ func main() {
 		provisioningService,
 		cleanupService,
 		aiGenerationService,
-		smeIngestionService,
 		workerClient,
 		logger,
 	)

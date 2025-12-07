@@ -169,44 +169,6 @@ func toNotificationPriority(s string) gen.NotificationPriority {
 	return gen.NotificationPriority(s)
 }
 
-// toExperienceLevel converts a string to gen.ExperienceLevel.
-func toExperienceLevel(s string) gen.ExperienceLevel {
-	return gen.ExperienceLevel(s)
-}
-
-// toTargetAudienceStatus converts a string to gen.TargetAudienceStatus.
-func toTargetAudienceStatus(s string) gen.TargetAudienceStatus {
-	return gen.TargetAudienceStatus(s)
-}
-
-// toSmeScope converts a string to gen.SmeScope.
-func toSmeScope(s string) gen.SmeScope {
-	return gen.SmeScope(s)
-}
-
-// toSmeStatus converts a string to gen.SmeStatus.
-func toSmeStatus(s string) gen.SmeStatus {
-	return gen.SmeStatus(s)
-}
-
-// toSmeTaskStatus converts a string to gen.SmeTaskStatus.
-func toSmeTaskStatus(s string) gen.SmeTaskStatus {
-	return gen.SmeTaskStatus(s)
-}
-
-// toSmeContentType converts a string to gen.SmeContentType.
-func toSmeContentType(s string) gen.SmeContentType {
-	return gen.SmeContentType(s)
-}
-
-// toNullSmeContentType converts a *string to gen.NullSmeContentType.
-func toNullSmeContentType(s *string) gen.NullSmeContentType {
-	if s == nil {
-		return gen.NullSmeContentType{}
-	}
-	return gen.NullSmeContentType{SmeContentType: gen.SmeContentType(*s), Valid: true}
-}
-
 // toLessonComponentType converts a string to gen.LessonComponentType.
 func toLessonComponentType(s string) gen.LessonComponentType {
 	return gen.LessonComponentType(s)
@@ -236,28 +198,4 @@ func toNullGenerationJobStatus(s *string) gen.NullGenerationJobStatus {
 		return gen.NullGenerationJobStatus{}
 	}
 	return gen.NullGenerationJobStatus{GenerationJobStatus: gen.GenerationJobStatus(*s), Valid: true}
-}
-
-// toNullSmeScope converts a *string to gen.NullSmeScope.
-func toNullSmeScope(s *string) gen.NullSmeScope {
-	if s == nil {
-		return gen.NullSmeScope{}
-	}
-	return gen.NullSmeScope{SmeScope: gen.SmeScope(*s), Valid: true}
-}
-
-// toNullSmeStatus converts a *string to gen.NullSmeStatus.
-func toNullSmeStatus(s *string) gen.NullSmeStatus {
-	if s == nil {
-		return gen.NullSmeStatus{}
-	}
-	return gen.NullSmeStatus{SmeStatus: gen.SmeStatus(*s), Valid: true}
-}
-
-// toNullSmeTaskStatus converts a *string to gen.NullSmeTaskStatus.
-func toNullSmeTaskStatus(s *string) gen.NullSmeTaskStatus {
-	if s == nil {
-		return gen.NullSmeTaskStatus{}
-	}
-	return gen.NullSmeTaskStatus{SmeTaskStatus: gen.SmeTaskStatus(*s), Valid: true}
 }
