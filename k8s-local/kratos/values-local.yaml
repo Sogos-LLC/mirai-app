@@ -1,0 +1,252 @@
+# Ory Kratos Helm Chart Values - Local Development
+# Install with: helm install kratos ory/kratos -f values-local.yaml -n mirai
+
+kratos:
+  development: true
+  automigration:
+    enabled: true
+
+  config:
+    dsn: $DSN
+
+    serve:
+      public:
+        base_url: https://auth.mirai.local
+        cors:
+          enabled: true
+          allowed_origins:
+            - https://mirai.local
+            - http://localhost:3000
+          allowed_methods:
+            - POST
+            - GET
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          allowed_headers:
+            - Authorization
+            - Cookie
+            - Content-Type
+            - X-Session-Token
+          exposed_headers:
+            - Content-Type
+            - Set-Cookie
+          allow_credentials: true
+          debug: true
+      admin:
+        base_url: http://kratos-admin:80
+
+    selfservice:
+      default_browser_return_url: https://mirai.local/dashboard
+      allowed_return_urls:
+        - https://mirai.local
+        - http://localhost:3000
+
+      methods:
+        password:
+          enabled: true
+        link:
+          enabled: true
+        code:
+          enabled: true
+
+      flows:
+        error:
+          ui_url: https://mirai.local/auth/error
+
+        settings:
+          ui_url: https://mirai.local/auth/settings
+          privileged_session_max_age: 15m
+
+        recovery:
+          enabled: true
+          ui_url: https://mirai.local/auth/recovery
+          use: code
+
+        verification:
+          enabled: false  # Disabled for easier local testing
+          ui_url: https://mirai.local/auth/verification
+          use: code
+          after:
+            default_browser_return_url: https://mirai.local/dashboard
+
+        logout:
+          after:
+            default_browser_return_url: https://mirai.local/auth/login
+
+        login:
+          ui_url: https://mirai.local/auth/login
+          lifespan: 10m
+
+        registration:
+          ui_url: https://mirai.local/auth/registration
+          lifespan: 10m
+          after:
+            password:
+              hooks:
+                - hook: session
+            default_browser_return_url: https://mirai.local/dashboard
+
+    log:
+      level: debug
+      format: text
+      leak_sensitive_values: true  # OK for local dev only
+
+    secrets:
+      default:
+        - $SECRETS_DEFAULT
+
+    hashers:
+      argon2:
+        parallelism: 1
+        memory: 128MB
+        iterations: 2
+        salt_length: 16
+        key_length: 16
+
+    identity:
+      default_schema_id: user
+      schemas:
+        - id: user
+          url: file:///etc/config/identity.schema.json
+
+    courier:
+      smtp:
+        connection_uri: smtp://mailpit.mirai.svc.cluster.local:1025/?disable_starttls=true
+        from_address: noreply@mirai.local
+        from_name: Mirai Local
+
+    session:
+      lifespan: 24h
+      cookie:
+        domain: .mirai.local
+        same_site: Lax
+        path: /
+
+  # Identity schema file (embedded in Helm values)
+  identitySchemas:
+    "identity.schema.json": |
+      {
+        "$id": "https://mirai.local/schemas/user.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "User",
+        "type": "object",
+        "properties": {
+          "traits": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email",
+                "title": "Email",
+                "minLength": 3,
+                "ory.sh/kratos": {
+                  "credentials": {
+                    "password": {
+                      "identifier": true
+                    }
+                  },
+                  "recovery": {
+                    "via": "email"
+                  },
+                  "verification": {
+                    "via": "email"
+                  }
+                }
+              },
+              "name": {
+                "type": "object",
+                "properties": {
+                  "first": {
+                    "type": "string",
+                    "title": "First Name",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "last": {
+                    "type": "string",
+                    "title": "Last Name",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": ["first", "last"]
+              }
+            },
+            "required": ["email", "name"],
+            "additionalProperties": false
+          }
+        }
+      }
+
+# Deployment configuration
+deployment:
+  extraEnv:
+    - name: DSN
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: dsn
+    - name: SECRETS_DEFAULT
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: secretsDefault
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 10000
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+
+# Job configuration (for migrations)
+job:
+  extraEnv:
+    - name: DSN
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: dsn
+
+# Service configuration
+service:
+  public:
+    enabled: true
+    type: ClusterIP
+    port: 80
+    name: http
+  admin:
+    enabled: true
+    type: ClusterIP
+    port: 80
+    name: http
+
+# Disable ingress (using Traefik IngressRoute instead)
+ingress:
+  public:
+    enabled: false
+  admin:
+    enabled: false
+
+# StatefulSet (courier) configuration
+statefulSet:
+  extraEnv:
+    - name: DSN
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: dsn

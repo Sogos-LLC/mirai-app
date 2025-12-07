@@ -68,9 +68,8 @@ spec:
 ---
 # Kratos Public API: auth.mirai.local
 # Routes to Ory Kratos authentication service (public endpoint)
-# Note: Kratos is deployed via Helm and creates its own service
+# Kratos is deployed via Helm to mirai namespace
 # The service name follows the pattern: <release-name>-public
-# Assuming release name is "kratos" in the "kratos" namespace
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -83,11 +82,8 @@ spec:
     - match: Host(`auth.mirai.local`)
       kind: Rule
       services:
-        # Cross-namespace service reference
-        # Format: service-name.namespace.svc.cluster.local
         # Kratos Helm chart creates service named "<release>-public"
         - name: kratos-public
-          namespace: kratos
           port: 80
       middlewares:
         - name: kratos-cors
