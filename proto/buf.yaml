@@ -2,6 +2,8 @@ version: v2
 modules:
   - path: .
     name: buf.build/mirai/api
+deps:
+  - buf.build/bufbuild/protovalidate
 lint:
   use:
     - STANDARD

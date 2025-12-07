@@ -7,6 +7,7 @@
 package miraiv1
 
 import (
+	_ "github.com/sogos/mirai-backend/gen/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -2315,7 +2316,7 @@ type CreateFolderRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	ParentId      *string                `protobuf:"bytes,2,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"` // null for root-level folders
-	Type          FolderType             `protobuf:"varint,3,opt,name=type,proto3,enum=mirai.v1.FolderType" json:"type,omitempty"`     // typically FOLDER_TYPE_FOLDER for user-created folders
+	Type          FolderType             `protobuf:"varint,3,opt,name=type,proto3,enum=mirai.v1.FolderType" json:"type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2886,16 +2887,16 @@ var File_mirai_v1_course_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_course_proto_rawDesc = "" +
 	"\n" +
-	"\x15mirai/v1/course.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"7\n" +
+	"\x15mirai/v1/course.proto\x12\bmirai.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"@\n" +
 	"\x11LearningObjective\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04text\x18\x02 \x01(\tR\x04text\"\xe2\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\x04text\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04text\"\x86\x03\n" +
 	"\aPersona\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04role\x18\x03 \x01(\tR\x04role\x12\x12\n" +
-	"\x04kpis\x18\x04 \x01(\tR\x04kpis\x12*\n" +
-	"\x10responsibilities\x18\x05 \x01(\tR\x10responsibilities\x12#\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x1b\n" +
+	"\x04role\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04role\x12\x1b\n" +
+	"\x04kpis\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04kpis\x123\n" +
+	"\x10responsibilities\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x10responsibilities\x12#\n" +
 	"\n" +
 	"challenges\x18\x06 \x01(\tH\x00R\n" +
 	"challenges\x88\x01\x01\x12\x1f\n" +
@@ -2945,10 +2946,11 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\tfile_path\x18\x05 \x01(\tR\bfilePath\x12.\n" +
 	"\x06status\x18\x06 \x01(\x0e2\x16.mirai.v1.ExportStatusR\x06status\x12(\n" +
 	"\rerror_message\x18\a \x01(\tH\x00R\ferrorMessage\x88\x01\x01B\x10\n" +
-	"\x0e_error_message\"\xc4\x01\n" +
-	"\x0eCourseSettings\x12\x14\n" +
-	"\x05title\x18\x01 \x01(\tR\x05title\x12'\n" +
-	"\x0fdesired_outcome\x18\x02 \x01(\tR\x0edesiredOutcome\x12-\n" +
+	"\x0e_error_message\"\xd9\x01\n" +
+	"\x0eCourseSettings\x12 \n" +
+	"\x05title\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05title\x120\n" +
+	"\x0fdesired_outcome\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x0edesiredOutcome\x12-\n" +
 	"\x12destination_folder\x18\x03 \x01(\tR\x11destinationFolder\x12#\n" +
 	"\rcategory_tags\x18\x04 \x03(\tR\fcategoryTags\x12\x1f\n" +
 	"\vdata_source\x18\x05 \x01(\tR\n" +
@@ -3039,9 +3041,9 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\acourses\x18\x01 \x03(\v2\x16.mirai.v1.LibraryEntryR\acourses\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
 	"totalCount\x12\x19\n" +
-	"\bhas_more\x18\x03 \x01(\bR\ahasMore\"\"\n" +
-	"\x10GetCourseRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"=\n" +
+	"\bhas_more\x18\x03 \x01(\bR\ahasMore\"+\n" +
+	"\x10GetCourseRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x02id\"=\n" +
 	"\x11GetCourseResponse\x12(\n" +
 	"\x06course\x18\x01 \x01(\v2\x10.mirai.v1.CourseR\x06course\"\xa6\x03\n" +
 	"\x13CreateCourseRequest\x12\x13\n" +
@@ -3057,9 +3059,9 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\n" +
 	"\b_content\"@\n" +
 	"\x14CreateCourseResponse\x12(\n" +
-	"\x06course\x18\x01 \x01(\v2\x10.mirai.v1.CourseR\x06course\"\xa2\x04\n" +
-	"\x13UpdateCourseRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x129\n" +
+	"\x06course\x18\x01 \x01(\v2\x10.mirai.v1.CourseR\x06course\"\xab\x04\n" +
+	"\x13UpdateCourseRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x02id\x129\n" +
 	"\bsettings\x18\x02 \x01(\v2\x18.mirai.v1.CourseSettingsH\x00R\bsettings\x88\x01\x01\x12-\n" +
 	"\bpersonas\x18\x03 \x03(\v2\x11.mirai.v1.PersonaR\bpersonas\x12L\n" +
 	"\x13learning_objectives\x18\x04 \x03(\v2\x1b.mirai.v1.LearningObjectiveR\x12learningObjectives\x12R\n" +
@@ -3074,9 +3076,9 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\a_statusB\v\n" +
 	"\t_metadata\"@\n" +
 	"\x14UpdateCourseResponse\x12(\n" +
-	"\x06course\x18\x01 \x01(\v2\x10.mirai.v1.CourseR\x06course\"%\n" +
-	"\x13DeleteCourseRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"0\n" +
+	"\x06course\x18\x01 \x01(\v2\x10.mirai.v1.CourseR\x06course\".\n" +
+	"\x13DeleteCourseRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x02id\"0\n" +
 	"\x14DeleteCourseResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"O\n" +
 	"\x19GetFolderHierarchyRequest\x122\n" +
@@ -3086,36 +3088,36 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x11GetLibraryRequest\x122\n" +
 	"\x15include_course_counts\x18\x01 \x01(\bR\x13includeCourseCounts\"A\n" +
 	"\x12GetLibraryResponse\x12+\n" +
-	"\alibrary\x18\x01 \x01(\v2\x11.mirai.v1.LibraryR\alibrary\"\x83\x01\n" +
-	"\x13CreateFolderRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\tparent_id\x18\x02 \x01(\tH\x00R\bparentId\x88\x01\x01\x12(\n" +
-	"\x04type\x18\x03 \x01(\x0e2\x14.mirai.v1.FolderTypeR\x04typeB\f\n" +
+	"\alibrary\x18\x01 \x01(\v2\x11.mirai.v1.LibraryR\alibrary\"\x98\x01\n" +
+	"\x13CreateFolderRequest\x12\x1d\n" +
+	"\x04name\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\x04name\x12 \n" +
+	"\tparent_id\x18\x02 \x01(\tH\x00R\bparentId\x88\x01\x01\x122\n" +
+	"\x04type\x18\x03 \x01(\x0e2\x14.mirai.v1.FolderTypeB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04typeB\f\n" +
 	"\n" +
 	"_parent_id\"@\n" +
 	"\x14CreateFolderResponse\x12(\n" +
-	"\x06folder\x18\x01 \x01(\v2\x10.mirai.v1.FolderR\x06folder\"%\n" +
-	"\x13DeleteFolderRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"0\n" +
+	"\x06folder\x18\x01 \x01(\v2\x10.mirai.v1.FolderR\x06folder\".\n" +
+	"\x13DeleteFolderRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x02id\"0\n" +
 	"\x14DeleteFolderResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"b\n" +
-	"\x13ExportCourseRequest\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12.\n" +
-	"\x06format\x18\x02 \x01(\x0e2\x16.mirai.v1.ExportFormatR\x06format\"F\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"u\n" +
+	"\x13ExportCourseRequest\x12$\n" +
+	"\tcourse_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bcourseId\x128\n" +
+	"\x06format\x18\x02 \x01(\x0e2\x16.mirai.v1.ExportFormatB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06format\"F\n" +
 	"\x14ExportCourseResponse\x12.\n" +
-	"\x06export\x18\x01 \x01(\v2\x16.mirai.v1.CourseExportR\x06export\"5\n" +
-	"\x16GetExportStatusRequest\x12\x1b\n" +
-	"\texport_id\x18\x01 \x01(\tR\bexportId\"I\n" +
+	"\x06export\x18\x01 \x01(\v2\x16.mirai.v1.CourseExportR\x06export\">\n" +
+	"\x16GetExportStatusRequest\x12$\n" +
+	"\texport_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bexportId\"I\n" +
 	"\x17GetExportStatusResponse\x12.\n" +
-	"\x06export\x18\x01 \x01(\v2\x16.mirai.v1.CourseExportR\x06export\"4\n" +
-	"\x15DownloadExportRequest\x12\x1b\n" +
-	"\texport_id\x18\x01 \x01(\tR\bexportId\"v\n" +
+	"\x06export\x18\x01 \x01(\v2\x16.mirai.v1.CourseExportR\x06export\"=\n" +
+	"\x15DownloadExportRequest\x12$\n" +
+	"\texport_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bexportId\"v\n" +
 	"\x16DownloadExportResponse\x12!\n" +
 	"\fdownload_url\x18\x01 \x01(\tR\vdownloadUrl\x129\n" +
 	"\n" +
-	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"1\n" +
-	"\x12ListExportsRequest\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"G\n" +
+	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\":\n" +
+	"\x12ListExportsRequest\x12$\n" +
+	"\tcourse_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bcourseId\"G\n" +
 	"\x13ListExportsResponse\x120\n" +
 	"\aexports\x18\x01 \x03(\v2\x16.mirai.v1.CourseExportR\aexports*\x80\x01\n" +
 	"\fCourseStatus\x12\x1d\n" +

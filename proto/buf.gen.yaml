@@ -4,6 +4,10 @@ managed:
   override:
     - file_option: go_package_prefix
       value: github.com/sogos/mirai-backend/gen
+inputs:
+  - directory: .
+  # Include protovalidate types for TypeScript generation
+  - module: buf.build/bufbuild/protovalidate
 plugins:
   # Go protobuf types
   - remote: buf.build/protocolbuffers/go
@@ -27,5 +31,10 @@ plugins:
 
   # Connect-Query for TanStack Query integration
   - remote: buf.build/connectrpc/query-es
+    out: ../frontend/src/gen
+    opt: target=ts
+
+  # Zod schema generation (local plugin)
+  - local: ../packages/protoc-gen-zod/bin/protoc-gen-zod.js
     out: ../frontend/src/gen
     opt: target=ts

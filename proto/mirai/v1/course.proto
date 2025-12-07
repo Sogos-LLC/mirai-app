@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package mirai.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
 // CourseStatus represents the publication state of a course.
@@ -51,16 +52,16 @@ enum ExportStatus {
 // LearningObjective represents a specific learning goal for the course.
 message LearningObjective {
   string id = 1;
-  string text = 2;
+  string text = 2 [(buf.validate.field).string.min_len = 1];
 }
 
 // Persona represents a target learner profile.
 message Persona {
   string id = 1;
-  string name = 2;
-  string role = 3;
-  string kpis = 4;
-  string responsibilities = 5;
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  string role = 3 [(buf.validate.field).string.min_len = 1];
+  string kpis = 4 [(buf.validate.field).string.min_len = 1];
+  string responsibilities = 5 [(buf.validate.field).string.min_len = 1];
   optional string challenges = 6;
   optional string concerns = 7;
   optional string knowledge = 8;
@@ -124,8 +125,8 @@ message CourseExport {
 
 // CourseSettings contains the configurable settings for a course.
 message CourseSettings {
-  string title = 1;
-  string desired_outcome = 2;
+  string title = 1 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  string desired_outcome = 2 [(buf.validate.field).string.min_len = 1];
   string destination_folder = 3;
   repeated string category_tags = 4;
   string data_source = 5;
@@ -255,7 +256,7 @@ message ListCoursesResponse {
 
 // GetCourseRequest contains the course ID to retrieve.
 message GetCourseRequest {
-  string id = 1;
+  string id = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 // GetCourseResponse contains the requested course.
@@ -280,7 +281,7 @@ message CreateCourseResponse {
 
 // UpdateCourseRequest contains the course ID and fields to update.
 message UpdateCourseRequest {
-  string id = 1;
+  string id = 1 [(buf.validate.field).string.min_len = 1];
   optional CourseSettings settings = 2;
   repeated Persona personas = 3;
   repeated LearningObjective learning_objectives = 4;
@@ -297,7 +298,7 @@ message UpdateCourseResponse {
 
 // DeleteCourseRequest contains the course ID to delete.
 message DeleteCourseRequest {
-  string id = 1;
+  string id = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 // DeleteCourseResponse confirms deletion.
@@ -327,9 +328,9 @@ message GetLibraryResponse {
 
 // CreateFolderRequest contains the data for creating a new folder.
 message CreateFolderRequest {
-  string name = 1;
+  string name = 1 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
   optional string parent_id = 2;  // null for root-level folders
-  FolderType type = 3;            // typically FOLDER_TYPE_FOLDER for user-created folders
+  FolderType type = 3 [(buf.validate.field).enum.defined_only = true];
 }
 
 // CreateFolderResponse contains the newly created folder.
@@ -339,7 +340,7 @@ message CreateFolderResponse {
 
 // DeleteFolderRequest contains the folder ID to delete.
 message DeleteFolderRequest {
-  string id = 1;
+  string id = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 // DeleteFolderResponse confirms deletion.
@@ -349,8 +350,8 @@ message DeleteFolderResponse {
 
 // ExportCourseRequest contains the course ID and export format.
 message ExportCourseRequest {
-  string course_id = 1;
-  ExportFormat format = 2;
+  string course_id = 1 [(buf.validate.field).string.min_len = 1];
+  ExportFormat format = 2 [(buf.validate.field).enum.defined_only = true];
 }
 
 // ExportCourseResponse contains the export job details.
@@ -360,7 +361,7 @@ message ExportCourseResponse {
 
 // GetExportStatusRequest contains the export ID.
 message GetExportStatusRequest {
-  string export_id = 1;
+  string export_id = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 // GetExportStatusResponse contains the export status.
@@ -370,7 +371,7 @@ message GetExportStatusResponse {
 
 // DownloadExportRequest contains the export ID.
 message DownloadExportRequest {
-  string export_id = 1;
+  string export_id = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 // DownloadExportResponse contains the presigned download URL.
@@ -381,7 +382,7 @@ message DownloadExportResponse {
 
 // ListExportsRequest contains the course ID.
 message ListExportsRequest {
-  string course_id = 1;
+  string course_id = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 // ListExportsResponse contains the list of exports.

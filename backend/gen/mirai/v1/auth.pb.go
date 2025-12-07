@@ -7,6 +7,7 @@
 package miraiv1
 
 import (
+	_ "github.com/sogos/mirai-backend/gen/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -711,23 +712,25 @@ var File_mirai_v1_auth_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x13mirai/v1/auth.proto\x12\bmirai.v1\x1a\x15mirai/v1/common.proto\")\n" +
-	"\x11CheckEmailRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\",\n" +
+	"\x13mirai/v1/auth.proto\x12\bmirai.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15mirai/v1/common.proto\"2\n" +
+	"\x11CheckEmailRequest\x12\x1d\n" +
+	"\x05email\x18\x01 \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\",\n" +
 	"\x12CheckEmailResponse\x12\x16\n" +
-	"\x06exists\x18\x01 \x01(\bR\x06exists\"\xd7\x02\n" +
-	"\x0fRegisterRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1d\n" +
+	"\x06exists\x18\x01 \x01(\bR\x06exists\"\x9d\x03\n" +
+	"\x0fRegisterRequest\x12\x1d\n" +
+	"\x05email\x18\x01 \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\x12&\n" +
+	"\bpassword\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\b\x18\x80\x01R\bpassword\x12&\n" +
 	"\n" +
-	"first_name\x18\x03 \x01(\tR\tfirstName\x12\x1b\n" +
-	"\tlast_name\x18\x04 \x01(\tR\blastName\x12!\n" +
-	"\fcompany_name\x18\x05 \x01(\tR\vcompanyName\x12\x1f\n" +
+	"first_name\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tfirstName\x12$\n" +
+	"\tlast_name\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\blastName\x12-\n" +
+	"\fcompany_name\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\vcompanyName\x12\x1f\n" +
 	"\bindustry\x18\x06 \x01(\tH\x00R\bindustry\x88\x01\x01\x12 \n" +
-	"\tteam_size\x18\a \x01(\tH\x01R\bteamSize\x88\x01\x01\x12\"\n" +
-	"\x04plan\x18\b \x01(\x0e2\x0e.mirai.v1.PlanR\x04plan\x12\"\n" +
+	"\tteam_size\x18\a \x01(\tH\x01R\bteamSize\x88\x01\x01\x12,\n" +
+	"\x04plan\x18\b \x01(\x0e2\x0e.mirai.v1.PlanB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04plan\x12+\n" +
 	"\n" +
-	"seat_count\x18\t \x01(\x05H\x02R\tseatCount\x88\x01\x01B\v\n" +
+	"seat_count\x18\t \x01(\x05B\a\xbaH\x04\x1a\x02(\x01H\x02R\tseatCount\x88\x01\x01B\v\n" +
 	"\t_industryB\f\n" +
 	"\n" +
 	"_team_sizeB\r\n" +
@@ -741,14 +744,15 @@ const file_mirai_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"\b_companyB\x0f\n" +
 	"\r_checkout_urlB\b\n" +
-	"\x06_email\"\xe8\x01\n" +
-	"\x0eOnboardRequest\x12!\n" +
-	"\fcompany_name\x18\x01 \x01(\tR\vcompanyName\x12\x1f\n" +
+	"\x06_email\"\x87\x02\n" +
+	"\x0eOnboardRequest\x12-\n" +
+	"\fcompany_name\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\vcompanyName\x12\x1f\n" +
 	"\bindustry\x18\x02 \x01(\tH\x00R\bindustry\x88\x01\x01\x12 \n" +
-	"\tteam_size\x18\x03 \x01(\tH\x01R\bteamSize\x88\x01\x01\x12\"\n" +
-	"\x04plan\x18\x04 \x01(\x0e2\x0e.mirai.v1.PlanR\x04plan\x12\"\n" +
+	"\tteam_size\x18\x03 \x01(\tH\x01R\bteamSize\x88\x01\x01\x12,\n" +
+	"\x04plan\x18\x04 \x01(\x0e2\x0e.mirai.v1.PlanB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04plan\x12+\n" +
 	"\n" +
-	"seat_count\x18\x05 \x01(\x05H\x02R\tseatCount\x88\x01\x01B\v\n" +
+	"seat_count\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01H\x02R\tseatCount\x88\x01\x01B\v\n" +
 	"\t_industryB\f\n" +
 	"\n" +
 	"_team_sizeB\r\n" +
@@ -759,13 +763,13 @@ const file_mirai_v1_auth_proto_rawDesc = "" +
 	"\fcheckout_url\x18\x03 \x01(\tH\x01R\vcheckoutUrl\x88\x01\x01B\n" +
 	"\n" +
 	"\b_companyB\x0f\n" +
-	"\r_checkout_url\"\x95\x02\n" +
-	"\x18EnterpriseContactRequest\x12!\n" +
-	"\fcompany_name\x18\x01 \x01(\tR\vcompanyName\x12\x1f\n" +
+	"\r_checkout_url\"\xb0\x02\n" +
+	"\x18EnterpriseContactRequest\x12*\n" +
+	"\fcompany_name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vcompanyName\x12\x1f\n" +
 	"\bindustry\x18\x02 \x01(\tH\x00R\bindustry\x88\x01\x01\x12 \n" +
-	"\tteam_size\x18\x03 \x01(\tH\x01R\bteamSize\x88\x01\x01\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12\x14\n" +
-	"\x05email\x18\x05 \x01(\tR\x05email\x12\x19\n" +
+	"\tteam_size\x18\x03 \x01(\tH\x01R\bteamSize\x88\x01\x01\x12\x1b\n" +
+	"\x04name\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x1d\n" +
+	"\x05email\x18\x05 \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\x12\x19\n" +
 	"\x05phone\x18\x06 \x01(\tH\x02R\x05phone\x88\x01\x01\x12\x1d\n" +
 	"\amessage\x18\a \x01(\tH\x03R\amessage\x88\x01\x01B\v\n" +
 	"\t_industryB\f\n" +
@@ -775,13 +779,13 @@ const file_mirai_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"\b_message\"5\n" +
 	"\x19EnterpriseContactResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x8d\x01\n" +
-	"\x1dRegisterWithInvitationRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1d\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xb1\x01\n" +
+	"\x1dRegisterWithInvitationRequest\x12\x1d\n" +
+	"\x05token\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05token\x12#\n" +
+	"\bpassword\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\bR\bpassword\x12&\n" +
 	"\n" +
-	"first_name\x18\x03 \x01(\tR\tfirstName\x12\x1b\n" +
-	"\tlast_name\x18\x04 \x01(\tR\blastName\"\x96\x01\n" +
+	"first_name\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tfirstName\x12$\n" +
+	"\tlast_name\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\blastName\"\x96\x01\n" +
 	"\x1eRegisterWithInvitationResponse\x12\"\n" +
 	"\x04user\x18\x01 \x01(\v2\x0e.mirai.v1.UserR\x04user\x12+\n" +
 	"\acompany\x18\x02 \x01(\v2\x11.mirai.v1.CompanyR\acompany\x12#\n" +

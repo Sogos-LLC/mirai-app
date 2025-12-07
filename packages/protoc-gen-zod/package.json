@@ -1,0 +1,44 @@
+{
+  "name": "protoc-gen-zod",
+  "version": "0.1.0",
+  "description": "Buf plugin to generate Zod schemas from Protocol Buffers with buf.validate support",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "protoc-gen-zod": "./bin/protoc-gen-zod.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.10.1",
+    "@bufbuild/protoplugin": "^2.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "zod": ">=4.0.0"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "protobuf",
+    "zod",
+    "buf",
+    "validation",
+    "code-generation",
+    "protoc-plugin"
+  ],
+  "license": "MIT"
+}
