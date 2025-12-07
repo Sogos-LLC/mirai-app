@@ -187,13 +187,13 @@ log_success "Infrastructure deployed"
 log_info "Step 9/17: Waiting for infrastructure to be ready..."
 
 log_info "  Waiting for PostgreSQL..."
-kubectl wait --for=condition=Ready pod -l app=postgres -n mirai --timeout=180s
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=postgres -n mirai --timeout=180s
 
 log_info "  Waiting for Redis..."
-kubectl wait --for=condition=Ready pod -l app=redis -n mirai --timeout=120s
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=redis -n mirai --timeout=120s
 
 log_info "  Waiting for MinIO..."
-kubectl wait --for=condition=Ready pod -l app=minio -n mirai --timeout=120s
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=minio -n mirai --timeout=120s
 
 log_success "Infrastructure ready"
 
