@@ -82,16 +82,12 @@ export function useGenerateCourseOutline() {
   return {
     mutate: async (input: {
       courseId: string;
-      smeIds: string[];
-      targetAudienceIds: string[];
       desiredOutcome: string;
       additionalContext?: string;
     }) => {
       const request = create(GenerateCourseOutlineRequestSchema, {
         input: create(CourseGenerationInputSchema, {
           courseId: input.courseId,
-          smeIds: input.smeIds,
-          targetAudienceIds: input.targetAudienceIds,
           desiredOutcome: input.desiredOutcome,
           additionalContext: input.additionalContext,
         }),

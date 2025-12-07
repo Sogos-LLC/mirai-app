@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2, X, PartyPopper } from 'lucide-react';
-import { AIGenerationFlowModal } from '@/components/ai-generation';
 import { useListCourses, useDeleteCourse, type LibraryEntry } from '@/hooks/useCourses';
 import { CourseStatus } from '@/gen/mirai/v1/course_pb';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -10,8 +9,6 @@ import confetti from 'canvas-confetti';
 import * as courseClient from '@/lib/courseClient';
 
 export default function Dashboard() {
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [editingCourseId, setEditingCourseId] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -53,11 +50,10 @@ export default function Dashboard() {
     }, 200);
   }, []);
 
-  // Handle checkout success, welcome banners, and edit param (auth_token handled by layout)
+  // Handle checkout success, welcome banners (auth_token handled by layout)
   useEffect(() => {
     const isCheckoutSuccess = searchParams.get('checkout') === 'success';
     const isWelcome = searchParams.get('welcome') === 'true';
-    const editCourseId = searchParams.get('edit');
 
     if (isCheckoutSuccess) {
       setShowSuccessBanner(true);
@@ -69,14 +65,6 @@ export default function Dashboard() {
     if (isWelcome) {
       setShowWelcomeModal(true);
       fireConfetti();
-      // Clean up URL
-      router.replace('/dashboard', { scroll: false });
-    }
-
-    // Auto-open edit modal if edit param is present (from email links)
-    if (editCourseId) {
-      setEditingCourseId(editCourseId);
-      setIsAIModalOpen(true);
       // Clean up URL
       router.replace('/dashboard', { scroll: false });
     }
@@ -105,13 +93,7 @@ export default function Dashboard() {
   });
 
   const handleEditCourse = (courseId: string) => {
-    setEditingCourseId(courseId);
-    setIsAIModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsAIModalOpen(false);
-    setEditingCourseId(undefined);
+    router.push(`/course-builder?id=${courseId}`);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -188,7 +170,7 @@ export default function Dashboard() {
             <p className="text-gray-600">Create engaging courses with AI or import existing materials</p>
           </div>
           <button
-            onClick={() => setIsAIModalOpen(true)}
+            onClick={() => router.push('/course-builder')}
             className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl"
           >
             <Plus className="w-5 h-5" />
@@ -196,13 +178,6 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
-
-      {/* AI Generation Flow Modal */}
-      <AIGenerationFlowModal
-        isOpen={isAIModalOpen}
-        onClose={handleCloseModal}
-        courseId={editingCourseId}
-      />
 
       {/* Your Courses Section */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -332,7 +307,7 @@ export default function Dashboard() {
               Get started by creating your first course using AI prompts or importing existing materials
             </p>
             <button
-              onClick={() => setIsAIModalOpen(true)}
+              onClick={() => router.push('/course-builder')}
               className="px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
             >
               Create your first course

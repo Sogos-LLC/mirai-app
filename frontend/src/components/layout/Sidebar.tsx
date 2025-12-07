@@ -9,13 +9,10 @@ import {
   LayoutDashboard,
   FileText,
   BookOpen,
-  Settings,
   HelpCircle,
   Bell,
   ChevronLeft,
   ChevronRight,
-  Users,
-  Target,
   Building2,
 } from 'lucide-react';
 import { useIsAdmin } from '@/hooks/useCurrentUser';
@@ -23,11 +20,8 @@ import { useIsAdmin } from '@/hooks/useCurrentUser';
 // Base navigation items (always visible)
 export const menuItems = [
   { icon: LayoutDashboard, label: 'Content Library', path: '/content-library' },
-  { icon: Users, label: 'SMEs', path: '/smes' },
-  { icon: Target, label: 'Audiences', path: '/target-audiences' },
   { icon: FileText, label: 'Templates', path: '/templates' },
   { icon: BookOpen, label: 'Tutorials', path: '/tutorials' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
 // Admin-only navigation items
@@ -52,7 +46,7 @@ export default function Sidebar() {
 
   // Combine menu items based on user role
   const visibleMenuItems = isAdmin
-    ? [...menuItems.slice(0, -1), ...adminMenuItems, menuItems[menuItems.length - 1]]
+    ? [...menuItems, ...adminMenuItems]
     : menuItems;
 
   useEffect(() => {

@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useGetFolderHierarchy, useListCourses, FolderType, type LibraryEntry, type Folder as FolderNode } from '@/hooks/useCourses';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { AIGenerationFlowModal } from '@/components/ai-generation';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import * as courseClient from '@/lib/courseClient';
 
@@ -15,8 +14,6 @@ const MAX_FOLDER_DEPTH = 3;
 export default function ContentLibrary() {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [editingCourseId, setEditingCourseId] = useState<string | undefined>(undefined);
 
   // Connect-query hooks
   const { data: folders, isLoading: foldersLoading, refetch: refetchFolders } = useGetFolderHierarchy(true);
@@ -105,13 +102,7 @@ export default function ContentLibrary() {
   };
 
   const handleCourseClick = (courseId: string) => {
-    setEditingCourseId(courseId);
-    setIsAIModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsAIModalOpen(false);
-    setEditingCourseId(undefined);
+    router.push(`/course-builder?id=${courseId}`);
   };
 
   // Folder creation handlers
@@ -400,13 +391,6 @@ export default function ContentLibrary() {
 
   return (
     <>
-      {/* AI Generation Flow Modal */}
-      <AIGenerationFlowModal
-        isOpen={isAIModalOpen}
-        onClose={handleCloseModal}
-        courseId={editingCourseId}
-      />
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>

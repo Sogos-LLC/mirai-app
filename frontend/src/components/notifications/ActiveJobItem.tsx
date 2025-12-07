@@ -15,7 +15,6 @@ const JOB_TYPE_LABELS: Record<number, string> = {
   [GenerationJobType.COURSE_OUTLINE]: 'Course Outline',
   [GenerationJobType.FULL_COURSE]: 'Full Course',
   [GenerationJobType.COMPONENT_REGEN]: 'Component',
-  [GenerationJobType.SME_INGESTION]: 'SME Ingestion',
 };
 
 const STATUS_CONFIG: Record<number, { label: string; color: string; bgColor: string }> = {
