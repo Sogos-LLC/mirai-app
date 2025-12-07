@@ -15,8 +15,8 @@ SELECT * FROM generation_jobs WHERE id = $1;
 
 -- name: ListGenerationJobs :many
 SELECT * FROM generation_jobs
-WHERE (sqlc.narg('type')::text IS NULL OR type = sqlc.narg('type'))
-  AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status'))
+WHERE (sqlc.narg('type')::text IS NULL OR type::text = sqlc.narg('type'))
+  AND (sqlc.narg('status')::text IS NULL OR status::text = sqlc.narg('status'))
   AND (sqlc.narg('course_id')::uuid IS NULL OR course_id = sqlc.narg('course_id'))
 ORDER BY created_at DESC;
 

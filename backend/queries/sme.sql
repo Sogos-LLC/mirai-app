@@ -16,8 +16,8 @@ SELECT * FROM subject_matter_experts WHERE id = $1;
 -- name: ListSMEs :many
 SELECT DISTINCT s.* FROM subject_matter_experts s
 LEFT JOIN sme_team_access sta ON s.id = sta.sme_id
-WHERE (sqlc.narg('scope')::text IS NULL OR s.scope = sqlc.narg('scope'))
-  AND (sqlc.narg('status')::text IS NULL OR s.status = sqlc.narg('status'))
+WHERE (sqlc.narg('scope')::text IS NULL OR s.scope::text = sqlc.narg('scope'))
+  AND (sqlc.narg('status')::text IS NULL OR s.status::text = sqlc.narg('status'))
   AND (sqlc.narg('team_id')::uuid IS NULL OR s.scope = 'global' OR sta.team_id = sqlc.narg('team_id'))
 ORDER BY s.created_at DESC;
 
@@ -64,7 +64,7 @@ SELECT * FROM sme_tasks WHERE id = $1;
 SELECT * FROM sme_tasks
 WHERE (sqlc.narg('sme_id')::uuid IS NULL OR sme_id = sqlc.narg('sme_id'))
   AND (sqlc.narg('assigned_to_user_id')::uuid IS NULL OR assigned_to_user_id = sqlc.narg('assigned_to_user_id'))
-  AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status'))
+  AND (sqlc.narg('status')::text IS NULL OR status::text = sqlc.narg('status'))
 ORDER BY created_at DESC;
 
 -- name: UpdateSMETask :one

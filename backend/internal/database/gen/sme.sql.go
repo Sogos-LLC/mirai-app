@@ -496,7 +496,7 @@ const listSMETasks = `-- name: ListSMETasks :many
 SELECT id, tenant_id, sme_id, title, description, expected_content_type, assigned_to_user_id, assigned_by_user_id, team_id, status, due_date, created_at, updated_at, completed_at FROM sme_tasks
 WHERE ($1::uuid IS NULL OR sme_id = $1)
   AND ($2::uuid IS NULL OR assigned_to_user_id = $2)
-  AND ($3::text IS NULL OR status = $3)
+  AND ($3::text IS NULL OR status::text = $3)
 ORDER BY created_at DESC
 `
 
@@ -607,8 +607,8 @@ func (q *Queries) ListSMETeamIDsBySMEID(ctx context.Context, smeID uuid.UUID) ([
 const listSMEs = `-- name: ListSMEs :many
 SELECT DISTINCT s.id, s.tenant_id, s.company_id, s.name, s.description, s.domain, s.scope, s.status, s.knowledge_summary, s.knowledge_content_path, s.created_by_user_id, s.created_at, s.updated_at FROM subject_matter_experts s
 LEFT JOIN sme_team_access sta ON s.id = sta.sme_id
-WHERE ($1::text IS NULL OR s.scope = $1)
-  AND ($2::text IS NULL OR s.status = $2)
+WHERE ($1::text IS NULL OR s.scope::text = $1)
+  AND ($2::text IS NULL OR s.status::text = $2)
   AND ($3::uuid IS NULL OR s.scope = 'global' OR sta.team_id = $3)
 ORDER BY s.created_at DESC
 `

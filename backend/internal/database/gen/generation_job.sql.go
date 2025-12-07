@@ -346,8 +346,8 @@ func (q *Queries) GetParentJobStatus(ctx context.Context, id uuid.UUID) (GetPare
 
 const listGenerationJobs = `-- name: ListGenerationJobs :many
 SELECT id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, outline_lesson_id FROM generation_jobs
-WHERE ($1::text IS NULL OR type = $1)
-  AND ($2::text IS NULL OR status = $2)
+WHERE ($1::text IS NULL OR type::text = $1)
+  AND ($2::text IS NULL OR status::text = $2)
   AND ($3::uuid IS NULL OR course_id = $3)
 ORDER BY created_at DESC
 `
