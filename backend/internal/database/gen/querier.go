@@ -13,13 +13,8 @@ import (
 )
 
 type Querier interface {
-	// ============================================================================
-	// SME Team Access
-	// ============================================================================
-	AddSMETeamAccess(ctx context.Context, arg AddSMETeamAccessParams) (SmeTeamAccess, error)
 	// Team Members
 	AddTeamMember(ctx context.Context, arg AddTeamMemberParams) (TeamMember, error)
-	CancelSMETask(ctx context.Context, id uuid.UUID) error
 	CheckAllChildrenComplete(ctx context.Context, parentJobID uuid.NullUUID) (bool, error)
 	// Claim a specific job by ID, only if queued
 	ClaimJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error)
@@ -86,27 +81,6 @@ type Querier interface {
 	// Pending Registration CRUD operations
 	// Schema: pending_registrations table (accessible only to superadmins)
 	CreatePendingRegistration(ctx context.Context, arg CreatePendingRegistrationParams) (PendingRegistration, error)
-	// Subject Matter Expert and related CRUD operations
-	// Schema: subject_matter_experts, sme_team_access, sme_tasks, sme_task_submissions, sme_knowledge_chunks tables
-	// ============================================================================
-	// Subject Matter Experts
-	// ============================================================================
-	CreateSME(ctx context.Context, arg CreateSMEParams) (SubjectMatterExpert, error)
-	// ============================================================================
-	// SME Knowledge Chunks
-	// ============================================================================
-	CreateSMEKnowledgeChunk(ctx context.Context, arg CreateSMEKnowledgeChunkParams) (SmeKnowledgeChunk, error)
-	// ============================================================================
-	// SME Task Submissions
-	// ============================================================================
-	CreateSMESubmission(ctx context.Context, arg CreateSMESubmissionParams) (SmeTaskSubmission, error)
-	// ============================================================================
-	// SME Tasks
-	// ============================================================================
-	CreateSMETask(ctx context.Context, arg CreateSMETaskParams) (SmeTask, error)
-	// Target Audience Template CRUD operations
-	// Schema: target_audience_templates table with RLS isolation by tenant_id
-	CreateTargetAudienceTemplate(ctx context.Context, arg CreateTargetAudienceTemplateParams) (TargetAudienceTemplate, error)
 	// Team and TeamMember CRUD operations
 	// Schema: teams and team_members tables with RLS isolation by tenant_id
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
@@ -126,11 +100,6 @@ type Querier interface {
 	DeleteOutlineLesson(ctx context.Context, id uuid.UUID) error
 	DeleteOutlineSection(ctx context.Context, id uuid.UUID) error
 	DeletePendingRegistration(ctx context.Context, id uuid.UUID) error
-	DeleteSME(ctx context.Context, id uuid.UUID) error
-	DeleteSMEKnowledgeChunk(ctx context.Context, id uuid.UUID) error
-	DeleteSMEKnowledgeChunksBySMEID(ctx context.Context, smeID uuid.UUID) error
-	DeleteSMETask(ctx context.Context, id uuid.UUID) error
-	DeleteTargetAudienceTemplate(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
 	DeleteTenant(ctx context.Context, id uuid.UUID) error
 	ExistsPendingRegistrationByEmail(ctx context.Context, email string) (bool, error)
@@ -168,12 +137,7 @@ type Querier interface {
 	GetPendingRegistrationByCheckoutSessionID(ctx context.Context, checkoutSessionID string) (PendingRegistration, error)
 	GetPendingRegistrationByEmail(ctx context.Context, email string) (PendingRegistration, error)
 	GetPendingRegistrationByID(ctx context.Context, id uuid.UUID) (PendingRegistration, error)
-	GetSMEByID(ctx context.Context, id uuid.UUID) (SubjectMatterExpert, error)
-	GetSMEKnowledgeChunkByID(ctx context.Context, id uuid.UUID) (SmeKnowledgeChunk, error)
-	GetSMESubmissionByID(ctx context.Context, id uuid.UUID) (SmeTaskSubmission, error)
-	GetSMETaskByID(ctx context.Context, id uuid.UUID) (SmeTask, error)
 	GetSharedFolder(ctx context.Context, tenantID uuid.UUID) (Folder, error)
-	GetTargetAudienceTemplateByID(ctx context.Context, id uuid.UUID) (TargetAudienceTemplate, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
 	GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamMember, error)
 	// Tenant AI Settings CRUD operations
@@ -201,22 +165,13 @@ type Querier interface {
 	ListPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
 	ListPendingRegistrationsByStatus(ctx context.Context, status string) ([]PendingRegistration, error)
 	ListRootFolders(ctx context.Context) ([]Folder, error)
-	ListSMEKnowledgeChunksBySMEID(ctx context.Context, smeID uuid.UUID) ([]SmeKnowledgeChunk, error)
-	ListSMESubmissionsByTaskID(ctx context.Context, taskID uuid.UUID) ([]SmeTaskSubmission, error)
-	ListSMETasks(ctx context.Context, arg ListSMETasksParams) ([]SmeTask, error)
-	ListSMETeamAccess(ctx context.Context, smeID uuid.UUID) ([]SmeTeamAccess, error)
-	ListSMETeamIDsBySMEID(ctx context.Context, smeID uuid.UUID) ([]uuid.UUID, error)
-	ListSMEs(ctx context.Context, arg ListSMEsParams) ([]SubjectMatterExpert, error)
-	ListTargetAudienceTemplates(ctx context.Context) ([]TargetAudienceTemplate, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]TeamMember, error)
 	ListTeamsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Team, error)
 	ListUnreadNotificationsByUserID(ctx context.Context, arg ListUnreadNotificationsByUserIDParams) ([]Notification, error)
 	ListUsersByCompanyID(ctx context.Context, companyID uuid.NullUUID) ([]User, error)
 	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error
 	MarkNotificationsAsRead(ctx context.Context, arg MarkNotificationsAsReadParams) error
-	RemoveSMETeamAccess(ctx context.Context, arg RemoveSMETeamAccessParams) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
-	SearchSMEKnowledgeChunks(ctx context.Context, arg SearchSMEKnowledgeChunksParams) ([]SmeKnowledgeChunk, error)
 	UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error)
 	UpdateCompanyStripeFields(ctx context.Context, arg UpdateCompanyStripeFieldsParams) error
 	UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Course, error)
@@ -230,11 +185,6 @@ type Querier interface {
 	UpdateOutlineLesson(ctx context.Context, arg UpdateOutlineLessonParams) error
 	UpdateOutlineSection(ctx context.Context, arg UpdateOutlineSectionParams) error
 	UpdatePendingRegistration(ctx context.Context, arg UpdatePendingRegistrationParams) (PendingRegistration, error)
-	UpdateSME(ctx context.Context, arg UpdateSMEParams) (SubjectMatterExpert, error)
-	UpdateSMEKnowledgeChunk(ctx context.Context, arg UpdateSMEKnowledgeChunkParams) error
-	UpdateSMESubmission(ctx context.Context, arg UpdateSMESubmissionParams) error
-	UpdateSMETask(ctx context.Context, arg UpdateSMETaskParams) (SmeTask, error)
-	UpdateTargetAudienceTemplate(ctx context.Context, arg UpdateTargetAudienceTemplateParams) (TargetAudienceTemplate, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateTenantAISettings(ctx context.Context, arg UpdateTenantAISettingsParams) (TenantAiSetting, error)

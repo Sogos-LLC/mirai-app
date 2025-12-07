@@ -2,8 +2,8 @@
 -- Schema: notifications table with RLS isolation by tenant_id
 
 -- name: CreateNotification :one
-INSERT INTO notifications (tenant_id, user_id, type, priority, title, message, course_id, job_id, task_id, sme_id, action_url, read, email_sent)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+INSERT INTO notifications (tenant_id, user_id, type, priority, title, message, course_id, job_id, action_url, read, email_sent)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: GetNotificationByID :one

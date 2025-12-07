@@ -2,13 +2,13 @@
 -- Schema: generation_jobs table with RLS isolation by tenant_id
 
 -- name: CreateGenerationJob :one
-INSERT INTO generation_jobs (tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+INSERT INTO generation_jobs (tenant_id, type, status, course_id, lesson_id, outline_lesson_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING *;
 
 -- name: CreateGenerationJobWithID :exec
-INSERT INTO generation_jobs (id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW());
+INSERT INTO generation_jobs (id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW());
 
 -- name: GetGenerationJobByID :one
 SELECT * FROM generation_jobs WHERE id = $1;

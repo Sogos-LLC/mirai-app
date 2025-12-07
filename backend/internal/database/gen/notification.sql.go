@@ -39,9 +39,9 @@ func (q *Queries) CountUnreadNotificationsByUserID(ctx context.Context, userID u
 
 const createNotification = `-- name: CreateNotification :one
 
-INSERT INTO notifications (tenant_id, user_id, type, priority, title, message, course_id, job_id, task_id, sme_id, action_url, read, email_sent)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-RETURNING id, tenant_id, user_id, type, priority, title, message, course_id, job_id, task_id, sme_id, action_url, read, email_sent, created_at, read_at
+INSERT INTO notifications (tenant_id, user_id, type, priority, title, message, course_id, job_id, action_url, read, email_sent)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, tenant_id, user_id, type, priority, title, message, course_id, job_id, action_url, read, email_sent, created_at, read_at
 `
 
 type CreateNotificationParams struct {
@@ -53,8 +53,6 @@ type CreateNotificationParams struct {
 	Message   string               `db:"message" json:"message"`
 	CourseID  uuid.NullUUID        `db:"course_id" json:"course_id"`
 	JobID     uuid.NullUUID        `db:"job_id" json:"job_id"`
-	TaskID    uuid.NullUUID        `db:"task_id" json:"task_id"`
-	SmeID     uuid.NullUUID        `db:"sme_id" json:"sme_id"`
 	ActionUrl sql.NullString       `db:"action_url" json:"action_url"`
 	Read      bool                 `db:"read" json:"read"`
 	EmailSent bool                 `db:"email_sent" json:"email_sent"`
@@ -72,8 +70,6 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		arg.Message,
 		arg.CourseID,
 		arg.JobID,
-		arg.TaskID,
-		arg.SmeID,
 		arg.ActionUrl,
 		arg.Read,
 		arg.EmailSent,
@@ -89,8 +85,6 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		&i.Message,
 		&i.CourseID,
 		&i.JobID,
-		&i.TaskID,
-		&i.SmeID,
 		&i.ActionUrl,
 		&i.Read,
 		&i.EmailSent,
@@ -110,7 +104,7 @@ func (q *Queries) DeleteNotification(ctx context.Context, id uuid.UUID) error {
 }
 
 const getNotificationByID = `-- name: GetNotificationByID :one
-SELECT id, tenant_id, user_id, type, priority, title, message, course_id, job_id, task_id, sme_id, action_url, read, email_sent, created_at, read_at FROM notifications WHERE id = $1
+SELECT id, tenant_id, user_id, type, priority, title, message, course_id, job_id, action_url, read, email_sent, created_at, read_at FROM notifications WHERE id = $1
 `
 
 func (q *Queries) GetNotificationByID(ctx context.Context, id uuid.UUID) (Notification, error) {
@@ -126,8 +120,6 @@ func (q *Queries) GetNotificationByID(ctx context.Context, id uuid.UUID) (Notifi
 		&i.Message,
 		&i.CourseID,
 		&i.JobID,
-		&i.TaskID,
-		&i.SmeID,
 		&i.ActionUrl,
 		&i.Read,
 		&i.EmailSent,
@@ -138,7 +130,7 @@ func (q *Queries) GetNotificationByID(ctx context.Context, id uuid.UUID) (Notifi
 }
 
 const listNotificationsByUserID = `-- name: ListNotificationsByUserID :many
-SELECT id, tenant_id, user_id, type, priority, title, message, course_id, job_id, task_id, sme_id, action_url, read, email_sent, created_at, read_at FROM notifications
+SELECT id, tenant_id, user_id, type, priority, title, message, course_id, job_id, action_url, read, email_sent, created_at, read_at FROM notifications
 WHERE user_id = $1
 ORDER BY created_at DESC, id DESC
 LIMIT COALESCE($2::int, 50)
@@ -168,8 +160,6 @@ func (q *Queries) ListNotificationsByUserID(ctx context.Context, arg ListNotific
 			&i.Message,
 			&i.CourseID,
 			&i.JobID,
-			&i.TaskID,
-			&i.SmeID,
 			&i.ActionUrl,
 			&i.Read,
 			&i.EmailSent,
@@ -190,7 +180,7 @@ func (q *Queries) ListNotificationsByUserID(ctx context.Context, arg ListNotific
 }
 
 const listUnreadNotificationsByUserID = `-- name: ListUnreadNotificationsByUserID :many
-SELECT id, tenant_id, user_id, type, priority, title, message, course_id, job_id, task_id, sme_id, action_url, read, email_sent, created_at, read_at FROM notifications
+SELECT id, tenant_id, user_id, type, priority, title, message, course_id, job_id, action_url, read, email_sent, created_at, read_at FROM notifications
 WHERE user_id = $1 AND read = false
 ORDER BY created_at DESC, id DESC
 LIMIT COALESCE($2::int, 50)
@@ -220,8 +210,6 @@ func (q *Queries) ListUnreadNotificationsByUserID(ctx context.Context, arg ListU
 			&i.Message,
 			&i.CourseID,
 			&i.JobID,
-			&i.TaskID,
-			&i.SmeID,
 			&i.ActionUrl,
 			&i.Read,
 			&i.EmailSent,

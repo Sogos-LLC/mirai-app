@@ -113,8 +113,8 @@ func (q *Queries) ClaimQueuedJob(ctx context.Context) (GenerationJob, error) {
 
 const createGenerationJob = `-- name: CreateGenerationJob :one
 
-INSERT INTO generation_jobs (tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+INSERT INTO generation_jobs (tenant_id, type, status, course_id, lesson_id, outline_lesson_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, outline_lesson_id
 `
 
@@ -125,8 +125,6 @@ type CreateGenerationJobParams struct {
 	CourseID        uuid.NullUUID       `db:"course_id" json:"course_id"`
 	LessonID        uuid.NullUUID       `db:"lesson_id" json:"lesson_id"`
 	OutlineLessonID uuid.NullUUID       `db:"outline_lesson_id" json:"outline_lesson_id"`
-	SmeTaskID       uuid.NullUUID       `db:"sme_task_id" json:"sme_task_id"`
-	SubmissionID    uuid.NullUUID       `db:"submission_id" json:"submission_id"`
 	ParentJobID     uuid.NullUUID       `db:"parent_job_id" json:"parent_job_id"`
 	ProgressPercent int32               `db:"progress_percent" json:"progress_percent"`
 	ProgressMessage sql.NullString      `db:"progress_message" json:"progress_message"`
@@ -148,8 +146,6 @@ func (q *Queries) CreateGenerationJob(ctx context.Context, arg CreateGenerationJ
 		arg.CourseID,
 		arg.LessonID,
 		arg.OutlineLessonID,
-		arg.SmeTaskID,
-		arg.SubmissionID,
 		arg.ParentJobID,
 		arg.ProgressPercent,
 		arg.ProgressMessage,
@@ -188,8 +184,8 @@ func (q *Queries) CreateGenerationJob(ctx context.Context, arg CreateGenerationJ
 }
 
 const createGenerationJobWithID = `-- name: CreateGenerationJobWithID :exec
-INSERT INTO generation_jobs (id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, sme_task_id, submission_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
+INSERT INTO generation_jobs (id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
 `
 
 type CreateGenerationJobWithIDParams struct {
@@ -200,8 +196,6 @@ type CreateGenerationJobWithIDParams struct {
 	CourseID        uuid.NullUUID       `db:"course_id" json:"course_id"`
 	LessonID        uuid.NullUUID       `db:"lesson_id" json:"lesson_id"`
 	OutlineLessonID uuid.NullUUID       `db:"outline_lesson_id" json:"outline_lesson_id"`
-	SmeTaskID       uuid.NullUUID       `db:"sme_task_id" json:"sme_task_id"`
-	SubmissionID    uuid.NullUUID       `db:"submission_id" json:"submission_id"`
 	ParentJobID     uuid.NullUUID       `db:"parent_job_id" json:"parent_job_id"`
 	ProgressPercent int32               `db:"progress_percent" json:"progress_percent"`
 	ProgressMessage sql.NullString      `db:"progress_message" json:"progress_message"`
@@ -222,8 +216,6 @@ func (q *Queries) CreateGenerationJobWithID(ctx context.Context, arg CreateGener
 		arg.CourseID,
 		arg.LessonID,
 		arg.OutlineLessonID,
-		arg.SmeTaskID,
-		arg.SubmissionID,
 		arg.ParentJobID,
 		arg.ProgressPercent,
 		arg.ProgressMessage,
