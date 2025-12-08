@@ -38,7 +38,7 @@ interface CourseEditorUIActions {
   // Modal editing actions
   openEditModal: (courseId: string, generatedLessonId: string, component: LessonComponent) => void;
   closeEditModal: () => void;
-  saveEditModal: (contentJson: string) => void;
+  saveEditModal: (contentJson: string) => Promise<void>;
 
   // Save state actions
   markDirty: () => void;
@@ -48,6 +48,9 @@ interface CourseEditorUIActions {
   // Reset
   reset: () => void;
 }
+
+// Callback type for persisting component changes to the database
+export type PersistComponentCallback = (componentId: string, contentJson: string) => Promise<void>;
 
 type CourseEditorUIStore = CourseEditorUIState & CourseEditorUIActions;
 
@@ -67,11 +70,25 @@ const initialState: CourseEditorUIState = {
 // Store
 // ============================================================================
 
-// Callback for saving edits - set by the editor page
+// Callback for saving edits to local state - set by the editor page
 let onSaveCallback: ((componentId: string, contentJson: string) => void) | null = null;
+
+// Callback for persisting changes to the database - set by the editor page
+let onPersistCallback: PersistComponentCallback | null = null;
+
+// Callback to notify editor of successful persist (to reset local hasChanges)
+let onPersistSuccessCallback: (() => void) | null = null;
 
 export const setOnSaveCallback = (callback: (componentId: string, contentJson: string) => void) => {
   onSaveCallback = callback;
+};
+
+export const setOnPersistCallback = (callback: PersistComponentCallback) => {
+  onPersistCallback = callback;
+};
+
+export const setOnPersistSuccessCallback = (callback: () => void) => {
+  onPersistSuccessCallback = callback;
 };
 
 export const useCourseEditorStore = create<CourseEditorUIStore>()(
@@ -91,15 +108,28 @@ export const useCourseEditorStore = create<CourseEditorUIStore>()(
         set({ editingComponent: null });
       },
 
-      saveEditModal: (contentJson) => {
+      saveEditModal: async (contentJson) => {
         const { editingComponent } = get();
         if (!editingComponent) return;
 
         // Call the save callback to update local state
         onSaveCallback?.(editingComponent.component.id, contentJson);
 
-        // Close modal and mark dirty
-        set({ editingComponent: null, isDirty: true });
+        // Close modal and mark saving state
+        set({ editingComponent: null, isSaving: true });
+
+        // Persist to database immediately for consistency
+        try {
+          await onPersistCallback?.(editingComponent.component.id, contentJson);
+          // Mark clean after successful persist
+          set({ isDirty: false, isSaving: false, lastSavedAt: Date.now() });
+          // Notify editor page of successful persist
+          onPersistSuccessCallback?.();
+        } catch (error) {
+          console.error('Failed to persist component:', error);
+          // Mark dirty so user knows they need to save manually
+          set({ isDirty: true, isSaving: false });
+        }
       },
 
       // Save state actions

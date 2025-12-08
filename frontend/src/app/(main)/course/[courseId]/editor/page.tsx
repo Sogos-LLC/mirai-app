@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -47,7 +47,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, LessonComponentType } from '@/hooks/useAIGeneration';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 import { EditModal } from '@/components/course/modals/EditModal';
-import { useCourseEditorStore, setOnSaveCallback } from '@/store/zustand/courseEditorStore';
+import { useCourseEditorStore, setOnSaveCallback, setOnPersistCallback, setOnPersistSuccessCallback } from '@/store/zustand/courseEditorStore';
 import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -171,17 +171,13 @@ export default function CourseEditorPage() {
     })
   );
 
-  // Set up save callback for zustand store
+  // Ref to access latest localComponents in callbacks
+  const localComponentsRef = useRef<LessonComponent[]>([]);
+
+  // Keep ref in sync with state
   useEffect(() => {
-    setOnSaveCallback((componentId: string, contentJson: string) => {
-      setLocalComponents((items) =>
-        items.map((item) =>
-          item.id === componentId ? { ...item, contentJson } : item
-        )
-      );
-      setHasChanges(true);
-    });
-  }, []);
+    localComponentsRef.current = localComponents;
+  }, [localComponents]);
 
   // Build lesson list from outline
   const lessonsList = useMemo(() => {
@@ -205,6 +201,65 @@ export default function CourseEditorPage() {
   const currentLesson = useMemo(() => {
     return lessonsList.find((l) => l.id === selectedLessonId);
   }, [lessonsList, selectedLessonId]);
+
+  // Ref to access latest currentLesson in callbacks
+  const currentLessonRef = useRef(currentLesson);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentLessonRef.current = currentLesson;
+  }, [currentLesson]);
+
+  // Set up save callback for zustand store (updates local state)
+  useEffect(() => {
+    setOnSaveCallback((componentId: string, contentJson: string) => {
+      setLocalComponents((items) =>
+        items.map((item) =>
+          item.id === componentId ? { ...item, contentJson } : item
+        )
+      );
+      setHasChanges(true);
+    });
+  }, []);
+
+  // Set up persist callback for zustand store (saves to database)
+  useEffect(() => {
+    setOnPersistCallback(async (componentId: string, contentJson: string) => {
+      const components = localComponentsRef.current;
+      const lesson = currentLessonRef.current;
+      const generatedLessonId = lesson?.generated?.id;
+
+      if (!generatedLessonId || components.length === 0) {
+        throw new Error('Cannot persist: no lesson selected or no components');
+      }
+
+      // Update the specific component in the list and save all
+      const updatedComponents = components.map((c) =>
+        c.id === componentId ? { ...c, contentJson } : c
+      );
+
+      await saveComponents({
+        courseId,
+        generatedLessonId,
+        components: updatedComponents.map((c) => ({
+          id: c.id,
+          type: c.type as LessonComponentType,
+          order: c.order,
+          contentJson: c.contentJson,
+          alignment: c.alignment
+            ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
+            : undefined,
+        })),
+      });
+    });
+  }, [courseId, saveComponents]);
+
+  // Set up success callback to reset hasChanges after successful persist
+  useEffect(() => {
+    setOnPersistSuccessCallback(() => {
+      setHasChanges(false);
+    });
+  }, []);
 
   // Get active component for drag overlay
   const activeComponent = useMemo(() => {
