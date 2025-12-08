@@ -11,7 +11,7 @@ export interface ResponsiveModalProps {
   title: string;
   children: React.ReactNode;
   /** Size for desktop modal */
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   /** Height for mobile bottom sheet */
   mobileHeight?: 'auto' | 'half' | 'full';
   /** Footer content (buttons, etc.) */
@@ -19,10 +19,12 @@ export interface ResponsiveModalProps {
 }
 
 const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
+  sm: 'max-w-sm',      // 384px - for confirmations
+  md: 'max-w-lg',      // 512px - small forms
+  lg: 'max-w-2xl',     // 672px - content editing
+  xl: 'max-w-3xl',     // 768px - large content
+  '2xl': 'max-w-4xl',  // 896px - wide editors
+  '3xl': 'max-w-5xl',  // 1024px - full editors
 };
 
 export function ResponsiveModal({

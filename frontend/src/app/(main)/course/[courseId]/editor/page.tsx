@@ -49,6 +49,7 @@ import { useCourseEditorStore, setOnSaveCallback } from '@/store/zustand/courseE
 import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 
 interface SortableComponentProps {
   component: LessonComponent;
@@ -132,6 +133,7 @@ export default function CourseEditorPage() {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showMobileNav, setShowMobileNav] = useState(false);
+  const [deletingComponentId, setDeletingComponentId] = useState<string | null>(null);
 
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
@@ -241,9 +243,9 @@ export default function CourseEditorPage() {
 
   const handleComponentClick = useCallback((component: LessonComponent) => {
     if (selectedLessonId) {
-      openEditModal(selectedLessonId, component);
+      openEditModal(courseId, selectedLessonId, component);
     }
-  }, [selectedLessonId, openEditModal]);
+  }, [courseId, selectedLessonId, openEditModal]);
 
   const handleAddComponent = (type: number) => {
     const newComponent: LessonComponent = {
@@ -259,13 +261,20 @@ export default function CourseEditorPage() {
 
     // Open edit modal for the new component
     if (selectedLessonId) {
-      openEditModal(selectedLessonId, newComponent);
+      openEditModal(courseId, selectedLessonId, newComponent);
     }
   };
 
   const handleDeleteComponent = (componentId: string) => {
     setLocalComponents((items) => items.filter((item) => item.id !== componentId));
     setHasChanges(true);
+    setDeletingComponentId(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletingComponentId) {
+      handleDeleteComponent(deletingComponentId);
+    }
   };
 
   const handleSave = async () => {
@@ -558,7 +567,7 @@ export default function CourseEditorPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteComponent(component.id);
+                                setDeletingComponentId(component.id);
                               }}
                               className="absolute -right-2 -top-2 p-2 bg-red-500 text-white rounded-full lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity hover:bg-red-600 z-20 min-h-[44px] min-w-[44px] flex items-center justify-center"
                               title="Delete component"
@@ -619,6 +628,39 @@ export default function CourseEditorPage() {
 
       {/* Edit Modal */}
       <EditModal />
+
+      {/* Delete Confirmation Modal */}
+      <ResponsiveModal
+        isOpen={!!deletingComponentId}
+        onClose={() => setDeletingComponentId(null)}
+        title="Delete Component"
+        size="sm"
+        mobileHeight="auto"
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => setDeletingComponentId(null)}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmDelete}
+              className="w-full sm:w-auto"
+            >
+              Delete
+            </Button>
+          </div>
+        }
+      >
+        <div className="text-center sm:text-left">
+          <p className="text-secondary">
+            Are you sure you want to delete this component? This action cannot be undone.
+          </p>
+        </div>
+      </ResponsiveModal>
     </div>
   );
 }

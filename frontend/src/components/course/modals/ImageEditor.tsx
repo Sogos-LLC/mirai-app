@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, RefreshCw } from 'lucide-react';
+import { useGenerateComponentImage } from '@/hooks/useAIGeneration';
+import Button from '@/components/ui/Button';
 
 interface ImageContent {
   imageDescription: string;
@@ -13,51 +15,158 @@ interface ImageContent {
 interface ImageEditorProps {
   contentJson: string;
   onSave: (contentJson: string) => void;
+  // Context for AI generation
+  courseId?: string;
+  lessonId?: string;
+  componentId?: string;
 }
 
-export function ImageEditor({ contentJson, onSave }: ImageEditorProps) {
+export function ImageEditor({
+  contentJson,
+  onSave,
+  courseId,
+  lessonId,
+  componentId,
+}: ImageEditorProps) {
   const parsed = JSON.parse(contentJson) as ImageContent;
   const [url, setUrl] = useState(parsed.url || '');
   const [altText, setAltText] = useState(parsed.altText || '');
   const [caption, setCaption] = useState(parsed.caption || '');
-  const [imageDescription] = useState(parsed.imageDescription || '');
+  const [imageDescription, setImageDescription] = useState(parsed.imageDescription || '');
+  const [imageError, setImageError] = useState(false);
+
+  const {
+    mutate: generateImage,
+    isLoading: isGenerating,
+    error: generateError,
+    reset: resetError,
+  } = useGenerateComponentImage();
+
+  // Check if we can generate images (have all required context)
+  const canGenerate = courseId && lessonId && componentId;
+
+  // Check if we have a real URL (not placeholder)
+  const hasRealUrl = url && !url.includes('example.com');
+
+  const handleGenerateImage = async () => {
+    if (!canGenerate || !imageDescription.trim()) return;
+
+    resetError();
+    try {
+      const result = await generateImage({
+        courseId,
+        lessonId,
+        componentId,
+        prompt: imageDescription.trim(),
+        aspectRatio: '16:9',
+      });
+
+      // Update the URL with the generated image
+      if (result.imageUrl) {
+        setUrl(result.imageUrl);
+        setImageError(false);
+      }
+    } catch {
+      // Error is handled by the hook
+    }
+  };
 
   const handleSave = () => {
-    onSave(JSON.stringify({
-      imageDescription,
-      altText,
-      caption: caption || undefined,
-      url: url || undefined,
-    }));
+    onSave(
+      JSON.stringify({
+        imageDescription,
+        altText,
+        caption: caption || undefined,
+        url: url || undefined,
+      })
+    );
   };
 
   return (
     <div className="space-y-6">
-      {/* AI-generated description (read-only) */}
-      {imageDescription && (
-        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-          <p className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">
-            AI-suggested image:
-          </p>
-          <p className="text-sm text-purple-600 dark:text-purple-400">{imageDescription}</p>
+      {/* AI Image Generation Section */}
+      <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
+            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
+              AI Image Generation
+            </p>
+            <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">
+              Describe the image you want and let AI generate it
+            </p>
+          </div>
         </div>
-      )}
 
+        <div className="space-y-3">
+          <textarea
+            value={imageDescription}
+            onChange={(e) => setImageDescription(e.target.value)}
+            className="w-full px-4 py-3 text-base bg-surface border border-default rounded-lg
+              focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
+              text-primary placeholder:text-muted resize-y min-h-[80px]"
+            placeholder="Describe what image should be shown (e.g., 'A professional diagram showing the data flow between microservices')"
+            disabled={isGenerating}
+          />
+
+          {canGenerate && (
+            <Button
+              onClick={handleGenerateImage}
+              disabled={isGenerating || !imageDescription.trim()}
+              variant="primary"
+              className="w-full sm:w-auto"
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Generate Image</span>
+                </>
+              )}
+            </Button>
+          )}
+
+          {!canGenerate && (
+            <p className="text-xs text-muted">
+              Save the course first to enable AI image generation
+            </p>
+          )}
+
+          {generateError && (
+            <p className="text-sm text-red-600 dark:text-red-400">
+              Failed to generate image. Please try again.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Manual URL Input */}
       <div>
         <label className="block text-sm font-medium text-primary mb-2">
-          Image URL
+          Image URL (or paste your own)
         </label>
         <input
           type="url"
           value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          className="w-full px-4 py-3 bg-surface border border-default rounded-lg
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setImageError(false);
+          }}
+          className="w-full px-4 py-3 text-base bg-surface border border-default rounded-lg
             focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
             text-primary placeholder:text-muted"
           placeholder="https://example.com/image.jpg"
+          disabled={isGenerating}
         />
       </div>
 
+      {/* Alt Text */}
       <div>
         <label className="block text-sm font-medium text-primary mb-2">
           Alt Text (for accessibility)
@@ -66,13 +175,15 @@ export function ImageEditor({ contentJson, onSave }: ImageEditorProps) {
           type="text"
           value={altText}
           onChange={(e) => setAltText(e.target.value)}
-          className="w-full px-4 py-3 bg-surface border border-default rounded-lg
+          className="w-full px-4 py-3 text-base bg-surface border border-default rounded-lg
             focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
             text-primary placeholder:text-muted"
           placeholder="Describe the image for screen readers..."
+          disabled={isGenerating}
         />
       </div>
 
+      {/* Caption */}
       <div>
         <label className="block text-sm font-medium text-primary mb-2">
           Caption (optional)
@@ -81,28 +192,44 @@ export function ImageEditor({ contentJson, onSave }: ImageEditorProps) {
           type="text"
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
-          className="w-full px-4 py-3 bg-surface border border-default rounded-lg
+          className="w-full px-4 py-3 text-base bg-surface border border-default rounded-lg
             focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
             text-primary placeholder:text-muted"
           placeholder="Figure 1: Description..."
+          disabled={isGenerating}
         />
       </div>
 
       {/* Preview */}
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
-          Preview
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-primary">Preview</label>
+          {hasRealUrl && canGenerate && (
+            <button
+              onClick={handleGenerateImage}
+              disabled={isGenerating || !imageDescription.trim()}
+              className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 disabled:opacity-50 flex items-center gap-1"
+            >
+              <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
+              Regenerate
+            </button>
+          )}
+        </div>
         <div className="p-4 bg-hover rounded-lg">
-          {url ? (
+          {isGenerating ? (
+            <div className="aspect-video bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg flex items-center justify-center">
+              <div className="text-center">
+                <RefreshCw className="h-8 w-8 text-purple-600 dark:text-purple-400 mx-auto mb-2 animate-spin" />
+                <p className="text-sm text-purple-600 dark:text-purple-400">Generating image...</p>
+              </div>
+            </div>
+          ) : hasRealUrl && !imageError ? (
             <figure>
               <img
                 src={url}
-                alt={altText}
+                alt={altText || 'Preview'}
                 className="max-w-full h-auto rounded-lg mx-auto"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
+                onError={() => setImageError(true)}
               />
               {caption && (
                 <figcaption className="text-sm text-muted text-center mt-2">
@@ -113,20 +240,24 @@ export function ImageEditor({ contentJson, onSave }: ImageEditorProps) {
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-muted">
               <ImageIcon className="w-12 h-12 mb-2" />
-              <p className="text-sm">No image URL provided</p>
+              <p className="text-sm">
+                {imageError ? 'Failed to load image' : 'No image URL provided'}
+              </p>
+              {imageDescription && !hasRealUrl && (
+                <p className="text-xs mt-1 text-center max-w-xs">
+                  Click &quot;Generate Image&quot; to create an image from your description
+                </p>
+              )}
             </div>
           )}
         </div>
       </div>
 
+      {/* Save Button */}
       <div className="flex justify-end gap-3 pt-4 border-t border-subtle">
-        <button
-          onClick={handleSave}
-          className="px-6 py-2 bg-purple-600 text-white font-medium rounded-lg
-            hover:bg-purple-700 transition-colors"
-        >
+        <Button onClick={handleSave} variant="primary" disabled={isGenerating}>
           Save Changes
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -40,7 +40,15 @@ export function EditModal() {
       case LessonComponentType.TEXT:
         return <TextEditor contentJson={component.contentJson} onSave={handleSave} />;
       case LessonComponentType.IMAGE:
-        return <ImageEditor contentJson={component.contentJson} onSave={handleSave} />;
+        return (
+          <ImageEditor
+            contentJson={component.contentJson}
+            onSave={handleSave}
+            courseId={editingComponent.courseId}
+            lessonId={editingComponent.lessonId}
+            componentId={component.id}
+          />
+        );
       case LessonComponentType.CODE:
         return <CodeEditor contentJson={component.contentJson} onSave={handleSave} />;
       case LessonComponentType.CALLOUT:
@@ -57,7 +65,7 @@ export function EditModal() {
       isOpen={!!editingComponent}
       onClose={closeEditModal}
       title={`Edit ${COMPONENT_TYPE_LABELS[component.type] || 'Component'}`}
-      size="lg"
+      size="xl"
       mobileHeight="full"
     >
       {renderEditor()}
