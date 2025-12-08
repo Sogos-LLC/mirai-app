@@ -266,6 +266,7 @@ func main() {
 			notificationService, // For outline completion notifications (implements OutlineCompletionNotifier)
 			workerClient,        // For event-driven job processing (push)
 			baseStorage,         // For storing generated images
+			tenantStorage,       // For storing course content.json
 			logger,
 		)
 

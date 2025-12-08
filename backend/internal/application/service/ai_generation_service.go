@@ -14,6 +14,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
 
 // AIProviderFactory creates AIProvider instances per-tenant.
@@ -72,16 +73,17 @@ type AIGenerationService struct {
 	sectionRepo        repository.OutlineSectionRepository
 	lessonRepo         repository.OutlineLessonRepository
 	genLessonRepo      repository.GeneratedLessonRepository
-	componentRepo      repository.LessonComponentRepository
+	componentRepo      repository.LessonComponentRepository // Deprecated: components now stored in MinIO
 	genInputRepo       repository.CourseGenerationInputRepository
 	aiSettingsRepo     repository.TenantAISettingsRepository
 	aiProviderFactory  AIProviderFactory
 	notifier           JobNotifier
 	completionNotifier CourseCompletionNotifier
 	outlineNotifier    OutlineCompletionNotifier
-	taskEnqueuer       TaskEnqueuer       // For event-driven job processing (optional, falls back to polling)
-	imageStorage       ImageStorage       // For storing generated images
-	jobEventPublisher  JobEventPublisher  // For real-time job event streaming (optional)
+	taskEnqueuer       TaskEnqueuer                  // For event-driven job processing (optional, falls back to polling)
+	imageStorage       ImageStorage                  // For storing generated images
+	contentStorage     *storage.TenantAwareStorage   // For storing course content (lessons, components) in MinIO
+	jobEventPublisher  JobEventPublisher             // For real-time job event streaming (optional)
 	logger             service.Logger
 }
 
@@ -102,6 +104,7 @@ func NewAIGenerationService(
 	outlineNotifier OutlineCompletionNotifier,
 	taskEnqueuer TaskEnqueuer, // Can be nil - falls back to polling
 	imageStorage ImageStorage, // For storing generated images (can be nil if not needed)
+	contentStorage *storage.TenantAwareStorage, // For storing course content in MinIO
 	logger service.Logger,
 ) *AIGenerationService {
 	return &AIGenerationService{
@@ -120,6 +123,7 @@ func NewAIGenerationService(
 		outlineNotifier:    outlineNotifier,
 		taskEnqueuer:       taskEnqueuer,
 		imageStorage:       imageStorage,
+		contentStorage:     contentStorage,
 		logger:             logger,
 	}
 }
@@ -771,24 +775,53 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		return s.failJob(ctx, job, "failed to store lesson")
 	}
 
-	// Create components
-	for _, compResult := range lessonResult.Components {
+	// Build S3 components from AI result
+	now := time.Now()
+	s3Components := make([]S3LessonComponent, len(lessonResult.Components))
+	for i, compResult := range lessonResult.Components {
 		compType, _ := valueobject.ParseLessonComponentType(compResult.Type)
-		component := &entity.LessonComponent{
-			ID:          uuid.New(),
-			TenantID:    job.TenantID,
-			LessonID:    genLesson.ID,
-			Type:        compType,
-			Position:    int32(compResult.Order),
-			ContentJSON: json.RawMessage(compResult.ContentJSON),
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		}
-
-		if err := s.componentRepo.Create(ctx, component); err != nil {
-			log.Error("failed to create component", "error", err)
+		s3Components[i] = S3LessonComponent{
+			ID:                   uuid.New().String(),
+			Type:                 string(compType),
+			Order:                int32(compResult.Order),
+			ContentJSON:          json.RawMessage(compResult.ContentJSON),
+			LearningObjectiveIDs: []string{},
+			CreatedAt:            now,
+			UpdatedAt:            now,
 		}
 	}
+
+	// Create S3 lesson with components
+	s3Lesson := S3GeneratedLesson{
+		ID:              genLesson.ID.String(),
+		SectionID:       genLesson.SectionID.String(),
+		OutlineLessonID: genLesson.OutlineLessonID.String(),
+		Title:           genLesson.Title,
+		SegueText:       genLesson.SegueText,
+		Components:      s3Components,
+		GeneratedAt:     genLesson.GeneratedAt,
+	}
+
+	// Read existing content.json and add the new lesson
+	content, err := s.readCourseContent(ctx, job.TenantID, *job.CourseID)
+	if err != nil {
+		// content.json doesn't exist yet, create a new one
+		log.Info("creating new content.json for course", "courseID", job.CourseID)
+		content = &S3CourseContent{
+			GeneratedLessons: []S3GeneratedLesson{},
+		}
+	}
+
+	// Add or update the lesson in content
+	upsertS3Lesson(content, s3Lesson)
+
+	// Write updated content back to MinIO
+	if err := s.writeCourseContent(ctx, job.TenantID, *job.CourseID, content); err != nil {
+		log.Error("failed to write components to MinIO", "error", err)
+		return s.failJob(ctx, job, "failed to store lesson components")
+	}
+
+	log.Info("lesson components stored in MinIO", "componentCount", len(s3Components))
 
 	// Update token usage
 	_ = s.aiSettingsRepo.IncrementTokenUsage(ctx, job.TenantID, lessonResult.TokensUsed)
@@ -1207,26 +1240,55 @@ func (s *AIGenerationService) CancelJob(ctx context.Context, kratosID uuid.UUID,
 }
 
 // GetGeneratedLesson retrieves a generated lesson by ID.
+// Components are loaded from MinIO content.json for cost efficiency.
 func (s *AIGenerationService) GetGeneratedLesson(ctx context.Context, kratosID uuid.UUID, lessonID uuid.UUID) (*entity.GeneratedLesson, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
 		return nil, domainerrors.ErrUserNotFound
 	}
 
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	tenantID := *user.TenantID
+
+	// Get lesson metadata from PostgreSQL
 	lesson, err := s.genLessonRepo.GetByID(ctx, lessonID)
 	if err != nil || lesson == nil {
 		return nil, domainerrors.ErrNotFound.WithMessage("generated lesson not found")
 	}
 
-	// Load components
-	components, err := s.componentRepo.ListByLessonID(ctx, lesson.ID)
+	// Read course content from MinIO to get components
+	content, err := s.readCourseContent(ctx, tenantID, lesson.CourseID)
 	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
+		// If content.json doesn't exist yet, return lesson without components
+		s.logger.Warn("course content not found in MinIO, returning empty components", "courseID", lesson.CourseID)
+		lesson.Components = []entity.LessonComponent{}
+		return lesson, nil
 	}
 
-	lesson.Components = make([]entity.LessonComponent, len(components))
-	for i, c := range components {
-		lesson.Components[i] = *c
+	// Find the lesson in content.json
+	s3Lesson := findS3Lesson(content, lessonID.String())
+	if s3Lesson != nil {
+		// Convert S3 components to entity components
+		lesson.Components = make([]entity.LessonComponent, len(s3Lesson.Components))
+		for i, s3Comp := range s3Lesson.Components {
+			compID, _ := uuid.Parse(s3Comp.ID)
+			lesson.Components[i] = entity.LessonComponent{
+				ID:                   compID,
+				TenantID:             tenantID,
+				LessonID:             lessonID,
+				Type:                 valueobject.LessonComponentType(s3Comp.Type),
+				Position:             s3Comp.Order,
+				ContentJSON:          s3Comp.ContentJSON,
+				LearningObjectiveIDs: s3Comp.LearningObjectiveIDs,
+				CreatedAt:            s3Comp.CreatedAt,
+				UpdatedAt:            s3Comp.UpdatedAt,
+			}
+		}
+	} else {
+		lesson.Components = []entity.LessonComponent{}
 	}
 
 	// Refresh image URLs to ensure they work across devices
@@ -1236,27 +1298,66 @@ func (s *AIGenerationService) GetGeneratedLesson(ctx context.Context, kratosID u
 }
 
 // ListGeneratedLessons retrieves all generated lessons for a course.
+// Components are loaded from MinIO content.json for cost efficiency.
 func (s *AIGenerationService) ListGeneratedLessons(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) ([]*entity.GeneratedLesson, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
 		return nil, domainerrors.ErrUserNotFound
 	}
 
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	tenantID := *user.TenantID
+
+	// Get lesson metadata from PostgreSQL
 	lessons, err := s.genLessonRepo.ListByCourseID(ctx, courseID)
 	if err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Load components for each lesson
+	// Read course content from MinIO to get components
+	content, err := s.readCourseContent(ctx, tenantID, courseID)
+	if err != nil {
+		// If content.json doesn't exist yet, return lessons without components
+		s.logger.Warn("course content not found in MinIO, returning empty components", "courseID", courseID)
+		for _, lesson := range lessons {
+			lesson.Components = []entity.LessonComponent{}
+		}
+		return lessons, nil
+	}
+
+	// Build a map of lesson ID -> S3 lesson for quick lookup
+	s3LessonMap := make(map[string]*S3GeneratedLesson)
+	for i := range content.GeneratedLessons {
+		s3LessonMap[content.GeneratedLessons[i].ID] = &content.GeneratedLessons[i]
+	}
+
+	// Load components for each lesson from content.json
 	for _, lesson := range lessons {
-		components, err := s.componentRepo.ListByLessonID(ctx, lesson.ID)
-		if err != nil {
-			continue // Skip if components fail to load
+		s3Lesson, ok := s3LessonMap[lesson.ID.String()]
+		if ok && s3Lesson != nil {
+			// Convert S3 components to entity components
+			lesson.Components = make([]entity.LessonComponent, len(s3Lesson.Components))
+			for i, s3Comp := range s3Lesson.Components {
+				compID, _ := uuid.Parse(s3Comp.ID)
+				lesson.Components[i] = entity.LessonComponent{
+					ID:                   compID,
+					TenantID:             tenantID,
+					LessonID:             lesson.ID,
+					Type:                 valueobject.LessonComponentType(s3Comp.Type),
+					Position:             s3Comp.Order,
+					ContentJSON:          s3Comp.ContentJSON,
+					LearningObjectiveIDs: s3Comp.LearningObjectiveIDs,
+					CreatedAt:            s3Comp.CreatedAt,
+					UpdatedAt:            s3Comp.UpdatedAt,
+				}
+			}
+		} else {
+			lesson.Components = []entity.LessonComponent{}
 		}
-		lesson.Components = make([]entity.LessonComponent, len(components))
-		for i, c := range components {
-			lesson.Components[i] = *c
-		}
+
 		// Refresh image URLs to ensure they work across devices
 		s.refreshImageURLs(ctx, lesson.Components)
 	}
@@ -1622,7 +1723,7 @@ type UpdateLessonComponentsResult struct {
 }
 
 // UpdateLessonComponents saves manual edits to lesson components.
-// It handles create, update, and delete operations for components in a lesson.
+// Components are stored in MinIO content.json for cost efficiency.
 func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratosID uuid.UUID, req UpdateLessonComponentsRequest) (*UpdateLessonComponentsResult, error) {
 	// Get user and tenant
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
@@ -1634,121 +1735,91 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
-	// Set tenant context
-	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+	tenantID := *user.TenantID
 
-	// Verify the lesson exists
-	lesson, err := s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
+	// Verify the lesson exists in PostgreSQL (metadata only)
+	lesson, err := s.genLessonRepo.GetByID(ctx, req.LessonID)
 	if err != nil || lesson == nil {
 		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
 	}
 
-	// Get existing components for this lesson
-	existingComponents, err := s.componentRepo.ListByLessonID(tenantCtx, req.LessonID)
+	// Read course content from MinIO
+	content, err := s.readCourseContent(ctx, tenantID, req.CourseID)
 	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
+		s.logger.Error("failed to read course content from MinIO", "error", err, "courseID", req.CourseID)
+		return nil, err
 	}
 
-	// Build map of existing component IDs for quick lookup
-	existingMap := make(map[uuid.UUID]*entity.LessonComponent)
-	for _, comp := range existingComponents {
-		existingMap[comp.ID] = comp
+	// Find or create the lesson in the content
+	s3Lesson := findS3Lesson(content, req.LessonID.String())
+	if s3Lesson == nil {
+		// Lesson doesn't exist in content.json yet, create it
+		s3Lesson = &S3GeneratedLesson{
+			ID:              lesson.ID.String(),
+			SectionID:       lesson.SectionID.String(),
+			OutlineLessonID: lesson.OutlineLessonID.String(),
+			Title:           lesson.Title,
+			SegueText:       lesson.SegueText,
+			GeneratedAt:     lesson.GeneratedAt,
+			Components:      []S3LessonComponent{},
+		}
 	}
 
-	// Track which components are in the new list (for deletion detection)
-	updatedIDs := make(map[uuid.UUID]bool)
-
-	// Process each component in the request
+	// Build updated components from request
 	now := time.Now()
-	for _, input := range req.Components {
+	updatedComponents := make([]S3LessonComponent, len(req.Components))
+	for i, input := range req.Components {
 		// Check if this is a new component (temp-* prefix) or existing
-		isNew := len(input.ID) > 5 && input.ID[:5] == "temp-"
-
-		if isNew {
-			// Create new component
-			newID := uuid.New()
-			component := &entity.LessonComponent{
-				ID:                   newID,
-				TenantID:             *user.TenantID,
-				LessonID:             req.LessonID,
-				Type:                 input.Type,
-				Position:             input.Order,
-				ContentJSON:          input.ContentJSON,
-				LearningObjectiveIDs: input.LearningObjectiveIDs,
-				CreatedAt:            now,
-				UpdatedAt:            now,
-			}
-
-			if err := s.componentRepo.Create(tenantCtx, component); err != nil {
-				s.logger.Error("failed to create component", "error", err, "lessonID", req.LessonID)
-				return nil, domainerrors.ErrInternal.WithCause(err)
-			}
-
-			updatedIDs[newID] = true
+		compID := input.ID
+		createdAt := now
+		if len(input.ID) > 5 && input.ID[:5] == "temp-" {
+			// New component - generate UUID
+			compID = uuid.New().String()
 		} else {
-			// Parse existing component ID
-			compID, err := uuid.Parse(input.ID)
-			if err != nil {
-				s.logger.Warn("invalid component ID, skipping", "id", input.ID)
-				continue
+			// Try to preserve createdAt from existing component
+			for _, existing := range s3Lesson.Components {
+				if existing.ID == input.ID {
+					createdAt = existing.CreatedAt
+					break
+				}
 			}
+		}
 
-			existing, exists := existingMap[compID]
-			if !exists {
-				s.logger.Warn("component not found, skipping", "id", input.ID)
-				continue
-			}
-
-			// Update existing component
-			existing.Type = input.Type
-			existing.Position = input.Order
-			existing.ContentJSON = input.ContentJSON
-			existing.LearningObjectiveIDs = input.LearningObjectiveIDs
-			existing.UpdatedAt = now
-
-			if err := s.componentRepo.Update(tenantCtx, existing); err != nil {
-				s.logger.Error("failed to update component", "error", err, "componentID", compID)
-				return nil, domainerrors.ErrInternal.WithCause(err)
-			}
-
-			updatedIDs[compID] = true
+		updatedComponents[i] = S3LessonComponent{
+			ID:                   compID,
+			Type:                 string(input.Type),
+			Order:                input.Order,
+			ContentJSON:          input.ContentJSON,
+			LearningObjectiveIDs: input.LearningObjectiveIDs,
+			CreatedAt:            createdAt,
+			UpdatedAt:            now,
 		}
 	}
 
-	// Delete components that were removed (not in the updated list)
-	for id := range existingMap {
-		if !updatedIDs[id] {
-			if err := s.componentRepo.Delete(tenantCtx, id); err != nil {
-				s.logger.Error("failed to delete component", "error", err, "componentID", id)
-				// Continue with other deletions, don't fail the whole operation
-			}
-		}
+	// Update the lesson's components
+	s3Lesson.Components = updatedComponents
+
+	// Upsert the lesson in the content
+	upsertS3Lesson(content, *s3Lesson)
+
+	// Write updated content back to MinIO
+	if err := s.writeCourseContent(ctx, tenantID, req.CourseID, content); err != nil {
+		s.logger.Error("failed to write course content to MinIO", "error", err, "courseID", req.CourseID)
+		return nil, err
 	}
 
-	// Reload the lesson with updated components
-	updatedLesson, err := s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
+	// Convert to entity for response
+	updatedLesson, err := s3LessonToEntity(s3Lesson, tenantID, req.CourseID)
 	if err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-	if updatedLesson == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found after update")
-	}
-
-	// Load components
-	components, err := s.componentRepo.ListByLessonID(tenantCtx, req.LessonID)
-	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-	updatedLesson.Components = make([]entity.LessonComponent, len(components))
-	for i, c := range components {
-		updatedLesson.Components[i] = *c
 	}
 
 	// Refresh image URLs to ensure they work across devices
-	s.refreshImageURLs(tenantCtx, updatedLesson.Components)
+	s.refreshImageURLs(ctx, updatedLesson.Components)
 
-	s.logger.Info("lesson components updated",
+	s.logger.Info("lesson components updated in MinIO",
 		"lessonID", req.LessonID,
+		"courseID", req.CourseID,
 		"componentCount", len(req.Components),
 	)
 
@@ -1824,4 +1895,133 @@ func (s *AIGenerationService) refreshImageURLs(ctx context.Context, components [
 		}
 		comp.ContentJSON = updatedJSON
 	}
+}
+
+// ============================================================================
+// MinIO Content Storage Helpers
+// ============================================================================
+
+// readCourseContent reads the course content.json from MinIO.
+func (s *AIGenerationService) readCourseContent(ctx context.Context, tenantID, courseID uuid.UUID) (*S3CourseContent, error) {
+	if s.contentStorage == nil {
+		return nil, domainerrors.ErrInternal.WithMessage("content storage not configured")
+	}
+
+	var content S3CourseContent
+	if err := s.contentStorage.ReadCourseContent(ctx, tenantID, courseID, &content); err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	return &content, nil
+}
+
+// writeCourseContent writes the course content.json to MinIO.
+func (s *AIGenerationService) writeCourseContent(ctx context.Context, tenantID, courseID uuid.UUID, content *S3CourseContent) error {
+	if s.contentStorage == nil {
+		return domainerrors.ErrInternal.WithMessage("content storage not configured")
+	}
+
+	if err := s.contentStorage.WriteCourseContent(ctx, tenantID, courseID, content); err != nil {
+		return domainerrors.ErrInternal.WithCause(err)
+	}
+	return nil
+}
+
+// findS3Lesson finds a lesson by ID in the S3CourseContent.
+func findS3Lesson(content *S3CourseContent, lessonID string) *S3GeneratedLesson {
+	for i := range content.GeneratedLessons {
+		if content.GeneratedLessons[i].ID == lessonID {
+			return &content.GeneratedLessons[i]
+		}
+	}
+	return nil
+}
+
+// upsertS3Lesson adds or updates a lesson in the S3CourseContent.
+func upsertS3Lesson(content *S3CourseContent, lesson S3GeneratedLesson) {
+	for i := range content.GeneratedLessons {
+		if content.GeneratedLessons[i].ID == lesson.ID {
+			content.GeneratedLessons[i] = lesson
+			return
+		}
+	}
+	// Not found, append
+	content.GeneratedLessons = append(content.GeneratedLessons, lesson)
+}
+
+// s3LessonToEntity converts an S3GeneratedLesson to domain entity.
+func s3LessonToEntity(s3Lesson *S3GeneratedLesson, tenantID, courseID uuid.UUID) (*entity.GeneratedLesson, error) {
+	lessonID, err := uuid.Parse(s3Lesson.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	sectionID, err := uuid.Parse(s3Lesson.SectionID)
+	if err != nil {
+		return nil, err
+	}
+
+	outlineLessonID, err := uuid.Parse(s3Lesson.OutlineLessonID)
+	if err != nil {
+		return nil, err
+	}
+
+	lesson := &entity.GeneratedLesson{
+		ID:              lessonID,
+		TenantID:        tenantID,
+		CourseID:        courseID,
+		SectionID:       sectionID,
+		OutlineLessonID: outlineLessonID,
+		Title:           s3Lesson.Title,
+		SegueText:       s3Lesson.SegueText,
+		GeneratedAt:     s3Lesson.GeneratedAt,
+		Components:      make([]entity.LessonComponent, len(s3Lesson.Components)),
+	}
+
+	for i, s3Comp := range s3Lesson.Components {
+		compID, err := uuid.Parse(s3Comp.ID)
+		if err != nil {
+			compID = uuid.New() // Generate new ID if parsing fails
+		}
+
+		lesson.Components[i] = entity.LessonComponent{
+			ID:                   compID,
+			TenantID:             tenantID,
+			LessonID:             lessonID,
+			Type:                 valueobject.LessonComponentType(s3Comp.Type),
+			Position:             s3Comp.Order,
+			ContentJSON:          s3Comp.ContentJSON,
+			LearningObjectiveIDs: s3Comp.LearningObjectiveIDs,
+			CreatedAt:            s3Comp.CreatedAt,
+			UpdatedAt:            s3Comp.UpdatedAt,
+		}
+	}
+
+	return lesson, nil
+}
+
+// entityToS3Lesson converts a domain entity to S3GeneratedLesson.
+func entityToS3Lesson(lesson *entity.GeneratedLesson) S3GeneratedLesson {
+	s3Lesson := S3GeneratedLesson{
+		ID:              lesson.ID.String(),
+		SectionID:       lesson.SectionID.String(),
+		OutlineLessonID: lesson.OutlineLessonID.String(),
+		Title:           lesson.Title,
+		SegueText:       lesson.SegueText,
+		GeneratedAt:     lesson.GeneratedAt,
+		Components:      make([]S3LessonComponent, len(lesson.Components)),
+	}
+
+	for i, comp := range lesson.Components {
+		s3Lesson.Components[i] = S3LessonComponent{
+			ID:                   comp.ID.String(),
+			Type:                 string(comp.Type),
+			Order:                comp.Position,
+			ContentJSON:          comp.ContentJSON,
+			LearningObjectiveIDs: comp.LearningObjectiveIDs,
+			CreatedAt:            comp.CreatedAt,
+			UpdatedAt:            comp.UpdatedAt,
+		}
+	}
+
+	return s3Lesson
 }

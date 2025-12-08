@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -95,12 +96,35 @@ type CourseContent struct {
 
 // S3CourseContent is stored in S3 - the heavy content payload.
 type S3CourseContent struct {
-	Settings           CourseSettings   `json:"settings"`
-	Personas           []map[string]any `json:"personas"`
-	LearningObjectives []map[string]any `json:"learningObjectives"`
-	AssessmentSettings map[string]any   `json:"assessmentSettings"`
-	Content            CourseContent    `json:"content"`
-	Exports            []map[string]any `json:"exports,omitempty"`
+	Settings           CourseSettings       `json:"settings"`
+	Personas           []map[string]any     `json:"personas"`
+	LearningObjectives []map[string]any     `json:"learningObjectives"`
+	AssessmentSettings map[string]any       `json:"assessmentSettings"`
+	Content            CourseContent        `json:"content"`
+	Exports            []map[string]any     `json:"exports,omitempty"`
+	GeneratedLessons   []S3GeneratedLesson  `json:"generatedLessons,omitempty"`
+}
+
+// S3GeneratedLesson represents a generated lesson stored in content.json.
+type S3GeneratedLesson struct {
+	ID              string              `json:"id"`
+	SectionID       string              `json:"sectionId"`
+	OutlineLessonID string              `json:"outlineLessonId"`
+	Title           string              `json:"title"`
+	SegueText       *string             `json:"segueText,omitempty"`
+	Components      []S3LessonComponent `json:"components"`
+	GeneratedAt     time.Time           `json:"generatedAt"`
+}
+
+// S3LessonComponent represents a lesson component stored in content.json.
+type S3LessonComponent struct {
+	ID                   string          `json:"id"`
+	Type                 string          `json:"type"` // LessonComponentType string value (e.g., "text", "heading", "image")
+	Order                int32           `json:"order"`
+	ContentJSON          json.RawMessage `json:"contentJson"`
+	LearningObjectiveIDs []string        `json:"learningObjectiveIds,omitempty"`
+	CreatedAt            time.Time       `json:"createdAt"`
+	UpdatedAt            time.Time       `json:"updatedAt"`
 }
 
 // LibraryEntry represents a course listing (metadata only).
