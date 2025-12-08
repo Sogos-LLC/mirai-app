@@ -11,6 +11,8 @@ enum NotificationType {
   NOTIFICATION_TYPE_GENERATION_COMPLETE = 6; // Course content generation complete
   NOTIFICATION_TYPE_GENERATION_FAILED = 7; // Course generation failed
   NOTIFICATION_TYPE_APPROVAL_REQUESTED = 8; // Content awaiting approval
+  NOTIFICATION_TYPE_EXPORT_COMPLETE = 9; // Course export complete, ready for download
+  NOTIFICATION_TYPE_EXPORT_FAILED = 10; // Course export failed
 }
 
 // NotificationPriority indicates urgency.
@@ -45,6 +47,7 @@ message Notification {
   // Optional references for navigation
   optional string course_id = 8;
   optional string job_id = 9;
+  optional string export_id = 10; // For export notifications
 
   // Action URL for frontend navigation
   optional string action_url = 12;

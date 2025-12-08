@@ -27,20 +27,24 @@ type NotificationType int32
 
 const (
 	NotificationType_NOTIFICATION_TYPE_UNSPECIFIED         NotificationType = 0
-	NotificationType_NOTIFICATION_TYPE_OUTLINE_READY       NotificationType = 5 // Course outline generation complete
-	NotificationType_NOTIFICATION_TYPE_GENERATION_COMPLETE NotificationType = 6 // Course content generation complete
-	NotificationType_NOTIFICATION_TYPE_GENERATION_FAILED   NotificationType = 7 // Course generation failed
-	NotificationType_NOTIFICATION_TYPE_APPROVAL_REQUESTED  NotificationType = 8 // Content awaiting approval
+	NotificationType_NOTIFICATION_TYPE_OUTLINE_READY       NotificationType = 5  // Course outline generation complete
+	NotificationType_NOTIFICATION_TYPE_GENERATION_COMPLETE NotificationType = 6  // Course content generation complete
+	NotificationType_NOTIFICATION_TYPE_GENERATION_FAILED   NotificationType = 7  // Course generation failed
+	NotificationType_NOTIFICATION_TYPE_APPROVAL_REQUESTED  NotificationType = 8  // Content awaiting approval
+	NotificationType_NOTIFICATION_TYPE_EXPORT_COMPLETE     NotificationType = 9  // Course export complete, ready for download
+	NotificationType_NOTIFICATION_TYPE_EXPORT_FAILED       NotificationType = 10 // Course export failed
 )
 
 // Enum value maps for NotificationType.
 var (
 	NotificationType_name = map[int32]string{
-		0: "NOTIFICATION_TYPE_UNSPECIFIED",
-		5: "NOTIFICATION_TYPE_OUTLINE_READY",
-		6: "NOTIFICATION_TYPE_GENERATION_COMPLETE",
-		7: "NOTIFICATION_TYPE_GENERATION_FAILED",
-		8: "NOTIFICATION_TYPE_APPROVAL_REQUESTED",
+		0:  "NOTIFICATION_TYPE_UNSPECIFIED",
+		5:  "NOTIFICATION_TYPE_OUTLINE_READY",
+		6:  "NOTIFICATION_TYPE_GENERATION_COMPLETE",
+		7:  "NOTIFICATION_TYPE_GENERATION_FAILED",
+		8:  "NOTIFICATION_TYPE_APPROVAL_REQUESTED",
+		9:  "NOTIFICATION_TYPE_EXPORT_COMPLETE",
+		10: "NOTIFICATION_TYPE_EXPORT_FAILED",
 	}
 	NotificationType_value = map[string]int32{
 		"NOTIFICATION_TYPE_UNSPECIFIED":         0,
@@ -48,6 +52,8 @@ var (
 		"NOTIFICATION_TYPE_GENERATION_COMPLETE": 6,
 		"NOTIFICATION_TYPE_GENERATION_FAILED":   7,
 		"NOTIFICATION_TYPE_APPROVAL_REQUESTED":  8,
+		"NOTIFICATION_TYPE_EXPORT_COMPLETE":     9,
+		"NOTIFICATION_TYPE_EXPORT_FAILED":       10,
 	}
 )
 
@@ -200,6 +206,7 @@ type Notification struct {
 	// Optional references for navigation
 	CourseId *string `protobuf:"bytes,8,opt,name=course_id,json=courseId,proto3,oneof" json:"course_id,omitempty"`
 	JobId    *string `protobuf:"bytes,9,opt,name=job_id,json=jobId,proto3,oneof" json:"job_id,omitempty"`
+	ExportId *string `protobuf:"bytes,10,opt,name=export_id,json=exportId,proto3,oneof" json:"export_id,omitempty"` // For export notifications
 	// Action URL for frontend navigation
 	ActionUrl     *string                `protobuf:"bytes,12,opt,name=action_url,json=actionUrl,proto3,oneof" json:"action_url,omitempty"`
 	Read          bool                   `protobuf:"varint,13,opt,name=read,proto3" json:"read,omitempty"`
@@ -299,6 +306,13 @@ func (x *Notification) GetCourseId() string {
 func (x *Notification) GetJobId() string {
 	if x != nil && x.JobId != nil {
 		return *x.JobId
+	}
+	return ""
+}
+
+func (x *Notification) GetExportId() string {
+	if x != nil && x.ExportId != nil {
+		return *x.ExportId
 	}
 	return ""
 }
@@ -900,7 +914,7 @@ var File_mirai_v1_notification_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_notification_proto_rawDesc = "" +
 	"\n" +
-	"\x1bmirai/v1/notification.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xae\x04\n" +
+	"\x1bmirai/v1/notification.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xde\x04\n" +
 	"\fNotification\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x17\n" +
@@ -910,18 +924,22 @@ const file_mirai_v1_notification_proto_rawDesc = "" +
 	"\x05title\x18\x06 \x01(\tR\x05title\x12\x18\n" +
 	"\amessage\x18\a \x01(\tR\amessage\x12 \n" +
 	"\tcourse_id\x18\b \x01(\tH\x00R\bcourseId\x88\x01\x01\x12\x1a\n" +
-	"\x06job_id\x18\t \x01(\tH\x01R\x05jobId\x88\x01\x01\x12\"\n" +
+	"\x06job_id\x18\t \x01(\tH\x01R\x05jobId\x88\x01\x01\x12 \n" +
+	"\texport_id\x18\n" +
+	" \x01(\tH\x02R\bexportId\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"action_url\x18\f \x01(\tH\x02R\tactionUrl\x88\x01\x01\x12\x12\n" +
+	"action_url\x18\f \x01(\tH\x03R\tactionUrl\x88\x01\x01\x12\x12\n" +
 	"\x04read\x18\r \x01(\bR\x04read\x12\x1d\n" +
 	"\n" +
 	"email_sent\x18\x0e \x01(\bR\temailSent\x129\n" +
 	"\n" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x128\n" +
-	"\aread_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\x06readAt\x88\x01\x01B\f\n" +
+	"\aread_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x06readAt\x88\x01\x01B\f\n" +
 	"\n" +
 	"_course_idB\t\n" +
-	"\a_job_idB\r\n" +
+	"\a_job_idB\f\n" +
+	"\n" +
+	"_export_idB\r\n" +
 	"\v_action_urlB\n" +
 	"\n" +
 	"\b_read_at\"\x1f\n" +
@@ -958,13 +976,16 @@ const file_mirai_v1_notification_proto_rawDesc = "" +
 	"\fmarked_count\x18\x01 \x01(\x05R\vmarkedCount\"D\n" +
 	"\x19DeleteNotificationRequest\x12'\n" +
 	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\"\x1c\n" +
-	"\x1aDeleteNotificationResponse*\xd8\x01\n" +
+	"\x1aDeleteNotificationResponse*\xa4\x02\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fNOTIFICATION_TYPE_OUTLINE_READY\x10\x05\x12)\n" +
 	"%NOTIFICATION_TYPE_GENERATION_COMPLETE\x10\x06\x12'\n" +
 	"#NOTIFICATION_TYPE_GENERATION_FAILED\x10\a\x12(\n" +
-	"$NOTIFICATION_TYPE_APPROVAL_REQUESTED\x10\b*\x9e\x01\n" +
+	"$NOTIFICATION_TYPE_APPROVAL_REQUESTED\x10\b\x12%\n" +
+	"!NOTIFICATION_TYPE_EXPORT_COMPLETE\x10\t\x12#\n" +
+	"\x1fNOTIFICATION_TYPE_EXPORT_FAILED\x10\n" +
+	"*\x9e\x01\n" +
 	"\x14NotificationPriority\x12%\n" +
 	"!NOTIFICATION_PRIORITY_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19NOTIFICATION_PRIORITY_LOW\x10\x01\x12 \n" +

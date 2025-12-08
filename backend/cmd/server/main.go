@@ -231,8 +231,9 @@ func main() {
 		genLessonRepo,
 		componentRepo,
 		scormPackager,
-		baseStorage,   // Use base storage, export paths are tenant-prefixed internally
-		workerClient,  // Implements ExportTaskEnqueuer
+		baseStorage,          // Use base storage, export paths are tenant-prefixed internally
+		workerClient,         // Implements ExportTaskEnqueuer
+		notificationService,  // Implements ExportNotifier
 		logger,
 	)
 	logger.Info("course export service initialized")

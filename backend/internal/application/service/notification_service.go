@@ -663,6 +663,72 @@ func (s *NotificationService) NotifyOutlineFailed(ctx context.Context, userID uu
 	return nil
 }
 
+// NotifyExportComplete sends in-app notification when export is ready for download.
+func (s *NotificationService) NotifyExportComplete(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string) error {
+	log := s.logger.With("userID", userID, "courseID", courseID, "exportID", exportID)
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil || user == nil {
+		log.Error("failed to get user for export notification", "error", err)
+		return domainerrors.ErrUserNotFound
+	}
+
+	actionURL := fmt.Sprintf("/course/%s/editor", courseID.String())
+	notification := &entity.Notification{
+		TenantID:  *user.TenantID,
+		UserID:    userID,
+		Type:      valueobject.NotificationTypeExportComplete,
+		Priority:  valueobject.NotificationPriorityNormal,
+		Title:     "Export Ready",
+		Message:   fmt.Sprintf("Your SCORM export for \"%s\" is ready to download.", courseTitle),
+		CourseID:  &courseID,
+		ExportID:  &exportID,
+		ActionURL: &actionURL,
+	}
+
+	if err := s.notificationRepo.Create(ctx, notification); err != nil {
+		log.Error("failed to create export complete notification", "error", err)
+		return err
+	}
+
+	s.publishNotificationEvent(ctx, userID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_CREATED, notification)
+	log.Info("export complete notification created")
+	return nil
+}
+
+// NotifyExportFailed sends in-app notification when export fails.
+func (s *NotificationService) NotifyExportFailed(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string, errorMsg string) error {
+	log := s.logger.With("userID", userID, "courseID", courseID, "exportID", exportID)
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil || user == nil {
+		log.Error("failed to get user for export notification", "error", err)
+		return domainerrors.ErrUserNotFound
+	}
+
+	actionURL := fmt.Sprintf("/course/%s/editor", courseID.String())
+	notification := &entity.Notification{
+		TenantID:  *user.TenantID,
+		UserID:    userID,
+		Type:      valueobject.NotificationTypeExportFailed,
+		Priority:  valueobject.NotificationPriorityHigh,
+		Title:     "Export Failed",
+		Message:   fmt.Sprintf("Export for \"%s\" failed: %s", courseTitle, errorMsg),
+		CourseID:  &courseID,
+		ExportID:  &exportID,
+		ActionURL: &actionURL,
+	}
+
+	if err := s.notificationRepo.Create(ctx, notification); err != nil {
+		log.Error("failed to create export failed notification", "error", err)
+		return err
+	}
+
+	s.publishNotificationEvent(ctx, userID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_CREATED, notification)
+	log.Info("export failed notification created")
+	return nil
+}
+
 // publishNotificationEvent publishes a notification event to Redis for real-time delivery.
 // This is fire-and-forget - errors are logged but don't fail the operation.
 func (s *NotificationService) publishNotificationEvent(ctx context.Context, userID uuid.UUID, eventType v1.NotificationEventType, notification *entity.Notification) {
@@ -716,6 +782,10 @@ func notificationToProto(n *entity.Notification) *v1.Notification {
 		// Keeping the domain field for backward compatibility but not mapping to proto
 		_ = s
 	}
+	if n.ExportID != nil {
+		s := n.ExportID.String()
+		proto.ExportId = &s
+	}
 	if n.ActionURL != nil {
 		proto.ActionUrl = n.ActionURL
 	}
@@ -749,6 +819,10 @@ func notificationTypeToProto(t valueobject.NotificationType) v1.NotificationType
 		return v1.NotificationType_NOTIFICATION_TYPE_GENERATION_FAILED
 	case valueobject.NotificationTypeApprovalRequested:
 		return v1.NotificationType_NOTIFICATION_TYPE_APPROVAL_REQUESTED
+	case valueobject.NotificationTypeExportComplete:
+		return v1.NotificationType_NOTIFICATION_TYPE_EXPORT_COMPLETE
+	case valueobject.NotificationTypeExportFailed:
+		return v1.NotificationType_NOTIFICATION_TYPE_EXPORT_FAILED
 	default:
 		return v1.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED
 	}

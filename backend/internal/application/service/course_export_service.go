@@ -22,6 +22,12 @@ type ExportTaskEnqueuer interface {
 	EnqueueCourseExport(exportID, tenantID string) error
 }
 
+// ExportNotifier sends notifications for export events.
+type ExportNotifier interface {
+	NotifyExportComplete(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string) error
+	NotifyExportFailed(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string, errorMsg string) error
+}
+
 // ExportStorage abstracts storage operations for exports.
 type ExportStorage interface {
 	// PutContent stores raw content to storage.
@@ -45,6 +51,7 @@ type CourseExportService struct {
 	scormPackager  *scorm.Packager
 	storage        ExportStorage
 	taskEnqueuer   ExportTaskEnqueuer
+	notifier       ExportNotifier
 	logger         service.Logger
 }
 
@@ -61,6 +68,7 @@ func NewCourseExportService(
 	scormPackager *scorm.Packager,
 	storage ExportStorage,
 	taskEnqueuer ExportTaskEnqueuer,
+	notifier ExportNotifier,
 	logger service.Logger,
 ) *CourseExportService {
 	return &CourseExportService{
@@ -75,6 +83,7 @@ func NewCourseExportService(
 		scormPackager: scormPackager,
 		storage:       storage,
 		taskEnqueuer:  taskEnqueuer,
+		notifier:      notifier,
 		logger:        logger,
 	}
 }
@@ -240,14 +249,12 @@ func (s *CourseExportService) ListExports(ctx context.Context, kratosID uuid.UUI
 }
 
 // ProcessExport processes an export job (called by worker).
+// The ctx should already have tenant context set by the worker handler.
 func (s *CourseExportService) ProcessExport(ctx context.Context, exportID uuid.UUID) error {
 	log := s.logger.With("exportID", exportID)
 
-	// Use superadmin context for worker processing
-	adminCtx := tenant.WithSuperAdmin(ctx, true)
-
-	// Claim the export atomically
-	export, err := s.exportRepo.ClaimByID(adminCtx, exportID)
+	// Claim the export atomically (tenant context already set by worker)
+	export, err := s.exportRepo.ClaimByID(ctx, exportID)
 	if err != nil {
 		log.Error("failed to claim export", "error", err)
 		return err
@@ -258,25 +265,22 @@ func (s *CourseExportService) ProcessExport(ctx context.Context, exportID uuid.U
 		return nil
 	}
 
-	// Set up tenant context from the export
-	tenantCtx := tenant.WithTenantID(adminCtx, export.TenantID)
-
 	log = log.With("tenantID", export.TenantID, "courseID", export.CourseID, "format", export.Format)
 	log.Info("processing export")
 
 	// Update progress: starting
-	if err := s.exportRepo.MarkProcessing(tenantCtx, exportID, 5, "Loading course data..."); err != nil {
+	if err := s.exportRepo.MarkProcessing(ctx, exportID, 5, "Loading course data..."); err != nil {
 		log.Error("failed to update progress", "error", err)
 	}
 
 	// Process based on format
 	switch export.Format {
 	case valueobject.ExportFormatSCORM2004:
-		return s.processSCORM2004Export(tenantCtx, export)
+		return s.processSCORM2004Export(ctx, export)
 	default:
 		errMsg := fmt.Sprintf("unsupported export format: %s", export.Format)
 		log.Error(errMsg)
-		return s.failExport(tenantCtx, export.ID, errMsg)
+		return s.failExport(ctx, export.ID, errMsg)
 	}
 }
 
@@ -415,16 +419,25 @@ func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export
 		return s.failExport(ctx, export.ID, "failed to finalize export")
 	}
 
+	// Send notification to user
+	if s.notifier != nil {
+		if err := s.notifier.NotifyExportComplete(ctx, export.CreatedByUserID, export.CourseID, export.ID, course.Title); err != nil {
+			log.Warn("failed to send export completion notification", "error", err)
+		}
+	}
+
 	log.Info("export completed successfully", "filePath", storagePath, "fileSize", result.Size)
 	return nil
 }
 
-// ProcessNextPending processes the next pending export (for polling).
+// ProcessNextPending processes the next pending export (for polling fallback).
+// This uses superadmin ONLY for the initial cross-tenant claim query,
+// then switches to proper tenant context for all subsequent operations.
 func (s *CourseExportService) ProcessNextPending(ctx context.Context) error {
-	// Use superadmin context for worker processing
+	// Use superadmin context for cross-tenant discovery of orphaned jobs
 	adminCtx := tenant.WithSuperAdmin(ctx, true)
 
-	// Claim next pending export
+	// Claim next pending export (atomically marks as processing)
 	export, err := s.exportRepo.ClaimPending(adminCtx)
 	if err != nil {
 		s.logger.Error("failed to claim pending export", "error", err)
@@ -436,7 +449,24 @@ func (s *CourseExportService) ProcessNextPending(ctx context.Context) error {
 		return nil
 	}
 
-	return s.ProcessExport(ctx, export.ID)
+	// Switch to proper tenant context for all subsequent operations
+	tenantCtx := tenant.WithTenantID(ctx, export.TenantID)
+
+	s.logger.Info("poll claimed orphaned export, processing with tenant context",
+		"exportID", export.ID,
+		"tenantID", export.TenantID,
+	)
+
+	// Process within tenant context (export already claimed, so ClaimByID will return nil)
+	// We call processSCORM2004Export directly since we already have the export
+	switch export.Format {
+	case valueobject.ExportFormatSCORM2004:
+		return s.processSCORM2004Export(tenantCtx, export)
+	default:
+		errMsg := fmt.Sprintf("unsupported export format: %s", export.Format)
+		s.logger.Error(errMsg)
+		return s.failExport(tenantCtx, export.ID, errMsg)
+	}
 }
 
 // failExport marks an export as failed with the given error message.

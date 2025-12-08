@@ -40,6 +40,7 @@ export const NotificationSchema = z.object({
   message: z.string(),
   courseId: z.string().optional(),
   jobId: z.string().optional(),
+  exportId: z.string().optional(),
   actionUrl: z.string().optional(),
   read: z.boolean(),
   emailSent: z.boolean(),

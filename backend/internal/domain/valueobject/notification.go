@@ -17,6 +17,8 @@ const (
 	NotificationTypeSubmissionReadyForReview NotificationType = "submission_ready_for_review"
 	NotificationTypeSubmissionApproved       NotificationType = "submission_approved"
 	NotificationTypeChangesRequested         NotificationType = "changes_requested"
+	NotificationTypeExportComplete           NotificationType = "export_complete"
+	NotificationTypeExportFailed             NotificationType = "export_failed"
 )
 
 func (t NotificationType) String() string {
@@ -30,7 +32,8 @@ func (t NotificationType) IsValid() bool {
 		NotificationTypeOutlineReady, NotificationTypeGenerationComplete,
 		NotificationTypeGenerationFailed, NotificationTypeApprovalRequested,
 		NotificationTypeSubmissionReadyForReview, NotificationTypeSubmissionApproved,
-		NotificationTypeChangesRequested:
+		NotificationTypeChangesRequested, NotificationTypeExportComplete,
+		NotificationTypeExportFailed:
 		return true
 	}
 	return false

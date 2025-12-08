@@ -24,6 +24,7 @@ type Notification struct {
 	JobID    *uuid.UUID
 	TaskID   *uuid.UUID
 	SMEID    *uuid.UUID
+	ExportID *uuid.UUID
 
 	// Action URL for frontend navigation
 	ActionURL *string
