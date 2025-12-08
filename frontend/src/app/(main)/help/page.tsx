@@ -10,6 +10,7 @@ import {
   ExternalLink,
   ChevronDown,
 } from 'lucide-react';
+import { AdaptiveGrid } from '@/components/ui/AdaptiveGrid';
 
 export default function HelpPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,7 +110,7 @@ export default function HelpPage() {
         </div>
 
         {/* Resource Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <AdaptiveGrid cols={{ default: 1, md: 2, lg: 4 }} gap="md" className="mb-12">
           {resources.map((resource, idx) => {
             const Icon = resource.icon;
             return (
@@ -129,7 +130,7 @@ export default function HelpPage() {
               </a>
             );
           })}
-        </div>
+        </AdaptiveGrid>
 
         {/* FAQ Section */}
         <section className="bg-surface border rounded-xl p-8 mb-12 shadow-sm dark:shadow-glow-sm">

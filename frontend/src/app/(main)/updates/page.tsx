@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Sparkles, Zap, CheckCircle, Clock } from 'lucide-react';
+import { AdaptiveGrid } from '@/components/ui/AdaptiveGrid';
 
 export default function UpdatesPage() {
   const updates = [
@@ -98,7 +99,7 @@ export default function UpdatesPage() {
       </div>
 
       {/* Updates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <AdaptiveGrid cols={{ default: 1, md: 2, lg: 3 }} gap="md">
         {updates.map((update) => {
           const Icon = update.icon;
           return (
@@ -133,7 +134,7 @@ export default function UpdatesPage() {
             </div>
           );
         })}
-      </div>
+      </AdaptiveGrid>
     </>
   );
 }

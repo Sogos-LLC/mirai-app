@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useGetTeam, useUpdateTeam, useDeleteTeam, type Team } from '@/hooks/useTeams';
 import { TeamMembersPanel } from '@/components/teams/TeamMembersPanel';
 import { EditTeamModal } from '@/components/teams/EditTeamModal';
+import { PageShell } from '@/components/layout/PageShell';
 
 export default function TeamDetailPage() {
   const params = useParams();
@@ -35,45 +36,40 @@ export default function TeamDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <PageShell maxWidth="4xl">
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (error || !team) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <PageShell
+        maxWidth="4xl"
+        backButton={{
+          label: "Back to Teams",
+          onClick: () => router.push('/teams')
+        }}
+      >
         <div className="rounded-md bg-red-50 p-4">
           <div className="text-sm text-red-700">
             Failed to load team. The team may not exist or you don&apos;t have access.
           </div>
         </div>
-        <button
-          onClick={() => router.push('/teams')}
-          className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-800"
-        >
-          Back to Teams
-        </button>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Back Button */}
-      <button
-        onClick={() => router.push('/teams')}
-        className="flex items-center text-sm text-secondary hover:text-primary mb-6"
-      >
-        <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to Teams
-      </button>
-
+    <PageShell
+      backButton={{
+        label: "Back to Teams",
+        onClick: () => router.push('/teams')
+      }}
+      maxWidth="4xl"
+    >
       {/* Team Header */}
       <div className="bg-surface shadow dark:shadow-glow-sm rounded-lg mb-6 border">
         <div className="px-4 py-5 sm:px-6 border-b border">
@@ -137,6 +133,6 @@ export default function TeamDetailPage() {
           onSave={handleUpdate}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

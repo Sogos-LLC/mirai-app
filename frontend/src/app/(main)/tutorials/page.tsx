@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { BookOpen, Play, Clock, CheckCircle } from 'lucide-react';
+import { AdaptiveGrid } from '@/components/ui/AdaptiveGrid';
 
 export default function TutorialsPage() {
   const tutorials = [
@@ -92,7 +93,7 @@ export default function TutorialsPage() {
       </div>
 
       {/* Tutorials Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <AdaptiveGrid cols={{ default: 1, md: 2, lg: 3 }} gap="md">
         {tutorials.map((tutorial) => (
           <div
             key={tutorial.id}
@@ -124,7 +125,7 @@ export default function TutorialsPage() {
             </div>
           </div>
         ))}
-      </div>
+      </AdaptiveGrid>
     </>
   );
 }
