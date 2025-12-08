@@ -123,10 +123,10 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 		mux.Handle(path, handler)
 	}
 
-	// AIGenerationService - AI course/lesson generation
-	if cfg.AIGenerationService != nil {
+	// AIGenerationService - AI course/lesson generation with real-time streaming
+	if cfg.AIGenerationService != nil && cfg.NotificationSubscriber != nil {
 		path, handler = miraiv1connect.NewAIGenerationServiceHandler(
-			NewAIGenerationServiceServer(cfg.AIGenerationService),
+			NewAIGenerationServiceServer(cfg.AIGenerationService, cfg.NotificationSubscriber),
 			interceptors,
 		)
 		mux.Handle(path, handler)

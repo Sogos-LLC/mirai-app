@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_pb.js";
+import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, SubscribeJobsRequest, SubscribeJobsResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -178,6 +178,18 @@ export const AIGenerationService = {
       I: UpdateLessonComponentsRequest,
       O: UpdateLessonComponentsResponse,
       kind: MethodKind.Unary,
+    },
+    /**
+     * SubscribeJobs opens a server-streaming connection for real-time job events.
+     * Events are pushed when jobs are created, updated, completed, or failed.
+     *
+     * @generated from rpc mirai.v1.AIGenerationService.SubscribeJobs
+     */
+    subscribeJobs: {
+      name: "SubscribeJobs",
+      I: SubscribeJobsRequest,
+      O: SubscribeJobsResponse,
+      kind: MethodKind.ServerStreaming,
     },
   }
 } as const;

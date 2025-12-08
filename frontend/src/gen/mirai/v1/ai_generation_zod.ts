@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import { z } from "zod";
-import { CalloutStyle, GenerationJobStatus, GenerationJobType, HeadingLevel, LessonComponentType, OutlineApprovalStatus } from "./ai_generation_pb";
+import { CalloutStyle, GenerationJobStatus, GenerationJobType, HeadingLevel, JobEventType, LessonComponentType, OutlineApprovalStatus } from "./ai_generation_pb";
 
 /**
  * Zod schema for GenerationJobType enum
@@ -46,6 +46,13 @@ export type CalloutStyleType = z.infer<typeof CalloutStyleSchema>;
  */
 export const HeadingLevelSchema = z.nativeEnum(HeadingLevel);
 export type HeadingLevelType = z.infer<typeof HeadingLevelSchema>;
+
+/**
+ * Zod schema for JobEventType enum
+ * @generated from enum mirai.v1.JobEventType
+ */
+export const JobEventTypeSchema = z.nativeEnum(JobEventType);
+export type JobEventTypeType = z.infer<typeof JobEventTypeSchema>;
 
 /**
  * Zod schema for GenerationJob
@@ -317,6 +324,15 @@ export const GenerateComponentImageRequestSchema = z.object({
 });
 
 export type GenerateComponentImageRequest = z.infer<typeof GenerateComponentImageRequestSchema>;
+
+/**
+ * Zod schema for SubscribeJobsRequest
+ * @generated from message mirai.v1.SubscribeJobsRequest
+ */
+export const SubscribeJobsRequestSchema = z.object({
+});
+
+export type SubscribeJobsRequest = z.infer<typeof SubscribeJobsRequestSchema>;
 
 /**
  * Zod schema for OutlineSection

@@ -269,6 +269,10 @@ func main() {
 			logger,
 		)
 
+		// Set up job event publisher for real-time streaming
+		jobEventAdapter := service.NewJobEventAdapter(notificationPubSub, logger)
+		aiGenerationService.SetJobEventPublisher(jobEventAdapter)
+
 		// Course Wizard service (AI-guided course creation)
 		courseWizardService = service.NewCourseWizardService(
 			userRepo,

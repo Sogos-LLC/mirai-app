@@ -64,6 +64,17 @@ enum HeadingLevel {
   HEADING_LEVEL_H6 = 6;
 }
 
+// JobEventType for real-time streaming job events.
+enum JobEventType {
+  JOB_EVENT_TYPE_UNSPECIFIED = 0;
+  JOB_EVENT_TYPE_CREATED = 1;    // New job created
+  JOB_EVENT_TYPE_UPDATED = 2;    // Job progress or status updated
+  JOB_EVENT_TYPE_COMPLETED = 3;  // Job completed successfully
+  JOB_EVENT_TYPE_FAILED = 4;     // Job failed
+  JOB_EVENT_TYPE_CANCELLED = 5;  // Job was cancelled
+  JOB_EVENT_TYPE_KEEPALIVE = 6;  // Keepalive to prevent proxy timeout
+}
+
 // GenerationJob represents an AI generation job.
 message GenerationJob {
   string id = 1;
@@ -278,6 +289,10 @@ service AIGenerationService {
 
   // UpdateLessonComponents saves manual edits to lesson components.
   rpc UpdateLessonComponents(UpdateLessonComponentsRequest) returns (UpdateLessonComponentsResponse);
+
+  // SubscribeJobs opens a server-streaming connection for real-time job events.
+  // Events are pushed when jobs are created, updated, completed, or failed.
+  rpc SubscribeJobs(SubscribeJobsRequest) returns (stream SubscribeJobsResponse);
 }
 
 // GenerateCourseOutlineRequest starts outline generation.
@@ -447,4 +462,15 @@ message UpdateLessonComponentsRequest {
 // UpdateLessonComponentsResponse returns the updated lesson.
 message UpdateLessonComponentsResponse {
   GeneratedLesson lesson = 1; // Updated lesson with new components
+}
+
+// SubscribeJobsRequest initiates a streaming subscription for job events.
+// User ID is derived from auth context.
+message SubscribeJobsRequest {}
+
+// SubscribeJobsResponse represents a real-time job event.
+// Each message in the stream contains an event type and the job payload.
+message SubscribeJobsResponse {
+  JobEventType event_type = 1;
+  GenerationJob job = 2;
 }

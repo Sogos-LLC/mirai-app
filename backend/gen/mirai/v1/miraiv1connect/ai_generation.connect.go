@@ -78,6 +78,9 @@ const (
 	// AIGenerationServiceUpdateLessonComponentsProcedure is the fully-qualified name of the
 	// AIGenerationService's UpdateLessonComponents RPC.
 	AIGenerationServiceUpdateLessonComponentsProcedure = "/mirai.v1.AIGenerationService/UpdateLessonComponents"
+	// AIGenerationServiceSubscribeJobsProcedure is the fully-qualified name of the
+	// AIGenerationService's SubscribeJobs RPC.
+	AIGenerationServiceSubscribeJobsProcedure = "/mirai.v1.AIGenerationService/SubscribeJobs"
 )
 
 // AIGenerationServiceClient is a client for the mirai.v1.AIGenerationService service.
@@ -112,6 +115,9 @@ type AIGenerationServiceClient interface {
 	GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error)
 	// UpdateLessonComponents saves manual edits to lesson components.
 	UpdateLessonComponents(context.Context, *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error)
+	// SubscribeJobs opens a server-streaming connection for real-time job events.
+	// Events are pushed when jobs are created, updated, completed, or failed.
+	SubscribeJobs(context.Context, *connect.Request[v1.SubscribeJobsRequest]) (*connect.ServerStreamForClient[v1.SubscribeJobsResponse], error)
 }
 
 // NewAIGenerationServiceClient constructs a client for the mirai.v1.AIGenerationService service. By
@@ -215,6 +221,12 @@ func NewAIGenerationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(aIGenerationServiceMethods.ByName("UpdateLessonComponents")),
 			connect.WithClientOptions(opts...),
 		),
+		subscribeJobs: connect.NewClient[v1.SubscribeJobsRequest, v1.SubscribeJobsResponse](
+			httpClient,
+			baseURL+AIGenerationServiceSubscribeJobsProcedure,
+			connect.WithSchema(aIGenerationServiceMethods.ByName("SubscribeJobs")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -235,6 +247,7 @@ type aIGenerationServiceClient struct {
 	listGeneratedLessons   *connect.Client[v1.ListGeneratedLessonsRequest, v1.ListGeneratedLessonsResponse]
 	generateComponentImage *connect.Client[v1.GenerateComponentImageRequest, v1.GenerateComponentImageResponse]
 	updateLessonComponents *connect.Client[v1.UpdateLessonComponentsRequest, v1.UpdateLessonComponentsResponse]
+	subscribeJobs          *connect.Client[v1.SubscribeJobsRequest, v1.SubscribeJobsResponse]
 }
 
 // GenerateCourseOutline calls mirai.v1.AIGenerationService.GenerateCourseOutline.
@@ -312,6 +325,11 @@ func (c *aIGenerationServiceClient) UpdateLessonComponents(ctx context.Context, 
 	return c.updateLessonComponents.CallUnary(ctx, req)
 }
 
+// SubscribeJobs calls mirai.v1.AIGenerationService.SubscribeJobs.
+func (c *aIGenerationServiceClient) SubscribeJobs(ctx context.Context, req *connect.Request[v1.SubscribeJobsRequest]) (*connect.ServerStreamForClient[v1.SubscribeJobsResponse], error) {
+	return c.subscribeJobs.CallServerStream(ctx, req)
+}
+
 // AIGenerationServiceHandler is an implementation of the mirai.v1.AIGenerationService service.
 type AIGenerationServiceHandler interface {
 	// GenerateCourseOutline starts outline generation job.
@@ -344,6 +362,9 @@ type AIGenerationServiceHandler interface {
 	GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error)
 	// UpdateLessonComponents saves manual edits to lesson components.
 	UpdateLessonComponents(context.Context, *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error)
+	// SubscribeJobs opens a server-streaming connection for real-time job events.
+	// Events are pushed when jobs are created, updated, completed, or failed.
+	SubscribeJobs(context.Context, *connect.Request[v1.SubscribeJobsRequest], *connect.ServerStream[v1.SubscribeJobsResponse]) error
 }
 
 // NewAIGenerationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -443,6 +464,12 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 		connect.WithSchema(aIGenerationServiceMethods.ByName("UpdateLessonComponents")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aIGenerationServiceSubscribeJobsHandler := connect.NewServerStreamHandler(
+		AIGenerationServiceSubscribeJobsProcedure,
+		svc.SubscribeJobs,
+		connect.WithSchema(aIGenerationServiceMethods.ByName("SubscribeJobs")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.AIGenerationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIGenerationServiceGenerateCourseOutlineProcedure:
@@ -475,6 +502,8 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 			aIGenerationServiceGenerateComponentImageHandler.ServeHTTP(w, r)
 		case AIGenerationServiceUpdateLessonComponentsProcedure:
 			aIGenerationServiceUpdateLessonComponentsHandler.ServeHTTP(w, r)
+		case AIGenerationServiceSubscribeJobsProcedure:
+			aIGenerationServiceSubscribeJobsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -542,4 +571,8 @@ func (UnimplementedAIGenerationServiceHandler) GenerateComponentImage(context.Co
 
 func (UnimplementedAIGenerationServiceHandler) UpdateLessonComponents(context.Context, *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.UpdateLessonComponents is not implemented"))
+}
+
+func (UnimplementedAIGenerationServiceHandler) SubscribeJobs(context.Context, *connect.Request[v1.SubscribeJobsRequest], *connect.ServerStream[v1.SubscribeJobsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.SubscribeJobs is not implemented"))
 }

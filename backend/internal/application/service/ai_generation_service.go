@@ -59,6 +59,11 @@ type ImageStorage interface {
 	GenerateDownloadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
 }
 
+// JobEventPublisher publishes real-time job events via pub/sub.
+type JobEventPublisher interface {
+	PublishJobEvent(ctx context.Context, userID uuid.UUID, eventType string, job *entity.GenerationJob) error
+}
+
 // AIGenerationService handles AI-powered content generation.
 type AIGenerationService struct {
 	userRepo           repository.UserRepository
@@ -74,8 +79,9 @@ type AIGenerationService struct {
 	notifier           JobNotifier
 	completionNotifier CourseCompletionNotifier
 	outlineNotifier    OutlineCompletionNotifier
-	taskEnqueuer       TaskEnqueuer // For event-driven job processing (optional, falls back to polling)
-	imageStorage       ImageStorage // For storing generated images
+	taskEnqueuer       TaskEnqueuer       // For event-driven job processing (optional, falls back to polling)
+	imageStorage       ImageStorage       // For storing generated images
+	jobEventPublisher  JobEventPublisher  // For real-time job event streaming (optional)
 	logger             service.Logger
 }
 
@@ -116,6 +122,11 @@ func NewAIGenerationService(
 		imageStorage:       imageStorage,
 		logger:             logger,
 	}
+}
+
+// SetJobEventPublisher sets the optional job event publisher for real-time streaming.
+func (s *AIGenerationService) SetJobEventPublisher(publisher JobEventPublisher) {
+	s.jobEventPublisher = publisher
 }
 
 // GenerateCourseOutlineRequest contains the inputs for outline generation.
@@ -181,6 +192,9 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 		log.Error("failed to create generation job", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
+
+	// Publish job created event for real-time streaming
+	s.publishJobEvent(ctx, "created", job)
 
 	log.Info("course outline generation job created", "jobID", job.ID)
 
@@ -347,6 +361,9 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	if err := s.jobRepo.Update(ctx, job); err != nil {
 		log.Error("failed to mark job as completed", "error", err)
 	}
+
+	// Publish job completed event for real-time streaming
+	s.publishJobEvent(ctx, "completed", job)
 
 	// Send outline ready notification with email (tenant-isolated via user lookup)
 	if s.outlineNotifier != nil {
@@ -632,6 +649,9 @@ func (s *AIGenerationService) GenerateLessonContent(ctx context.Context, kratosI
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
+	// Publish job created event for real-time streaming
+	s.publishJobEvent(ctx, "created", job)
+
 	log.Info("lesson content generation job created", "jobID", job.ID)
 
 	// Push: Enqueue for immediate processing (if task enqueuer available)
@@ -783,6 +803,9 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 	if err := s.jobRepo.Update(ctx, job); err != nil {
 		log.Error("failed to mark job as completed", "error", err)
 	}
+
+	// Publish job completed event for real-time streaming
+	s.publishJobEvent(ctx, "completed", job)
 
 	// Only notify for standalone lesson generation (not part of full course generation)
 	// Full course generation sends ONE notification when all lessons are done
@@ -1247,6 +1270,9 @@ func (s *AIGenerationService) failJob(ctx context.Context, job *entity.Generatio
 		s.logger.Error("failed to mark job as failed", "jobID", job.ID, "error", err)
 	}
 
+	// Publish job failed event for real-time streaming
+	s.publishJobEvent(ctx, "failed", job)
+
 	// Notify user of failure (tenant-isolated via user lookup)
 	if s.notifier != nil {
 		jobType := "Generation"
@@ -1297,6 +1323,10 @@ func (s *AIGenerationService) markJobCancelled(ctx context.Context, job *entity.
 		s.logger.Error("failed to mark job as cancelled", "jobID", job.ID, "error", err)
 		return err
 	}
+
+	// Publish job cancelled event for real-time streaming
+	s.publishJobEvent(ctx, "cancelled", job)
+
 	return nil
 }
 
@@ -1713,4 +1743,30 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 	return &UpdateLessonComponentsResult{
 		Lesson: updatedLesson,
 	}, nil
+}
+
+// GetUserIDByKratosID returns the user's internal ID from their Kratos ID.
+// Used for subscribing to real-time job events.
+func (s *AIGenerationService) GetUserIDByKratosID(ctx context.Context, kratosID uuid.UUID) (uuid.UUID, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return uuid.Nil, domainerrors.ErrUserNotFound
+	}
+	return user.ID, nil
+}
+
+// publishJobEvent publishes a job event for real-time streaming.
+// This is fire-and-forget - errors are logged but don't fail the operation.
+func (s *AIGenerationService) publishJobEvent(ctx context.Context, eventType string, job *entity.GenerationJob) {
+	if s.jobEventPublisher == nil {
+		return
+	}
+
+	if err := s.jobEventPublisher.PublishJobEvent(ctx, job.CreatedByUserID, eventType, job); err != nil {
+		s.logger.Warn("failed to publish job event",
+			"error", err,
+			"eventType", eventType,
+			"jobID", job.ID,
+		)
+	}
 }

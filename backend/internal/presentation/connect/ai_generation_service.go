@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -12,17 +13,22 @@ import (
 	"github.com/sogos/mirai-backend/internal/application/service"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 )
 
 // AIGenerationServiceServer implements the AIGenerationService Connect handler.
 type AIGenerationServiceServer struct {
 	miraiv1connect.UnimplementedAIGenerationServiceHandler
-	aiService *service.AIGenerationService
+	aiService  *service.AIGenerationService
+	subscriber pubsub.Subscriber
 }
 
 // NewAIGenerationServiceServer creates a new AIGenerationServiceServer.
-func NewAIGenerationServiceServer(aiService *service.AIGenerationService) *AIGenerationServiceServer {
-	return &AIGenerationServiceServer{aiService: aiService}
+func NewAIGenerationServiceServer(aiService *service.AIGenerationService, subscriber pubsub.Subscriber) *AIGenerationServiceServer {
+	return &AIGenerationServiceServer{
+		aiService:  aiService,
+		subscriber: subscriber,
+	}
 }
 
 // GenerateCourseOutline starts outline generation job.
@@ -638,6 +644,75 @@ func (s *AIGenerationServiceServer) UpdateLessonComponents(
 	return connect.NewResponse(&v1.UpdateLessonComponentsResponse{
 		Lesson: generatedLessonToProto(result.Lesson),
 	}), nil
+}
+
+// SubscribeJobs opens a server-streaming connection for real-time job events.
+func (s *AIGenerationServiceServer) SubscribeJobs(
+	ctx context.Context,
+	req *connect.Request[v1.SubscribeJobsRequest],
+	stream *connect.ServerStream[v1.SubscribeJobsResponse],
+) error {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Get user ID from kratos ID
+	userID, err := s.aiService.GetUserIDByKratosID(ctx, kratosID)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Subscribe to Redis channel for this user's job events
+	eventCh, cleanup, err := s.subscriber.SubscribeJobEvents(ctx, userID)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	defer cleanup()
+
+	// Heartbeat ticker to keep connection alive through Cloudflare/proxy timeouts
+	// Send a keep-alive every 15 seconds (proxy timeout is ~30s)
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+
+	// Forward events to client stream
+	for {
+		select {
+		case <-ctx.Done():
+			// Client disconnected or context cancelled
+			return nil
+		case <-heartbeat.C:
+			// Send heartbeat to keep connection alive through proxy timeouts
+			resp := &v1.SubscribeJobsResponse{
+				EventType: v1.JobEventType_JOB_EVENT_TYPE_KEEPALIVE,
+				Job: &v1.GenerationJob{
+					Id:        "keepalive",
+					CreatedAt: timestamppb.Now(),
+				},
+			}
+			if err := stream.Send(resp); err != nil {
+				return err
+			}
+		case event, ok := <-eventCh:
+			if !ok {
+				// Channel closed
+				return nil
+			}
+			// Send event to client
+			resp := &v1.SubscribeJobsResponse{
+				EventType: event.EventType,
+				Job:       event.Job,
+			}
+			if err := stream.Send(resp); err != nil {
+				return err
+			}
+		}
+	}
 }
 
 // Helper functions for proto conversion

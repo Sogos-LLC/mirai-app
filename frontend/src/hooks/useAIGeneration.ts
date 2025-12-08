@@ -255,32 +255,24 @@ export function useRegenerateComponent() {
 
 /**
  * Hook to get a generation job by ID.
+ * Relies on useJobStream() to invalidate queries via SSE events.
+ *
  * @param jobId - The job ID to fetch
  * @param options - Optional configuration
  * @param options.enabled - Whether the query is enabled (default: true if jobId is provided)
- * @param options.refetchInterval - Override auto-polling interval. Set to false to disable auto-polling.
+ *
+ * IMPORTANT: Ensure useJobStream() is called at a parent level (e.g., MainLayout)
+ * to receive real-time job updates.
  */
 export function useGetJob(
   jobId: string | undefined,
-  options?: { enabled?: boolean; refetchInterval?: number | false }
+  options?: { enabled?: boolean }
 ) {
   const query = useQuery(
     getJob,
     jobId ? { jobId } : undefined,
     {
       enabled: options?.enabled ?? !!jobId,
-      // Use provided refetchInterval, or default to auto-poll when job is in progress
-      refetchInterval: options?.refetchInterval !== undefined
-        ? options.refetchInterval
-        : (data) => {
-            // Default: poll every 2 seconds if job is in progress
-            const job = data.state.data?.job;
-            if (job?.status === GenerationJobStatus.QUEUED ||
-                job?.status === GenerationJobStatus.PROCESSING) {
-              return 2000;
-            }
-            return false;
-          },
     }
   );
 
@@ -349,24 +341,14 @@ export function useListGeneratedLessons(courseId: string | undefined) {
 
 /**
  * Hook to get active generation jobs (queued or processing).
- * Uses adaptive polling: 3 seconds when jobs are active, 30 seconds idle.
+ * Relies on useJobStream() to invalidate queries via SSE events.
  * Only shows top-level jobs (course_outline, full_course) - not individual lesson jobs.
+ *
+ * IMPORTANT: Ensure useJobStream() is called at a parent level (e.g., MainLayout)
+ * to receive real-time job updates. Without the stream, this hook only fetches on mount.
  */
 export function useActiveGenerationJobs() {
-  const query = useQuery(listJobs, {}, {
-    // Adaptive polling: faster when jobs are active, slower when idle
-    refetchInterval: (data) => {
-      const jobs = data.state.data?.jobs ?? [];
-      const hasActive = jobs.some(
-        (job: GenerationJob) =>
-          (job.status === GenerationJobStatus.QUEUED ||
-           job.status === GenerationJobStatus.PROCESSING) &&
-          !job.parentJobId // Only count top-level jobs
-      );
-      // Poll every 3 seconds when active, every 30 seconds when idle
-      return hasActive ? 3000 : 30000;
-    },
-  });
+  const query = useQuery(listJobs, {});
 
   // Filter to only show top-level active jobs (not child lesson jobs)
   const activeJobs = (query.data?.jobs ?? []).filter(
