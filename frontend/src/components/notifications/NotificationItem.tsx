@@ -11,15 +11,15 @@ interface NotificationItemProps {
 }
 
 const TYPE_CONFIG: Record<number, { icon: string; color: string; bgColor: string }> = {
-  0: { icon: '📋', color: 'text-gray-600', bgColor: 'bg-gray-100' },
-  1: { icon: '📝', color: 'text-blue-600', bgColor: 'bg-blue-100' }, // TASK_ASSIGNED
-  2: { icon: '⏰', color: 'text-amber-600', bgColor: 'bg-amber-100' }, // TASK_DUE_SOON
-  3: { icon: '✅', color: 'text-green-600', bgColor: 'bg-green-100' }, // INGESTION_COMPLETE
-  4: { icon: '❌', color: 'text-red-600', bgColor: 'bg-red-100' }, // INGESTION_FAILED
-  5: { icon: '📄', color: 'text-purple-600', bgColor: 'bg-purple-100' }, // OUTLINE_READY
-  6: { icon: '🎉', color: 'text-green-600', bgColor: 'bg-green-100' }, // GENERATION_COMPLETE
-  7: { icon: '⚠️', color: 'text-red-600', bgColor: 'bg-red-100' }, // GENERATION_FAILED
-  8: { icon: '👀', color: 'text-indigo-600', bgColor: 'bg-indigo-100' }, // APPROVAL_REQUESTED
+  0: { icon: '📋', color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-800/50' },
+  1: { icon: '📝', color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30' }, // TASK_ASSIGNED
+  2: { icon: '⏰', color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-100 dark:bg-amber-900/30' }, // TASK_DUE_SOON
+  3: { icon: '✅', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' }, // INGESTION_COMPLETE
+  4: { icon: '❌', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' }, // INGESTION_FAILED
+  5: { icon: '📄', color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30' }, // OUTLINE_READY
+  6: { icon: '🎉', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' }, // GENERATION_COMPLETE
+  7: { icon: '⚠️', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' }, // GENERATION_FAILED
+  8: { icon: '👀', color: 'text-indigo-600 dark:text-indigo-400', bgColor: 'bg-indigo-100 dark:bg-indigo-900/30' }, // APPROVAL_REQUESTED
 };
 
 const PRIORITY_INDICATOR: Record<number, string> = {
@@ -68,8 +68,8 @@ export function NotificationItem({
   return (
     <div
       className={`
-        relative p-4 hover:bg-gray-50 cursor-pointer transition-colors
-        ${!isRead ? 'bg-blue-50/50' : ''}
+        relative p-4 hover:bg-gray-50 dark:hover:bg-dark-50 cursor-pointer transition-colors
+        ${!isRead ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''}
         ${priorityClass}
       `}
       onClick={handleClick}
@@ -83,12 +83,12 @@ export function NotificationItem({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <p className={`text-sm font-medium ${isRead ? 'text-gray-700' : 'text-gray-900'}`}>
+            <p className={`text-sm font-medium ${isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>
               {notification.title}
             </p>
             <div className="flex items-center gap-1 flex-shrink-0">
               {!isRead && (
-                <span className="w-2 h-2 rounded-full bg-blue-500" title="Unread" />
+                <span className="w-2 h-2 rounded-full bg-primary-500" title="Unread" />
               )}
               {onDelete && (
                 <button
@@ -96,7 +96,7 @@ export function NotificationItem({
                     e.stopPropagation();
                     onDelete();
                   }}
-                  className="p-1 text-gray-400 hover:text-red-500 rounded"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded"
                   title="Delete"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -107,16 +107,16 @@ export function NotificationItem({
             </div>
           </div>
 
-          <p className={`mt-1 text-sm ${isRead ? 'text-gray-500' : 'text-gray-600'} line-clamp-2`}>
+          <p className={`mt-1 text-sm ${isRead ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'} line-clamp-2`}>
             {notification.message}
           </p>
 
-          <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
+          <div className="mt-2 flex items-center gap-3 text-xs text-gray-400 dark:text-dark-text-muted">
             {notification.createdAt && (
               <span>{getRelativeTime(notification.createdAt)}</span>
             )}
             {notification.actionUrl && (
-              <span className="text-blue-500 hover:text-blue-700">View details →</span>
+              <span className="text-primary-500 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">View details →</span>
             )}
           </div>
         </div>

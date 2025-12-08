@@ -81,7 +81,7 @@ export function ResponsiveModal({
         <div className="flex flex-col h-full">
           <div className="flex-1">{children}</div>
           {footer && (
-            <div className="pt-4 mt-auto border-t border-gray-100 -mx-4 px-4 pb-2">
+            <div className="pt-4 mt-auto border-t border-gray-100 dark:border-dark-border -mx-4 px-4 pb-2">
               {footer}
             </div>
           )}
@@ -95,7 +95,7 @@ export function ResponsiveModal({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 animate-backdrop-in"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 z-40 animate-backdrop-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -107,24 +107,26 @@ export function ResponsiveModal({
           aria-modal="true"
           aria-labelledby="modal-title"
           className={`
-            bg-white rounded-2xl shadow-xl
+            bg-white dark:bg-dark-surface-elevated
+            rounded-2xl shadow-xl dark:shadow-dark-lg
             w-full ${sizeClasses[size]}
             max-h-[90vh] overflow-hidden
             flex flex-col
             animate-fadeIn
+            dark:border dark:border-dark-border
           `}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border">
             <h2
               id="modal-title"
-              className="text-lg font-semibold text-gray-900"
+              className="text-lg font-semibold text-gray-900 dark:text-white"
             >
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 -mr-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 -mr-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-50 rounded-full transition-colors"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -136,7 +138,7 @@ export function ResponsiveModal({
 
           {/* Footer */}
           {footer && (
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-surface">
               {footer}
             </div>
           )}

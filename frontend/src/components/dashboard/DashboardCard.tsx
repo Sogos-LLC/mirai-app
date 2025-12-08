@@ -16,11 +16,11 @@ export default function DashboardCard({
   return (
     <button
       onClick={onClick}
-      className="bg-primary-200 rounded-3xl p-8 text-left hover:bg-primary-300 transition-colors w-full"
+      className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-6 text-left hover:shadow-lg dark:hover:shadow-glow-sm hover:border-primary-300 dark:hover:border-primary-600 transition-all w-full"
     >
       {icon && <div className="mb-4">{icon}</div>}
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-700">{description}</p>
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
+      <p className="text-gray-600 dark:text-gray-400">{description}</p>
     </button>
   );
 }

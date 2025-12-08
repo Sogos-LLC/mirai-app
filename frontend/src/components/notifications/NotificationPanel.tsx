@@ -85,15 +85,15 @@ export function NotificationPanel({
   return (
     <div
       ref={panelRef}
-      className="absolute right-0 top-full mt-2 w-96 max-h-[80vh] bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50"
+      className="absolute right-0 top-full mt-2 w-96 max-h-[80vh] bg-white dark:bg-dark-surface-elevated rounded-lg shadow-lg dark:shadow-dark-lg border border-gray-200 dark:border-dark-border overflow-hidden z-50"
     >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
           <button
             onClick={closeNotificationPanel}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+            className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -103,12 +103,12 @@ export function NotificationPanel({
 
         {/* Filter & Actions */}
         <div className="mt-3 flex items-center justify-between">
-          <label className="flex items-center text-sm text-gray-600 cursor-pointer">
+          <label className="flex items-center text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
             <input
               type="checkbox"
               checked={showUnreadOnly}
               onChange={(e) => setShowUnreadOnly(e.target.checked)}
-              className="mr-2 h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+              className="mr-2 h-4 w-4 text-primary-600 dark:text-primary-400 rounded focus:ring-primary-500 dark:focus:ring-primary-400 bg-white dark:bg-dark-400 border-gray-300 dark:border-dark-border"
             />
             Unread only
           </label>
@@ -116,7 +116,7 @@ export function NotificationPanel({
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
             >
               Mark all as read
             </button>
@@ -126,9 +126,9 @@ export function NotificationPanel({
 
       {/* Active Jobs Section */}
       {activeJobs.length > 0 && (
-        <div className="border-b border-gray-200">
-          <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100">
-            <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">
+        <div className="border-b border-gray-200 dark:border-dark-border">
+          <div className="px-4 py-2 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-primary-800/30">
+            <span className="text-xs font-semibold text-primary-700 dark:text-primary-300 uppercase tracking-wide">
               Active Jobs
             </span>
           </div>
@@ -143,10 +143,10 @@ export function NotificationPanel({
       )}
 
       {/* Notification List */}
-      <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
+      <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100 dark:divide-dark-border">
         {isLoading && notifications.length === 0 && activeJobs.length === 0 ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 dark:border-primary-400" />
           </div>
         ) : filteredNotifications.length > 0 ? (
           <>
@@ -164,7 +164,7 @@ export function NotificationPanel({
                 <button
                   onClick={onLoadMore}
                   disabled={isLoading}
-                  className="w-full py-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  className="w-full py-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 disabled:opacity-50"
                 >
                   {isLoading ? 'Loading...' : 'Load more'}
                 </button>
@@ -174,7 +174,7 @@ export function NotificationPanel({
         ) : activeJobs.length === 0 ? (
           <div className="py-12 text-center">
             <svg
-              className="mx-auto h-12 w-12 text-gray-300"
+              className="mx-auto h-12 w-12 text-gray-300 dark:text-dark-text-muted"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -186,7 +186,7 @@ export function NotificationPanel({
                 d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
               />
             </svg>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-sm text-gray-500 dark:text-dark-text-muted">
               {showUnreadOnly ? 'No unread notifications' : 'No notifications yet'}
             </p>
           </div>
@@ -195,13 +195,13 @@ export function NotificationPanel({
 
       {/* Footer */}
       {filteredNotifications.length > 0 && (
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+        <div className="px-4 py-3 border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface">
           <button
             onClick={() => {
               closeNotificationPanel();
               // Navigate to notifications page if it exists
             }}
-            className="w-full text-center text-sm text-blue-600 hover:text-blue-800"
+            className="w-full text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
           >
             View all notifications
           </button>

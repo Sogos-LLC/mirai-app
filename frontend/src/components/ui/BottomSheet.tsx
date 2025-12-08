@@ -100,7 +100,7 @@ export function BottomSheet({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 animate-backdrop-in"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 z-40 animate-backdrop-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -113,10 +113,12 @@ export function BottomSheet({
         aria-labelledby={title ? 'bottom-sheet-title' : undefined}
         className={`
           fixed bottom-0 left-0 right-0 z-50
-          bg-white rounded-t-2xl shadow-2xl
+          bg-white dark:bg-dark-surface-elevated
+          rounded-t-2xl shadow-2xl dark:shadow-dark-lg
           flex flex-col
           animate-slide-in-bottom
           safe-area-bottom
+          dark:border-t dark:border-x dark:border-dark-border
           ${heightClass}
         `}
         onTouchStart={handleTouchStart}
@@ -126,17 +128,17 @@ export function BottomSheet({
         {/* Drag handle */}
         {showDragHandle && (
           <div className="flex justify-center pt-3 pb-2">
-            <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            <div className="w-10 h-1 bg-gray-300 dark:bg-dark-border rounded-full" />
           </div>
         )}
 
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-dark-border">
             {title && (
               <h2
                 id="bottom-sheet-title"
-                className="text-lg font-semibold text-gray-900"
+                className="text-lg font-semibold text-gray-900 dark:text-white"
               >
                 {title}
               </h2>
@@ -145,7 +147,7 @@ export function BottomSheet({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-2 -mr-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full touch-target flex items-center justify-center"
+                className="p-2 -mr-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-50 rounded-full touch-target flex items-center justify-center"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />

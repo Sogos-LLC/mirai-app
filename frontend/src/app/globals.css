@@ -21,11 +21,17 @@
    =================================== */
 @layer components {
   .sidebar-link {
-    @apply flex items-center gap-3 px-4 py-2 rounded-lg transition-colors hover:bg-primary-100 cursor-pointer;
+    @apply flex items-center gap-3 px-4 py-2 rounded-lg transition-colors cursor-pointer;
+    @apply hover:bg-primary-100 dark:hover:bg-primary-900/20;
   }
-  
+
   .sidebar-link.active {
-    @apply bg-primary-200 text-primary-800;
+    @apply bg-primary-200 dark:bg-primary-900/30;
+    color: #5b21b6; /* primary-800 equivalent */
+  }
+
+  .dark .sidebar-link.active {
+    color: #c4b5fd; /* primary-300 equivalent */
   }
 }
 
@@ -53,31 +59,74 @@
   --bg-page: #f9fafb;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #ffffff;
+  --bg-surface-raised: #ffffff;
   --bg-hover: #f3f4f6;
   --bg-active: #ede9fe;
+  --bg-input: #ffffff;
   --border-default: #e5e7eb;
   --border-subtle: #f3f4f6;
+  --border-focus: #8b5cf6;
+  --border-input: #d1d5db;
   --text-primary: #111827;
   --text-secondary: #374151;
   --text-muted: #6b7280;
+  --text-placeholder: #9ca3af;
   --sidebar-bg: #ffffff;
   --sidebar-border: #e5e7eb;
+
+  /* Accent colors - light mode */
+  --accent-primary: #8b5cf6;
+  --accent-primary-hover: #7c3aed;
+  --accent-success: #10b981;
+  --accent-error: #ef4444;
+  --accent-warning: #f59e0b;
+
+  /* Gradients - light mode */
+  --gradient-surface: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+  --gradient-glow: none;
+  --gradient-card: none;
 }
 
 .dark {
-  /* Dark theme colors - purple-tinted */
-  --bg-page: #0f0d15;
-  --bg-surface: #1a1625;
-  --bg-surface-elevated: #221e30;
-  --bg-hover: #2a2640;
-  --bg-active: #352f4d;
-  --border-default: #3d3650;
-  --border-subtle: #2a2540;
-  --text-primary: #f3f4f6;
-  --text-secondary: #d1d5db;
-  --text-muted: #9ca3af;
-  --sidebar-bg: #13101c;
-  --sidebar-border: #2a2540;
+  /* Dark theme colors - sophisticated purple-tinted palette */
+  /* Base backgrounds - deep purple-black with subtle warmth */
+  --bg-page: #0c0a12;
+  --bg-surface: #151320;
+  --bg-surface-elevated: #1c1a2e;
+  --bg-surface-raised: #232038;
+
+  /* Interactive states */
+  --bg-hover: #262340;
+  --bg-active: #322e50;
+  --bg-input: #12101c;
+
+  /* Borders - purple-tinted for cohesion */
+  --border-default: #2d2a45;
+  --border-subtle: #1f1d30;
+  --border-focus: #6366f1;
+  --border-input: #3d3860;
+
+  /* Text hierarchy - ensuring readability */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #8b8da8;
+  --text-placeholder: #5c5d7a;
+
+  /* Sidebar specific */
+  --sidebar-bg: #0e0c16;
+  --sidebar-border: #1f1d30;
+
+  /* Accent colors */
+  --accent-primary: #a78bfa;
+  --accent-primary-hover: #c4b5fd;
+  --accent-success: #34d399;
+  --accent-error: #f87171;
+  --accent-warning: #fbbf24;
+
+  /* Gradients */
+  --gradient-surface: linear-gradient(180deg, #151320 0%, #12101c 100%);
+  --gradient-glow: radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+  --gradient-card: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
 }
 
 /* ===================================
@@ -459,4 +508,106 @@
 /* Hide the desktop toggle button on mobile devices */
 .sidebar.device-mobile .sidebar-toggle {
   display: none;
+}
+
+/* ===================================
+   Dark Theme Enhancements
+   =================================== */
+
+/* Surface card with subtle gradient in dark mode */
+.dark .surface-card {
+  background: var(--gradient-surface);
+  border-color: var(--border-default);
+}
+
+/* Add subtle purple glow effect to page background */
+.dark .page-glow {
+  position: relative;
+}
+
+.dark .page-glow::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40vh;
+  background: var(--gradient-glow);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Input styling for dark mode */
+.dark-input {
+  background-color: var(--bg-input);
+  border-color: var(--border-input);
+  color: var(--text-primary);
+}
+
+.dark-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.dark-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+/* Card hover effect in dark mode */
+.dark .card-hover {
+  transition: all 0.2s ease;
+}
+
+.dark .card-hover:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+}
+
+/* Status badges */
+.badge-success {
+  @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+}
+
+.badge-error {
+  @apply bg-rose-500/20 text-rose-400 border border-rose-500/30;
+}
+
+.badge-warning {
+  @apply bg-amber-500/20 text-amber-400 border border-amber-500/30;
+}
+
+/* Modern button in dark mode */
+.dark .btn-primary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
+}
+
+.dark .btn-primary:hover {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+}
+
+/* Subtle divider for dark mode */
+.dark .divider {
+  background: linear-gradient(90deg, transparent, var(--border-default), transparent);
+  height: 1px;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-input);
 }

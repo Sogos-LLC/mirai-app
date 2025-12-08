@@ -210,7 +210,7 @@ export default function ContentLibrary() {
         <div
           className={`
             group flex items-center gap-2 py-2 px-3 rounded-lg cursor-pointer transition-colors
-            ${isSelected ? 'bg-white shadow-sm' : 'hover:bg-primary-100'}
+            ${isSelected ? 'bg-white dark:bg-dark-surface shadow-sm dark:shadow-glow-sm' : 'hover:bg-primary-100 dark:hover:bg-primary-900/20'}
           `}
           style={{ paddingLeft: `${level * 20 + 12}px` }}
           onClick={() => {
@@ -222,7 +222,7 @@ export default function ContentLibrary() {
         >
           {(hasChildren || isCreatingHere) && (
             <button
-              className="p-1 -ml-1 text-gray-600 min-w-[32px] min-h-[32px] flex items-center justify-center"
+              className="p-1 -ml-1 text-gray-600 dark:text-gray-400 min-w-[32px] min-h-[32px] flex items-center justify-center"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleFolder(folder.id);
@@ -237,9 +237,9 @@ export default function ContentLibrary() {
           )}
           {!hasChildren && !isCreatingHere && <div className="w-8" />}
           {getIcon()}
-          <span className="font-medium text-gray-900 flex-1">{folder.name}</span>
+          <span className="font-medium text-gray-900 dark:text-white flex-1">{folder.name}</span>
           {folder.courseCount !== undefined && folder.courseCount > 0 && (
-            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+            <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-dark-50 px-2 py-0.5 rounded-full">
               {folder.courseCount}
             </span>
           )}
@@ -247,10 +247,10 @@ export default function ContentLibrary() {
           {canCreateSubfolder && (
             <button
               onClick={(e) => handleStartCreateFolder(folder.id, e)}
-              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary-200 rounded transition-opacity"
+              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary-200 dark:hover:bg-primary-900/30 rounded transition-opacity"
               title="Create subfolder"
             >
-              <Plus className="w-4 h-4 text-gray-500" />
+              <Plus className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </button>
           )}
 
@@ -262,22 +262,22 @@ export default function ContentLibrary() {
                   e.stopPropagation();
                   setShowFolderMenu(showFolderMenu === folder.id ? null : folder.id);
                 }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-dark-50 rounded transition-opacity"
                 title="Folder options"
               >
-                <MoreVertical className="w-4 h-4 text-gray-500" />
+                <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
 
               {/* Dropdown menu */}
               {showFolderMenu === folder.id && (
-                <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+                <div className="absolute right-0 top-8 z-20 bg-white dark:bg-dark-surface-elevated border border-gray-200 dark:border-dark-border rounded-lg shadow-lg dark:shadow-dark-lg py-1 min-w-[120px]">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowFolderMenu(null);
                       setFolderToDelete({ id: folder.id, name: folder.name, type: folder.type || 'folder' });
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                     Delete
@@ -378,11 +378,11 @@ export default function ContentLibrary() {
   // Folder list content (used in both desktop sidebar and mobile sheet)
   const folderListContent = (
     <div className="space-y-2">
-      <div className="text-xs text-gray-500 px-3 mb-2">
+      <div className="text-xs text-gray-500 dark:text-gray-400 px-3 mb-2">
         Hover over folders to add subfolders (max {MAX_FOLDER_DEPTH} levels)
       </div>
       {foldersLoading ? (
-        <div className="text-center text-gray-600 py-4">Loading folders...</div>
+        <div className="text-center text-gray-600 dark:text-gray-400 py-4">Loading folders...</div>
       ) : (
         folders.map((folder) => renderFolder(folder))
       )}
@@ -394,8 +394,8 @@ export default function ContentLibrary() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-1 lg:mb-2">Content Library</h1>
-          <p className="text-sm lg:text-base text-gray-600">Browse and organize all your content</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 lg:mb-2">Content Library</h1>
+          <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">Browse and organize all your content</p>
         </div>
       </div>
 
@@ -428,42 +428,46 @@ export default function ContentLibrary() {
       {/* Two-column layout - stacked on mobile */}
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
         {/* Left: Folder Sidebar (hidden on mobile - use sheet instead) */}
-        <div className="hidden lg:block w-80 bg-primary-50 border border-gray-200 rounded-2xl p-4 h-[calc(100vh-200px)] overflow-y-auto">
+        <div className="hidden lg:block w-80 bg-primary-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-4 h-[calc(100vh-200px)] overflow-y-auto">
           {folderListContent}
         </div>
 
         {/* Right: Main Content */}
-        <div className="flex-1 bg-white border border-gray-200 rounded-2xl p-4 lg:p-6">
+        <div className="flex-1 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-4 lg:p-6">
           <div className="mb-4 lg:mb-6">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="Search courses..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full lg:max-w-md pl-10 pr-4 py-3 lg:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px]"
+                className="w-full lg:max-w-md pl-10 pr-4 py-3 lg:py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px]
+                  bg-white dark:bg-dark-400
+                  border-gray-300 dark:border-dark-border
+                  text-gray-900 dark:text-white
+                  placeholder:text-gray-400 dark:placeholder:text-gray-500"
               />
             </div>
           </div>
 
           {coursesLoading ? (
-            <div className="text-center text-gray-600 py-12">Loading courses...</div>
+            <div className="text-center text-gray-600 dark:text-gray-400 py-12">Loading courses...</div>
           ) : filteredCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCourses.map((course) => (
                 <div
                   key={course.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                  className="border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface-elevated rounded-lg p-4 hover:shadow-lg dark:hover:shadow-glow-sm transition-shadow cursor-pointer"
                   onClick={() => handleCourseClick(course.id)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 line-clamp-2">
+                      <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2">
                         {course.title || 'Untitled Course'}
                       </h3>
                     </div>
-                    <FileText className="w-5 h-5 text-gray-400" />
+                    <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   </div>
 
                   {course.tags && course.tags.length > 0 && (
@@ -471,28 +475,28 @@ export default function ContentLibrary() {
                       {course.tags.slice(0, 3).map((tag) => (
                         <span
                           key={tag}
-                          className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded"
+                          className="text-xs px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded"
                         >
                           {tag}
                         </span>
                       ))}
                       {course.tags.length > 3 && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           +{course.tags.length - 3}
                         </span>
                       )}
                     </div>
                   )}
 
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     Modified {course.modifiedAt?.seconds
                       ? new Date(Number(course.modifiedAt.seconds) * 1000).toLocaleDateString()
                       : 'N/A'}
                   </div>
 
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-dark-border">
                     <button
-                      className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-primary-600 hover:bg-primary-50 rounded-lg transition-colors min-h-[44px]"
+                      className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors min-h-[44px]"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCourseClick(course.id);
@@ -502,7 +506,7 @@ export default function ContentLibrary() {
                       Edit
                     </button>
                     <button
-                      className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors min-h-[44px]"
+                      className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-50 rounded-lg transition-colors min-h-[44px]"
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/course/${course.id}/preview`);
@@ -517,11 +521,11 @@ export default function ContentLibrary() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <Folder className="w-16 h-16 text-gray-300 dark:text-dark-text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 {selectedFolderId ? 'No courses in this folder' : 'Select a folder'}
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 {selectedFolderId
                   ? 'Create your first course in this folder to get started.'
                   : 'Choose a folder from the sidebar to view its contents.'}

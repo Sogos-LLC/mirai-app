@@ -49,9 +49,9 @@ export default function TeamSettings() {
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">
-        <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-32 bg-gray-200 rounded"></div>
-        <div className="h-64 bg-gray-200 rounded"></div>
+        <div className="h-8 bg-gray-200 dark:bg-dark-50 rounded w-1/3"></div>
+        <div className="h-32 bg-gray-200 dark:bg-dark-50 rounded"></div>
+        <div className="h-64 bg-gray-200 dark:bg-dark-50 rounded"></div>
       </div>
     );
   }
@@ -59,9 +59,9 @@ export default function TeamSettings() {
   if (error) {
     return (
       <div className="text-center py-8">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load team info</h3>
-        <p className="text-gray-600">Please try again later.</p>
+        <AlertCircle className="w-12 h-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Failed to load team info</h3>
+        <p className="text-gray-600 dark:text-gray-400">Please try again later.</p>
       </div>
     );
   }
@@ -73,18 +73,18 @@ export default function TeamSettings() {
 
   return (
     <div>
-      <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">
+      <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-4 lg:mb-6">
         Team Management
       </h2>
 
       {/* Seat Info Card */}
-      <div className="bg-primary-50 border border-primary-200 rounded-xl p-5 mb-6">
+      <div className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-5 mb-6">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">Team Seats</h3>
-            <p className="text-gray-600">Manage your team&apos;s seats and invitations</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Team Seats</h3>
+            <p className="text-gray-600 dark:text-gray-400">Manage your team&apos;s seats and invitations</p>
           </div>
-          <Users className="w-8 h-8 text-primary-600 flex-shrink-0" />
+          <Users className="w-8 h-8 text-primary-600 dark:text-primary-400 flex-shrink-0" />
         </div>
 
         {seatInfo && (
@@ -109,7 +109,7 @@ export default function TeamSettings() {
           className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-colors mb-6 ${
             hasAvailableSeats
               ? 'bg-primary-600 text-white hover:bg-primary-700'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-100 dark:bg-dark-50 text-gray-400 dark:text-gray-500 cursor-not-allowed'
           }`}
         >
           <UserPlus className="w-5 h-5" />
@@ -125,10 +125,10 @@ export default function TeamSettings() {
       {/* Pending Invitations */}
       {pendingInvitations.length > 0 && (
         <div className="mb-6">
-          <h3 className="font-semibold text-gray-900 mb-3">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
             Pending Invitations ({pendingInvitations.length})
           </h3>
-          <div className="border border-gray-200 rounded-xl">
+          <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden">
             {pendingInvitations.map((invitation, idx) => (
               <InvitationRow
                 key={invitation.id}
@@ -144,10 +144,10 @@ export default function TeamSettings() {
       {/* All Invitations (non-pending) */}
       {invitations && invitations.length > pendingInvitations.length && (
         <div>
-          <h3 className="font-semibold text-gray-900 mb-3">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
             Invitation History
           </h3>
-          <div className="border border-gray-200 rounded-xl">
+          <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden">
             {invitations
               .filter((inv) => inv.status !== InvitationStatus.PENDING)
               .map((invitation, idx, arr) => (
@@ -165,10 +165,10 @@ export default function TeamSettings() {
 
       {/* Empty state */}
       {(!invitations || invitations.length === 0) && !showInviteForm && (
-        <div className="text-center py-8 border border-dashed border-gray-300 rounded-xl">
-          <Mail className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="font-medium text-gray-900 mb-1">No invitations yet</h3>
-          <p className="text-sm text-gray-500">
+        <div className="text-center py-8 border border-dashed border-gray-300 dark:border-dark-border rounded-xl">
+          <Mail className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+          <h3 className="font-medium text-gray-900 dark:text-white mb-1">No invitations yet</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Invite team members to collaborate with you
           </p>
         </div>
@@ -192,12 +192,12 @@ function SeatStat({ label, value, highlight }: SeatStatProps) {
     <div className="text-center">
       <p
         className={`text-2xl font-bold ${
-          highlight ? 'text-green-600' : 'text-gray-900'
+          highlight ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'
         }`}
       >
         {value}
       </p>
-      <p className="text-sm text-gray-600">{label}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
     </div>
   );
 }
@@ -251,12 +251,12 @@ function InviteForm({ onClose, onSuccess }: InviteFormProps) {
   };
 
   return (
-    <div className="border border-gray-200 rounded-xl p-5 mb-6 bg-gray-50">
+    <div className="border border-gray-200 dark:border-dark-border rounded-xl p-5 mb-6 bg-gray-50 dark:bg-dark-surface">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-900">Invite Team Member</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white">Invite Team Member</h3>
         <button
           onClick={onClose}
-          className="p-1 text-gray-400 hover:text-gray-600"
+          className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
         >
           <X className="w-5 h-5" />
         </button>
@@ -264,7 +264,7 @@ function InviteForm({ onClose, onSuccess }: InviteFormProps) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Email Address
           </label>
           <input
@@ -272,19 +272,26 @@ function InviteForm({ onClose, onSuccess }: InviteFormProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="colleague@company.com"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base
+              bg-white dark:bg-dark-400
+              border-gray-300 dark:border-dark-border
+              text-gray-900 dark:text-white
+              placeholder:text-gray-400 dark:placeholder:text-gray-500"
             disabled={isPending}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Role
           </label>
           <select
             value={role}
             onChange={(e) => setRole(Number(e.target.value) as Role)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
+            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base
+              bg-white dark:bg-dark-400
+              border-gray-300 dark:border-dark-border
+              text-gray-900 dark:text-white"
             disabled={isPending}
           >
             <option value={Role.MEMBER}>Member - Can view and edit content</option>
@@ -294,7 +301,7 @@ function InviteForm({ onClose, onSuccess }: InviteFormProps) {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 text-red-600 text-sm">
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             {error}
           </div>
@@ -304,7 +311,7 @@ function InviteForm({ onClose, onSuccess }: InviteFormProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium"
+            className="flex-1 py-3 px-4 border border-gray-300 dark:border-dark-border text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-50 font-medium"
             disabled={isPending}
           >
             Cancel
@@ -382,33 +389,33 @@ function InvitationRow({ invitation, isFirst, isLast, showActions = true }: Invi
 
   return (
     <div
-      className={`flex items-center gap-4 px-4 py-3 bg-white ${roundedClasses} ${
-        !isLast ? 'border-b border-gray-100' : ''
+      className={`flex items-center gap-4 px-4 py-3 bg-white dark:bg-dark-surface ${roundedClasses} ${
+        !isLast ? 'border-b border-gray-100 dark:border-dark-border' : ''
       }`}
     >
       {/* Status Icon */}
       <div className="flex-shrink-0">
         {invitation.status === InvitationStatus.PENDING && (
-          <Clock className="w-5 h-5 text-yellow-500" />
+          <Clock className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
         )}
         {invitation.status === InvitationStatus.ACCEPTED && (
-          <CheckCircle className="w-5 h-5 text-green-500" />
+          <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400" />
         )}
         {(invitation.status === InvitationStatus.EXPIRED ||
           invitation.status === InvitationStatus.REVOKED) && (
-          <XCircle className="w-5 h-5 text-gray-400" />
+          <XCircle className="w-5 h-5 text-gray-400 dark:text-gray-500" />
         )}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-900 truncate">{invitation.email}</p>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <p className="font-medium text-gray-900 dark:text-white truncate">{invitation.email}</p>
+        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <span>{roleToString(invitation.role)}</span>
           {expiresAt && isPending && (
             <>
-              <span className="text-gray-300">|</span>
-              <span className={isExpiringSoon ? 'text-orange-600' : ''}>
+              <span className="text-gray-300 dark:text-gray-600">|</span>
+              <span className={isExpiringSoon ? 'text-orange-600 dark:text-orange-400' : ''}>
                 Expires {expiresAt.toLocaleDateString()}
               </span>
             </>
@@ -431,7 +438,7 @@ function InvitationRow({ invitation, isFirst, isLast, showActions = true }: Invi
           <button
             onClick={() => setShowMenu(!showMenu)}
             disabled={isWorking}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+            className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-50"
           >
             {isWorking ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -449,17 +456,17 @@ function InvitationRow({ invitation, isFirst, isLast, showActions = true }: Invi
               />
 
               {/* Menu */}
-              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg shadow-lg dark:shadow-glow-sm z-20 py-1">
                 <button
                   onClick={handleResend}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-50"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Resend
                 </button>
                 <button
                   onClick={handleRevoke}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <X className="w-4 h-4" />
                   Revoke

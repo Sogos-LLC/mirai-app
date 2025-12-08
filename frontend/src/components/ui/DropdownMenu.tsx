@@ -66,7 +66,7 @@ export default function DropdownMenu({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+        className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-dark-50 rounded-lg transition-colors"
       >
         {trigger}
         {triggerIcon === 'chevron' && (
@@ -83,15 +83,17 @@ export default function DropdownMenu({
       {isOpen && (
         <div
           className={`
-            absolute top-full mt-2 min-w-[200px] bg-white border border-gray-200
-            rounded-lg shadow-xl z-20 py-1
+            absolute top-full mt-2 min-w-[200px]
+            bg-white dark:bg-dark-surface-elevated
+            border border-gray-200 dark:border-dark-border
+            rounded-lg shadow-xl dark:shadow-dark-lg z-20 py-1
             ${alignmentClasses[align]}
             ${menuClassName}
           `}
         >
           {items.map((item, index) => {
             if (item.divider) {
-              return <hr key={index} className="my-1 border-gray-200" />;
+              return <hr key={index} className="my-1 border-gray-200 dark:border-dark-border" />;
             }
 
             return (
@@ -104,8 +106,8 @@ export default function DropdownMenu({
                   w-full text-left px-4 py-2 text-sm flex items-center gap-3
                   ${
                     item.disabled
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'text-gray-400 dark:text-dark-text-muted cursor-not-allowed'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-50 hover:text-gray-900 dark:hover:text-white'
                   }
                   transition-colors
                 `}

@@ -56,8 +56,8 @@ export default function TemplatesPage() {
     <>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Templates</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Templates</h1>
+          <p className="text-gray-600 dark:text-gray-400">
             Pre-built templates to accelerate your content creation
           </p>
         </div>
@@ -69,16 +69,20 @@ export default function TemplatesPage() {
 
       <div className="flex gap-4 mb-8">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
           <input
             type="text"
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent
+              bg-white dark:bg-dark-surface
+              border-gray-300 dark:border-dark-border
+              text-gray-900 dark:text-white
+              placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50">
+        <button className="flex items-center gap-2 px-6 py-3 border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-50 text-gray-700 dark:text-gray-300">
           <Filter className="w-5 h-5" />
           Filter
         </button>
@@ -90,7 +94,7 @@ export default function TemplatesPage() {
             key={template.id}
             title={template.title}
             description={template.description}
-            icon={<FileText className="w-8 h-8 text-primary-600" />}
+            icon={<FileText className="w-8 h-8 text-primary-600 dark:text-primary-400" />}
             onClick={() => console.log('Template clicked:', template.id)}
           />
         ))}
