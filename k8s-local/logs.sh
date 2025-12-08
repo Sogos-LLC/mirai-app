@@ -98,17 +98,30 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+CLUSTER_NAME="mirai-local"
+EXPECTED_CONTEXT="k3d-mirai-local"
+
 # Check if cluster is running
-if ! k3d cluster list | grep -q "mirai-local.*running"; then
-    log_error "Cluster 'mirai-local' is not running."
+if ! k3d cluster list | grep -q "${CLUSTER_NAME}.*running"; then
+    log_error "Cluster '${CLUSTER_NAME}' is not running."
     log_info "Start the cluster with: ./start.sh"
+    exit 1
+fi
+
+# SAFETY: Set kubectl context before any kubectl commands
+kubectl config use-context "${EXPECTED_CONTEXT}" >/dev/null 2>&1
+
+current_context=$(kubectl config current-context 2>/dev/null || echo "none")
+if [[ "${current_context}" != "${EXPECTED_CONTEXT}" ]]; then
+    log_error "SAFETY CHECK FAILED! Wrong kubectl context."
+    log_error "Expected: ${EXPECTED_CONTEXT}, Got: ${current_context}"
     exit 1
 fi
 
 # Function to get logs with kubectl
 get_kubectl_logs() {
     local selector="$1"
-    local namespace="${2:-mirai}"
+    local namespace="${2:-mirai-local}"
 
     log_info "Showing logs for ${selector} in namespace ${namespace}..."
     log_info "Press Ctrl+C to exit"
@@ -120,7 +133,7 @@ get_kubectl_logs() {
 # Function to get logs with stern (if available)
 get_stern_logs() {
     local selector="$1"
-    local namespace="${2:-mirai}"
+    local namespace="${2:-mirai-local}"
 
     log_info "Showing logs for ${selector} in namespace ${namespace} (via stern)..."
     log_info "Press Ctrl+C to exit"
@@ -199,7 +212,7 @@ case "${SERVICE}" in
             log_info "Showing logs for all pods in mirai namespace (via stern)..."
             log_info "Press Ctrl+C to exit"
             echo ""
-            stern -n mirai . --tail="${TAIL_LINES}"
+            stern -n mirai-local . --tail="${TAIL_LINES}"
         else
             log_warning "Stern is not installed. Showing combined logs via kubectl."
             log_info "For a better experience, install stern: brew install stern"
@@ -207,7 +220,7 @@ case "${SERVICE}" in
             echo ""
 
             # Get all pod names and tail their logs
-            kubectl logs -n mirai --all-containers=true -l 'app in (mirai-backend,mirai-frontend,mirai-marketing,postgres,redis,minio,mailpit)' ${FOLLOW} --tail="${TAIL_LINES}"
+            kubectl logs -n mirai-local --all-containers=true -l 'app in (mirai-backend,mirai-frontend,mirai-marketing,postgres,redis,minio,mailpit)' ${FOLLOW} --tail="${TAIL_LINES}"
         fi
         ;;
     *)

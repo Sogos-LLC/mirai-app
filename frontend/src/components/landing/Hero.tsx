@@ -3,9 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
-
-// App URL for auth redirects (marketing site should send users to main app for registration)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
+import { buildAuthUrl } from '@/lib/urls';
 
 export default function Hero() {
   return (
@@ -33,7 +31,7 @@ export default function Hero() {
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
-            href={`${APP_URL}/auth/registration`}
+            href={buildAuthUrl('/auth/registration')}
             className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:shadow-lg hover:shadow-indigo-500/25 flex items-center justify-center gap-2"
           >
             Get Started

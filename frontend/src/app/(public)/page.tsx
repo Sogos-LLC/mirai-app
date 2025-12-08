@@ -7,8 +7,7 @@ import Features from '@/components/landing/Features';
 import PricingCards from '@/components/landing/PricingCards';
 import Footer from '@/components/landing/Footer';
 import CheckoutSuccessModal from '@/components/landing/CheckoutSuccessModal';
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
+import { buildAppUrl } from '@/lib/urls';
 
 /**
  * Public landing page for get-mirai.sogos.io
@@ -18,7 +17,7 @@ export default function LandingPage() {
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'prefetch';
-    link.href = `${APP_URL}/auth/registration`;
+    link.href = buildAppUrl('/auth/registration');
     document.head.appendChild(link);
 
     return () => {

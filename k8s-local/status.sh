@@ -44,6 +44,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 CLUSTER_NAME="mirai-local"
+EXPECTED_CONTEXT="k3d-mirai-local"
 
 # Check if cluster exists
 if ! k3d cluster list | grep -q "${CLUSTER_NAME}"; then
@@ -73,7 +74,17 @@ if [[ "${CLUSTER_STATUS}" != *"running"* ]]; then
     exit 0
 fi
 
-echo "  Context: k3d-${CLUSTER_NAME}"
+# SAFETY: Set kubectl context before any kubectl commands
+kubectl config use-context "${EXPECTED_CONTEXT}" >/dev/null 2>&1
+
+current_context=$(kubectl config current-context 2>/dev/null || echo "none")
+if [[ "${current_context}" != "${EXPECTED_CONTEXT}" ]]; then
+    log_error "SAFETY CHECK FAILED! Wrong kubectl context."
+    log_error "Expected: ${EXPECTED_CONTEXT}, Got: ${current_context}"
+    exit 1
+fi
+
+echo "  Context: ${EXPECTED_CONTEXT}"
 echo ""
 
 # Node status
@@ -88,40 +99,40 @@ echo ""
 
 # Infrastructure pods
 log_info "Infrastructure Pods:"
-kubectl get pods -n mirai -l 'app in (postgres,redis,minio,mailpit)' -o wide
+kubectl get pods -n mirai-local -l 'app in (postgres,redis,minio,mailpit)' -o wide
 echo ""
 
 # Kratos pods
 log_info "Authentication Pods (Kratos):"
-kubectl get pods -n mirai -l 'app.kubernetes.io/name=kratos' -o wide
+kubectl get pods -n mirai-local -l 'app.kubernetes.io/name=kratos' -o wide
 echo ""
 
 # Application pods
 log_info "Application Pods:"
-kubectl get pods -n mirai -l 'app in (mirai-backend,mirai-frontend,mirai-marketing)' -o wide
+kubectl get pods -n mirai-local -l 'app in (mirai-backend,mirai-frontend,mirai-marketing)' -o wide
 echo ""
 
 # Services
 log_info "Services:"
-kubectl get svc -n mirai
+kubectl get svc -n mirai-local
 echo ""
 
 # Ingress routes
 log_info "Ingress Routes:"
-kubectl get ingressroute -n mirai -o wide 2>/dev/null || log_warning "No IngressRoutes found (may still be deploying)"
+kubectl get ingressroute -n mirai-local -o wide 2>/dev/null || log_warning "No IngressRoutes found (may still be deploying)"
 echo ""
 
 # Pod summary with color coding
 log_info "Pod Status Summary:"
 
 get_pod_count() {
-    kubectl get pods -n mirai "$@" 2>/dev/null | grep -v NAME | wc -l | tr -d ' '
+    kubectl get pods -n mirai-local "$@" 2>/dev/null | grep -v NAME | wc -l | tr -d ' '
 }
 
 get_pod_status() {
     local selector="$1"
-    local running=$(kubectl get pods -n mirai -l "${selector}" --field-selector=status.phase=Running 2>/dev/null | grep -v NAME | wc -l | tr -d ' ')
-    local total=$(kubectl get pods -n mirai -l "${selector}" 2>/dev/null | grep -v NAME | wc -l | tr -d ' ')
+    local running=$(kubectl get pods -n mirai-local -l "${selector}" --field-selector=status.phase=Running 2>/dev/null | grep -v NAME | wc -l | tr -d ' ')
+    local total=$(kubectl get pods -n mirai-local -l "${selector}" 2>/dev/null | grep -v NAME | wc -l | tr -d ' ')
 
     if [[ "${running}" == "${total}" ]] && [[ "${total}" != "0" ]]; then
         echo -e "  ${GREEN}✓${NC} ${selector}: ${running}/${total} running"
@@ -147,21 +158,16 @@ echo ""
 log_info "Access URLs:"
 echo ""
 echo "  Add these entries to /etc/hosts:"
-echo "  127.0.0.1 mirai.local auth.mirai.local api.mirai.local minio.mirai.local mailpit.mirai.local"
+echo "  127.0.0.1 mirai.local get-mirai.local auth.mirai.local api.mirai.local minio.mirai.local mailpit.mirai.local traefik.mirai.local"
 echo ""
 echo "  Application URLs:"
 echo "    Frontend:  https://mirai.local"
+echo "    Marketing: https://get-mirai.local"
 echo "    Auth:      https://auth.mirai.local"
 echo "    API:       https://api.mirai.local"
-echo "    MinIO:     https://minio.mirai.local"
 echo "    Mailpit:   https://mailpit.mirai.local"
-echo ""
-
-# Traefik Dashboard
-log_info "Traefik Dashboard:"
-echo "  Access via port-forward:"
-echo "    kubectl port-forward -n kube-system svc/traefik 9000:9000"
-echo "  Then open: http://localhost:9000/dashboard/"
+echo "    MinIO:     https://minio.mirai.local"
+echo "    Traefik:   https://traefik.mirai.local/dashboard/"
 echo ""
 
 # Quick commands
@@ -176,7 +182,7 @@ echo ""
 ISSUES_FOUND=false
 
 # Check for pods not running
-NOT_RUNNING=$(kubectl get pods -n mirai --field-selector=status.phase!=Running 2>/dev/null | grep -v NAME || true)
+NOT_RUNNING=$(kubectl get pods -n mirai-local --field-selector=status.phase!=Running 2>/dev/null | grep -v NAME || true)
 if [[ -n "${NOT_RUNNING}" ]]; then
     ISSUES_FOUND=true
     log_warning "Some pods are not running:"
@@ -185,7 +191,7 @@ if [[ -n "${NOT_RUNNING}" ]]; then
 fi
 
 # Check for recent pod restarts
-RECENT_RESTARTS=$(kubectl get pods -n mirai -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .status.containerStatuses[*]}{.restartCount}{"\n"}{end}{end}' 2>/dev/null | awk '$2 > 0' || true)
+RECENT_RESTARTS=$(kubectl get pods -n mirai-local -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .status.containerStatuses[*]}{.restartCount}{"\n"}{end}{end}' 2>/dev/null | awk '$2 > 0' || true)
 if [[ -n "${RECENT_RESTARTS}" ]]; then
     ISSUES_FOUND=true
     log_warning "Pods with restarts detected:"

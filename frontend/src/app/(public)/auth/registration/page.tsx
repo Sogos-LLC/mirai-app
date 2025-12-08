@@ -4,8 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 import { SignupWizard } from '@/components/auth/signup';
-
-const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://get-mirai.sogos.io';
+import { buildLandingUrl } from '@/lib/urls';
 
 // Note: Auth redirects for logged-in users are handled by middleware (server-side).
 // No need for client-side session check here.
@@ -14,7 +13,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       {/* Logo */}
-      <a href={LANDING_URL} className="flex items-center gap-2 mb-8">
+      <a href={buildLandingUrl()} className="flex items-center gap-2 mb-8">
         <BookOpen className="h-10 w-10 text-indigo-600" />
         <span className="text-2xl font-bold text-slate-900">Mirai</span>
       </a>
@@ -42,7 +41,7 @@ export default function SignupPage() {
         <p className="mt-4 text-xs text-slate-500 text-center">
           By creating an account, you agree to our{' '}
           <a
-            href={`${LANDING_URL}/terms`}
+            href={buildLandingUrl('/terms')}
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-slate-700"
@@ -51,7 +50,7 @@ export default function SignupPage() {
           </a>{' '}
           and{' '}
           <a
-            href={`${LANDING_URL}/privacy`}
+            href={buildLandingUrl('/privacy')}
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-slate-700"

@@ -23,6 +23,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Note: APP_URL defined here since middleware runs on the server
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
 
   // Redirect ALL auth routes to main app domain

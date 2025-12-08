@@ -91,6 +91,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 CLUSTER_NAME="mirai-local"
+EXPECTED_CONTEXT="k3d-mirai-local"
 
 # Check if cluster exists and is running
 if ! k3d cluster list | grep -q "${CLUSTER_NAME}"; then
@@ -102,6 +103,16 @@ fi
 if ! k3d cluster list | grep -q "${CLUSTER_NAME}.*running"; then
     log_error "Cluster '${CLUSTER_NAME}' is not running."
     log_info "Start the cluster with: ./start.sh"
+    exit 1
+fi
+
+# SAFETY: Set kubectl context before any kubectl commands
+kubectl config use-context "${EXPECTED_CONTEXT}" >/dev/null 2>&1
+
+current_context=$(kubectl config current-context 2>/dev/null || echo "none")
+if [[ "${current_context}" != "${EXPECTED_CONTEXT}" ]]; then
+    log_error "SAFETY CHECK FAILED! Wrong kubectl context."
+    log_error "Expected: ${EXPECTED_CONTEXT}, Got: ${current_context}"
     exit 1
 fi
 
@@ -145,12 +156,12 @@ build_and_import() {
 
         if [[ -n "${deployment_name}" ]]; then
             log_info "Restarting ${deployment_name} deployment..."
-            kubectl rollout restart deployment/${deployment_name} -n mirai
+            kubectl rollout restart deployment/${deployment_name} -n mirai-local
             log_success "${deployment_name} deployment restarted"
 
             # Wait for rollout to complete
             log_info "Waiting for rollout to complete..."
-            kubectl rollout status deployment/${deployment_name} -n mirai --timeout=180s
+            kubectl rollout status deployment/${deployment_name} -n mirai-local --timeout=180s
             log_success "Rollout complete"
         fi
     fi
@@ -226,7 +237,7 @@ if [[ "${RESTART}" == "true" ]]; then
     log_info "Deployments have been restarted with new images."
 else
     log_warning "Deployments were not restarted. To use the new images, run:"
-    echo "  kubectl rollout restart deployment/<name> -n mirai"
+    echo "  kubectl rollout restart deployment/<name> -n mirai-local"
 fi
 
 echo ""

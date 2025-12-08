@@ -108,6 +108,38 @@ fi
 
 log_success "All prerequisites satisfied"
 
+# =============================================================================
+# SAFETY: Context verification
+# =============================================================================
+EXPECTED_CONTEXT="k3d-mirai-local"
+
+# Function to verify we're in the correct kubectl context
+verify_context() {
+    local current_context
+    current_context=$(kubectl config current-context 2>/dev/null || echo "none")
+
+    if [[ "${current_context}" != "${EXPECTED_CONTEXT}" ]]; then
+        log_error "SAFETY CHECK FAILED!"
+        log_error "Expected context: ${EXPECTED_CONTEXT}"
+        log_error "Current context:  ${current_context}"
+        log_error ""
+        log_error "This script should ONLY run against the local k3d cluster."
+        log_error "Aborting to prevent accidental changes to production."
+        exit 1
+    fi
+}
+
+# Check if current context looks like production (safety warning)
+current_ctx=$(kubectl config current-context 2>/dev/null || echo "none")
+if [[ "${current_ctx}" == *"prod"* ]] || [[ "${current_ctx}" == *"sogos"* ]] || [[ "${current_ctx}" == *"gke"* ]] || [[ "${current_ctx}" == *"eks"* ]] || [[ "${current_ctx}" == *"aks"* ]]; then
+    log_error "DANGER: Current kubectl context appears to be production!"
+    log_error "Context: ${current_ctx}"
+    log_error ""
+    log_error "This script is for LOCAL DEVELOPMENT ONLY."
+    log_error "Aborting for safety."
+    exit 1
+fi
+
 # Step 2: Create k3d cluster
 log_info "Step 2/17: Creating k3d cluster 'mirai-local'..."
 
@@ -119,13 +151,19 @@ fi
 k3d cluster create --config "${SCRIPT_DIR}/cluster-config.yaml"
 log_success "k3d cluster created"
 
+# Step 2.5: Explicitly set and verify kubectl context
+log_info "Setting kubectl context to ${EXPECTED_CONTEXT}..."
+kubectl config use-context "${EXPECTED_CONTEXT}"
+verify_context
+log_success "kubectl context verified: ${EXPECTED_CONTEXT}"
+
 # Step 3: Wait for cluster to be ready
 log_info "Step 3/17: Waiting for cluster nodes to be ready..."
 kubectl wait --for=condition=Ready nodes --all --timeout=120s
 log_success "Cluster nodes ready"
 
-# Step 4: Create mirai namespace
-log_info "Step 4/17: Creating 'mirai' namespace..."
+# Step 4: Create mirai-local namespace
+log_info "Step 4/17: Creating 'mirai-local' namespace..."
 kubectl apply -f "${SCRIPT_DIR}/namespaces.yaml"
 log_success "Namespace created"
 
@@ -148,35 +186,52 @@ log_success "Traefik installed"
 # Step 7: Generate mkcert certificates
 log_info "Step 7/17: Generating TLS certificates with mkcert..."
 
-# Ensure mkcert is initialized
+# Ensure mkcert CA is installed in system trust store
 mkcert -install
 
-# Create temp directory for certificates
-CERT_DIR=$(mktemp -d)
-trap "rm -rf ${CERT_DIR}" EXIT
+# Use persistent certs directory (not temp - keeps certs for debugging)
+CERT_DIR="${SCRIPT_DIR}/certs"
+mkdir -p "${CERT_DIR}"
 
-# Generate certificates for all Mirai domains
+# Generate certificate with explicit SANs for all domains
+# (Avoiding wildcards - they can be problematic with .local TLD)
 cd "${CERT_DIR}"
-mkcert \
-    "mirai.local" \
-    "*.mirai.local" \
-    "auth.mirai.local" \
-    "api.mirai.local" \
-    "minio.mirai.local" \
-    "mailpit.mirai.local"
 
-# Find the generated certificate files
-TLS_CERT=$(ls -1 *.pem | grep -v key | head -n 1)
-TLS_KEY=$(ls -1 *-key.pem | head -n 1)
+# Only regenerate if cert doesn't exist or is older than 30 days
+CERT_FILE="${CERT_DIR}/mirai-local.pem"
+KEY_FILE="${CERT_DIR}/mirai-local-key.pem"
 
-# Create TLS secret in mirai namespace
+if [[ ! -f "${CERT_FILE}" ]] || [[ $(find "${CERT_FILE}" -mtime +30 2>/dev/null) ]]; then
+    log_info "  Generating new certificate with all domain SANs..."
+    mkcert \
+        -cert-file "${CERT_FILE}" \
+        -key-file "${KEY_FILE}" \
+        "mirai.local" \
+        "api.mirai.local" \
+        "auth.mirai.local" \
+        "mailpit.mirai.local" \
+        "minio.mirai.local" \
+        "traefik.mirai.local" \
+        "get-mirai.local"
+else
+    log_info "  Using existing certificate (less than 30 days old)"
+fi
+
+# Create TLS secret in mirai-local namespace
 kubectl create secret tls mirai-tls \
-    --cert="${TLS_CERT}" \
-    --key="${TLS_KEY}" \
-    --namespace=mirai \
+    --cert="${CERT_FILE}" \
+    --key="${KEY_FILE}" \
+    --namespace=mirai-local \
     --dry-run=client -o yaml | kubectl apply -f -
 
-log_success "TLS certificates generated and secret created"
+# Create TLS secret in kube-system namespace (for Traefik dashboard IngressRoute)
+kubectl create secret tls mirai-tls \
+    --cert="${CERT_FILE}" \
+    --key="${KEY_FILE}" \
+    --namespace=kube-system \
+    --dry-run=client -o yaml | kubectl apply -f -
+
+log_success "TLS certificates generated and secrets created"
 
 # Step 8: Deploy infrastructure
 log_info "Step 8/17: Deploying infrastructure (PostgreSQL, Redis, MinIO)..."
@@ -187,13 +242,13 @@ log_success "Infrastructure deployed"
 log_info "Step 9/17: Waiting for infrastructure to be ready..."
 
 log_info "  Waiting for PostgreSQL..."
-kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=postgres -n mirai --timeout=180s
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=postgres -n mirai-local --timeout=180s
 
 log_info "  Waiting for Redis..."
-kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=redis -n mirai --timeout=120s
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=redis -n mirai-local --timeout=120s
 
 log_info "  Waiting for MinIO..."
-kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=minio -n mirai --timeout=120s
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=minio -n mirai-local --timeout=120s
 
 log_success "Infrastructure ready"
 
@@ -204,7 +259,7 @@ log_info "Step 10/17: Creating Kratos database in PostgreSQL..."
 sleep 5
 
 # Create kratos database
-kubectl exec -n mirai deployment/postgres -- \
+kubectl exec -n mirai-local deployment/postgres -- \
     psql -U postgres -c "CREATE DATABASE kratos;" 2>/dev/null || log_warning "Kratos database may already exist"
 
 log_success "Kratos database created"
@@ -216,17 +271,16 @@ log_success "Kratos prerequisites deployed"
 
 # Wait for mailpit
 log_info "  Waiting for Mailpit..."
-kubectl wait --for=condition=Ready pod -l app=mailpit -n mirai --timeout=60s
+kubectl wait --for=condition=Ready pod -l app=mailpit -n mirai-local --timeout=60s
 
 # Step 12: Install Kratos via Helm
 log_info "Step 12/17: Installing Ory Kratos..."
 
-# Update DSN in values file with actual connection details
+# Install Kratos - DSN and secrets come from kratos-secret via environment variables
+# defined in values-local.yaml (deployment.extraEnv)
 helm upgrade --install kratos ory/kratos \
-    --namespace mirai \
+    --namespace mirai-local \
     --values "${SCRIPT_DIR}/kratos/values-local.yaml" \
-    --set-string 'kratos.config.dsn=postgres://postgres:$PASSWORD@postgres:5432/kratos?sslmode=disable' \
-    --set-string 'kratos.config.secrets.default[0]=PLEASE_CHANGE_THIS_TO_A_SECURE_SECRET_IN_PRODUCTION' \
     --wait \
     --timeout 5m
 
@@ -234,12 +288,14 @@ log_success "Kratos installed"
 
 # Step 13: Wait for Kratos to be ready
 log_info "Step 13/17: Waiting for Kratos to be ready..."
-kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=kratos -n mirai --timeout=180s
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=kratos -n mirai-local --timeout=180s
 log_success "Kratos ready"
 
 # Step 14: Deploy ingress routes
 log_info "Step 14/17: Deploying ingress routes and middleware..."
 kubectl apply -k "${SCRIPT_DIR}/ingress"
+# Deploy Traefik dashboard IngressRoute separately (it's in kube-system namespace)
+kubectl apply -f "${SCRIPT_DIR}/ingress/traefik-dashboard.yaml"
 log_success "Ingress routes deployed"
 
 # Step 15: Build local Docker images
@@ -273,22 +329,40 @@ log_info "Waiting for applications to be ready..."
 sleep 10
 
 log_info "  Waiting for backend..."
-kubectl wait --for=condition=Ready pod -l app=mirai-backend -n mirai --timeout=120s 2>/dev/null || log_warning "Backend may still be starting"
+kubectl wait --for=condition=Ready pod -l app=mirai-backend -n mirai-local --timeout=120s 2>/dev/null || log_warning "Backend may still be starting"
 
 log_info "  Waiting for frontend..."
-kubectl wait --for=condition=Ready pod -l app=mirai-frontend -n mirai --timeout=120s 2>/dev/null || log_warning "Frontend may still be starting"
+kubectl wait --for=condition=Ready pod -l app=mirai-frontend -n mirai-local --timeout=120s 2>/dev/null || log_warning "Frontend may still be starting"
 
 log_info "  Waiting for marketing..."
-kubectl wait --for=condition=Ready pod -l app=mirai-marketing -n mirai --timeout=120s 2>/dev/null || log_warning "Marketing may still be starting"
+kubectl wait --for=condition=Ready pod -l app=mirai-marketing -n mirai-local --timeout=120s 2>/dev/null || log_warning "Marketing may still be starting"
 
 # Configure /etc/hosts automatically
 log_info "Configuring /etc/hosts..."
-HOSTS_ENTRY="127.0.0.1 mirai.local get-mirai.local auth.mirai.local api.mirai.local minio.mirai.local mailpit.mirai.local"
+REQUIRED_HOSTS="mirai.local get-mirai.local auth.mirai.local api.mirai.local minio.mirai.local mailpit.mirai.local traefik.mirai.local"
+HOSTS_ENTRY="127.0.0.1 ${REQUIRED_HOSTS}"
 
-if grep -q "mirai.local" /etc/hosts; then
-    log_success "/etc/hosts already configured"
+# Check if all required hosts are present
+MISSING_HOSTS=()
+for host in ${REQUIRED_HOSTS}; do
+    if ! grep -q "${host}" /etc/hosts; then
+        MISSING_HOSTS+=("${host}")
+    fi
+done
+
+if [ ${#MISSING_HOSTS[@]} -eq 0 ]; then
+    log_success "/etc/hosts already configured with all required domains"
 else
-    log_info "Adding mirai.local entries to /etc/hosts (requires sudo)..."
+    log_info "Missing hosts in /etc/hosts: ${MISSING_HOSTS[*]}"
+
+    # Remove any existing partial mirai.local line and add complete one
+    if grep -q "mirai.local" /etc/hosts; then
+        log_info "Updating existing /etc/hosts entry (requires sudo)..."
+        sudo sed -i '' '/mirai\.local/d' /etc/hosts
+    else
+        log_info "Adding mirai.local entries to /etc/hosts (requires sudo)..."
+    fi
+
     echo "$HOSTS_ENTRY" | sudo tee -a /etc/hosts > /dev/null
     log_success "/etc/hosts configured"
 fi
@@ -303,7 +377,7 @@ echo ""
 # Show cluster status
 log_info "Cluster Status:"
 echo ""
-kubectl get pods -n mirai -o wide
+kubectl get pods -n mirai-local -o wide
 echo ""
 
 log_info "Application URLs:"
@@ -312,32 +386,26 @@ echo "  Marketing:  https://get-mirai.local"
 echo "  Auth:       https://auth.mirai.local"
 echo "  API:        https://api.mirai.local"
 echo "  Mailpit:    https://mailpit.mirai.local (email testing)"
+echo "  MinIO:      https://minio.mirai.local (storage console)"
+echo "  Traefik:    https://traefik.mirai.local/dashboard/ (ingress dashboard)"
 echo ""
 
-# Start Traefik dashboard in background
-log_info "Starting Traefik dashboard..."
-kubectl port-forward -n kube-system svc/traefik 9000:9000 >/dev/null 2>&1 &
-TRAEFIK_PID=$!
-echo "  Dashboard: http://localhost:9000/dashboard/"
-echo "  (running in background, PID: $TRAEFIK_PID)"
-echo ""
-
-# Open browser
+# Open Traefik dashboard in browser
 if command -v open >/dev/null 2>&1; then
     log_info "Opening Traefik dashboard in browser..."
     sleep 2
-    open "http://localhost:9000/dashboard/"
+    open "https://traefik.mirai.local/dashboard/"
 fi
 
 # k9s recommendation
 echo ""
 if command -v k9s >/dev/null 2>&1; then
     log_success "k9s is installed! Launch with:"
-    echo -e "  ${GREEN}k9s --context k3d-mirai-local${NC}"
+    echo -e "  ${GREEN}k9s --context k3d-mirai-local -n mirai-local${NC}"
 else
     log_info "Recommended: Install k9s for a better cluster UI"
     echo -e "  ${YELLOW}brew install k9s${NC}"
-    echo "  Then run: k9s --context k3d-mirai-local"
+    echo "  Then run: k9s --context k3d-mirai-local -n mirai-local"
 fi
 
 echo ""

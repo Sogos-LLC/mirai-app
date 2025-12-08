@@ -1,0 +1,20 @@
+---
+# Traefik Dashboard: traefik.mirai.local
+# Routes to the Traefik dashboard for ingress monitoring
+# This IngressRoute is in kube-system namespace where Traefik lives
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard
+  namespace: kube-system
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`traefik.mirai.local`)
+      kind: Rule
+      services:
+        - name: api@internal
+          kind: TraefikService
+  tls:
+    secretName: mirai-tls

@@ -24,6 +24,7 @@ import {
 
 // Environment configuration
 const KRATOS_PUBLIC_URL = process.env.KRATOS_PUBLIC_URL || 'http://kratos-public.kratos.svc.cluster.local:80';
+// Note: LANDING_URL is defined server-side since middleware runs on the server
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://get-mirai.sogos.io';
 
 /**

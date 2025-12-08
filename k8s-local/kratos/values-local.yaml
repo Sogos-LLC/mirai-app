@@ -1,5 +1,5 @@
 # Ory Kratos Helm Chart Values - Local Development
-# Install with: helm install kratos ory/kratos -f values-local.yaml -n mirai
+# Install with: helm install kratos ory/kratos -f values-local.yaml -n mirai-local
 
 kratos:
   development: true
@@ -113,7 +113,7 @@ kratos:
 
     courier:
       smtp:
-        connection_uri: smtp://mailpit.mirai.svc.cluster.local:1025/?disable_starttls=true
+        connection_uri: smtp://mailpit.mirai-local.svc.cluster.local:1025/?disable_starttls=true
         from_address: noreply@mirai.local
         from_name: Mirai Local
 
@@ -196,11 +196,11 @@ deployment:
 
   resources:
     requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
+      cpu: 100m
       memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
   securityContext:
     capabilities:

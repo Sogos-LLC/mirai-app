@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { Check } from 'lucide-react';
-
-// App URL for auth redirects (marketing site should send users to main app for registration)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
+import { buildRegistrationUrl } from '@/lib/urls';
 
 const tiers = [
   {
@@ -19,7 +17,7 @@ const tiers = [
       '5GB storage',
     ],
     cta: 'Get Started',
-    ctaLink: `${APP_URL}/auth/registration?tier=starter`,
+    ctaLink: buildRegistrationUrl('starter'),
     highlighted: false,
   },
   {
@@ -36,7 +34,7 @@ const tiers = [
       'Analytics dashboard',
     ],
     cta: 'Get Started',
-    ctaLink: `${APP_URL}/auth/registration?tier=pro`,
+    ctaLink: buildRegistrationUrl('pro'),
     highlighted: true,
   },
   {
@@ -53,7 +51,7 @@ const tiers = [
       'SLA guarantee',
     ],
     cta: 'Contact Sales',
-    ctaLink: `${APP_URL}/auth/registration?tier=enterprise`,
+    ctaLink: buildRegistrationUrl('enterprise'),
     highlighted: false,
   },
 ];

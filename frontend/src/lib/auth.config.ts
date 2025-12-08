@@ -92,9 +92,9 @@ export const REDIRECT_URLS = {
 
 /**
  * External URLs
+ * Re-exported from urls.ts for backwards compatibility
  */
-export const LANDING_URL =
-  process.env.NEXT_PUBLIC_LANDING_URL || 'https://get-mirai.sogos.io';
+export { LANDING_URL } from './urls';
 
 // =============================================================================
 // Protected Routes

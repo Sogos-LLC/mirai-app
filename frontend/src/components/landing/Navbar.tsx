@@ -3,9 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
-
-// App URL for auth redirects (marketing site should send users to main app for login)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mirai.sogos.io';
+import { buildAuthUrl } from '@/lib/urls';
 
 export default function Navbar() {
   return (
@@ -37,13 +35,13 @@ export default function Navbar() {
           {/* Auth Buttons - link to main app domain */}
           <div className="flex items-center gap-4">
             <a
-              href={`${APP_URL}/auth/login`}
+              href={buildAuthUrl('/auth/login')}
               className="text-slate-600 hover:text-slate-900 font-medium transition-colors"
             >
               Sign In
             </a>
             <a
-              href={`${APP_URL}/auth/registration`}
+              href={buildAuthUrl('/auth/registration')}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
               Get Started

@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference production backend folder
+resources:
+- ../../../k8s/backend
+
+# Exclude network policies by patching them to delete
+# This doesn't modify prod files - kustomize just excludes them from output
+patches:
+- patch: |-
+    $patch: delete
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: placeholder
+  target:
+    kind: NetworkPolicy

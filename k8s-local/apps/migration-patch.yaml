@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mirai-db-migrate
+spec:
+  template:
+    spec:
+      # Remove production DNS config for local k3d
+      dnsPolicy: ClusterFirst
+      dnsConfig: null
+      tolerations: null
+
+      containers:
+      - name: migrate
+        # Use local images with Never pull policy
+        imagePullPolicy: Never

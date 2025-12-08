@@ -19,19 +19,74 @@ spec:
       dnsPolicy: ClusterFirst
       dnsConfig: null
 
+      # Init containers to wait for dependencies before backend starts
+      # This prevents the "DNS lookup failed" errors during cluster startup
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for PostgreSQL DNS..."
+          until nslookup mirai-db.mirai-local.svc.cluster.local > /dev/null 2>&1; do
+            echo "  DNS not ready, retrying in 2s..."
+            sleep 2
+          done
+          echo "PostgreSQL DNS resolved, checking TCP connectivity..."
+          until nc -z mirai-db.mirai-local.svc.cluster.local 5432; do
+            echo "  PostgreSQL not accepting connections, retrying in 2s..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+      - name: wait-for-redis
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for Redis DNS..."
+          until nslookup redis.mirai-local.svc.cluster.local > /dev/null 2>&1; do
+            echo "  DNS not ready, retrying in 2s..."
+            sleep 2
+          done
+          echo "Redis DNS resolved, checking TCP connectivity..."
+          until nc -z redis.mirai-local.svc.cluster.local 6379; do
+            echo "  Redis not accepting connections, retrying in 2s..."
+            sleep 2
+          done
+          echo "Redis is ready!"
+      - name: wait-for-kratos
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for Kratos DNS..."
+          until nslookup kratos-public.mirai-local.svc.cluster.local > /dev/null 2>&1; do
+            echo "  DNS not ready, retrying in 2s..."
+            sleep 2
+          done
+          echo "Kratos DNS resolved, checking TCP connectivity..."
+          until nc -z kratos-public.mirai-local.svc.cluster.local 80; do
+            echo "  Kratos not accepting connections, retrying in 2s..."
+            sleep 2
+          done
+          echo "Kratos is ready!"
+
       containers:
       - name: backend
         # Use local images with Never pull policy
         imagePullPolicy: Never
 
-        # Reduced resources for local development
+        # Resources for local development (increased to prevent OOM)
         resources:
           requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
             memory: "128Mi"
-            cpu: "200m"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
 
         # Override environment variables for local development
         env:
@@ -43,15 +98,15 @@ spec:
               name: mirai-db-secret
               key: dsn
         - name: KRATOS_URL
-          value: "http://kratos-public.kratos.svc.cluster.local:80"
+          value: "http://kratos-public.mirai-local.svc.cluster.local:80"
         - name: KRATOS_ADMIN_URL
-          value: "http://kratos-admin.kratos.svc.cluster.local:80"
+          value: "http://kratos-admin.mirai-local.svc.cluster.local:80"
         - name: ALLOWED_ORIGIN
           value: "https://mirai.local"
         - name: FRONTEND_URL
           value: "https://mirai.local"
         - name: MARKETING_URL
-          value: "https://marketing.mirai.local"
+          value: "https://get-mirai.local"
         - name: BACKEND_URL
           value: "https://api.mirai.local"
         - name: STRIPE_SECRET_KEY
@@ -75,7 +130,7 @@ spec:
               name: mirai-stripe-secret
               key: pro-price-id
         - name: SMTP_HOST
-          value: "mailpit.mailpit.svc.cluster.local"
+          value: "mailpit.mirai-local.svc.cluster.local"
         - name: SMTP_PORT
           value: "1025"
         - name: SMTP_FROM
@@ -104,6 +159,8 @@ spec:
             secretKeyRef:
               name: minio-secret
               key: secretkey
+        - name: REDIS_URL
+          value: "redis://redis.mirai-local.svc.cluster.local:6379"
         - name: GIN_MODE
           value: "debug"
         - name: ENCRYPTION_KEY

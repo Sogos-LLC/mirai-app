@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-init
-  namespace: mirai
+  namespace: mirai-local
   labels:
     app.kubernetes.io/name: postgres
     app.kubernetes.io/component: database

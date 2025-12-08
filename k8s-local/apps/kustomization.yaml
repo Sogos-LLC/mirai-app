@@ -1,13 +1,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: mirai
+namespace: mirai-local
 
 # Reference production manifests as base
 resources:
 - ../../k8s/frontend
 - ../../k8s/frontend-marketing
-- ../../k8s/backend
+# Backend via local wrapper that excludes restrictive network policies
+- backend-base
+# Local permissive network policy (allows all egress including DNS)
+- networkpolicy-local.yaml
 
 # Strategic merge patches for local development
 patches:
@@ -23,6 +26,10 @@ patches:
   target:
     kind: Deployment
     name: mirai-marketing
+- path: migration-patch.yaml
+  target:
+    kind: Job
+    name: mirai-db-migrate
 
 # Override images for local development
 images:
