@@ -1,0 +1,25 @@
+# NetworkPolicy to allow CNPG operator (from cnpg-system namespace) to reach database pods
+# The operator needs access to:
+# - Port 8000: PostgreSQL instance manager API (health checks, status)
+# - Port 5432: PostgreSQL database (for management operations)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-cnpg-operator
+  namespace: mirai
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: mirai-db
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cnpg-system
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 5432

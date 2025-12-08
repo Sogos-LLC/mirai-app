@@ -1,0 +1,15 @@
+# CiliumNetworkPolicy to allow CNPG database pods to reach the Kubernetes API server
+# This is required for CNPG pods to communicate with the control plane
+# Uses Cilium's entity selector which properly handles the kube-apiserver identity
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-cnpg-to-apiserver
+  namespace: mirai
+spec:
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: mirai-db
+  egress:
+  - toEntities:
+    - kube-apiserver

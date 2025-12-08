@@ -1,0 +1,13 @@
+# CiliumNetworkPolicy to allow Kratos CNPG database pods to reach the Kubernetes API server
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-cnpg-to-apiserver
+  namespace: kratos
+spec:
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: kratos-db
+  egress:
+  - toEntities:
+    - kube-apiserver

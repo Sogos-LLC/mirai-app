@@ -11,6 +11,12 @@ resources:
   - mirai-cluster.yaml
   # Kratos Authentication Database
   - kratos-cluster.yaml
+  # Network policies for CNPG pods (mirai namespace)
+  - networkpolicy-cnpg-apiserver.yaml
+  - networkpolicy-cnpg-operator.yaml
+  # Network policies for CNPG pods (kratos namespace)
+  - networkpolicy-kratos-cnpg-apiserver.yaml
+  - networkpolicy-kratos-cnpg-operator.yaml
 
 # NOTE: Secret files are gitignored and must be created manually:
 # - mirai-db-credentials.yaml (from template)
