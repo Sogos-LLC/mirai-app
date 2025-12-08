@@ -94,3 +94,10 @@ export const getGeneratedLesson = AIGenerationService.method.getGeneratedLesson;
  * @generated from rpc mirai.v1.AIGenerationService.ListGeneratedLessons
  */
 export const listGeneratedLessons = AIGenerationService.method.listGeneratedLessons;
+
+/**
+ * GenerateComponentImage generates an image for an image component placeholder.
+ *
+ * @generated from rpc mirai.v1.AIGenerationService.GenerateComponentImage
+ */
+export const generateComponentImage = AIGenerationService.method.generateComponentImage;

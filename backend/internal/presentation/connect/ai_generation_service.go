@@ -527,6 +527,61 @@ func (s *AIGenerationServiceServer) ListGeneratedLessons(
 	}), nil
 }
 
+// GenerateComponentImage generates an image for an image placeholder component.
+func (s *AIGenerationServiceServer) GenerateComponentImage(
+	ctx context.Context,
+	req *connect.Request[v1.GenerateComponentImageRequest],
+) (*connect.Response[v1.GenerateComponentImageResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	courseID, err := parseUUID(req.Msg.CourseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	lessonID, err := parseUUID(req.Msg.LessonId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	componentID, err := parseUUID(req.Msg.ComponentId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	// Get aspect ratio, default to 16:9
+	aspectRatio := "16:9"
+	if req.Msg.AspectRatio != nil && *req.Msg.AspectRatio != "" {
+		aspectRatio = *req.Msg.AspectRatio
+	}
+
+	serviceReq := service.GenerateComponentImageRequest{
+		CourseID:    courseID,
+		LessonID:    lessonID,
+		ComponentID: componentID,
+		Prompt:      req.Msg.Prompt,
+		AspectRatio: aspectRatio,
+	}
+
+	result, err := s.aiService.GenerateComponentImage(ctx, kratosID, serviceReq)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.GenerateComponentImageResponse{
+		ImageUrl:  result.ImageURL,
+		Component: lessonComponentToProto(result.Component),
+	}), nil
+}
+
 // Helper functions for proto conversion
 
 func generationJobToProto(job *entity.GenerationJob) *v1.GenerationJob {

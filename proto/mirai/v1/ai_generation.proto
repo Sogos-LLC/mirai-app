@@ -272,6 +272,9 @@ service AIGenerationService {
 
   // ListGeneratedLessons returns all generated lessons for a course.
   rpc ListGeneratedLessons(ListGeneratedLessonsRequest) returns (ListGeneratedLessonsResponse);
+
+  // GenerateComponentImage generates an image for an image component placeholder.
+  rpc GenerateComponentImage(GenerateComponentImageRequest) returns (GenerateComponentImageResponse);
 }
 
 // GenerateCourseOutlineRequest starts outline generation.
@@ -414,4 +417,19 @@ message ListGeneratedLessonsRequest {
 // ListGeneratedLessonsResponse contains the lessons.
 message ListGeneratedLessonsResponse {
   repeated GeneratedLesson lessons = 1;
+}
+
+// GenerateComponentImageRequest generates an image for an image placeholder.
+message GenerateComponentImageRequest {
+  string course_id = 1;       // Course context
+  string lesson_id = 2;       // Lesson containing the component
+  string component_id = 3;    // Component to update with generated image
+  string prompt = 4;          // Image generation prompt (from imageDescription)
+  optional string aspect_ratio = 5; // Optional: 1:1, 16:9, 4:3, etc. (default: 16:9)
+}
+
+// GenerateComponentImageResponse returns the generated image URL.
+message GenerateComponentImageResponse {
+  string image_url = 1;           // MinIO URL to the generated image
+  LessonComponent component = 2;  // Updated component with image URL
 }

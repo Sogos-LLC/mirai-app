@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse } from "./ai_generation_pb.js";
+import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse } from "./ai_generation_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -155,6 +155,17 @@ export const AIGenerationService = {
       name: "ListGeneratedLessons",
       I: ListGeneratedLessonsRequest,
       O: ListGeneratedLessonsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GenerateComponentImage generates an image for an image component placeholder.
+     *
+     * @generated from rpc mirai.v1.AIGenerationService.GenerateComponentImage
+     */
+    generateComponentImage: {
+      name: "GenerateComponentImage",
+      I: GenerateComponentImageRequest,
+      O: GenerateComponentImageResponse,
       kind: MethodKind.Unary,
     },
   }

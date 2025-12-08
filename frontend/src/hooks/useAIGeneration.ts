@@ -14,6 +14,7 @@ import {
   cancelJob,
   getGeneratedLesson,
   listGeneratedLessons,
+  generateComponentImage,
 } from '@/gen/mirai/v1/ai_generation-AIGenerationService_connectquery';
 import {
   listNotifications,
@@ -39,6 +40,7 @@ import {
   RegenerateComponentRequestSchema,
   CancelJobRequestSchema,
   CourseGenerationInputSchema,
+  GenerateComponentImageRequestSchema,
 } from '@/gen/mirai/v1/ai_generation_pb';
 
 // Re-export types and enums
@@ -376,5 +378,42 @@ export function useActiveGenerationJobs() {
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
+  };
+}
+
+/**
+ * Hook to generate an image for an image component.
+ * This is a synchronous operation (no job polling needed).
+ */
+export function useGenerateComponentImage() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(generateComponentImage);
+
+  return {
+    mutate: async (data: {
+      courseId: string;
+      lessonId: string;
+      componentId: string;
+      prompt: string;
+      aspectRatio?: string;
+    }) => {
+      const request = create(GenerateComponentImageRequestSchema, {
+        courseId: data.courseId,
+        lessonId: data.lessonId,
+        componentId: data.componentId,
+        prompt: data.prompt,
+        aspectRatio: data.aspectRatio,
+      });
+
+      const result = await mutation.mutateAsync(request);
+      // Invalidate lesson data to refresh the component
+      await queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: getGeneratedLesson, cardinality: undefined }),
+      });
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
   };
 }

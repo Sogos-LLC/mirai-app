@@ -305,6 +305,20 @@ export const ListGeneratedLessonsRequestSchema = z.object({
 export type ListGeneratedLessonsRequest = z.infer<typeof ListGeneratedLessonsRequestSchema>;
 
 /**
+ * Zod schema for GenerateComponentImageRequest
+ * @generated from message mirai.v1.GenerateComponentImageRequest
+ */
+export const GenerateComponentImageRequestSchema = z.object({
+  courseId: z.string(),
+  lessonId: z.string(),
+  componentId: z.string(),
+  prompt: z.string(),
+  aspectRatio: z.string().optional(),
+});
+
+export type GenerateComponentImageRequest = z.infer<typeof GenerateComponentImageRequestSchema>;
+
+/**
  * Zod schema for OutlineSection
  * @generated from message mirai.v1.OutlineSection
  */

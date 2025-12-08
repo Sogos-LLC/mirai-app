@@ -51,6 +51,14 @@ type TaskEnqueuer interface {
 	EnqueueAIGeneration(jobID, jobType string) error
 }
 
+// ImageStorage abstracts image storage operations.
+type ImageStorage interface {
+	// PutContent stores raw content to storage.
+	PutContent(ctx context.Context, path string, content []byte, contentType string) error
+	// GenerateDownloadURL generates a presigned URL for downloads.
+	GenerateDownloadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
+}
+
 // AIGenerationService handles AI-powered content generation.
 type AIGenerationService struct {
 	userRepo           repository.UserRepository
@@ -67,6 +75,7 @@ type AIGenerationService struct {
 	completionNotifier CourseCompletionNotifier
 	outlineNotifier    OutlineCompletionNotifier
 	taskEnqueuer       TaskEnqueuer // For event-driven job processing (optional, falls back to polling)
+	imageStorage       ImageStorage // For storing generated images
 	logger             service.Logger
 }
 
@@ -86,6 +95,7 @@ func NewAIGenerationService(
 	completionNotifier CourseCompletionNotifier,
 	outlineNotifier OutlineCompletionNotifier,
 	taskEnqueuer TaskEnqueuer, // Can be nil - falls back to polling
+	imageStorage ImageStorage, // For storing generated images (can be nil if not needed)
 	logger service.Logger,
 ) *AIGenerationService {
 	return &AIGenerationService{
@@ -103,6 +113,7 @@ func NewAIGenerationService(
 		completionNotifier: completionNotifier,
 		outlineNotifier:    outlineNotifier,
 		taskEnqueuer:       taskEnqueuer,
+		imageStorage:       imageStorage,
 		logger:             logger,
 	}
 }
@@ -1406,4 +1417,149 @@ func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) 
 		log.Error("unknown or invalid job type, marking as failed", "type", job.Type)
 		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
 	}
+}
+
+// =============================================================================
+// Image Generation
+// =============================================================================
+
+// GenerateComponentImageRequest contains the inputs for component image generation.
+type GenerateComponentImageRequest struct {
+	CourseID    uuid.UUID
+	LessonID    uuid.UUID
+	ComponentID uuid.UUID
+	Prompt      string
+	AspectRatio string // e.g., "16:9", "1:1", "4:3"
+}
+
+// GenerateComponentImageResult contains the result of image generation.
+type GenerateComponentImageResult struct {
+	ImageURL  string
+	Component *entity.LessonComponent
+}
+
+// GenerateComponentImage generates an image for an image placeholder component.
+// It uses Gemini to generate the image, stores it in MinIO, and updates the component.
+func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratosID uuid.UUID, req GenerateComponentImageRequest) (*GenerateComponentImageResult, error) {
+	// Get user and tenant
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	// Set tenant context
+	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+
+	// Verify the component exists and belongs to this lesson
+	component, err := s.componentRepo.GetByID(tenantCtx, req.ComponentID)
+	if err != nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("component not found")
+	}
+
+	// Verify it's an image component
+	if component.Type != valueobject.LessonComponentTypeImage {
+		return nil, domainerrors.ErrBadRequest.WithMessage("component is not an image type")
+	}
+
+	// Verify the lesson exists
+	_, err = s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
+	if err != nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
+	}
+
+	// Get AI provider for this tenant
+	aiProvider, err := s.aiProviderFactory.GetProvider(tenantCtx, *user.TenantID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Generate the image
+	s.logger.Info("generating image for component",
+		"componentID", req.ComponentID,
+		"lessonID", req.LessonID,
+		"prompt", req.Prompt,
+	)
+
+	imageResult, err := aiProvider.GenerateImage(tenantCtx, service.GenerateImageRequest{
+		Prompt:      req.Prompt,
+		AspectRatio: req.AspectRatio,
+	})
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Check if storage is configured
+	if s.imageStorage == nil {
+		return nil, domainerrors.ErrInternal.WithMessage("image storage not configured")
+	}
+
+	// Determine file extension from MIME type
+	ext := ".png"
+	if imageResult.MimeType == "image/jpeg" {
+		ext = ".jpg"
+	} else if imageResult.MimeType == "image/webp" {
+		ext = ".webp"
+	}
+
+	// Store the image in MinIO with tenant-scoped path
+	// Path: tenants/{tenant_id}/generated-images/{course_id}/{lesson_id}/{component_id}{ext}
+	storagePath := fmt.Sprintf("tenants/%s/generated-images/%s/%s/%s%s",
+		user.TenantID.String(),
+		req.CourseID.String(),
+		req.LessonID.String(),
+		req.ComponentID.String(),
+		ext,
+	)
+
+	err = s.imageStorage.PutContent(tenantCtx, storagePath, imageResult.ImageData, imageResult.MimeType)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Generate a download URL (valid for 24 hours for viewing in the course editor)
+	imageURL, err := s.imageStorage.GenerateDownloadURL(tenantCtx, storagePath, 24*time.Hour)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Update the component's content JSON with the new image URL
+	// Parse existing content, update URL, save back
+	var imageContent map[string]interface{}
+	if err := json.Unmarshal(component.ContentJSON, &imageContent); err != nil {
+		// If we can't parse, create new content
+		imageContent = make(map[string]interface{})
+	}
+
+	imageContent["url"] = imageURL
+	// Keep the original image_description as a reference
+	if _, exists := imageContent["image_description"]; !exists {
+		imageContent["image_description"] = req.Prompt
+	}
+
+	updatedContentJSON, err := json.Marshal(imageContent)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Update the component in the database
+	component.ContentJSON = updatedContentJSON
+	err = s.componentRepo.Update(tenantCtx, component)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	s.logger.Info("image generated and stored successfully",
+		"componentID", req.ComponentID,
+		"storagePath", storagePath,
+		"tokensUsed", imageResult.TokensUsed,
+	)
+
+	return &GenerateComponentImageResult{
+		ImageURL:  imageURL,
+		Component: component,
+	}, nil
 }

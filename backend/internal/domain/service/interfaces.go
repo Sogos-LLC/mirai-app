@@ -358,6 +358,9 @@ type AIProvider interface {
 
 	// GenerateToneOptions generates 3 tone/style options for the course.
 	GenerateToneOptions(ctx context.Context, req GenerateToneOptionsRequest) (*GenerateToneOptionsResult, error)
+
+	// GenerateImage generates an image from a text prompt.
+	GenerateImage(ctx context.Context, req GenerateImageRequest) (*GenerateImageResult, error)
 }
 
 // =============================================================================
@@ -602,6 +605,23 @@ type SMEChunkResult struct {
 	Topic          string
 	Keywords       []string
 	RelevanceScore float32
+}
+
+// =============================================================================
+// Image Generation Types
+// =============================================================================
+
+// GenerateImageRequest contains inputs for image generation.
+type GenerateImageRequest struct {
+	Prompt      string // Image description/prompt
+	AspectRatio string // e.g., "16:9", "1:1", "4:3" - defaults to "16:9"
+}
+
+// GenerateImageResult contains the generated image.
+type GenerateImageResult struct {
+	ImageData  []byte // Raw image bytes (PNG format)
+	MimeType   string // MIME type of the image
+	TokensUsed int64
 }
 
 // ContentEnhancer abstracts AI content enhancement operations.
