@@ -65,6 +65,18 @@ export function ImageEditor({
       if (result.imageUrl) {
         setUrl(result.imageUrl);
         setImageError(false);
+
+        // Auto-save to persist the URL immediately to localComponents
+        // This prevents the URL from being lost if the user closes the modal
+        // without clicking "Save Changes"
+        onSave(
+          JSON.stringify({
+            imageDescription: imageDescription.trim(),
+            altText,
+            caption: caption || undefined,
+            url: result.imageUrl,
+          })
+        );
       }
     } catch {
       // Error is handled by the hook
