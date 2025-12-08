@@ -13,15 +13,15 @@ import {
   SESSION_COOKIE_ATTRIBUTES,
   REDIRECT_PARAMS,
   REDIRECT_URLS,
-  PROTECTED_ROUTES,
   PUBLIC_ROUTES,
+  AUTH_REDIRECT_ROUTES,
   KRATOS_ENDPOINTS,
   setSessionTokenCookie,
   clearSessionTokenCookie,
   getSessionTokenFromCookies,
   extractSessionToken,
-  isProtectedRoute,
   isPublicRoute,
+  shouldRedirectIfAuthenticated,
   buildLoginRedirect,
 } from './auth.config';
 
@@ -105,21 +105,13 @@ describe('Auth Contract Constants', () => {
     });
   });
 
-  describe('PROTECTED_ROUTES', () => {
-    it('should include dashboard', () => {
-      expect(PROTECTED_ROUTES).toContain('/dashboard');
+  describe('PUBLIC_ROUTES (Deny by Default)', () => {
+    it('should be a minimal list of auth-only routes', () => {
+      // SECURITY: Only authentication flows should be public
+      // All other routes are protected by default
+      expect(PUBLIC_ROUTES.length).toBeLessThanOrEqual(10);
     });
 
-    it('should include settings', () => {
-      expect(PROTECTED_ROUTES).toContain('/settings');
-    });
-
-    it('should include course-builder', () => {
-      expect(PROTECTED_ROUTES).toContain('/course-builder');
-    });
-  });
-
-  describe('PUBLIC_ROUTES', () => {
     it('should include login', () => {
       expect(PUBLIC_ROUTES).toContain('/auth/login');
     });
@@ -130,6 +122,50 @@ describe('Auth Contract Constants', () => {
 
     it('should include recovery', () => {
       expect(PUBLIC_ROUTES).toContain('/auth/recovery');
+    });
+
+    it('should include reset-password', () => {
+      expect(PUBLIC_ROUTES).toContain('/auth/reset-password');
+    });
+
+    it('should include accept-invite', () => {
+      expect(PUBLIC_ROUTES).toContain('/auth/accept-invite');
+    });
+
+    it('should NOT include pricing (pricing is on marketing site only)', () => {
+      expect(PUBLIC_ROUTES).not.toContain('/pricing');
+    });
+
+    it('should NOT include any app routes', () => {
+      // SECURITY: App routes must not be in public routes
+      expect(PUBLIC_ROUTES).not.toContain('/dashboard');
+      expect(PUBLIC_ROUTES).not.toContain('/teams');
+      expect(PUBLIC_ROUTES).not.toContain('/settings');
+      expect(PUBLIC_ROUTES).not.toContain('/course-builder');
+    });
+  });
+
+  describe('AUTH_REDIRECT_ROUTES', () => {
+    it('should include login', () => {
+      expect(AUTH_REDIRECT_ROUTES).toContain('/auth/login');
+    });
+
+    it('should include registration', () => {
+      expect(AUTH_REDIRECT_ROUTES).toContain('/auth/registration');
+    });
+
+    it('should NOT include recovery (users can re-recover)', () => {
+      expect(AUTH_REDIRECT_ROUTES).not.toContain('/auth/recovery');
+    });
+
+    it('should NOT include verification', () => {
+      expect(AUTH_REDIRECT_ROUTES).not.toContain('/auth/verification');
+    });
+
+    it('should be a subset of PUBLIC_ROUTES', () => {
+      AUTH_REDIRECT_ROUTES.forEach(route => {
+        expect(PUBLIC_ROUTES).toContain(route);
+      });
     });
   });
 });
@@ -225,40 +261,6 @@ describe('Auth Helper Functions', () => {
     });
   });
 
-  describe('isProtectedRoute', () => {
-    it('should return true for dashboard', () => {
-      expect(isProtectedRoute('/dashboard')).toBe(true);
-    });
-
-    it('should return true for dashboard subpaths', () => {
-      expect(isProtectedRoute('/dashboard/overview')).toBe(true);
-    });
-
-    it('should return true for settings', () => {
-      expect(isProtectedRoute('/settings')).toBe(true);
-    });
-
-    it('should return true for course-builder', () => {
-      expect(isProtectedRoute('/course-builder')).toBe(true);
-    });
-
-    it('should return true for folder routes', () => {
-      expect(isProtectedRoute('/folder/team-1')).toBe(true);
-    });
-
-    it('should return false for login', () => {
-      expect(isProtectedRoute('/auth/login')).toBe(false);
-    });
-
-    it('should return false for registration', () => {
-      expect(isProtectedRoute('/auth/registration')).toBe(false);
-    });
-
-    it('should return false for root', () => {
-      expect(isProtectedRoute('/')).toBe(false);
-    });
-  });
-
   describe('isPublicRoute', () => {
     it('should return true for login', () => {
       expect(isPublicRoute('/auth/login')).toBe(true);
@@ -272,16 +274,47 @@ describe('Auth Helper Functions', () => {
       expect(isPublicRoute('/auth/recovery')).toBe(true);
     });
 
-    it('should return true for pricing', () => {
-      expect(isPublicRoute('/pricing')).toBe(true);
+    it('should return true for reset-password', () => {
+      expect(isPublicRoute('/auth/reset-password')).toBe(true);
     });
 
-    it('should return false for dashboard', () => {
+    it('should return false for dashboard (deny by default)', () => {
       expect(isPublicRoute('/dashboard')).toBe(false);
     });
 
-    it('should return false for settings', () => {
-      expect(isPublicRoute('/settings')).toBe(false);
+    it('should return false for teams (deny by default)', () => {
+      expect(isPublicRoute('/teams')).toBe(false);
+    });
+
+    it('should return false for any unknown route (deny by default)', () => {
+      expect(isPublicRoute('/some-new-feature')).toBe(false);
+      expect(isPublicRoute('/course/123/preview')).toBe(false);
+    });
+  });
+
+  describe('shouldRedirectIfAuthenticated', () => {
+    it('should return true for login', () => {
+      expect(shouldRedirectIfAuthenticated('/auth/login')).toBe(true);
+    });
+
+    it('should return true for registration', () => {
+      expect(shouldRedirectIfAuthenticated('/auth/registration')).toBe(true);
+    });
+
+    it('should return false for recovery (users can re-recover)', () => {
+      expect(shouldRedirectIfAuthenticated('/auth/recovery')).toBe(false);
+    });
+
+    it('should return false for verification', () => {
+      expect(shouldRedirectIfAuthenticated('/auth/verification')).toBe(false);
+    });
+
+    it('should return false for reset-password', () => {
+      expect(shouldRedirectIfAuthenticated('/auth/reset-password')).toBe(false);
+    });
+
+    it('should return false for accept-invite', () => {
+      expect(shouldRedirectIfAuthenticated('/auth/accept-invite')).toBe(false);
     });
   });
 

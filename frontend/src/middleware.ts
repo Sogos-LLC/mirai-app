@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
-  AUTH_COOKIES,
-  PROTECTED_ROUTES,
-  PUBLIC_ROUTES,
   REDIRECT_URLS,
   REDIRECT_PARAMS,
   KRATOS_ENDPOINTS,
   extractSessionToken,
-  isProtectedRoute,
   isPublicRoute,
+  shouldRedirectIfAuthenticated,
 } from '@/lib/auth.config';
 
 /**
@@ -73,20 +70,16 @@ async function checkSession(request: NextRequest): Promise<boolean> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for static files and API routes
+  // Skip middleware for static files, API routes, and Next.js internals
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
-    pathname.includes('.') // static files
+    pathname.includes('.') // static files (favicon.ico, etc.)
   ) {
     return NextResponse.next();
   }
 
-  // Check route types using shared config
-  const isProtected = isProtectedRoute(pathname);
-  const isPublic = isPublicRoute(pathname);
-
-  // Root path - check session and redirect accordingly
+  // Root path - redirect based on auth status
   if (pathname === '/') {
     const hasSession = await checkSession(request);
     if (hasSession) {
@@ -96,27 +89,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(LANDING_URL);
   }
 
-  // Protected routes - require authentication
-  if (isProtected) {
-    const hasSession = await checkSession(request);
-    if (!hasSession) {
-      const loginUrl = new URL(REDIRECT_URLS.LOGIN, request.url);
-      loginUrl.searchParams.set(REDIRECT_PARAMS.RETURN_TO, pathname);
-      return NextResponse.redirect(loginUrl);
+  // Public routes - allow access without authentication
+  if (isPublicRoute(pathname)) {
+    // Redirect to dashboard if already logged in (login/registration only)
+    if (shouldRedirectIfAuthenticated(pathname)) {
+      const hasSession = await checkSession(request);
+      if (hasSession) {
+        return NextResponse.redirect(new URL(REDIRECT_URLS.DASHBOARD, request.url));
+      }
     }
+    return NextResponse.next();
   }
 
-  // Auth pages - redirect to dashboard if already logged in
-  if (isPublic && pathname.startsWith('/auth/')) {
-    // Skip redirect for settings (requires auth anyway)
-    if (pathname === '/auth/settings') {
-      return NextResponse.next();
-    }
-
-    const hasSession = await checkSession(request);
-    if (hasSession && (pathname === REDIRECT_URLS.LOGIN || pathname === REDIRECT_URLS.REGISTRATION)) {
-      return NextResponse.redirect(new URL(REDIRECT_URLS.DASHBOARD, request.url));
-    }
+  // DENY BY DEFAULT: All other routes require authentication
+  const hasSession = await checkSession(request);
+  if (!hasSession) {
+    const loginUrl = new URL(REDIRECT_URLS.LOGIN, request.url);
+    loginUrl.searchParams.set(REDIRECT_PARAMS.RETURN_TO, pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

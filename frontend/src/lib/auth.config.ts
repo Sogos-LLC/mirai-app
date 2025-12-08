@@ -97,26 +97,16 @@ export const REDIRECT_URLS = {
 export { LANDING_URL } from './urls';
 
 // =============================================================================
-// Protected Routes
+// Route Protection (Deny by Default)
 // =============================================================================
 
 /**
- * Routes that require authentication
- */
-export const PROTECTED_ROUTES = [
-  '/dashboard',
-  '/course-builder',
-  '/content-library',
-  '/templates',
-  '/tutorials',
-  '/settings',
-  '/help',
-  '/updates',
-  '/folder',
-] as const;
-
-/**
  * Routes that are public (don't require auth)
+ *
+ * SECURITY MODEL: Deny by Default
+ * - All routes require authentication EXCEPT those listed here
+ * - New routes are automatically protected
+ * - Only authentication-related flows should be public
  */
 export const PUBLIC_ROUTES = [
   '/auth/login',
@@ -125,7 +115,16 @@ export const PUBLIC_ROUTES = [
   '/auth/verification',
   '/auth/error',
   '/auth/accept-invite',
-  '/pricing',
+  '/auth/reset-password',
+] as const;
+
+/**
+ * Public routes that should redirect to dashboard if user is already authenticated
+ * (subset of PUBLIC_ROUTES - only login/registration trigger this redirect)
+ */
+export const AUTH_REDIRECT_ROUTES = [
+  '/auth/login',
+  '/auth/registration',
 ] as const;
 
 // =============================================================================
@@ -201,18 +200,6 @@ export function extractSessionToken(cookieString: string): string | null {
 }
 
 /**
- * Check if a path is protected
- */
-export function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some((pattern) => {
-    if (pattern.endsWith('/*')) {
-      return pathname.startsWith(pattern.slice(0, -2));
-    }
-    return pathname === pattern || pathname.startsWith(`${pattern}/`);
-  });
-}
-
-/**
  * Check if a path is public
  */
 export function isPublicRoute(pathname: string): boolean {
@@ -222,6 +209,16 @@ export function isPublicRoute(pathname: string): boolean {
     }
     return pathname === pattern || pathname.startsWith(`${pattern}/`);
   });
+}
+
+/**
+ * Check if an authenticated user on a public route should be redirected to dashboard
+ * Only applies to login/registration pages
+ */
+export function shouldRedirectIfAuthenticated(pathname: string): boolean {
+  return AUTH_REDIRECT_ROUTES.some((route) =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
 }
 
 /**
