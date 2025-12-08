@@ -10,6 +10,7 @@ import (
 	domainerrors "github.com/sogos/mirai-backend/internal/domain/errors"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
+	"github.com/sogos/mirai-backend/internal/domain/tenant"
 )
 
 // CourseWizardService handles the course creation wizard workflow.
@@ -64,22 +65,25 @@ func (s *CourseWizardService) GenerateTitle(ctx context.Context, kratosID uuid.U
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
+	// Set tenant context for RLS
+	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+
 	// Get tenant-specific AI provider
-	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, *user.TenantID)
+	aiProvider, err := s.aiProviderFactory.GetProvider(tenantCtx, *user.TenantID)
 	if err != nil {
 		log.Error("failed to get AI provider", "error", err)
-		return nil, domainerrors.ErrInternal.WithMessage("failed to get AI provider")
+		return nil, err
 	}
 
 	// Generate improved title
-	result, err := aiProvider.GenerateImprovedTitle(ctx, courseName)
+	result, err := aiProvider.GenerateImprovedTitle(tenantCtx, courseName)
 	if err != nil {
 		log.Error("failed to generate improved title", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("AI generation failed")
 	}
 
 	// Update token usage
-	_ = s.aiSettingsRepo.IncrementTokenUsage(ctx, *user.TenantID, result.TokensUsed)
+	_ = s.aiSettingsRepo.IncrementTokenUsage(tenantCtx, *user.TenantID, result.TokensUsed)
 
 	log.Info("generated improved title", "tokensUsed", result.TokensUsed)
 
@@ -109,22 +113,25 @@ func (s *CourseWizardService) GenerateSMEPersonas(ctx context.Context, kratosID 
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
+	// Set tenant context for RLS
+	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+
 	// Get tenant-specific AI provider
-	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, *user.TenantID)
+	aiProvider, err := s.aiProviderFactory.GetProvider(tenantCtx, *user.TenantID)
 	if err != nil {
 		log.Error("failed to get AI provider", "error", err)
-		return nil, domainerrors.ErrInternal.WithMessage("failed to get AI provider")
+		return nil, err
 	}
 
 	// Generate SME personas
-	result, err := aiProvider.GenerateSMEPersonas(ctx, title, description)
+	result, err := aiProvider.GenerateSMEPersonas(tenantCtx, title, description)
 	if err != nil {
 		log.Error("failed to generate SME personas", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("AI generation failed")
 	}
 
 	// Update token usage
-	_ = s.aiSettingsRepo.IncrementTokenUsage(ctx, *user.TenantID, result.TokensUsed)
+	_ = s.aiSettingsRepo.IncrementTokenUsage(tenantCtx, *user.TenantID, result.TokensUsed)
 
 	// Convert to entity types
 	personas := make([]entity.WizardSMEPersona, len(result.Personas))
@@ -172,11 +179,14 @@ func (s *CourseWizardService) GenerateAudiencePersonas(ctx context.Context, krat
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
+	// Set tenant context for RLS
+	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+
 	// Get tenant-specific AI provider
-	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, *user.TenantID)
+	aiProvider, err := s.aiProviderFactory.GetProvider(tenantCtx, *user.TenantID)
 	if err != nil {
 		log.Error("failed to get AI provider", "error", err)
-		return nil, domainerrors.ErrInternal.WithMessage("failed to get AI provider")
+		return nil, err
 	}
 
 	// Convert entity types to service types
@@ -192,7 +202,7 @@ func (s *CourseWizardService) GenerateAudiencePersonas(ctx context.Context, krat
 	}
 
 	// Generate audience personas
-	result, err := aiProvider.GenerateAudiencePersonas(ctx, service.GenerateAudiencePersonasRequest{
+	result, err := aiProvider.GenerateAudiencePersonas(tenantCtx, service.GenerateAudiencePersonasRequest{
 		Title:       req.Title,
 		Description: req.Description,
 		SMEPersonas: smePersonas,
@@ -203,7 +213,7 @@ func (s *CourseWizardService) GenerateAudiencePersonas(ctx context.Context, krat
 	}
 
 	// Update token usage
-	_ = s.aiSettingsRepo.IncrementTokenUsage(ctx, *user.TenantID, result.TokensUsed)
+	_ = s.aiSettingsRepo.IncrementTokenUsage(tenantCtx, *user.TenantID, result.TokensUsed)
 
 	// Convert to entity types
 	personas := make([]entity.WizardAudiencePersona, len(result.Personas))
@@ -251,11 +261,14 @@ func (s *CourseWizardService) GenerateToneOptions(ctx context.Context, kratosID 
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
+	// Set tenant context for RLS
+	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+
 	// Get tenant-specific AI provider
-	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, *user.TenantID)
+	aiProvider, err := s.aiProviderFactory.GetProvider(tenantCtx, *user.TenantID)
 	if err != nil {
 		log.Error("failed to get AI provider", "error", err)
-		return nil, domainerrors.ErrInternal.WithMessage("failed to get AI provider")
+		return nil, err
 	}
 
 	// Convert entity types to service types
@@ -271,7 +284,7 @@ func (s *CourseWizardService) GenerateToneOptions(ctx context.Context, kratosID 
 	}
 
 	// Generate tone options
-	result, err := aiProvider.GenerateToneOptions(ctx, service.GenerateToneOptionsRequest{
+	result, err := aiProvider.GenerateToneOptions(tenantCtx, service.GenerateToneOptionsRequest{
 		Title:            req.Title,
 		Description:      req.Description,
 		AudiencePersonas: audiencePersonas,
@@ -282,7 +295,7 @@ func (s *CourseWizardService) GenerateToneOptions(ctx context.Context, kratosID 
 	}
 
 	// Update token usage
-	_ = s.aiSettingsRepo.IncrementTokenUsage(ctx, *user.TenantID, result.TokensUsed)
+	_ = s.aiSettingsRepo.IncrementTokenUsage(tenantCtx, *user.TenantID, result.TokensUsed)
 
 	// Convert to entity types
 	options := make([]entity.WizardToneOption, len(result.Options))
