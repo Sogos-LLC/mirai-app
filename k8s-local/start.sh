@@ -132,19 +132,19 @@ done
 echo ""
 
 log_info "Application URLs:"
-echo "  Frontend:   https://mirai.local"
-echo "  Marketing:  https://get-mirai.local"
-echo "  Auth:       https://auth.mirai.local"
-echo "  API:        https://api.mirai.local"
-echo "  Mailpit:    https://mailpit.mirai.local"
-echo "  MinIO:      https://minio.mirai.local"
-echo "  Traefik:    https://traefik.mirai.local/dashboard/"
+echo "  Frontend:   https://mirai.test"
+echo "  Marketing:  https://get-mirai.test"
+echo "  Auth:       https://auth.mirai.test"
+echo "  API:        https://api.mirai.test"
+echo "  Mailpit:    https://mailpit.mirai.test"
+echo "  MinIO:      https://minio.mirai.test"
+echo "  Traefik:    https://traefik.mirai.test/dashboard/"
 echo ""
 
 # Open Traefik dashboard
 if command -v open >/dev/null 2>&1; then
     sleep 1
-    open "https://traefik.mirai.local/dashboard/"
+    open "https://traefik.mirai.test/dashboard/"
 fi
 
 # k9s handling

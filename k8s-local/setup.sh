@@ -194,7 +194,7 @@ CERT_DIR="${SCRIPT_DIR}/certs"
 mkdir -p "${CERT_DIR}"
 
 # Generate certificate with explicit SANs for all domains
-# (Avoiding wildcards - they can be problematic with .local TLD)
+# (Avoiding wildcards - they can be problematic with .test TLD)
 cd "${CERT_DIR}"
 
 # Only regenerate if cert doesn't exist or is older than 30 days
@@ -206,13 +206,13 @@ if [[ ! -f "${CERT_FILE}" ]] || [[ $(find "${CERT_FILE}" -mtime +30 2>/dev/null)
     mkcert \
         -cert-file "${CERT_FILE}" \
         -key-file "${KEY_FILE}" \
-        "mirai.local" \
-        "api.mirai.local" \
-        "auth.mirai.local" \
-        "mailpit.mirai.local" \
-        "minio.mirai.local" \
-        "traefik.mirai.local" \
-        "get-mirai.local"
+        "mirai.test" \
+        "api.mirai.test" \
+        "auth.mirai.test" \
+        "mailpit.mirai.test" \
+        "minio.mirai.test" \
+        "traefik.mirai.test" \
+        "get-mirai.test"
 else
     log_info "  Using existing certificate (less than 30 days old)"
 fi
@@ -237,6 +237,32 @@ log_success "TLS certificates generated and secrets created"
 log_info "Step 8/17: Deploying infrastructure (PostgreSQL, Redis, MinIO)..."
 kubectl apply -k "${SCRIPT_DIR}/infrastructure"
 log_success "Infrastructure deployed"
+
+# Step 8b: Apply Stripe secrets from .env if available
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+    log_info "  Found .env file, loading Stripe secrets..."
+    # Source the .env file
+    set -a
+    source "${SCRIPT_DIR}/.env"
+    set +a
+
+    # Patch the Stripe secret with real values
+    if [ -n "${STRIPE_SECRET_KEY:-}" ]; then
+        kubectl patch secret mirai-stripe-secret -n mirai-local -p "{
+            \"stringData\": {
+                \"secret-key\": \"${STRIPE_SECRET_KEY}\",
+                \"webhook-secret\": \"${STRIPE_WEBHOOK_SECRET:-}\",
+                \"starter-price-id\": \"${STRIPE_STARTER_PRICE_ID:-}\",
+                \"pro-price-id\": \"${STRIPE_PRO_PRICE_ID:-}\"
+            }
+        }" 2>/dev/null && log_success "Stripe secrets applied from .env" || log_warning "Failed to patch Stripe secret"
+    else
+        log_warning "STRIPE_SECRET_KEY not found in .env"
+    fi
+else
+    log_warning "No .env file found - Stripe will use placeholder secrets"
+    log_warning "Copy .env.example to .env and add your Stripe test keys"
+fi
 
 # Step 9: Wait for infrastructure to be ready
 log_info "Step 9/17: Waiting for infrastructure to be ready..."
@@ -305,10 +331,17 @@ log_info "  Building backend image..."
 docker build -t mirai-backend:local -f "${PROJECT_ROOT}/backend/Dockerfile" "${PROJECT_ROOT}/backend"
 
 log_info "  Building frontend image..."
-docker build -t mirai-frontend:local -f "${PROJECT_ROOT}/frontend/Dockerfile" "${PROJECT_ROOT}/frontend"
+docker build -t mirai-frontend:local \
+    --build-arg NEXT_PUBLIC_APP_URL=https://mirai.test \
+    --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.test \
+    --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.test \
+    --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.test \
+    -f "${PROJECT_ROOT}/frontend/Dockerfile" "${PROJECT_ROOT}/frontend"
 
 log_info "  Building marketing image..."
-docker build -t mirai-marketing:local -f "${PROJECT_ROOT}/frontend/Dockerfile.marketing" "${PROJECT_ROOT}/frontend"
+docker build -t mirai-marketing:local \
+    --build-arg NEXT_PUBLIC_APP_URL=https://mirai.test \
+    -f "${PROJECT_ROOT}/frontend/Dockerfile.marketing" "${PROJECT_ROOT}/frontend"
 
 log_success "Docker images built"
 
@@ -339,7 +372,7 @@ kubectl wait --for=condition=Ready pod -l app=mirai-marketing -n mirai-local --t
 
 # Configure /etc/hosts automatically
 log_info "Configuring /etc/hosts..."
-REQUIRED_HOSTS="mirai.local get-mirai.local auth.mirai.local api.mirai.local minio.mirai.local mailpit.mirai.local traefik.mirai.local"
+REQUIRED_HOSTS="mirai.test get-mirai.test auth.mirai.test api.mirai.test minio.mirai.test mailpit.mirai.test traefik.mirai.test"
 HOSTS_ENTRY="127.0.0.1 ${REQUIRED_HOSTS}"
 
 # Check if all required hosts are present
@@ -355,12 +388,12 @@ if [ ${#MISSING_HOSTS[@]} -eq 0 ]; then
 else
     log_info "Missing hosts in /etc/hosts: ${MISSING_HOSTS[*]}"
 
-    # Remove any existing partial mirai.local line and add complete one
-    if grep -q "mirai.local" /etc/hosts; then
+    # Remove any existing partial mirai.test line and add complete one
+    if grep -q "mirai.test" /etc/hosts; then
         log_info "Updating existing /etc/hosts entry (requires sudo)..."
-        sudo sed -i '' '/mirai\.local/d' /etc/hosts
+        sudo sed -i '' '/mirai\.test/d' /etc/hosts
     else
-        log_info "Adding mirai.local entries to /etc/hosts (requires sudo)..."
+        log_info "Adding mirai.test entries to /etc/hosts (requires sudo)..."
     fi
 
     echo "$HOSTS_ENTRY" | sudo tee -a /etc/hosts > /dev/null
@@ -381,20 +414,20 @@ kubectl get pods -n mirai-local -o wide
 echo ""
 
 log_info "Application URLs:"
-echo "  Frontend:   https://mirai.local"
-echo "  Marketing:  https://get-mirai.local"
-echo "  Auth:       https://auth.mirai.local"
-echo "  API:        https://api.mirai.local"
-echo "  Mailpit:    https://mailpit.mirai.local (email testing)"
-echo "  MinIO:      https://minio.mirai.local (storage console)"
-echo "  Traefik:    https://traefik.mirai.local/dashboard/ (ingress dashboard)"
+echo "  Frontend:   https://mirai.test"
+echo "  Marketing:  https://get-mirai.test"
+echo "  Auth:       https://auth.mirai.test"
+echo "  API:        https://api.mirai.test"
+echo "  Mailpit:    https://mailpit.mirai.test (email testing)"
+echo "  MinIO:      https://minio.mirai.test (storage console)"
+echo "  Traefik:    https://traefik.mirai.test/dashboard/ (ingress dashboard)"
 echo ""
 
 # Open Traefik dashboard in browser
 if command -v open >/dev/null 2>&1; then
     log_info "Opening Traefik dashboard in browser..."
     sleep 2
-    open "https://traefik.mirai.local/dashboard/"
+    open "https://traefik.mirai.test/dashboard/"
 fi
 
 # k9s recommendation

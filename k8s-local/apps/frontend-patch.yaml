@@ -24,10 +24,10 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "100m"
+            cpu: "250m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "1Gi"
+            cpu: "1000m"
 
         # Override environment variables for local development
         # Note: S3_ENDPOINT must use value (not valueFrom) to override production's value
@@ -63,13 +63,13 @@ spec:
         - name: KRATOS_PUBLIC_URL
           value: "http://kratos-public.mirai-local.svc.cluster.local:80"
         - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
-          value: "https://auth.mirai.local"
+          value: "https://auth.mirai.test"
         - name: NEXT_PUBLIC_API_URL
-          value: "https://api.mirai.local"
+          value: "https://api.mirai.test"
         - name: NEXT_PUBLIC_APP_URL
-          value: "https://mirai.local"
+          value: "https://mirai.test"
         - name: NEXT_PUBLIC_LANDING_URL
-          value: "https://get-mirai.local"
+          value: "https://get-mirai.test"
         # Development mode to prevent production redirects
         - name: NODE_ENV
           value: "development"

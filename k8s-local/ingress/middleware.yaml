@@ -33,10 +33,10 @@ spec:
       - "Connect-Timeout-Ms"
       - "X-User-Agent"
     accessControlAllowOriginList:
-      - "https://mirai.local"
-      - "https://get-mirai.local"
-      - "http://mirai.local"
-      - "http://get-mirai.local"
+      - "https://mirai.test"
+      - "https://get-mirai.test"
+      - "http://mirai.test"
+      - "http://get-mirai.test"
     accessControlAllowCredentials: true
     accessControlMaxAge: 100
     addVaryHeader: true
@@ -63,10 +63,10 @@ spec:
       - "Cookie"
       - "X-Session-Token"
     accessControlAllowOriginList:
-      - "https://mirai.local"
-      - "https://get-mirai.local"
-      - "http://mirai.local"
-      - "http://get-mirai.local"
+      - "https://mirai.test"
+      - "https://get-mirai.test"
+      - "http://mirai.test"
+      - "http://get-mirai.test"
     accessControlAllowCredentials: true
     accessControlMaxAge: 100
     addVaryHeader: true

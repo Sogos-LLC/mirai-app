@@ -20,24 +20,24 @@ spec:
         # Use local images with Never pull policy
         imagePullPolicy: Never
 
-        # Reduced resources for local development
+        # Resources for local development
         resources:
           requests:
-            memory: "64Mi"
-            cpu: "25m"
-          limits:
             memory: "128Mi"
             cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
 
         # Override environment variables for local development
         env:
         # Ory Kratos authentication configuration (local URLs for redirects)
         - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
-          value: "https://auth.mirai.local"
+          value: "https://auth.mirai.test"
         - name: NEXT_PUBLIC_APP_URL
-          value: "https://mirai.local"
+          value: "https://mirai.test"
         - name: NEXT_PUBLIC_LANDING_URL
-          value: "https://marketing.mirai.local"
+          value: "https://get-mirai.test"
 
         # Faster startup probes for local development
         startupProbe:

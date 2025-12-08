@@ -100,7 +100,8 @@ if ! k3d cluster list | grep -q "${CLUSTER_NAME}"; then
     exit 1
 fi
 
-if ! k3d cluster list | grep -q "${CLUSTER_NAME}.*running"; then
+# Check if cluster nodes are running (k3d node list shows actual running status)
+if ! k3d node list 2>/dev/null | grep -q "${CLUSTER_NAME}.*running"; then
     log_error "Cluster '${CLUSTER_NAME}' is not running."
     log_info "Start the cluster with: ./start.sh"
     exit 1
@@ -122,6 +123,7 @@ build_and_import() {
     local dockerfile="$2"
     local context="$3"
     local image_name="$4"
+    local build_args="${5:-}"  # Optional build args for Next.js NEXT_PUBLIC_* vars
 
     log_info "Building ${service_name} image..."
 
@@ -130,8 +132,8 @@ build_and_import() {
         return 1
     fi
 
-    # Build the image
-    docker build ${CACHE_FLAG} -t "${image_name}" -f "${dockerfile}" "${context}"
+    # Build the image (build_args allows passing --build-arg for Next.js env vars)
+    docker build ${CACHE_FLAG} ${build_args} -t "${image_name}" -f "${dockerfile}" "${context}"
     log_success "${service_name} image built"
 
     # Import into k3d
@@ -181,14 +183,16 @@ case "${SERVICE}" in
             "frontend" \
             "${PROJECT_ROOT}/frontend/Dockerfile" \
             "${PROJECT_ROOT}/frontend" \
-            "mirai-frontend:local"
+            "mirai-frontend:local" \
+            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.test --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.test --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.test --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.test"
         ;;
     marketing)
         build_and_import \
             "marketing" \
             "${PROJECT_ROOT}/frontend/Dockerfile.marketing" \
             "${PROJECT_ROOT}/frontend" \
-            "mirai-marketing:local"
+            "mirai-marketing:local" \
+            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.test"
         ;;
     all)
         log_info "Building all images..."
@@ -206,7 +210,8 @@ case "${SERVICE}" in
             "frontend" \
             "${PROJECT_ROOT}/frontend/Dockerfile" \
             "${PROJECT_ROOT}/frontend" \
-            "mirai-frontend:local"
+            "mirai-frontend:local" \
+            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.test --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.test --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.test --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.test"
 
         echo ""
 
@@ -214,7 +219,8 @@ case "${SERVICE}" in
             "marketing" \
             "${PROJECT_ROOT}/frontend/Dockerfile.marketing" \
             "${PROJECT_ROOT}/frontend" \
-            "mirai-marketing:local"
+            "mirai-marketing:local" \
+            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.test"
 
         echo ""
         log_success "All images built and imported"

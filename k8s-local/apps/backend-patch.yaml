@@ -79,14 +79,14 @@ spec:
         # Use local images with Never pull policy
         imagePullPolicy: Never
 
-        # Resources for local development (increased to prevent OOM)
+        # Resources for local development (generous for better performance)
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "256Mi"
+            cpu: "250m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "1Gi"
+            cpu: "1000m"
 
         # Override environment variables for local development
         env:
@@ -102,13 +102,13 @@ spec:
         - name: KRATOS_ADMIN_URL
           value: "http://kratos-admin.mirai-local.svc.cluster.local:80"
         - name: ALLOWED_ORIGIN
-          value: "https://mirai.local"
+          value: "https://mirai.test"
         - name: FRONTEND_URL
-          value: "https://mirai.local"
+          value: "https://mirai.test"
         - name: MARKETING_URL
-          value: "https://get-mirai.local"
+          value: "https://get-mirai.test"
         - name: BACKEND_URL
-          value: "https://api.mirai.local"
+          value: "https://api.mirai.test"
         - name: STRIPE_SECRET_KEY
           valueFrom:
             secretKeyRef:
@@ -134,7 +134,7 @@ spec:
         - name: SMTP_PORT
           value: "1025"
         - name: SMTP_FROM
-          value: "noreply@mirai.local"
+          value: "noreply@mirai.test"
         - name: S3_ENDPOINT
           valueFrom:
             secretKeyRef:
