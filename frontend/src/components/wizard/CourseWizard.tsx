@@ -20,7 +20,16 @@ import {
   useDeleteWizardState,
   useCreateCourseFromOutline,
 } from '@/hooks/useCourseWizard';
-import type { SMEPersona, AudiencePersona } from '@/gen/mirai/v1/course_wizard_pb';
+import {
+  useGenerateCourseOutline,
+} from '@/hooks/useAIGeneration';
+import { useCreateCourse } from '@/hooks/useCourses';
+import {
+  getJob as getJobClient,
+  getCourseOutline as getCourseOutlineClient,
+  GenerationJobStatus,
+} from '@/lib/aiGenerationClient';
+import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
 import CourseNameStep from './steps/CourseNameStep';
@@ -37,7 +46,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 export default function CourseWizard() {
   const router = useRouter();
 
-  // API hooks
+  // API hooks - wizard generation
   const generateTitle = useGenerateTitle();
   const generateSMEPersonas = useGenerateSMEPersonas();
   const generateAudiencePersonas = useGenerateAudiencePersonas();
@@ -46,6 +55,10 @@ export default function CourseWizard() {
   const saveWizardState = useSaveWizardState();
   const deleteWizardState = useDeleteWizardState();
   const createCourseFromOutline = useCreateCourseFromOutline();
+
+  // API hooks - course & outline generation
+  const createCourse = useCreateCourse();
+  const generateCourseOutline = useGenerateCourseOutline();
 
   // Create machine with provided actors
   const machineWithActors = useMemo(() => {
@@ -95,46 +108,90 @@ export default function CourseWizard() {
             return { options: result.options };
           }
         ),
-        generateOutlineActor: fromPromise(async () => {
-          // TODO: Integrate with existing outline generation job system
-          // For now, simulate a job being created
-          return { job: { id: 'placeholder-job-id' } };
-        }),
-        pollOutlineJobActor: fromPromise(async () => {
-          // TODO: Poll actual job status
-          return { job: { id: 'placeholder-job-id', status: 3 } }; // COMPLETED
-        }),
-        getOutlineActor: fromPromise(async () => {
-          // TODO: Fetch actual outline
-          return {
-            outline: {
-              id: 'placeholder-outline-id',
-              sections: [
-                {
-                  title: 'Introduction',
-                  lessons: [
-                    { title: 'Getting Started', description: 'An overview of the course' },
-                    { title: 'Key Concepts', description: 'Understanding the fundamentals' },
-                  ],
-                },
-                {
-                  title: 'Core Content',
-                  lessons: [
-                    { title: 'Deep Dive', description: 'Exploring the main topics' },
-                    { title: 'Practical Examples', description: 'Hands-on exercises' },
-                  ],
-                },
-                {
-                  title: 'Conclusion',
-                  lessons: [
-                    { title: 'Summary', description: 'Recap of key learnings' },
-                    { title: 'Next Steps', description: 'Where to go from here' },
-                  ],
-                },
-              ],
-            },
-          };
-        }),
+        generateOutlineActor: fromPromise(
+          async ({
+            input,
+          }: {
+            input: {
+              title: string;
+              description: string;
+              smePersonas: SMEPersona[];
+              audiencePersonas: AudiencePersona[];
+              toneOption: ToneOption | undefined;
+              additionalContext: string;
+            };
+          }) => {
+            // Step 1: Create a minimal course to get a courseId
+            const courseResult = await createCourse.mutate({
+              settings: {
+                title: input.title,
+                desiredOutcome: input.description,
+              },
+            });
+
+            if (!courseResult.course?.id) {
+              throw new Error('Failed to create course');
+            }
+
+            const courseId = courseResult.course.id;
+
+            // Step 2: Generate the course outline
+            const outlineResult = await generateCourseOutline.mutate({
+              courseId,
+              desiredOutcome: input.description,
+              additionalContext: input.additionalContext || undefined,
+            });
+
+            if (!outlineResult.job?.id) {
+              throw new Error('Failed to start outline generation');
+            }
+
+            // Return both courseId and job info for later use
+            return {
+              job: {
+                id: outlineResult.job.id,
+                courseId,
+              },
+            };
+          }
+        ),
+        pollOutlineJobActor: fromPromise(
+          async ({ input }: { input: { jobId: string } }) => {
+            const job = await getJobClient(input.jobId);
+
+            return {
+              job: {
+                id: job.id,
+                status: job.status,
+                courseId: job.courseId,
+                errorMessage: job.errorMessage,
+              },
+            };
+          }
+        ),
+        getOutlineActor: fromPromise(
+          async ({ input }: { input: { jobId: string } }) => {
+            // First get the job to find the courseId
+            const job = await getJobClient(input.jobId);
+            const courseId = job.courseId;
+
+            if (!courseId) {
+              throw new Error('Job has no courseId');
+            }
+
+            // Now fetch the outline for that course
+            const outline = await getCourseOutlineClient(courseId);
+
+            if (!outline) {
+              throw new Error('Failed to fetch outline');
+            }
+
+            return {
+              outline,
+              courseId,
+            };
+          }
+        ),
         createCourseActor: fromPromise(
           async ({
             input,
@@ -174,6 +231,8 @@ export default function CourseWizard() {
     generateSMEPersonas,
     generateAudiencePersonas,
     generateToneOptions,
+    createCourse,
+    generateCourseOutline,
     createCourseFromOutline,
     saveWizardState,
     deleteWizardState,

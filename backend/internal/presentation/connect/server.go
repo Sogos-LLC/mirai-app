@@ -134,7 +134,7 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	// CourseWizardService - AI-guided course creation wizard
 	if cfg.CourseWizardService != nil {
 		path, handler = miraiv1connect.NewCourseWizardServiceHandler(
-			NewCourseWizardServiceServer(cfg.CourseWizardService),
+			NewCourseWizardServiceServer(cfg.CourseWizardService, cfg.AIGenerationService, cfg.CourseService),
 			interceptors,
 		)
 		mux.Handle(path, handler)

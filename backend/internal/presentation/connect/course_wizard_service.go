@@ -16,11 +16,21 @@ import (
 type CourseWizardServiceServer struct {
 	miraiv1connect.UnimplementedCourseWizardServiceHandler
 	wizardService *service.CourseWizardService
+	aiService     *service.AIGenerationService
+	courseService *service.CourseService
 }
 
 // NewCourseWizardServiceServer creates a new CourseWizardServiceServer.
-func NewCourseWizardServiceServer(wizardService *service.CourseWizardService) *CourseWizardServiceServer {
-	return &CourseWizardServiceServer{wizardService: wizardService}
+func NewCourseWizardServiceServer(
+	wizardService *service.CourseWizardService,
+	aiService *service.AIGenerationService,
+	courseService *service.CourseService,
+) *CourseWizardServiceServer {
+	return &CourseWizardServiceServer{
+		wizardService: wizardService,
+		aiService:     aiService,
+		courseService: courseService,
+	}
 }
 
 // GenerateTitle improves the course name and generates a description.
@@ -249,13 +259,62 @@ func (s *CourseWizardServiceServer) DeleteWizardState(
 }
 
 // CreateCourseFromOutline creates a course record after outline approval.
-// TODO: Implement this method when course creation from outline is needed.
+// This method:
+// 1. Approves the outline
+// 2. Starts background jobs to generate lesson content via GenerateAllLessons
+// 3. Cleans up wizard state
+// 4. Returns the course ID and title
 func (s *CourseWizardServiceServer) CreateCourseFromOutline(
 	ctx context.Context,
 	req *connect.Request[v1.CreateCourseFromOutlineRequest],
 ) (*connect.Response[v1.CreateCourseFromOutlineResponse], error) {
-	// This will be implemented when we integrate with the outline approval flow
-	return nil, connect.NewError(connect.CodeUnimplemented, nil)
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	outlineID, err := parseUUID(req.Msg.OutlineId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	// Step 1: Approve the outline
+	outline, err := s.aiService.ApproveCourseOutline(ctx, kratosID, outlineID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	// Step 2: Get the course to retrieve its title
+	course, err := s.courseService.GetCourse(ctx, kratosID, outline.CourseID.String())
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	courseTitle := ""
+	if course != nil {
+		courseTitle = course.Settings.Title
+	}
+
+	// Step 3: Start background jobs to generate lesson content
+	// GenerateAllLessons creates a parent FULL_COURSE job and child LESSON_CONTENT jobs
+	_, err = s.aiService.GenerateAllLessons(ctx, kratosID, outline.CourseID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	// Step 4: Clean up wizard state (ignore errors - not critical)
+	_ = s.wizardService.DeleteWizardState(ctx, kratosID)
+
+	// Return the course ID and title
+	return connect.NewResponse(&v1.CreateCourseFromOutlineResponse{
+		CourseId:    outline.CourseID.String(),
+		CourseTitle: courseTitle,
+	}), nil
 }
 
 // =============================================================================
