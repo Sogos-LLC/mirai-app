@@ -27,8 +27,8 @@ export function SignupWizard() {
     return (
       <div className="w-full max-w-md mx-auto">
         <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-4" />
-          <p className="text-slate-600">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400 mb-4" />
+          <p className="text-secondary">
             {registration.state === 'submitting'
               ? 'Processing registration...'
               : registration.state === 'redirectingToCheckout'
@@ -79,8 +79,8 @@ export function SignupWizard() {
             key={step}
             className={`text-xs font-medium ${
               index <= registration.stepIndex
-                ? 'text-indigo-600'
-                : 'text-slate-400'
+                ? 'text-indigo-600 dark:text-indigo-400'
+                : 'text-muted'
             }`}
           >
             {getStepLabel(step)}
@@ -90,8 +90,8 @@ export function SignupWizard() {
 
       {/* Error display */}
       {registration.error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700 text-sm">{registration.error}</p>
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-red-700 dark:text-red-400 text-sm">{registration.error}</p>
         </div>
       )}
 
@@ -155,7 +155,7 @@ export function SignupWizard() {
 
       {/* Debug info in development */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="mt-8 p-4 bg-slate-100 rounded text-xs font-mono">
+        <div className="mt-8 p-4 bg-hover rounded text-xs font-mono">
           <p>State: {registration.state}</p>
           <p>Step: {registration.currentStep} ({registration.stepIndex + 1}/{registration.totalSteps})</p>
         </div>
@@ -178,7 +178,7 @@ function ProgressBar({
 
   return (
     <div className="mb-6">
-      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+      <div className="h-2 bg-hover rounded-full overflow-hidden">
         <div
           className="h-full bg-indigo-600 transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}

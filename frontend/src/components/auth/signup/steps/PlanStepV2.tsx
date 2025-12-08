@@ -97,10 +97,10 @@ export function PlanStepV2({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+        <h2 className="text-2xl font-semibold text-primary mb-2">
           Choose your plan
         </h2>
-        <p className="text-slate-600">Select the plan that works best for your team.</p>
+        <p className="text-secondary">Select the plan that works best for your team.</p>
       </div>
 
       {/* Plan cards */}
@@ -114,8 +114,8 @@ export function PlanStepV2({
               w-full p-4 border-2 rounded-xl text-left transition-all relative
               ${
                 selectedPlan === plan.id
-                  ? 'border-indigo-600 bg-indigo-50'
-                  : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+                  : 'border hover:border'
               }
             `}
           >
@@ -127,17 +127,17 @@ export function PlanStepV2({
 
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="font-semibold text-slate-900">{plan.name}</h3>
-                <p className="text-sm text-slate-600 mt-1">{plan.description}</p>
+                <h3 className="font-semibold text-primary">{plan.name}</h3>
+                <p className="text-sm text-secondary mt-1">{plan.description}</p>
               </div>
               <div className="text-right">
                 {plan.price > 0 ? (
                   <>
-                    <span className="text-2xl font-bold text-slate-900">${plan.price}</span>
-                    <span className="text-slate-600">/seat/mo</span>
+                    <span className="text-2xl font-bold text-primary">${plan.price}</span>
+                    <span className="text-secondary">/seat/mo</span>
                   </>
                 ) : (
-                  <span className="text-lg font-semibold text-slate-900">Contact us</span>
+                  <span className="text-lg font-semibold text-primary">Contact us</span>
                 )}
               </div>
             </div>
@@ -145,8 +145,8 @@ export function PlanStepV2({
             {/* Features list */}
             <ul className="mt-4 space-y-2">
               {plan.features.map((feature) => (
-                <li key={feature} className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                <li key={feature} className="flex items-center gap-2 text-sm text-secondary">
+                  <Check className="h-4 w-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
                   {feature}
                 </li>
               ))}
@@ -166,18 +166,18 @@ export function PlanStepV2({
 
       {/* Seat counter (only for paid plans) */}
       {selectedPlan !== Plan.ENTERPRISE && (
-        <div className="p-4 bg-slate-50 rounded-xl">
+        <div className="p-4 bg-surface-elevated rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-slate-900">Number of seats</h4>
-              <p className="text-sm text-slate-600">Add seats for your team members</p>
+              <h4 className="font-medium text-primary">Number of seats</h4>
+              <p className="text-sm text-secondary">Add seats for your team members</p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={decrementSeats}
                 disabled={seatCount <= 1}
-                className="h-10 w-10 flex items-center justify-center border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-10 w-10 flex items-center justify-center border rounded-lg hover:bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Minus className="h-5 w-5" />
               </button>
@@ -185,7 +185,7 @@ export function PlanStepV2({
               <button
                 type="button"
                 onClick={incrementSeats}
-                className="h-10 w-10 flex items-center justify-center border border-slate-300 rounded-lg hover:bg-slate-100"
+                className="h-10 w-10 flex items-center justify-center border rounded-lg hover:bg-hover"
               >
                 <Plus className="h-5 w-5" />
               </button>
@@ -193,10 +193,10 @@ export function PlanStepV2({
           </div>
 
           {/* Price summary */}
-          <div className="mt-4 pt-4 border-t border-slate-200">
+          <div className="mt-4 pt-4 border-t">
             <div className="flex justify-between text-lg">
-              <span className="text-slate-600">Monthly total</span>
-              <span className="font-bold text-slate-900">${monthlyTotal}/month</span>
+              <span className="text-secondary">Monthly total</span>
+              <span className="font-bold text-primary">${monthlyTotal}/month</span>
             </div>
           </div>
         </div>
@@ -207,7 +207,7 @@ export function PlanStepV2({
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-secondary bg-hover hover:bg-hover transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
           Back
@@ -222,7 +222,7 @@ export function PlanStepV2({
             ${
               !isLoading && selectedPlan !== Plan.ENTERPRISE
                 ? 'bg-indigo-600 hover:bg-indigo-700'
-                : 'bg-slate-300 cursor-not-allowed'
+                : 'bg-hover cursor-not-allowed'
             }
           `}
         >

@@ -29,18 +29,18 @@ export function EmailStepV2({ defaultEmail, onSubmit, isLoading }: EmailStepV2Pr
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+        <h2 className="text-2xl font-semibold text-primary mb-2">
           Let&apos;s get started
         </h2>
-        <p className="text-slate-600">Enter your email address to begin.</p>
+        <p className="text-secondary">Enter your email address to begin.</p>
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+        <label htmlFor="email" className="block text-sm font-medium text-secondary mb-2">
           Email address
         </label>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
           <input
             {...register('email')}
             type="email"
@@ -49,14 +49,14 @@ export function EmailStepV2({ defaultEmail, onSubmit, isLoading }: EmailStepV2Pr
             autoFocus
             placeholder="you@company.com"
             className={`
-              w-full pl-10 pr-4 py-3 border rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-indigo-500
-              ${errors.email ? 'border-red-300' : 'border-slate-300'}
+              w-full pl-10 pr-4 py-3 rounded-lg
+              focus:outline-none focus:ring-2
+              ${errors.email ? 'border border-red-300 dark:border-red-700 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-surface text-primary placeholder:text-muted' : 'border bg-surface text-primary placeholder:text-muted focus:ring-indigo-500 dark:focus:ring-indigo-400'}
             `}
           />
         </div>
         {errors.email && (
-          <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
         )}
       </div>
 
@@ -69,7 +69,7 @@ export function EmailStepV2({ defaultEmail, onSubmit, isLoading }: EmailStepV2Pr
           ${
             isValid && !isLoading
               ? 'bg-indigo-600 hover:bg-indigo-700'
-              : 'bg-slate-300 cursor-not-allowed'
+              : 'bg-hover cursor-not-allowed'
           }
         `}
       >

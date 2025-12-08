@@ -56,20 +56,20 @@ export function AccountStepV2({ defaultValues, onSubmit, onBack }: AccountStepV2
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+        <h2 className="text-2xl font-semibold text-primary mb-2">
           Create your account
         </h2>
-        <p className="text-slate-600">Set up your login credentials.</p>
+        <p className="text-secondary">Set up your login credentials.</p>
       </div>
 
       {/* Name fields */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-2">
+          <label htmlFor="firstName" className="block text-sm font-medium text-secondary mb-2">
             First name
           </label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
             <input
               {...register('firstName')}
               type="text"
@@ -77,19 +77,19 @@ export function AccountStepV2({ defaultValues, onSubmit, onBack }: AccountStepV2
               autoFocus
               placeholder="John"
               className={`
-                w-full pl-10 pr-4 py-3 border rounded-lg
-                focus:outline-none focus:ring-2 focus:ring-indigo-500
-                ${errors.firstName ? 'border-red-300' : 'border-slate-300'}
+                w-full pl-10 pr-4 py-3 border rounded-lg bg-surface text-primary placeholder:text-muted
+                focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400
+                ${errors.firstName ? 'border-red-300 dark:border-red-700' : ''}
               `}
             />
           </div>
           {errors.firstName && (
-            <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.firstName.message}</p>
           )}
         </div>
 
         <div>
-          <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-2">
+          <label htmlFor="lastName" className="block text-sm font-medium text-secondary mb-2">
             Last name
           </label>
           <input
@@ -98,39 +98,39 @@ export function AccountStepV2({ defaultValues, onSubmit, onBack }: AccountStepV2
             id="lastName"
             placeholder="Doe"
             className={`
-              w-full px-4 py-3 border rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-indigo-500
-              ${errors.lastName ? 'border-red-300' : 'border-slate-300'}
+              w-full px-4 py-3 border rounded-lg bg-surface text-primary placeholder:text-muted
+              focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400
+              ${errors.lastName ? 'border-red-300 dark:border-red-700' : ''}
             `}
           />
           {errors.lastName && (
-            <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.lastName.message}</p>
           )}
         </div>
       </div>
 
       {/* Password */}
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+        <label htmlFor="password" className="block text-sm font-medium text-secondary mb-2">
           Password
         </label>
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
           <input
             {...register('password')}
             type={showPassword ? 'text' : 'password'}
             id="password"
             placeholder="Create a strong password"
             className={`
-              w-full pl-10 pr-12 py-3 border rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-indigo-500
-              ${errors.password ? 'border-red-300' : 'border-slate-300'}
+              w-full pl-10 pr-12 py-3 border rounded-lg bg-surface text-primary placeholder:text-muted
+              focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400
+              ${errors.password ? 'border-red-300 dark:border-red-700' : ''}
             `}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
           >
             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>
@@ -142,7 +142,7 @@ export function AccountStepV2({ defaultValues, onSubmit, onBack }: AccountStepV2
             <div
               key={req.label}
               className={`flex items-center gap-2 text-sm ${
-                req.met ? 'text-green-600' : 'text-slate-400'
+                req.met ? 'text-green-600 dark:text-green-400' : 'text-muted'
               }`}
             >
               {req.met ? (
@@ -158,32 +158,32 @@ export function AccountStepV2({ defaultValues, onSubmit, onBack }: AccountStepV2
 
       {/* Confirm Password */}
       <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-2">
+        <label htmlFor="confirmPassword" className="block text-sm font-medium text-secondary mb-2">
           Confirm password
         </label>
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
           <input
             {...register('confirmPassword')}
             type={showConfirmPassword ? 'text' : 'password'}
             id="confirmPassword"
             placeholder="Confirm your password"
             className={`
-              w-full pl-10 pr-12 py-3 border rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-indigo-500
-              ${errors.confirmPassword ? 'border-red-300' : 'border-slate-300'}
+              w-full pl-10 pr-12 py-3 border rounded-lg bg-surface text-primary placeholder:text-muted
+              focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400
+              ${errors.confirmPassword ? 'border-red-300 dark:border-red-700' : ''}
             `}
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
           >
             {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>
         </div>
         {errors.confirmPassword && (
-          <p className="mt-2 text-sm text-red-600">{errors.confirmPassword.message}</p>
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>
         )}
       </div>
 
@@ -192,7 +192,7 @@ export function AccountStepV2({ defaultValues, onSubmit, onBack }: AccountStepV2
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-secondary bg-hover hover:bg-hover transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
           Back
@@ -203,7 +203,7 @@ export function AccountStepV2({ defaultValues, onSubmit, onBack }: AccountStepV2
           className={`
             flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
             font-medium text-white transition-colors
-            ${isValid ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'}
+            ${isValid ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-hover cursor-not-allowed'}
           `}
         >
           Continue

@@ -14,23 +14,23 @@ export default function SignupPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       {/* Logo */}
       <a href={buildLandingUrl()} className="flex items-center gap-2 mb-8">
-        <BookOpen className="h-10 w-10 text-indigo-600" />
-        <span className="text-2xl font-bold text-slate-900">Mirai</span>
+        <BookOpen className="h-10 w-10 text-indigo-600 dark:text-indigo-400" />
+        <span className="text-2xl font-bold text-primary">Mirai</span>
       </a>
 
       {/* Wizard Card */}
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+        <div className="bg-surface rounded-2xl shadow-xl border p-8">
           <SignupWizard />
         </div>
 
         {/* Links */}
         <div className="mt-6 text-center text-sm">
-          <p className="text-slate-600">
+          <p className="text-secondary">
             Already have an account?{' '}
             <Link
               href="/auth/login"
-              className="text-indigo-600 hover:text-indigo-700 font-medium"
+              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
             >
               Sign in
             </Link>
@@ -38,13 +38,13 @@ export default function SignupPage() {
         </div>
 
         {/* Terms */}
-        <p className="mt-4 text-xs text-slate-500 text-center">
+        <p className="mt-4 text-xs text-muted text-center">
           By creating an account, you agree to our{' '}
           <a
             href={buildLandingUrl('/terms')}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline hover:text-slate-700"
+            className="underline hover:text-secondary"
           >
             Terms of Service
           </a>{' '}
@@ -53,7 +53,7 @@ export default function SignupPage() {
             href={buildLandingUrl('/privacy')}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline hover:text-slate-700"
+            className="underline hover:text-secondary"
           >
             Privacy Policy
           </a>

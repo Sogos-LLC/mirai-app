@@ -62,10 +62,10 @@ export default function PricingCards() {
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-primary mb-4">
             Simple, transparent pricing
           </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-lg text-secondary max-w-2xl mx-auto">
             Choose the plan that fits your team. Pay per seat, cancel anytime.
           </p>
         </div>
@@ -78,12 +78,12 @@ export default function PricingCards() {
               className={`rounded-2xl p-8 ${
                 tier.highlighted
                   ? 'bg-indigo-600 text-white ring-4 ring-indigo-600 ring-offset-2'
-                  : 'bg-white border border-slate-200'
+                  : 'bg-surface border'
               }`}
             >
               <h3
                 className={`text-xl font-semibold mb-2 ${
-                  tier.highlighted ? 'text-white' : 'text-slate-900'
+                  tier.highlighted ? 'text-white' : 'text-primary'
                 }`}
               >
                 {tier.name}
@@ -91,20 +91,20 @@ export default function PricingCards() {
               <div className="flex items-baseline gap-1 mb-4">
                 <span
                   className={`text-4xl font-bold ${
-                    tier.highlighted ? 'text-white' : 'text-slate-900'
+                    tier.highlighted ? 'text-white' : 'text-primary'
                   }`}
                 >
                   {tier.price}
                 </span>
                 <span
-                  className={tier.highlighted ? 'text-indigo-200' : 'text-slate-500'}
+                  className={tier.highlighted ? 'text-indigo-200' : 'text-muted'}
                 >
                   {tier.period}
                 </span>
               </div>
               <p
                 className={`mb-6 ${
-                  tier.highlighted ? 'text-indigo-100' : 'text-slate-600'
+                  tier.highlighted ? 'text-indigo-100' : 'text-secondary'
                 }`}
               >
                 {tier.description}
@@ -115,12 +115,12 @@ export default function PricingCards() {
                   <li key={feature} className="flex items-start gap-3">
                     <Check
                       className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-                        tier.highlighted ? 'text-indigo-200' : 'text-indigo-600'
+                        tier.highlighted ? 'text-indigo-200' : 'text-indigo-600 dark:text-indigo-400'
                       }`}
                     />
                     <span
                       className={
-                        tier.highlighted ? 'text-indigo-50' : 'text-slate-600'
+                        tier.highlighted ? 'text-indigo-50' : 'text-secondary'
                       }
                     >
                       {feature}

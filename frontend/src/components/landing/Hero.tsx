@@ -16,13 +16,13 @@ export default function Hero() {
         </div>
 
         {/* Headline */}
-        <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">
+        <h1 className="text-5xl sm:text-6xl font-bold text-primary mb-6 leading-tight">
           Build Engaging Courses{' '}
           <span className="text-indigo-600 dark:text-indigo-400">10x Faster</span>
         </h1>
 
         {/* Subheadline */}
-        <p className="text-xl text-slate-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-xl text-secondary mb-10 max-w-2xl mx-auto leading-relaxed">
           Mirai helps startup teams create professional learning content with
           AI assistance. From onboarding guides to product training, build
           courses that your team will actually complete.
@@ -39,14 +39,14 @@ export default function Hero() {
           </a>
           <Link
             href="/pricing"
-            className="w-full sm:w-auto bg-white dark:bg-dark-surface hover:bg-slate-50 dark:hover:bg-dark-50 text-slate-900 dark:text-white px-8 py-4 rounded-xl font-semibold text-lg border border-slate-200 dark:border-dark-border transition-colors"
+            className="w-full sm:w-auto bg-surface hover:bg-hover text-primary px-8 py-4 rounded-xl font-semibold text-lg border transition-colors"
           >
             View Pricing
           </Link>
         </div>
 
         {/* Social Proof */}
-        <p className="mt-8 text-slate-500 dark:text-gray-400 text-sm">
+        <p className="mt-8 text-muted text-sm">
           Trusted by teams at growing startups
         </p>
       </div>

@@ -41,19 +41,19 @@ export function OrgStepV2({ defaultValues, onSubmit, onBack }: OrgStepV2Props) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+        <h2 className="text-2xl font-semibold text-primary mb-2">
           Tell us about your organization
         </h2>
-        <p className="text-slate-600">This helps us customize your experience.</p>
+        <p className="text-secondary">This helps us customize your experience.</p>
       </div>
 
       {/* Company Name */}
       <div>
-        <label htmlFor="companyName" className="block text-sm font-medium text-slate-700 mb-2">
-          Company name <span className="text-red-500">*</span>
+        <label htmlFor="companyName" className="block text-sm font-medium text-secondary mb-2">
+          Company name <span className="text-red-600 dark:text-red-400">*</span>
         </label>
         <div className="relative">
-          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
           <input
             {...register('companyName')}
             type="text"
@@ -61,26 +61,26 @@ export function OrgStepV2({ defaultValues, onSubmit, onBack }: OrgStepV2Props) {
             autoFocus
             placeholder="Acme Inc."
             className={`
-              w-full pl-10 pr-4 py-3 border rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-indigo-500
-              ${errors.companyName ? 'border-red-300' : 'border-slate-300'}
+              w-full pl-10 pr-4 py-3 rounded-lg
+              focus:outline-none focus:ring-2
+              ${errors.companyName ? 'border border-red-300 dark:border-red-700 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-surface text-primary placeholder:text-muted' : 'border bg-surface text-primary placeholder:text-muted focus:ring-indigo-500 dark:focus:ring-indigo-400'}
             `}
           />
         </div>
         {errors.companyName && (
-          <p className="mt-2 text-sm text-red-600">{errors.companyName.message}</p>
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.companyName.message}</p>
         )}
       </div>
 
       {/* Industry (optional) */}
       <div>
-        <label htmlFor="industry" className="block text-sm font-medium text-slate-700 mb-2">
-          Industry <span className="text-slate-400">(optional)</span>
+        <label htmlFor="industry" className="block text-sm font-medium text-secondary mb-2">
+          Industry <span className="text-muted">(optional)</span>
         </label>
         <select
           {...register('industry')}
           id="industry"
-          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-4 py-3 border bg-surface text-primary placeholder:text-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
         >
           <option value="">Select industry</option>
           {INDUSTRIES.map((industry) => (
@@ -93,13 +93,13 @@ export function OrgStepV2({ defaultValues, onSubmit, onBack }: OrgStepV2Props) {
 
       {/* Team Size (optional) */}
       <div>
-        <label htmlFor="teamSize" className="block text-sm font-medium text-slate-700 mb-2">
-          Team size <span className="text-slate-400">(optional)</span>
+        <label htmlFor="teamSize" className="block text-sm font-medium text-secondary mb-2">
+          Team size <span className="text-muted">(optional)</span>
         </label>
         <select
           {...register('teamSize')}
           id="teamSize"
-          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-4 py-3 border bg-surface text-primary placeholder:text-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
         >
           <option value="">Select team size</option>
           {TEAM_SIZES.map((size) => (
@@ -115,7 +115,7 @@ export function OrgStepV2({ defaultValues, onSubmit, onBack }: OrgStepV2Props) {
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-secondary bg-hover hover:bg-hover transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
           Back
@@ -126,7 +126,7 @@ export function OrgStepV2({ defaultValues, onSubmit, onBack }: OrgStepV2Props) {
           className={`
             flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
             font-medium text-white transition-colors
-            ${isValid ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'}
+            ${isValid ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-hover cursor-not-allowed'}
           `}
         >
           Continue
