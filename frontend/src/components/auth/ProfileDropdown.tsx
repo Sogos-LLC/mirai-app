@@ -45,8 +45,8 @@ export default function ProfileDropdown({ isProtectedPage = false }: ProfileDrop
     if (!isInitialized || !user) {
       return (
         <div className="flex items-center gap-2 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
-          <div className="hidden sm:block w-20 h-4 bg-slate-200 rounded animate-pulse" />
+          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-dark-50 animate-pulse" />
+          <div className="hidden sm:block w-20 h-4 bg-slate-200 dark:bg-dark-50 rounded animate-pulse" />
         </div>
       );
     }
@@ -55,7 +55,7 @@ export default function ProfileDropdown({ isProtectedPage = false }: ProfileDrop
     return (
       <Link
         href="/auth/login"
-        className="text-slate-600 hover:text-slate-900 font-medium transition-colors"
+        className="text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-gray-100 font-medium transition-colors"
       >
         Sign In
       </Link>
@@ -75,18 +75,18 @@ export default function ProfileDropdown({ isProtectedPage = false }: ProfileDrop
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-50 transition-colors"
       >
         {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-medium">
           {initials}
         </div>
         {/* Name (hidden on small screens) */}
-        <span className="hidden sm:block text-sm font-medium text-slate-700 max-w-32 truncate">
+        <span className="hidden sm:block text-sm font-medium text-slate-700 dark:text-gray-300 max-w-32 truncate">
           {displayName}
         </span>
         <ChevronDown
-          className={`h-4 w-4 text-slate-500 transition-transform ${
+          className={`h-4 w-4 text-slate-500 dark:text-gray-400 transition-transform ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
@@ -94,11 +94,11 @@ export default function ProfileDropdown({ isProtectedPage = false }: ProfileDrop
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-dark-surface-elevated rounded-lg shadow-lg border border-slate-200 dark:border-dark-border py-1 z-50">
           {/* User Info */}
-          <div className="px-4 py-3 border-b border-slate-100">
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-dark-border">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-slate-900 truncate">
+              <p className="text-sm font-medium text-slate-900 dark:text-gray-100 truncate">
                 {displayName}
               </p>
               {backendUser && (
@@ -107,9 +107,9 @@ export default function ProfileDropdown({ isProtectedPage = false }: ProfileDrop
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 truncate">{user.traits?.email}</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400 truncate">{user.traits?.email}</p>
             {user.traits?.company?.name && (
-              <p className="text-xs text-slate-400 truncate mt-1">
+              <p className="text-xs text-slate-400 dark:text-gray-500 truncate mt-1">
                 {user.traits.company.name}
               </p>
             )}
@@ -120,27 +120,27 @@ export default function ProfileDropdown({ isProtectedPage = false }: ProfileDrop
             <Link
               href="/auth/settings"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-dark-50 transition-colors"
             >
-              <User className="h-4 w-4 text-slate-400" />
+              <User className="h-4 w-4 text-slate-400 dark:text-gray-500" />
               Profile
             </Link>
             <Link
               href="/settings"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-dark-50 transition-colors"
             >
-              <Settings className="h-4 w-4 text-slate-400" />
+              <Settings className="h-4 w-4 text-slate-400 dark:text-gray-500" />
               Settings
             </Link>
           </div>
 
           {/* Logout */}
-          <div className="border-t border-slate-100 py-1">
+          <div className="border-t border-slate-100 dark:border-dark-border py-1">
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoggingOut ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

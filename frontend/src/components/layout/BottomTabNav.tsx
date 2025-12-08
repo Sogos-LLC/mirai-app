@@ -58,7 +58,7 @@ export function BottomTabNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 safe-area-bottom"
+      className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-dark-surface border-t border-gray-200 dark:border-dark-border safe-area-bottom transition-colors"
       style={{ height: 'calc(var(--bottom-nav-height) + var(--safe-area-bottom))' }}
     >
       <div className="flex items-center justify-around h-16 px-2">
@@ -76,7 +76,7 @@ export function BottomTabNav() {
                 <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 transition-colors">
                   {item.icon}
                 </div>
-                <span className="text-xs mt-1 text-gray-600">{item.label}</span>
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">{item.label}</span>
               </Link>
             );
           }
@@ -90,14 +90,14 @@ export function BottomTabNav() {
                 min-w-[64px] py-2 px-3
                 transition-colors
                 ${isActive
-                  ? 'text-primary-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'text-primary-600 dark:text-primary-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }
               `}
             >
               <div className={`
                 flex items-center justify-center w-6 h-6
-                ${isActive ? 'text-primary-600' : ''}
+                ${isActive ? 'text-primary-600 dark:text-primary-400' : ''}
               `}>
                 {item.icon}
               </div>

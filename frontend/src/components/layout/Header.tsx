@@ -40,13 +40,13 @@ export default function Header({ title }: HeaderProps) {
   const cancelJob = useCancelJob();
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
+    <header className="sticky top-0 z-30 bg-white dark:bg-dark-surface border-b border-gray-200 dark:border-dark-border px-4 lg:px-6 py-4 transition-colors">
       <div className="flex items-center justify-between">
         {/* Hamburger menu (mobile devices only) */}
         {isMobile && (
           <button
             onClick={toggleMobileSidebar}
-            className="touch-target flex items-center justify-center p-2 -ml-2 mr-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="touch-target flex items-center justify-center p-2 -ml-2 mr-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-dark-50 rounded-lg transition-colors"
             aria-label="Open navigation menu"
           >
             <Menu className="w-6 h-6" />
@@ -55,8 +55,8 @@ export default function Header({ title }: HeaderProps) {
 
         {/* Logo / Brand */}
         <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 lg:h-6 lg:w-6 text-indigo-600" />
-          <span className="text-base lg:text-lg font-semibold text-gray-900">
+          <BookOpen className="h-5 w-5 lg:h-6 lg:w-6 text-indigo-600 dark:text-primary-400" />
+          <span className="text-base lg:text-lg font-semibold text-gray-900 dark:text-gray-100">
             {title || 'Mirai'}
           </span>
         </div>

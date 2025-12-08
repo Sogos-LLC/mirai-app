@@ -10,7 +10,9 @@
    =================================== */
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    @apply transition-colors duration-200;
   }
 }
 
@@ -46,6 +48,36 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
+
+  /* Light theme colors */
+  --bg-page: #f9fafb;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-hover: #f3f4f6;
+  --bg-active: #ede9fe;
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e5e7eb;
+}
+
+.dark {
+  /* Dark theme colors - purple-tinted */
+  --bg-page: #0f0d15;
+  --bg-surface: #1a1625;
+  --bg-surface-elevated: #221e30;
+  --bg-hover: #2a2640;
+  --bg-active: #352f4d;
+  --border-default: #3d3650;
+  --border-subtle: #2a2540;
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --sidebar-bg: #13101c;
+  --sidebar-border: #2a2540;
 }
 
 /* ===================================
@@ -57,11 +89,11 @@
   left: 0;
   height: 100vh;
   width: var(--sidebar-width-expanded);
-  background: white;
-  border-right: 1px solid #e5e7eb;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
-  transition: width var(--sidebar-transition-speed);
+  transition: width var(--sidebar-transition-speed), background-color 0.2s, border-color 0.2s;
   overflow: visible;
   z-index: 40;
 }
@@ -95,7 +127,7 @@
 
 .sidebar-brand {
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 /* ===================================
@@ -107,18 +139,19 @@
   right: -12px;
   width: 24px;
   height: 24px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 50;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
 .sidebar-toggle:hover {
-  background: #f9fafb;
+  background: var(--bg-hover);
 }
 
 /* ===================================
@@ -139,24 +172,28 @@
   gap: 12px;
   height: 40px;
   padding: 0 12px;
-  color: #374151;
+  color: var(--text-secondary);
   background: transparent;
   border: none;
   border-radius: 8px;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
   width: 100%;
   text-align: left;
 }
 
 .menu-item:hover {
-  background: #f3f4f6;
+  background: var(--bg-hover);
 }
 
 .menu-item.active {
-  background: #ede9fe;
-  color: #6d28d9;
+  background: var(--bg-active);
+  color: #a78bfa;
+}
+
+.dark .menu-item.active {
+  color: #c4b5fd;
 }
 
 .menu-icon {
@@ -183,7 +220,7 @@
 .recents-title {
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-muted);
   text-transform: uppercase;
   padding: 0 12px;
   margin-bottom: 8px;
@@ -195,7 +232,7 @@
   gap: 12px;
   height: 40px;
   padding: 0 12px;
-  color: #374151;
+  color: var(--text-secondary);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -207,14 +244,14 @@
 }
 
 .recent-item:hover {
-  background: #f3f4f6;
+  background: var(--bg-hover);
 }
 
 .recent-dot {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #d1d5db;
+  background: var(--border-default);
   flex-shrink: 0;
 }
 
@@ -222,7 +259,7 @@
    Sidebar Bottom Section
    =================================== */
 .sidebar-bottom {
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-default);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -373,6 +410,10 @@
   inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 40;
+}
+
+.dark .backdrop-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 /* Safe area padding utilities */

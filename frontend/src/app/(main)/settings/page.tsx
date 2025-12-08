@@ -5,6 +5,7 @@ import { User, Bell, Lock, Palette, Globe, CreditCard, Users, ChevronRight, Spar
 import BillingSettings from '@/components/settings/BillingSettings';
 import TeamSettings from '@/components/settings/TeamSettings';
 import { AISettingsPanel } from '@/components/settings/AISettingsPanel';
+import AppearanceSettings from '@/components/settings/AppearanceSettings';
 import {
   useGetAISettings,
   useSetAPIKey,
@@ -42,13 +43,13 @@ function AISettingsContainer() {
   if (settingsError || usageError) {
     return (
       <div>
-        <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">
+        <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 lg:mb-6">
           AI Settings
         </h2>
         <div className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load AI settings</h3>
-          <p className="text-gray-600">Please try again later or contact support if the issue persists.</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Failed to load AI settings</h3>
+          <p className="text-gray-600 dark:text-gray-400">Please try again later or contact support if the issue persists.</p>
         </div>
       </div>
     );
@@ -98,15 +99,15 @@ export default function SettingsPage() {
     <>
       {/* Page Header */}
       <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-1 lg:mb-2">Settings</h1>
-        <p className="text-sm lg:text-base text-gray-600">Manage your account and preferences</p>
+        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1 lg:mb-2">Settings</h1>
+        <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">Manage your account and preferences</p>
       </div>
 
       {/* Main Content */}
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
         {/* Mobile: Tab Menu (full screen list) */}
         <div className={`lg:hidden ${showMobileMenu ? 'block' : 'hidden'}`}>
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden">
             {tabs.map((tab, idx) => {
               const Icon = tab.icon;
               const isLast = idx === tabs.length - 1;
@@ -114,20 +115,20 @@ export default function SettingsPage() {
                 <button
                   key={tab.id}
                   onClick={() => handleTabSelect(tab.id)}
-                  className={`w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors ${
-                    !isLast ? 'border-b border-gray-100' : ''
+                  className={`w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 dark:hover:bg-dark-50 active:bg-gray-100 dark:active:bg-dark-100 transition-colors ${
+                    !isLast ? 'border-b border-gray-100 dark:border-dark-border' : ''
                   }`}
                 >
                   <div className={`p-2 rounded-lg ${
-                    activeTab === tab.id ? 'bg-primary-100' : 'bg-gray-100'
+                    activeTab === tab.id ? 'bg-primary-100 dark:bg-primary-900/30' : 'bg-gray-100 dark:bg-dark-50'
                   }`}>
                     <Icon className={`w-5 h-5 ${
-                      activeTab === tab.id ? 'text-primary-600' : 'text-gray-600'
+                      activeTab === tab.id ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'
                     }`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">{tab.label}</p>
-                    <p className="text-sm text-gray-500 truncate">{tab.description}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{tab.label}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{tab.description}</p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 </button>
@@ -141,14 +142,14 @@ export default function SettingsPage() {
           {/* Back button */}
           <button
             onClick={handleBackToMenu}
-            className="flex items-center gap-2 text-primary-600 font-medium mb-4 min-h-[44px]"
+            className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-medium mb-4 min-h-[44px]"
           >
             <ChevronRight className="w-5 h-5 rotate-180" />
             Back to Settings
           </button>
 
           {/* Content card */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-4">
             {renderTabContent()}
           </div>
         </div>
@@ -164,8 +165,8 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-primary-100 text-primary-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-50'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -177,7 +178,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Desktop: Content Panel */}
-        <div className="hidden lg:block flex-1 bg-white border border-gray-200 rounded-xl p-8">
+        <div className="hidden lg:block flex-1 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-8">
           {renderTabContent()}
         </div>
       </div>
@@ -189,37 +190,37 @@ export default function SettingsPage() {
       case 'profile':
         return (
           <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 lg:mb-6">
               Profile Settings
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Full Name
                 </label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white dark:bg-dark-surface-elevated text-gray-900 dark:text-gray-100"
                   placeholder="John Doe"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email
                 </label>
                 <input
                   type="email"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white dark:bg-dark-surface-elevated text-gray-900 dark:text-gray-100"
                   placeholder="john@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Bio
                 </label>
                 <textarea
                   rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white dark:bg-dark-surface-elevated text-gray-900 dark:text-gray-100"
                   placeholder="Tell us about yourself..."
                 />
               </div>
@@ -236,7 +237,7 @@ export default function SettingsPage() {
       case 'notifications':
         return (
           <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 lg:mb-6">
               Notification Preferences
             </h2>
             <div className="space-y-1">
@@ -248,15 +249,15 @@ export default function SettingsPage() {
               ].map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0"
+                  className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-dark-border last:border-0"
                 >
                   <div className="flex-1 min-w-0 pr-4">
-                    <p className="font-medium text-gray-900">{item.label}</p>
-                    <p className="text-sm text-gray-500">{item.desc}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{item.label}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                     <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    <div className="w-11 h-6 bg-gray-200 dark:bg-dark-50 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-dark-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                   </label>
                 </div>
               ))}
@@ -267,39 +268,39 @@ export default function SettingsPage() {
       case 'security':
         return (
           <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 lg:mb-6">
               Security Settings
             </h2>
             <div className="space-y-6">
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Change Password</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Change Password</h3>
                 <div className="space-y-3">
                   <input
                     type="password"
                     placeholder="Current password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-dark-border rounded-lg text-base bg-white dark:bg-dark-surface-elevated text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   />
                   <input
                     type="password"
                     placeholder="New password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-dark-border rounded-lg text-base bg-white dark:bg-dark-surface-elevated text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   />
                   <input
                     type="password"
                     placeholder="Confirm new password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-dark-border rounded-lg text-base bg-white dark:bg-dark-surface-elevated text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   />
                   <button className="w-full bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 font-medium">
                     Update Password
                   </button>
                 </div>
               </div>
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="font-semibold text-gray-900 mb-2">Two-Factor Authentication</h3>
-                <p className="text-sm text-gray-600 mb-4">
+              <div className="border-t border-gray-200 dark:border-dark-border pt-6">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Two-Factor Authentication</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Add an extra layer of security to your account
                 </p>
-                <button className="w-full border border-primary-600 text-primary-600 px-6 py-3 rounded-lg hover:bg-primary-50 font-medium">
+                <button className="w-full border border-primary-600 text-primary-600 dark:text-primary-400 px-6 py-3 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 font-medium">
                   Enable 2FA
                 </button>
               </div>
@@ -308,46 +309,20 @@ export default function SettingsPage() {
         );
 
       case 'appearance':
-        return (
-          <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">
-              Appearance
-            </h2>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Theme</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {['Light', 'Dark', 'System'].map((theme) => (
-                  <button
-                    key={theme}
-                    className="border-2 border-gray-300 rounded-lg p-3 hover:border-primary-600 transition-colors"
-                  >
-                    <div
-                      className={`h-16 rounded mb-2 ${
-                        theme === 'Dark'
-                          ? 'bg-gray-800'
-                          : 'bg-white border border-gray-200'
-                      }`}
-                    ></div>
-                    <p className="font-medium text-center text-sm">{theme}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
+        return <AppearanceSettings />;
 
       case 'language':
         return (
           <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 lg:mb-6">
               Language & Region
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Language
                 </label>
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base bg-white">
+                <select className="w-full px-4 py-3 border border-gray-300 dark:border-dark-border rounded-lg text-base bg-white dark:bg-dark-surface-elevated text-gray-900 dark:text-gray-100">
                   <option>English (US)</option>
                   <option>Spanish</option>
                   <option>French</option>
@@ -356,10 +331,10 @@ export default function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Timezone
                 </label>
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base bg-white">
+                <select className="w-full px-4 py-3 border border-gray-300 dark:border-dark-border rounded-lg text-base bg-white dark:bg-dark-surface-elevated text-gray-900 dark:text-gray-100">
                   <option>Eastern Time (ET)</option>
                   <option>Central Time (CT)</option>
                   <option>Mountain Time (MT)</option>
