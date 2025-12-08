@@ -19,7 +19,7 @@ import (
 
 // ExportTaskEnqueuer enqueues export background tasks.
 type ExportTaskEnqueuer interface {
-	EnqueueCourseExport(exportID string) error
+	EnqueueCourseExport(exportID, tenantID string) error
 }
 
 // ExportStorage abstracts storage operations for exports.
@@ -141,7 +141,7 @@ func (s *CourseExportService) ExportCourse(ctx context.Context, kratosID uuid.UU
 
 	// Push: Enqueue for immediate processing (if task enqueuer available)
 	if s.taskEnqueuer != nil {
-		if err := s.taskEnqueuer.EnqueueCourseExport(export.ID.String()); err != nil {
+		if err := s.taskEnqueuer.EnqueueCourseExport(export.ID.String(), export.TenantID.String()); err != nil {
 			log.Warn("failed to enqueue export job, will be picked up by poll", "error", err)
 		}
 	}

@@ -80,8 +80,8 @@ func (c *Client) EnqueueAIGeneration(jobID, jobType string) error {
 }
 
 // EnqueueCourseExport enqueues a course export task.
-func (c *Client) EnqueueCourseExport(exportID string) error {
-	task, err := worker.NewCourseExportTask(exportID)
+func (c *Client) EnqueueCourseExport(exportID, tenantID string) error {
+	task, err := worker.NewCourseExportTask(exportID, tenantID)
 	if err != nil {
 		c.logger.Error("failed to create course export task", "error", err)
 		return err
@@ -91,6 +91,7 @@ func (c *Client) EnqueueCourseExport(exportID string) error {
 	if err != nil {
 		c.logger.Error("failed to enqueue course export task",
 			"exportID", exportID,
+			"tenantID", tenantID,
 			"error", err,
 		)
 		return err
@@ -100,6 +101,7 @@ func (c *Client) EnqueueCourseExport(exportID string) error {
 		"taskID", info.ID,
 		"queue", info.Queue,
 		"exportID", exportID,
+		"tenantID", tenantID,
 	)
 	return nil
 }

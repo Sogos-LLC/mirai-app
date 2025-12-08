@@ -40,6 +40,7 @@ type AIGenerationPayload struct {
 // CourseExportPayload contains data for course export jobs
 type CourseExportPayload struct {
 	ExportID string `json:"export_id"`
+	TenantID string `json:"tenant_id"`
 }
 
 // NewStripeProvisionTask creates a new Stripe provisioning task
@@ -83,9 +84,10 @@ func NewAIGenerationPollTask() *asynq.Task {
 }
 
 // NewCourseExportTask creates a new course export task
-func NewCourseExportTask(exportID string) (*asynq.Task, error) {
+func NewCourseExportTask(exportID, tenantID string) (*asynq.Task, error) {
 	payload, err := json.Marshal(CourseExportPayload{
 		ExportID: exportID,
+		TenantID: tenantID,
 	})
 	if err != nil {
 		return nil, err

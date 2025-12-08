@@ -215,6 +215,7 @@ func (h *Handlers) HandleCourseExport(ctx context.Context, t *asynq.Task) error 
 	log := h.logger.With(
 		"task", worker.TypeCourseExport,
 		"exportID", payload.ExportID,
+		"tenantID", payload.TenantID,
 	)
 	log.Info("processing course export task")
 
@@ -224,8 +225,11 @@ func (h *Handlers) HandleCourseExport(ctx context.Context, t *asynq.Task) error 
 		return nil
 	}
 
+	// Set up tenant context from payload for RLS isolation
+	tenantCtx := tenant.WithTenantID(ctx, parseUUID(payload.TenantID))
+
 	// Call the export service to process this specific export
-	err := h.exportService.ProcessExport(ctx, parseUUID(payload.ExportID))
+	err := h.exportService.ProcessExport(tenantCtx, parseUUID(payload.ExportID))
 	if err != nil {
 		log.Error("failed to process course export", "error", err)
 		return err
