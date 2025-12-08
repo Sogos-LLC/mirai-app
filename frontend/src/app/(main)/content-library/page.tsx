@@ -432,12 +432,12 @@ export default function ContentLibrary() {
       {/* Two-column layout - stacked on mobile */}
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
         {/* Left: Folder Sidebar (hidden on mobile - use sheet instead) */}
-        <div className="hidden lg:block w-80 bg-primary-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-4 h-[calc(100vh-200px)] overflow-y-auto">
+        <div className="hidden lg:block w-80 bg-primary-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-4 max-h-[calc(100vh-280px)] overflow-y-auto">
           {folderListContent}
         </div>
 
         {/* Right: Main Content */}
-        <div className="flex-1 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-4 lg:p-6">
+        <div className="flex-1 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-4 lg:p-6 max-h-[calc(100vh-280px)] overflow-y-auto">
           <div className="mb-4 lg:mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
