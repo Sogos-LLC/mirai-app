@@ -19,7 +19,7 @@ export function EnterpriseContactV2({
   error,
 }: EnterpriseContactV2Props) {
   return (
-    <div className="w-full max-w-md mx-auto space-y-6">
+    <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-primary mb-2">
           Contact our sales team

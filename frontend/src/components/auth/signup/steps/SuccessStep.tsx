@@ -11,7 +11,7 @@ interface SuccessStepProps {
 export function SuccessStep({ isEnterprise, companyName }: SuccessStepProps) {
   if (isEnterprise) {
     return (
-      <div className="w-full max-w-md mx-auto text-center py-8">
+      <div className="text-center py-8">
         <div className="inline-flex items-center justify-center h-16 w-16 bg-green-100 dark:bg-green-900/30 rounded-full mb-6">
           <Mail className="h-8 w-8 text-green-600 dark:text-green-400" />
         </div>
@@ -36,7 +36,7 @@ export function SuccessStep({ isEnterprise, companyName }: SuccessStepProps) {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto text-center py-8">
+    <div className="text-center py-8">
       <div className="inline-flex items-center justify-center h-16 w-16 bg-green-100 dark:bg-green-900/30 rounded-full mb-6">
         <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
       </div>

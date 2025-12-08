@@ -19,10 +19,8 @@ export default function SignupPage() {
       </a>
 
       {/* Wizard Card */}
-      <div className="w-full max-w-md">
-        <div className="bg-surface rounded-2xl shadow-xl border p-8">
-          <SignupWizard />
-        </div>
+      <div className="w-full max-w-4xl">
+        <SignupWizard />
 
         {/* Links */}
         <div className="mt-6 text-center text-sm">

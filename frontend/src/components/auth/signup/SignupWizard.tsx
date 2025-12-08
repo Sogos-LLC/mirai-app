@@ -26,15 +26,17 @@ export function SignupWizard() {
   if (registration.isLoading && !registration.isEmailStep) {
     return (
       <div className="w-full max-w-md mx-auto">
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400 mb-4" />
-          <p className="text-secondary">
-            {registration.state === 'submitting'
-              ? 'Processing registration...'
-              : registration.state === 'redirectingToCheckout'
-                ? 'Redirecting to payment...'
-                : 'Please wait...'}
-          </p>
+        <div className="bg-surface rounded-2xl shadow-xl border p-8">
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400 mb-4" />
+            <p className="text-secondary">
+              {registration.state === 'submitting'
+                ? 'Processing registration...'
+                : registration.state === 'redirectingToCheckout'
+                  ? 'Redirecting to payment...'
+                  : 'Please wait...'}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -43,23 +45,31 @@ export function SignupWizard() {
   // Success states
   if (registration.isSuccess || registration.isEnterpriseSuccess) {
     return (
-      <SuccessStep
-        isEnterprise={registration.isEnterpriseSuccess}
-        companyName={registration.data.companyName}
-      />
+      <div className="w-full max-w-md mx-auto">
+        <div className="bg-surface rounded-2xl shadow-xl border p-8">
+          <SuccessStep
+            isEnterprise={registration.isEnterpriseSuccess}
+            companyName={registration.data.companyName}
+          />
+        </div>
+      </div>
     );
   }
 
   // Enterprise contact form (side flow)
   if (registration.isEnterpriseContact) {
     return (
-      <EnterpriseContactV2
-        data={registration.data}
-        onCancel={registration.cancelEnterprise}
-        onSubmit={registration.submit}
-        isLoading={registration.isLoading}
-        error={registration.error}
-      />
+      <div className="w-full max-w-md mx-auto">
+        <div className="bg-surface rounded-2xl shadow-xl border p-8">
+          <EnterpriseContactV2
+            data={registration.data}
+            onCancel={registration.cancelEnterprise}
+            onSubmit={registration.submit}
+            isLoading={registration.isLoading}
+            error={registration.error}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -71,100 +81,102 @@ export function SignupWizard() {
 
   return (
     <div className={containerClass}>
-      {/* Progress indicator */}
-      <ProgressBar
-        currentStep={registration.stepIndex}
-        totalSteps={registration.totalSteps}
-      />
+      <div className="bg-surface rounded-2xl shadow-xl border p-8">
+        {/* Progress indicator */}
+        <ProgressBar
+          currentStep={registration.stepIndex}
+          totalSteps={registration.totalSteps}
+        />
 
-      {/* Step labels */}
-      <div className="flex justify-between mb-8 px-2">
-        {STEPS.map((step, index) => (
-          <span
-            key={step}
-            className={`text-xs font-medium ${
-              index <= registration.stepIndex
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-muted'
-            }`}
-          >
-            {getStepLabel(step)}
-          </span>
-        ))}
+        {/* Step labels */}
+        <div className="flex justify-between mb-8 px-2">
+          {STEPS.map((step, index) => (
+            <span
+              key={step}
+              className={`text-xs font-medium ${
+                index <= registration.stepIndex
+                  ? 'text-indigo-600 dark:text-indigo-400'
+                  : 'text-muted'
+              }`}
+            >
+              {getStepLabel(step)}
+            </span>
+          ))}
+        </div>
+
+        {/* Error display */}
+        {registration.error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-red-700 dark:text-red-400 text-sm">{registration.error}</p>
+          </div>
+        )}
+
+        {/* Current step */}
+        {registration.isEmailStep && (
+          <EmailStepV2
+            defaultEmail={registration.data.email}
+            onSubmit={(email) => {
+              registration.setEmail(email);
+              registration.next();
+            }}
+            isLoading={registration.state === 'checkingEmail'}
+          />
+        )}
+
+        {registration.isOrgStep && (
+          <OrgStepV2
+            defaultValues={{
+              companyName: registration.data.companyName,
+              industry: registration.data.industry,
+              teamSize: registration.data.teamSize,
+            }}
+            onSubmit={(data) => {
+              registration.setOrg(data.companyName, data.industry, data.teamSize);
+              registration.next();
+            }}
+            onBack={registration.back}
+          />
+        )}
+
+        {registration.isAccountStep && (
+          <AccountStepV2
+            defaultValues={{
+              firstName: registration.data.firstName,
+              lastName: registration.data.lastName,
+              password: registration.data.password,
+            }}
+            onSubmit={(data) => {
+              registration.setAccount(data.firstName, data.lastName, data.password);
+              registration.next();
+            }}
+            onBack={registration.back}
+          />
+        )}
+
+        {registration.isPlanStep && (
+          <PlanStepV2
+            defaultValues={{
+              plan: registration.data.plan,
+              seatCount: registration.data.seatCount,
+            }}
+            onSubmit={(data) => {
+              registration.setPlan(data.plan, data.seatCount);
+              registration.submit();
+            }}
+            onBack={registration.back}
+            onSelectEnterprise={registration.selectEnterprise}
+            isLoading={registration.isLoading}
+          />
+        )}
+
+        {/* Debug info in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 p-4 bg-hover rounded text-xs font-mono">
+            <p>State: {registration.state}</p>
+            <p>Step: {registration.currentStep} ({registration.stepIndex + 1}/{registration.totalSteps})</p>
+          </div>
+        )}
       </div>
-
-      {/* Error display */}
-      {registration.error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-red-700 dark:text-red-400 text-sm">{registration.error}</p>
-        </div>
-      )}
-
-      {/* Current step */}
-      {registration.isEmailStep && (
-        <EmailStepV2
-          defaultEmail={registration.data.email}
-          onSubmit={(email) => {
-            registration.setEmail(email);
-            registration.next();
-          }}
-          isLoading={registration.state === 'checkingEmail'}
-        />
-      )}
-
-      {registration.isOrgStep && (
-        <OrgStepV2
-          defaultValues={{
-            companyName: registration.data.companyName,
-            industry: registration.data.industry,
-            teamSize: registration.data.teamSize,
-          }}
-          onSubmit={(data) => {
-            registration.setOrg(data.companyName, data.industry, data.teamSize);
-            registration.next();
-          }}
-          onBack={registration.back}
-        />
-      )}
-
-      {registration.isAccountStep && (
-        <AccountStepV2
-          defaultValues={{
-            firstName: registration.data.firstName,
-            lastName: registration.data.lastName,
-            password: registration.data.password,
-          }}
-          onSubmit={(data) => {
-            registration.setAccount(data.firstName, data.lastName, data.password);
-            registration.next();
-          }}
-          onBack={registration.back}
-        />
-      )}
-
-      {registration.isPlanStep && (
-        <PlanStepV2
-          defaultValues={{
-            plan: registration.data.plan,
-            seatCount: registration.data.seatCount,
-          }}
-          onSubmit={(data) => {
-            registration.setPlan(data.plan, data.seatCount);
-            registration.submit();
-          }}
-          onBack={registration.back}
-          onSelectEnterprise={registration.selectEnterprise}
-          isLoading={registration.isLoading}
-        />
-      )}
-
-      {/* Debug info in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-8 p-4 bg-hover rounded text-xs font-mono">
-          <p>State: {registration.state}</p>
-          <p>Step: {registration.currentStep} ({registration.stepIndex + 1}/{registration.totalSteps})</p>
-        </div>
-      )}
     </div>
   );
 }
