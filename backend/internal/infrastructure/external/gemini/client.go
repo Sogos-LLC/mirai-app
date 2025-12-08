@@ -261,8 +261,11 @@ func (c *Client) GenerateCourseOutline(ctx context.Context, req service.Generate
 	}, nil
 }
 
-// GenerateLessonContent generates content for a single lesson.
+// GenerateLessonContent generates content for a single lesson using iterative component generation.
+// This approach generates components one at a time to avoid JSON parsing failures from large responses.
 func (c *Client) GenerateLessonContent(ctx context.Context, req service.GenerateLessonRequest) (*service.GenerateLessonResult, error) {
+	var totalTokensUsed int64
+
 	// Check for cancellation at start
 	select {
 	case <-ctx.Done():
@@ -270,49 +273,103 @@ func (c *Client) GenerateLessonContent(ctx context.Context, req service.Generate
 	default:
 	}
 
-	prompt := buildLessonPrompt(req)
-
-	config := &genai.GenerateContentConfig{
-		ResponseMIMEType:  "application/json",
-		ResponseJsonSchema: lessonContentSchema(),
+	// Step 1: Plan components (get type + purpose for each)
+	planPrompt := buildComponentPlanPrompt(req)
+	planConfig := &genai.GenerateContentConfig{
+		ResponseMIMEType:   "application/json",
+		ResponseJsonSchema: componentPlanSchema(),
 	}
 
-	result, err := c.generateWithRetry(ctx, "generate lesson content", func() (*genai.GenerateContentResponse, error) {
-		return c.client.Models.GenerateContent(
-			ctx,
-			c.model,
-			genai.Text(prompt),
-			config,
-		)
+	planResult, err := c.generateWithRetry(ctx, "plan lesson components", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(ctx, c.model, genai.Text(planPrompt), planConfig)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate lesson content: %w", err)
+		return nil, fmt.Errorf("failed to plan lesson components: %w", err)
+	}
+	totalTokensUsed += extractTokensUsed(planResult)
+
+	var plan componentPlanResponse
+	if err := json.Unmarshal([]byte(planResult.Text()), &plan); err != nil {
+		return nil, fmt.Errorf("failed to parse component plan: %w", err)
 	}
 
-	// Parse the structured response
-	var lessonResp lessonContentResponse
-	if err := json.Unmarshal([]byte(result.Text()), &lessonResp); err != nil {
-		return nil, fmt.Errorf("failed to parse lesson response: %w", err)
-	}
+	// Step 2: Generate each component individually
+	var components []service.LessonComponentResult
+	var previousComponentsContext strings.Builder
 
-	// Convert to domain result - transform flat schema to nested contentJSON
-	components := make([]service.LessonComponentResult, len(lessonResp.Components))
-	for i, comp := range lessonResp.Components {
-		contentJSON, err := comp.toContentJSON()
+	for i, planned := range plan.Components {
+		// Check for cancellation before each component
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("lesson generation cancelled after %d components: %w", i, ctx.Err())
+		default:
+		}
+
+		// Build prompt for this single component
+		compPrompt := buildSingleComponentPrompt(req, planned, previousComponentsContext.String())
+		compSchema := singleComponentSchema(planned.ComponentType)
+		compConfig := &genai.GenerateContentConfig{
+			ResponseMIMEType:   "application/json",
+			ResponseJsonSchema: compSchema,
+		}
+
+		compResult, err := c.generateWithRetry(ctx, fmt.Sprintf("generate %s component", planned.ComponentType), func() (*genai.GenerateContentResponse, error) {
+			return c.client.Models.GenerateContent(ctx, c.model, genai.Text(compPrompt), compConfig)
+		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert component content: %w", err)
+			// Log but continue - graceful degradation
+			fmt.Printf("Warning: failed to generate %s component: %v\n", planned.ComponentType, err)
+			continue
 		}
-		components[i] = service.LessonComponentResult{
+		totalTokensUsed += extractTokensUsed(compResult)
+
+		// Parse the individual component
+		comp, contentJSON, summary, err := parseAndTransformComponent(planned.ComponentType, compResult.Text())
+		if err != nil {
+			// Log but continue - graceful degradation
+			fmt.Printf("Warning: failed to parse %s component: %v\n", planned.ComponentType, err)
+			continue
+		}
+
+		components = append(components, service.LessonComponentResult{
 			Type:        comp.ComponentType,
-			Order:       i + 1,
+			Order:       len(components) + 1,
 			ContentJSON: contentJSON,
+		})
+
+		// Add summary to context for next component
+		previousComponentsContext.WriteString(fmt.Sprintf("- [%s] %s\n", planned.ComponentType, summary))
+	}
+
+	// Step 3: Generate segue text
+	segueText := ""
+	if !req.IsLastInCourse && req.NextLessonTitle != "" {
+		seguePrompt := buildSeguePrompt(req)
+		segueConfig := &genai.GenerateContentConfig{
+			ResponseMIMEType:   "application/json",
+			ResponseJsonSchema: segueSchema(),
 		}
+
+		segueResult, err := c.generateWithRetry(ctx, "generate segue text", func() (*genai.GenerateContentResponse, error) {
+			return c.client.Models.GenerateContent(ctx, c.model, genai.Text(seguePrompt), segueConfig)
+		})
+		if err == nil {
+			totalTokensUsed += extractTokensUsed(segueResult)
+			var segue segueResponse
+			if json.Unmarshal([]byte(segueResult.Text()), &segue) == nil {
+				segueText = segue.SegueText
+			}
+		}
+	}
+
+	if len(components) == 0 {
+		return nil, fmt.Errorf("failed to generate any components for lesson")
 	}
 
 	return &service.GenerateLessonResult{
 		Components: components,
-		SegueText:  lessonResp.SegueText,
-		TokensUsed: extractTokensUsed(result),
+		SegueText:  segueText,
+		TokensUsed: totalTokensUsed,
 	}, nil
 }
 
@@ -430,6 +487,54 @@ type outlineLesson struct {
 type lessonContentResponse struct {
 	Components []flatLessonComponent `json:"components"`
 	SegueText  string                `json:"segue_text"`
+}
+
+// Component planning types (for iterative generation)
+type componentPlanResponse struct {
+	Components []plannedComponent `json:"components"`
+}
+
+type plannedComponent struct {
+	ComponentType string `json:"component_type"`
+	Purpose       string `json:"purpose"`
+}
+
+type segueResponse struct {
+	SegueText string `json:"segue_text"`
+}
+
+// Individual component response types
+type singleTextComponent struct {
+	TextHTML string `json:"text_html"`
+}
+
+type singleHeadingComponent struct {
+	HeadingLevel int    `json:"heading_level"`
+	HeadingText  string `json:"heading_text"`
+}
+
+type singleImageComponent struct {
+	ImageDescription string `json:"image_description"`
+	ImageAltText     string `json:"image_alt_text"`
+	ImageCaption     string `json:"image_caption"`
+}
+
+type singleQuizComponent struct {
+	QuizQuestion        string       `json:"quiz_question"`
+	QuizOptions         []quizOption `json:"quiz_options"`
+	QuizCorrectAnswerID string       `json:"quiz_correct_answer_id"`
+	QuizExplanation     string       `json:"quiz_explanation"`
+}
+
+type singleCodeComponent struct {
+	Code     string `json:"code"`
+	Language string `json:"language"`
+}
+
+type singleCalloutComponent struct {
+	Style   string `json:"style"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
 }
 
 // flatLessonComponent matches the new flat schema where all fields are at the same level
@@ -860,6 +965,217 @@ func smeProcessingSchema() map[string]any {
 	}
 }
 
+// =============================================================================
+// Iterative Component Generation Schemas
+// =============================================================================
+
+// componentPlanSchema returns a simple schema for planning lesson components
+func componentPlanSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"components": map[string]any{
+				"type":        "array",
+				"description": "Planned components for this lesson (5-8 components)",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"component_type": map[string]any{
+							"type":        "string",
+							"enum":        []string{"text", "heading", "image", "quiz"},
+							"description": "The type of component",
+						},
+						"purpose": map[string]any{
+							"type":        "string",
+							"description": "Brief description of what this component will contain (1-2 sentences)",
+						},
+					},
+					"required": []string{"component_type", "purpose"},
+				},
+			},
+		},
+		"required": []string{"components"},
+	}
+}
+
+// singleComponentSchema returns the schema for generating a single component
+func singleComponentSchema(componentType string) map[string]any {
+	switch componentType {
+	case "text":
+		return singleTextSchema()
+	case "heading":
+		return singleHeadingSchema()
+	case "image":
+		return singleImageSchema()
+	case "quiz":
+		return singleQuizSchema()
+	case "code":
+		return singleCodeSchema()
+	case "callout":
+		return singleCalloutSchema()
+	default:
+		return singleTextSchema()
+	}
+}
+
+func singleTextSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"text_html": map[string]any{
+				"type":        "string",
+				"description": "HTML-formatted rich text content (2-4 paragraphs with <p> tags, can include <strong>, <em>, <ul>, <li>)",
+			},
+		},
+		"required": []string{"text_html"},
+	}
+}
+
+func singleHeadingSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"heading_level": map[string]any{
+				"type":        "integer",
+				"minimum":     1,
+				"maximum":     4,
+				"description": "Heading level (2 for main sections, 3 for subsections)",
+			},
+			"heading_text": map[string]any{
+				"type":        "string",
+				"description": "The heading text",
+			},
+		},
+		"required": []string{"heading_level", "heading_text"},
+	}
+}
+
+func singleImageSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"image_description": map[string]any{
+				"type":        "string",
+				"description": "Detailed description of what image should show (for later generation/selection)",
+			},
+			"image_alt_text": map[string]any{
+				"type":        "string",
+				"description": "Accessibility alt text for the image",
+			},
+			"image_caption": map[string]any{
+				"type":        "string",
+				"description": "Optional caption to display below the image",
+			},
+		},
+		"required": []string{"image_description", "image_alt_text"},
+	}
+}
+
+func singleQuizSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"quiz_question": map[string]any{
+				"type":        "string",
+				"description": "The quiz question text",
+			},
+			"quiz_options": map[string]any{
+				"type":        "array",
+				"description": "2-4 answer options",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id":   map[string]any{"type": "string", "description": "Option ID (a, b, c, or d)"},
+						"text": map[string]any{"type": "string", "description": "Option text"},
+					},
+					"required": []string{"id", "text"},
+				},
+				"minItems": 2,
+				"maxItems": 4,
+			},
+			"quiz_correct_answer_id": map[string]any{
+				"type":        "string",
+				"description": "ID of the correct answer",
+			},
+			"quiz_explanation": map[string]any{
+				"type":        "string",
+				"description": "Explanation of why the correct answer is right",
+			},
+		},
+		"required": []string{"quiz_question", "quiz_options", "quiz_correct_answer_id", "quiz_explanation"},
+	}
+}
+
+func segueSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"segue_text": map[string]any{
+				"type":        "string",
+				"description": "Transition text to the next lesson (1-2 sentences)",
+			},
+		},
+		"required": []string{"segue_text"},
+	}
+}
+
+func singleCodeSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"code": map[string]any{
+				"type":        "string",
+				"description": "Code snippet (5-15 lines, relevant to the lesson)",
+			},
+			"language": map[string]any{
+				"type":        "string",
+				"description": "Programming language (javascript, python, go, html, css, sql, bash, etc.)",
+			},
+		},
+		"required": []string{"code", "language"},
+	}
+}
+
+func singleCalloutSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"style": map[string]any{
+				"type":        "string",
+				"enum":        []string{"info", "warning", "success", "error", "tip"},
+				"description": "Visual style of the callout",
+			},
+			"title": map[string]any{
+				"type":        "string",
+				"description": "Optional short title for the callout",
+			},
+			"content": map[string]any{
+				"type":        "string",
+				"description": "Callout message (1-2 sentences of important information)",
+			},
+		},
+		"required": []string{"style", "content"},
+	}
+}
+
+// calloutStyleToNumber converts a string style to its numeric enum value
+func calloutStyleToNumber(style string) int {
+	switch strings.ToLower(style) {
+	case "info":
+		return 1
+	case "warning":
+		return 2
+	case "success":
+		return 3
+	case "error":
+		return 4
+	case "tip":
+		return 5
+	default:
+		return 1 // Default to info
+	}
+}
+
 // Prompt builders
 
 // buildSectionsOnlyPrompt creates the prompt for the first call - sections with lesson titles only
@@ -1065,6 +1381,253 @@ func buildRegeneratePrompt(req service.RegenerateComponentRequest) string {
 	sb.WriteString("Ensure the content is appropriate for the target audience.\n")
 
 	return sb.String()
+}
+
+// =============================================================================
+// Iterative Component Generation Prompts
+// =============================================================================
+
+func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
+	var sb strings.Builder
+
+	sb.WriteString("You are an expert instructional designer planning components for a lesson.\n\n")
+
+	sb.WriteString("## Lesson Information\n")
+	sb.WriteString(fmt.Sprintf("**Course:** %s\n", req.CourseTitle))
+	sb.WriteString(fmt.Sprintf("**Section:** %s\n", req.SectionTitle))
+	sb.WriteString(fmt.Sprintf("**Lesson:** %s\n", req.LessonTitle))
+	sb.WriteString(fmt.Sprintf("**Description:** %s\n\n", req.LessonDescription))
+
+	sb.WriteString("## Learning Objectives\n")
+	for _, obj := range req.LearningObjectives {
+		sb.WriteString(fmt.Sprintf("- %s\n", obj))
+	}
+	sb.WriteString("\n")
+
+	sb.WriteString("## Target Audience\n")
+	sb.WriteString(fmt.Sprintf("**Role:** %s\n", req.TargetAudience.Role))
+	sb.WriteString(fmt.Sprintf("**Experience Level:** %s\n\n", req.TargetAudience.ExperienceLevel))
+
+	sb.WriteString("## Instructions\n")
+	sb.WriteString("Plan 5-8 components for this lesson. For each component, specify:\n")
+	sb.WriteString("1. The type (text, heading, image, or quiz)\n")
+	sb.WriteString("2. A brief purpose describing what it will contain\n\n")
+
+	sb.WriteString("The lesson should include:\n")
+	sb.WriteString("- At least 1 heading (for structure)\n")
+	sb.WriteString("- At least 2 text components (for content)\n")
+	sb.WriteString("- At least 1 image (for visual learning)\n")
+	sb.WriteString("- At least 1 quiz (for knowledge check)\n\n")
+
+	sb.WriteString("Structure the lesson with:\n")
+	sb.WriteString("1. Introduction heading and text\n")
+	sb.WriteString("2. Main content with explanations and examples\n")
+	sb.WriteString("3. Visual element (image or diagram)\n")
+	sb.WriteString("4. Quiz to check understanding\n")
+	sb.WriteString("5. Summary or key takeaways\n")
+
+	return sb.String()
+}
+
+func buildSingleComponentPrompt(req service.GenerateLessonRequest, planned plannedComponent, previousComponents string) string {
+	var sb strings.Builder
+
+	sb.WriteString("You are generating a single educational component.\n\n")
+
+	sb.WriteString("## Context\n")
+	sb.WriteString(fmt.Sprintf("**Course:** %s\n", req.CourseTitle))
+	sb.WriteString(fmt.Sprintf("**Section:** %s\n", req.SectionTitle))
+	sb.WriteString(fmt.Sprintf("**Lesson:** %s\n\n", req.LessonTitle))
+
+	sb.WriteString("## Component to Generate\n")
+	sb.WriteString(fmt.Sprintf("**Type:** %s\n", planned.ComponentType))
+	sb.WriteString(fmt.Sprintf("**Purpose:** %s\n\n", planned.Purpose))
+
+	if previousComponents != "" {
+		sb.WriteString("## Previously Generated Components\n")
+		sb.WriteString(previousComponents)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("## Target Audience\n")
+	sb.WriteString(fmt.Sprintf("**Role:** %s\n", req.TargetAudience.Role))
+	sb.WriteString(fmt.Sprintf("**Experience Level:** %s\n\n", req.TargetAudience.ExperienceLevel))
+
+	// Type-specific instructions
+	switch planned.ComponentType {
+	case "heading":
+		sb.WriteString("## Instructions\n")
+		sb.WriteString("Generate a heading with:\n")
+		sb.WriteString("- heading_level: 2 for main sections, 3 for subsections\n")
+		sb.WriteString("- heading_text: Clear, descriptive heading text\n")
+	case "text":
+		sb.WriteString("## Instructions\n")
+		sb.WriteString("Generate text content with:\n")
+		sb.WriteString("- text_html: 2-4 paragraphs of HTML-formatted content\n")
+		sb.WriteString("- Use <p> tags for paragraphs\n")
+		sb.WriteString("- Can include <strong>, <em>, <ul>, <li> for emphasis and lists\n")
+		sb.WriteString("- Be educational and engaging\n")
+	case "image":
+		sb.WriteString("## Instructions\n")
+		sb.WriteString("Generate an image placeholder with:\n")
+		sb.WriteString("- image_description: Detailed description of the image to show\n")
+		sb.WriteString("- image_alt_text: Accessibility description\n")
+		sb.WriteString("- image_caption: Optional caption\n")
+	case "quiz":
+		sb.WriteString("## Instructions\n")
+		sb.WriteString("Generate a quiz question with:\n")
+		sb.WriteString("- quiz_question: Clear question text\n")
+		sb.WriteString("- quiz_options: 3-4 answer options with id (a,b,c,d) and text\n")
+		sb.WriteString("- quiz_correct_answer_id: The correct option's id\n")
+		sb.WriteString("- quiz_explanation: Why the correct answer is right\n")
+	}
+
+	return sb.String()
+}
+
+func buildSeguePrompt(req service.GenerateLessonRequest) string {
+	var sb strings.Builder
+
+	sb.WriteString("You are writing a transition to the next lesson.\n\n")
+
+	sb.WriteString(fmt.Sprintf("**Current Lesson:** %s\n", req.LessonTitle))
+	sb.WriteString(fmt.Sprintf("**Next Lesson:** %s\n\n", req.NextLessonTitle))
+
+	sb.WriteString("Write 1-2 sentences that smoothly transition from this lesson to the next.\n")
+	sb.WriteString("The segue should connect the concepts and motivate learners to continue.\n")
+
+	return sb.String()
+}
+
+// parseAndTransformComponent parses a single component response and transforms it to storage format
+func parseAndTransformComponent(componentType, responseText string) (*flatLessonComponent, string, string, error) {
+	comp := &flatLessonComponent{ComponentType: componentType}
+	var contentJSON string
+	var summary string
+
+	switch componentType {
+	case "text":
+		var resp singleTextComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse text component: %w", err)
+		}
+		comp.TextHTML = resp.TextHTML
+		content := map[string]any{
+			"html":      resp.TextHTML,
+			"plaintext": stripHTML(resp.TextHTML),
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		// Summary: first 60 chars of plaintext
+		plaintext := stripHTML(resp.TextHTML)
+		if len(plaintext) > 60 {
+			summary = plaintext[:60] + "..."
+		} else {
+			summary = plaintext
+		}
+
+	case "heading":
+		var resp singleHeadingComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse heading component: %w", err)
+		}
+		comp.HeadingLevel = resp.HeadingLevel
+		comp.HeadingText = resp.HeadingText
+		content := map[string]any{
+			"level": resp.HeadingLevel,
+			"text":  resp.HeadingText,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		summary = fmt.Sprintf("H%d: %s", resp.HeadingLevel, resp.HeadingText)
+
+	case "image":
+		var resp singleImageComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse image component: %w", err)
+		}
+		comp.ImageDescription = resp.ImageDescription
+		comp.ImageAltText = resp.ImageAltText
+		comp.ImageCaption = resp.ImageCaption
+		// Use camelCase to match frontend ImageRenderer expectations
+		content := map[string]any{
+			"imageDescription": resp.ImageDescription,
+			"altText":          resp.ImageAltText,
+			"caption":          resp.ImageCaption,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		summary = fmt.Sprintf("Image: %s", resp.ImageAltText)
+
+	case "quiz":
+		var resp singleQuizComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse quiz component: %w", err)
+		}
+		comp.QuizQuestion = resp.QuizQuestion
+		comp.QuizOptions = resp.QuizOptions
+		comp.QuizCorrectAnswerID = resp.QuizCorrectAnswerID
+		comp.QuizExplanation = resp.QuizExplanation
+		options := make([]map[string]string, len(resp.QuizOptions))
+		for i, opt := range resp.QuizOptions {
+			options[i] = map[string]string{"id": opt.ID, "text": opt.Text}
+		}
+		content := map[string]any{
+			"question":          resp.QuizQuestion,
+			"question_type":     "multiple_choice",
+			"options":           options,
+			"correct_answer_id": resp.QuizCorrectAnswerID,
+			"explanation":       resp.QuizExplanation,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		// Summary: first 40 chars of question
+		if len(resp.QuizQuestion) > 40 {
+			summary = fmt.Sprintf("Quiz: %s...", resp.QuizQuestion[:40])
+		} else {
+			summary = fmt.Sprintf("Quiz: %s", resp.QuizQuestion)
+		}
+
+	case "code":
+		var resp singleCodeComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse code component: %w", err)
+		}
+		content := map[string]any{
+			"code":     resp.Code,
+			"language": resp.Language,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		summary = fmt.Sprintf("Code (%s)", resp.Language)
+
+	case "callout":
+		var resp singleCalloutComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse callout component: %w", err)
+		}
+		// Convert string style to numeric enum value (matches proto CalloutStyle)
+		styleNum := calloutStyleToNumber(resp.Style)
+		content := map[string]any{
+			"style":   styleNum,
+			"title":   resp.Title,
+			"content": resp.Content,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		if resp.Title != "" {
+			summary = fmt.Sprintf("%s: %s", resp.Style, resp.Title)
+		} else if len(resp.Content) > 40 {
+			summary = fmt.Sprintf("%s: %s...", resp.Style, resp.Content[:40])
+		} else {
+			summary = fmt.Sprintf("%s: %s", resp.Style, resp.Content)
+		}
+
+	default:
+		return nil, "", "", fmt.Errorf("unknown component type: %s", componentType)
+	}
+
+	return comp, contentJSON, summary, nil
 }
 
 func buildSMEProcessingPrompt(req service.ProcessSMEContentRequest) string {

@@ -1,16 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-// New schema: Gemini provides description instead of URL
-// URL can be added later by user or image search integration
-interface ImageContent {
-  imageDescription: string;
-  altText: string;
-  caption?: string;
-  // Optional URL - only present if user adds a real image
-  url?: string;
-}
+import type { ImageContent } from '@/gen/mirai/v1/ai_generation_zod';
 
 interface ImageRendererProps {
   content: ImageContent;

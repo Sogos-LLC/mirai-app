@@ -128,9 +128,10 @@ export type HeadingContent = z.infer<typeof HeadingContentSchema>;
  * @generated from message mirai.v1.ImageContent
  */
 export const ImageContentSchema = z.object({
-  url: z.string(),
+  imageDescription: z.string(),
   altText: z.string(),
   caption: z.string().optional(),
+  url: z.string().optional(),
 });
 
 export type ImageContent = z.infer<typeof ImageContentSchema>;

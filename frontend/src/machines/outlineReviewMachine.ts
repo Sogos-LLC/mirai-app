@@ -28,10 +28,8 @@ export type OutlineReviewEvent =
   // Review actions
   | { type: 'APPROVE_OUTLINE' }
   | { type: 'REGENERATE_OUTLINE' }
-  | { type: 'UPDATE_OUTLINE'; sections: OutlineSection[] }
-  // Job queued - user choice
-  | { type: 'WAIT_FOR_LESSONS' }
-  | { type: 'NAVIGATE_AWAY' }
+  | { type: 'UPDATE_SECTION_TITLE'; sectionIndex: number; title: string }
+  | { type: 'UPDATE_LESSON'; sectionIndex: number; lessonIndex: number; title: string; description: string }
   // Common
   | { type: 'RETRY' }
   | { type: 'DISMISS_ERROR' };
@@ -327,6 +325,42 @@ export const outlineReviewMachine = createMachine({
       on: {
         APPROVE_OUTLINE: 'approving',
         REGENERATE_OUTLINE: 'regenerating',
+        UPDATE_SECTION_TITLE: {
+          actions: assign({
+            outline: ({ context, event }) => {
+              if (!context.outline?.sections) return context.outline;
+              const sections = [...context.outline.sections];
+              if (sections[event.sectionIndex]) {
+                sections[event.sectionIndex] = {
+                  ...sections[event.sectionIndex],
+                  title: event.title,
+                };
+              }
+              return { ...context.outline, sections };
+            },
+          }),
+        },
+        UPDATE_LESSON: {
+          actions: assign({
+            outline: ({ context, event }) => {
+              if (!context.outline?.sections) return context.outline;
+              const sections = [...context.outline.sections];
+              const section = sections[event.sectionIndex];
+              if (section?.lessons) {
+                const lessons = [...section.lessons];
+                if (lessons[event.lessonIndex]) {
+                  lessons[event.lessonIndex] = {
+                    ...lessons[event.lessonIndex],
+                    title: event.title,
+                    description: event.description,
+                  };
+                }
+                sections[event.sectionIndex] = { ...section, lessons };
+              }
+              return { ...context.outline, sections };
+            },
+          }),
+        },
       },
     },
 
@@ -370,7 +404,7 @@ export const outlineReviewMachine = createMachine({
             src: 'generateLessonsActor',
             input: ({ context }) => ({ courseId: context.courseId }),
             onDone: {
-              target: '#outlineReview.lessonJobQueued',
+              target: '#outlineReview.success',
               actions: assign({
                 lessonJobId: ({ event }) => event.output.job.id,
                 progressMessage: 'Lessons queued for generation',
@@ -395,85 +429,11 @@ export const outlineReviewMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Lesson Job Queued - User chooses wait or background
+    // Success - Show celebration then redirect to dashboard
     // --------------------------------------------------------
-    lessonJobQueued: {
-      on: {
-        WAIT_FOR_LESSONS: 'generatingLessons',
-        NAVIGATE_AWAY: 'backgroundGeneration',
-      },
-    },
-
-    // --------------------------------------------------------
-    // Generating Lessons - Polling for completion
-    // --------------------------------------------------------
-    generatingLessons: {
-      initial: 'polling',
-      entry: assign({
-        progressPercent: 10,
-        progressMessage: 'Generating lesson content...',
-      }),
-      states: {
-        polling: {
-          invoke: {
-            id: 'pollLessonJob',
-            src: 'pollJobActor',
-            input: ({ context }) => ({ jobId: context.lessonJobId! }),
-            onDone: [
-              {
-                // Job completed
-                target: '#outlineReview.complete',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.COMPLETED,
-                actions: assign({
-                  progressPercent: 100,
-                  progressMessage: 'All lessons generated!',
-                }),
-              },
-              {
-                // Job failed
-                target: '#outlineReview.viewing',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.FAILED,
-                actions: assign({
-                  error: ({ event }) =>
-                    createAuthError(
-                      'GENERATION_FAILED',
-                      event.output.job.errorMessage || 'Lesson generation failed',
-                      true
-                    ),
-                }),
-              },
-              {
-                // Still processing
-                target: 'waiting',
-                actions: assign({
-                  progressPercent: ({ event }) =>
-                    Math.min(95, 10 + (event.output.job.progressPercent || 0) * 0.85),
-                  progressMessage: ({ event }) =>
-                    event.output.job.progressMessage || 'Generating lessons...',
-                }),
-              },
-            ],
-            onError: {
-              target: '#outlineReview.viewing',
-              actions: assign({
-                error: ({ event }) =>
-                  createAuthError(
-                    'NETWORK_ERROR',
-                    event.error instanceof Error ? event.error.message : 'Failed to poll job status',
-                    true
-                  ),
-              }),
-            },
-          },
-        },
-        waiting: {
-          after: {
-            5000: 'polling', // Poll every 5 seconds for lessons
-          },
-          on: {
-            NAVIGATE_AWAY: '#outlineReview.backgroundGeneration',
-          },
-        },
+    success: {
+      after: {
+        3000: 'backgroundGeneration', // Auto-redirect after 3 seconds
       },
     },
 
@@ -557,28 +517,17 @@ export function isLoading(stateValue: unknown): boolean {
   if (typeof stateValue === 'object' && stateValue !== null) {
     return (
       'pollingOutline' in stateValue ||
-      'approving' in stateValue ||
-      'generatingLessons' in stateValue
+      'approving' in stateValue
     );
   }
   return false;
 }
 
 /**
- * Check if in lesson job queued state
+ * Check if in success state (celebration)
  */
-export function isInLessonJobQueued(stateValue: unknown): boolean {
-  return stateValue === 'lessonJobQueued';
-}
-
-/**
- * Check if generating lessons (actively polling)
- */
-export function isGeneratingLessons(stateValue: unknown): boolean {
-  if (typeof stateValue === 'object' && stateValue !== null) {
-    return 'generatingLessons' in stateValue;
-  }
-  return false;
+export function isSuccess(stateValue: unknown): boolean {
+  return stateValue === 'success';
 }
 
 /**

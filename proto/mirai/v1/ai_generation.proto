@@ -183,10 +183,12 @@ message HeadingContent {
 }
 
 // ImageContent for image components.
+// AI generates image_description as placeholder; url is added by user later.
 message ImageContent {
-  string url = 1;
-  string alt_text = 2;
-  optional string caption = 3;
+  string image_description = 1;  // AI-generated description of what image to show
+  string alt_text = 2;           // Accessibility alt text
+  optional string caption = 3;   // Optional caption below image
+  optional string url = 4;       // User-provided image URL (empty until user adds)
 }
 
 // QuizContent for quiz/knowledge check components.

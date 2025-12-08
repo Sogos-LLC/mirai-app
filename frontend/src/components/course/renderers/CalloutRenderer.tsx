@@ -2,24 +2,23 @@
 
 import React, { useState } from 'react';
 import { Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
+import { CalloutStyle } from '@/gen/mirai/v1/ai_generation_pb';
+import type { CalloutContent } from '@/gen/mirai/v1/ai_generation_zod';
+
+// Re-export for compatibility
+export type { CalloutContent };
 
 // Callout style enum values from proto
 const CALLOUT_STYLES = {
-  UNSPECIFIED: 0,
-  INFO: 1,
-  WARNING: 2,
-  SUCCESS: 3,
-  ERROR: 4,
-  TIP: 5,
+  UNSPECIFIED: CalloutStyle.UNSPECIFIED,
+  INFO: CalloutStyle.INFO,
+  WARNING: CalloutStyle.WARNING,
+  SUCCESS: CalloutStyle.SUCCESS,
+  ERROR: CalloutStyle.ERROR,
+  TIP: CalloutStyle.TIP,
 } as const;
 
 export type CalloutStyleValue = (typeof CALLOUT_STYLES)[keyof typeof CALLOUT_STYLES];
-
-export interface CalloutContent {
-  style: CalloutStyleValue;
-  title?: string;
-  content: string;
-}
 
 interface CalloutRendererProps {
   content: CalloutContent;

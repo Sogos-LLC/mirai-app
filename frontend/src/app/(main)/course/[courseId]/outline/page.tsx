@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useMachine } from '@xstate/react';
 import { fromPromise } from 'xstate';
@@ -13,37 +13,47 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
+  CheckCircle2,
+  Pencil,
+  Check,
   X,
 } from 'lucide-react';
 import {
   outlineReviewMachine,
   isLoading,
-  isInLessonJobQueued,
+  isSuccess,
   isPollingOutline,
-  isGeneratingLessons,
 } from '@/machines/outlineReviewMachine';
 import {
-  useGetCourseOutline,
   useApproveCourseOutline,
   useGenerateAllLessons,
   useGenerateCourseOutline,
-  useGetJob,
 } from '@/hooks/useAIGeneration';
 import {
   getJob as getJobClient,
   getCourseOutline as getCourseOutlineClient,
 } from '@/lib/aiGenerationClient';
-import { GenerationQueuedConfirmation } from '@/components/ai-generation/GenerationQueuedConfirmation';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+
+// Inline edit state type
+interface EditState {
+  type: 'section' | 'lesson';
+  sectionIndex: number;
+  lessonIndex?: number;
+  title: string;
+  description?: string;
+}
 
 export default function OutlineReviewPage() {
   const params = useParams();
   const router = useRouter();
   const courseId = params.courseId as string;
 
+  // Inline editing state
+  const [editState, setEditState] = useState<EditState | null>(null);
+
   // API hooks
-  const getOutline = useGetCourseOutline(courseId);
   const approveCourseOutline = useApproveCourseOutline();
   const generateAllLessons = useGenerateAllLessons();
   const generateCourseOutline = useGenerateCourseOutline();
@@ -181,51 +191,31 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Lesson job queued - show choice
-  if (isInLessonJobQueued(stateValue)) {
+  // Success state - celebration animation
+  if (isSuccess(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="p-0">
-            <GenerationQueuedConfirmation
-              jobId={context.lessonJobId || ''}
-              title="Lesson Generation Started!"
-              description={`Your ${totalLessons} lessons are being generated. This typically takes a few minutes.`}
-              infoTitle="Generation takes a few minutes"
-              infoDescription="Each lesson is carefully crafted based on your outline. You can wait here to watch the progress, or continue working and receive a notification when complete."
-              waitButtonLabel="Watch Progress"
-              navigateButtonLabel="Notify Me When Done"
-              onWaitForCompletion={() => send({ type: 'WAIT_FOR_LESSONS' })}
-              onNavigateAway={() => send({ type: 'NAVIGATE_AWAY' })}
-            />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Generating lessons - show progress
-  if (isGeneratingLessons(stateValue)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-6" />
-            <h2 className="text-xl font-bold text-primary mb-2">Generating Lessons</h2>
-            <p className="text-secondary mb-4">{context.progressMessage}</p>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4">
-              <div
-                className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${context.progressPercent}%` }}
-              />
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+              <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => send({ type: 'NAVIGATE_AWAY' })}
-            >
-              Continue in Background
-            </Button>
+            <h2 className="text-2xl font-bold text-primary mb-2">
+              Awesome! Your course is being created
+            </h2>
+            <p className="text-secondary mb-6">
+              We&apos;re generating {totalLessons} lessons based on your outline.
+              This typically takes 5-7 minutes.
+            </p>
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>You&apos;ll be notified</strong> when your course is ready.
+                Check the bell icon or your email.
+              </p>
+            </div>
+            <p className="text-sm text-muted animate-pulse">
+              Redirecting to dashboard...
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -310,58 +300,168 @@ export default function OutlineReviewPage() {
             {/* Outline */}
             {context.outline ? (
               <div className="border rounded-lg divide-y mb-6">
-                {context.outline.sections?.map((section, sectionIndex) => (
-                  <div key={sectionIndex} className="bg-surface">
-                    <button
-                      onClick={() => toggleSection(sectionIndex)}
-                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-hover transition-colors text-left"
-                    >
-                      {expandedSections.has(sectionIndex) ? (
-                        <ChevronDown className="w-5 h-5 text-muted flex-shrink-0" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-muted flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-muted">
-                            Section {sectionIndex + 1}
-                          </span>
-                          <span className="text-xs text-muted">
-                            ({section.lessons?.length ?? 0} lessons)
-                          </span>
-                        </div>
-                        <h3 className="font-semibold text-primary truncate">
-                          {section.title || `Section ${sectionIndex + 1}`}
-                        </h3>
-                      </div>
-                    </button>
+                {context.outline.sections?.map((section, sectionIndex) => {
+                  const isEditingSection = editState?.type === 'section' && editState.sectionIndex === sectionIndex;
 
-                    {expandedSections.has(sectionIndex) && section.lessons && (
-                      <div className="px-4 pb-3">
-                        <div className="ml-8 space-y-2">
-                          {section.lessons.map((lesson, lessonIndex) => (
-                            <div
-                              key={lessonIndex}
-                              className="flex items-start gap-3 p-2 rounded hover:bg-hover"
+                  return (
+                    <div key={sectionIndex} className="bg-surface">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleSection(sectionIndex)}
+                          className="flex-shrink-0 p-3 hover:bg-hover transition-colors"
+                        >
+                          {expandedSections.has(sectionIndex) ? (
+                            <ChevronDown className="w-5 h-5 text-muted" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-muted" />
+                          )}
+                        </button>
+
+                        {isEditingSection ? (
+                          <div className="flex-1 flex items-center gap-2 py-2 pr-4">
+                            <input
+                              type="text"
+                              value={editState.title}
+                              onChange={(e) => setEditState({ ...editState, title: e.target.value })}
+                              className="flex-1 px-3 py-1.5 text-sm font-semibold border rounded bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  send({ type: 'UPDATE_SECTION_TITLE', sectionIndex, title: editState.title });
+                                  setEditState(null);
+                                } else if (e.key === 'Escape') {
+                                  setEditState(null);
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => {
+                                send({ type: 'UPDATE_SECTION_TITLE', sectionIndex, title: editState.title });
+                                setEditState(null);
+                              }}
+                              className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
                             >
-                              <BookOpen className="w-4 h-4 text-muted mt-0.5 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-primary">
-                                  {lesson.title || `Lesson ${lessonIndex + 1}`}
-                                </p>
-                                {lesson.description && (
-                                  <p className="text-xs text-secondary line-clamp-2">
-                                    {lesson.description}
-                                  </p>
-                                )}
-                              </div>
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setEditState(null)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            className="flex-1 py-3 pr-4 cursor-pointer group"
+                            onClick={() => setEditState({
+                              type: 'section',
+                              sectionIndex,
+                              title: section.title || `Section ${sectionIndex + 1}`,
+                            })}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-muted">
+                                Section {sectionIndex + 1}
+                              </span>
+                              <span className="text-xs text-muted">
+                                ({section.lessons?.length ?? 0} lessons)
+                              </span>
+                              <Pencil className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
-                          ))}
-                        </div>
+                            <h3 className="font-semibold text-primary">
+                              {section.title || `Section ${sectionIndex + 1}`}
+                            </h3>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {expandedSections.has(sectionIndex) && section.lessons && (
+                        <div className="px-4 pb-3">
+                          <div className="ml-8 space-y-2">
+                            {section.lessons.map((lesson, lessonIndex) => {
+                              const isEditingLesson = editState?.type === 'lesson' &&
+                                editState.sectionIndex === sectionIndex &&
+                                editState.lessonIndex === lessonIndex;
+
+                              return (
+                                <div key={lessonIndex}>
+                                  {isEditingLesson ? (
+                                    <div className="p-3 border rounded bg-surface space-y-2">
+                                      <input
+                                        type="text"
+                                        value={editState.title}
+                                        onChange={(e) => setEditState({ ...editState, title: e.target.value })}
+                                        className="w-full px-3 py-1.5 text-sm font-medium border rounded bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="Lesson title"
+                                        autoFocus
+                                      />
+                                      <textarea
+                                        value={editState.description || ''}
+                                        onChange={(e) => setEditState({ ...editState, description: e.target.value })}
+                                        className="w-full px-3 py-1.5 text-xs border rounded bg-surface text-secondary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                                        placeholder="Lesson description (optional)"
+                                        rows={2}
+                                      />
+                                      <div className="flex justify-end gap-2">
+                                        <button
+                                          onClick={() => setEditState(null)}
+                                          className="px-3 py-1 text-xs text-secondary hover:bg-hover rounded"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            send({
+                                              type: 'UPDATE_LESSON',
+                                              sectionIndex,
+                                              lessonIndex,
+                                              title: editState.title,
+                                              description: editState.description || '',
+                                            });
+                                            setEditState(null);
+                                          }}
+                                          className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div
+                                      className="flex items-start gap-3 p-2 rounded hover:bg-hover cursor-pointer group"
+                                      onClick={() => setEditState({
+                                        type: 'lesson',
+                                        sectionIndex,
+                                        lessonIndex,
+                                        title: lesson.title || `Lesson ${lessonIndex + 1}`,
+                                        description: lesson.description || '',
+                                      })}
+                                    >
+                                      <BookOpen className="w-4 h-4 text-muted mt-0.5 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium text-primary">
+                                            {lesson.title || `Lesson ${lessonIndex + 1}`}
+                                          </p>
+                                          <Pencil className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
+                                        {lesson.description && (
+                                          <p className="text-xs text-secondary line-clamp-2">
+                                            {lesson.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-12">

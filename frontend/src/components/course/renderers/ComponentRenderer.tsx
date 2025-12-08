@@ -2,57 +2,37 @@
 
 import { useMemo } from 'react';
 import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
+import { LessonComponentType } from '@/gen/mirai/v1/ai_generation_pb';
+import type {
+  TextContent,
+  HeadingContent,
+  ImageContent,
+  QuizContent,
+  CodeContent,
+  CalloutContent,
+} from '@/gen/mirai/v1/ai_generation_zod';
 import { TextRenderer } from './TextRenderer';
 import { HeadingRenderer } from './HeadingRenderer';
 import { ImageRenderer } from './ImageRenderer';
 import { QuizRenderer } from './QuizRenderer';
 import { CodeRenderer } from './CodeRenderer';
-import { CalloutRenderer, type CalloutContent } from './CalloutRenderer';
+import { CalloutRenderer } from './CalloutRenderer';
 
 // Component type enum values from proto
 const COMPONENT_TYPES = {
-  UNSPECIFIED: 0,
-  TEXT: 1,
-  HEADING: 2,
-  IMAGE: 3,
-  QUIZ: 4,
-  CODE: 5,
-  CALLOUT: 6,
+  UNSPECIFIED: LessonComponentType.UNSPECIFIED,
+  TEXT: LessonComponentType.TEXT,
+  HEADING: LessonComponentType.HEADING,
+  IMAGE: LessonComponentType.IMAGE,
+  QUIZ: LessonComponentType.QUIZ,
+  CODE: LessonComponentType.CODE,
+  CALLOUT: LessonComponentType.CALLOUT,
 } as const;
 
-// Content types matching the new Gemini schema
-interface TextContent {
-  html: string;
-  plaintext: string;
-}
-
-interface HeadingContent {
-  level: number;
-  text: string;
-}
-
-interface ImageContent {
-  imageDescription: string;
-  altText: string;
-  caption?: string;
-}
-
+// Quiz option interface for normalization
 interface QuizOption {
   id: string;
   text: string;
-}
-
-interface QuizContent {
-  question: string;
-  questionType: string;
-  options: QuizOption[];
-  correctAnswerId: string;
-  explanation: string;
-}
-
-interface CodeContent {
-  code: string;
-  language: string;
 }
 
 interface ComponentRendererProps {

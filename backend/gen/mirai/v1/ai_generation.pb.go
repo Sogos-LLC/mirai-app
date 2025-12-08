@@ -1182,13 +1182,15 @@ func (x *HeadingContent) GetText() string {
 }
 
 // ImageContent for image components.
+// AI generates image_description as placeholder; url is added by user later.
 type ImageContent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
-	AltText       string                 `protobuf:"bytes,2,opt,name=alt_text,json=altText,proto3" json:"alt_text,omitempty"`
-	Caption       *string                `protobuf:"bytes,3,opt,name=caption,proto3,oneof" json:"caption,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ImageDescription string                 `protobuf:"bytes,1,opt,name=image_description,json=imageDescription,proto3" json:"image_description,omitempty"` // AI-generated description of what image to show
+	AltText          string                 `protobuf:"bytes,2,opt,name=alt_text,json=altText,proto3" json:"alt_text,omitempty"`                            // Accessibility alt text
+	Caption          *string                `protobuf:"bytes,3,opt,name=caption,proto3,oneof" json:"caption,omitempty"`                                     // Optional caption below image
+	Url              *string                `protobuf:"bytes,4,opt,name=url,proto3,oneof" json:"url,omitempty"`                                             // User-provided image URL (empty until user adds)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ImageContent) Reset() {
@@ -1221,9 +1223,9 @@ func (*ImageContent) Descriptor() ([]byte, []int) {
 	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *ImageContent) GetUrl() string {
+func (x *ImageContent) GetImageDescription() string {
 	if x != nil {
-		return x.Url
+		return x.ImageDescription
 	}
 	return ""
 }
@@ -1238,6 +1240,13 @@ func (x *ImageContent) GetAltText() string {
 func (x *ImageContent) GetCaption() string {
 	if x != nil && x.Caption != nil {
 		return *x.Caption
+	}
+	return ""
+}
+
+func (x *ImageContent) GetUrl() string {
+	if x != nil && x.Url != nil {
+		return *x.Url
 	}
 	return ""
 }
@@ -2928,13 +2937,15 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\tplaintext\x18\x02 \x01(\tR\tplaintext\"R\n" +
 	"\x0eHeadingContent\x12,\n" +
 	"\x05level\x18\x01 \x01(\x0e2\x16.mirai.v1.HeadingLevelR\x05level\x12\x12\n" +
-	"\x04text\x18\x02 \x01(\tR\x04text\"f\n" +
-	"\fImageContent\x12\x10\n" +
-	"\x03url\x18\x01 \x01(\tR\x03url\x12\x19\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\xa0\x01\n" +
+	"\fImageContent\x12+\n" +
+	"\x11image_description\x18\x01 \x01(\tR\x10imageDescription\x12\x19\n" +
 	"\balt_text\x18\x02 \x01(\tR\aaltText\x12\x1d\n" +
-	"\acaption\x18\x03 \x01(\tH\x00R\acaption\x88\x01\x01B\n" +
+	"\acaption\x18\x03 \x01(\tH\x00R\acaption\x88\x01\x01\x12\x15\n" +
+	"\x03url\x18\x04 \x01(\tH\x01R\x03url\x88\x01\x01B\n" +
 	"\n" +
-	"\b_caption\"\xdc\x02\n" +
+	"\b_captionB\x06\n" +
+	"\x04_url\"\xdc\x02\n" +
 	"\vQuizContent\x12\x1a\n" +
 	"\bquestion\x18\x01 \x01(\tR\bquestion\x12#\n" +
 	"\rquestion_type\x18\x02 \x01(\tR\fquestionType\x12.\n" +
