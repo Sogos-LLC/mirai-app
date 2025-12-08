@@ -313,7 +313,11 @@ export default function ContentLibrary() {
                     }
                   }}
                   placeholder="New folder name"
-                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                    bg-white dark:bg-dark-400
+                    border-gray-300 dark:border-dark-border
+                    text-gray-900 dark:text-white
+                    placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   autoFocus
                   disabled={isCreating}
                   onClick={(e) => e.stopPropagation()}
@@ -324,7 +328,7 @@ export default function ContentLibrary() {
                     handleCreateFolder();
                   }}
                   disabled={!newFolderName.trim() || isCreating}
-                  className="p-1 hover:bg-green-100 rounded text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded text-green-600 dark:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Create folder"
                 >
                   <Check className="w-4 h-4" />
@@ -335,7 +339,7 @@ export default function ContentLibrary() {
                     handleCancelCreateFolder();
                   }}
                   disabled={isCreating}
-                  className="p-1 hover:bg-red-100 rounded text-red-600"
+                  className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400"
                   title="Cancel"
                 >
                   <X className="w-4 h-4" />
@@ -346,7 +350,7 @@ export default function ContentLibrary() {
             {/* Error message */}
             {isCreatingHere && createError && (
               <div
-                className="flex items-center gap-2 px-3 py-1 text-sm text-red-600"
+                className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 dark:text-red-400"
                 style={{ paddingLeft: `${(level + 1) * 20 + 12 + 32}px` }}
               >
                 {createError}
@@ -543,15 +547,15 @@ export default function ContentLibrary() {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-gray-600">
-            Are you sure you want to delete the folder <strong>"{folderToDelete?.name}"</strong>?
+          <p className="text-gray-600 dark:text-gray-400">
+            Are you sure you want to delete the folder <strong className="text-gray-900 dark:text-white">"{folderToDelete?.name}"</strong>?
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             This action cannot be undone. The folder must be empty to be deleted.
           </p>
 
           {deleteError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
               {deleteError}
             </div>
           )}
@@ -560,7 +564,7 @@ export default function ContentLibrary() {
             <button
               onClick={handleCancelDelete}
               disabled={isDeleting}
-              className="flex-1 px-4 py-3 lg:py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium min-h-[44px]"
+              className="flex-1 px-4 py-3 lg:py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-dark-50 rounded-lg hover:bg-gray-200 dark:hover:bg-dark-400 transition-colors font-medium min-h-[44px]"
             >
               Cancel
             </button>

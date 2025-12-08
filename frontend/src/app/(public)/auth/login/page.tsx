@@ -74,11 +74,11 @@ export default function LoginPage() {
     <AuthLayout title="Sign In" subtitle="Welcome back">
       {/* Checkout success message */}
       {checkoutSuccess && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-3">
+          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-green-800 font-medium">Payment successful!</p>
-            <p className="text-green-700 text-sm">Sign in with your credentials to access your account.</p>
+            <p className="text-green-800 dark:text-green-400 font-medium">Payment successful!</p>
+            <p className="text-green-700 dark:text-green-500 text-sm">Sign in with your credentials to access your account.</p>
           </div>
         </div>
       )}
@@ -87,11 +87,11 @@ export default function LoginPage() {
 
       {/* Links */}
       <div className="mt-6 space-y-3 text-center text-sm">
-        <p className="text-slate-600">
+        <p className="text-slate-600 dark:text-gray-400">
           Don&apos;t have an account?{' '}
           <Link
             href="/auth/registration"
-            className="text-indigo-600 hover:text-indigo-700 font-medium"
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
           >
             Sign up
           </Link>
@@ -99,7 +99,7 @@ export default function LoginPage() {
         <p>
           <Link
             href="/auth/recovery"
-            className="text-slate-500 hover:text-slate-700"
+            className="text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-300"
           >
             Forgot your password?
           </Link>

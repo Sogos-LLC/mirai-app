@@ -55,7 +55,7 @@ function Node({ node, showPasswordConfirmation }: { node: UiNode; showPasswordCo
       return <InputNode node={node} showPasswordConfirmation={showPasswordConfirmation} />;
     case 'text':
       return (
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-slate-600 dark:text-gray-400">
           {meta.label?.text || attributes.title}
         </div>
       );
@@ -63,7 +63,7 @@ function Node({ node, showPasswordConfirmation }: { node: UiNode; showPasswordCo
       return (
         <a
           href={attributes.href}
-          className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium"
         >
           {meta.label?.text || 'Link'}
         </a>
@@ -113,9 +113,9 @@ function InputNode({ node, showPasswordConfirmation }: { node: UiNode; showPassw
           name={attributes.name}
           defaultChecked={attributes.value as boolean}
           disabled={attributes.disabled}
-          className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+          className="w-4 h-4 text-indigo-600 border-slate-300 dark:border-dark-border rounded focus:ring-indigo-500 dark:bg-dark-400"
         />
-        <span className="text-sm text-slate-700">{meta.label?.text}</span>
+        <span className="text-sm text-slate-700 dark:text-gray-300">{meta.label?.text}</span>
       </label>
     );
   }
@@ -131,7 +131,7 @@ function InputNode({ node, showPasswordConfirmation }: { node: UiNode; showPassw
       {meta.label && (
         <label
           htmlFor={attributes.name}
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1"
         >
           {meta.label.text}
           {attributes.required && <span className="text-red-500 ml-1">*</span>}
@@ -146,10 +146,10 @@ function InputNode({ node, showPasswordConfirmation }: { node: UiNode; showPassw
         disabled={attributes.disabled}
         pattern={attributes.pattern}
         autoComplete={getAutoComplete(attributes.name)}
-        className={`w-full px-4 py-3 rounded-lg border ${
+        className={`w-full px-4 py-3 rounded-lg border bg-white dark:bg-dark-400 text-gray-900 dark:text-white ${
           hasError
-            ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-            : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+            ? 'border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-500'
+            : 'border-slate-300 dark:border-dark-border focus:border-indigo-500 focus:ring-indigo-500'
         } focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors`}
       />
       {/* Field messages */}
@@ -159,7 +159,7 @@ function InputNode({ node, showPasswordConfirmation }: { node: UiNode; showPassw
             <p
               key={message.id}
               className={`text-sm ${
-                message.type === 'error' ? 'text-red-600' : 'text-slate-600'
+                message.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-gray-400'
               }`}
             >
               {message.text}
@@ -219,7 +219,7 @@ function PasswordInputNode({ node, showConfirmation }: { node: UiNode; showConfi
         {meta.label && (
           <label
             htmlFor={attributes.name}
-            className="block text-sm font-medium text-slate-700 mb-1"
+            className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1"
           >
             {meta.label.text}
             {attributes.required && <span className="text-red-500 ml-1">*</span>}
@@ -237,16 +237,16 @@ function PasswordInputNode({ node, showConfirmation }: { node: UiNode; showConfi
             disabled={attributes.disabled}
             pattern={attributes.pattern}
             autoComplete={getAutoComplete(attributes.name)}
-            className={`w-full px-4 py-3 pr-12 rounded-lg border ${
+            className={`w-full px-4 py-3 pr-12 rounded-lg border bg-white dark:bg-dark-400 text-gray-900 dark:text-white ${
               hasError
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                ? 'border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-500'
+                : 'border-slate-300 dark:border-dark-border focus:border-indigo-500 focus:ring-indigo-500'
             } focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors`}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
             tabIndex={-1}
           >
             {showPassword ? (
@@ -263,7 +263,7 @@ function PasswordInputNode({ node, showConfirmation }: { node: UiNode; showConfi
               <p
                 key={message.id}
                 className={`text-sm ${
-                  message.type === 'error' ? 'text-red-600' : 'text-slate-600'
+                  message.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-gray-400'
                 }`}
               >
                 {message.text}
@@ -278,7 +278,7 @@ function PasswordInputNode({ node, showConfirmation }: { node: UiNode; showConfi
         <div>
           <label
             htmlFor={`${attributes.name}-confirm`}
-            className="block text-sm font-medium text-slate-700 mb-1"
+            className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1"
           >
             Confirm Password
             {attributes.required && <span className="text-red-500 ml-1">*</span>}
@@ -293,16 +293,16 @@ function PasswordInputNode({ node, showConfirmation }: { node: UiNode; showConfi
               required={attributes.required}
               disabled={attributes.disabled}
               autoComplete="new-password"
-              className={`w-full px-4 py-3 pr-12 rounded-lg border ${
+              className={`w-full px-4 py-3 pr-12 rounded-lg border bg-white dark:bg-dark-400 text-gray-900 dark:text-white ${
                 confirmError
-                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                  : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-500'
+                  ? 'border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-500'
+                  : 'border-slate-300 dark:border-dark-border focus:border-indigo-500 focus:ring-indigo-500'
               } focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors`}
             />
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
               tabIndex={-1}
             >
               {showConfirm ? (
@@ -313,7 +313,7 @@ function PasswordInputNode({ node, showConfirmation }: { node: UiNode; showConfi
             </button>
           </div>
           {confirmError && (
-            <p className="mt-1 text-sm text-red-600">{confirmError}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{confirmError}</p>
           )}
         </div>
       )}
@@ -328,9 +328,9 @@ function Message({ message }: { message: UiText }) {
     info: Info,
   };
   const colors = {
-    error: 'bg-red-50 text-red-800 border-red-200',
-    success: 'bg-green-50 text-green-800 border-green-200',
-    info: 'bg-blue-50 text-blue-800 border-blue-200',
+    error: 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800',
+    success: 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-400 border-green-200 dark:border-green-800',
+    info: 'bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 border-blue-200 dark:border-blue-800',
   };
 
   const Icon = icons[message.type] || Info;
