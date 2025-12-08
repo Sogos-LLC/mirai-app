@@ -64,8 +64,13 @@ export function SignupWizard() {
   }
 
   // Main wizard flow
+  // Use wider container for plan step to fit cards side-by-side
+  const containerClass = registration.isPlanStep
+    ? 'w-full max-w-4xl mx-auto'
+    : 'w-full max-w-md mx-auto';
+
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className={containerClass}>
       {/* Progress indicator */}
       <ProgressBar
         currentStep={registration.stepIndex}

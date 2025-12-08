@@ -104,53 +104,26 @@ export function PlanStepV2({
       </div>
 
       {/* Plan cards */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {PLANS.map((plan) => (
           <button
             key={plan.id}
             type="button"
             onClick={() => handlePlanSelect(plan.id)}
             className={`
-              w-full p-4 border-2 rounded-xl text-left transition-all relative
+              h-full p-5 border-2 rounded-xl text-left transition-all relative flex flex-col
               ${
                 selectedPlan === plan.id
                   ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                  : 'border hover:border'
+                  : 'border hover:border-indigo-300 dark:hover:border-indigo-700'
               }
             `}
           >
             {plan.popular && (
-              <span className="absolute -top-3 right-4 px-3 py-1 bg-indigo-600 text-white text-xs font-medium rounded-full">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-indigo-600 text-white text-xs font-medium rounded-full whitespace-nowrap">
                 Most Popular
               </span>
             )}
-
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-semibold text-primary">{plan.name}</h3>
-                <p className="text-sm text-secondary mt-1">{plan.description}</p>
-              </div>
-              <div className="text-right">
-                {plan.price > 0 ? (
-                  <>
-                    <span className="text-2xl font-bold text-primary">${plan.price}</span>
-                    <span className="text-secondary">/seat/mo</span>
-                  </>
-                ) : (
-                  <span className="text-lg font-semibold text-primary">Contact us</span>
-                )}
-              </div>
-            </div>
-
-            {/* Features list */}
-            <ul className="mt-4 space-y-2">
-              {plan.features.map((feature) => (
-                <li key={feature} className="flex items-center gap-2 text-sm text-secondary">
-                  <Check className="h-4 w-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
 
             {/* Selection indicator */}
             {selectedPlan === plan.id && plan.id !== Plan.ENTERPRISE && (
@@ -160,6 +133,34 @@ export function PlanStepV2({
                 </div>
               </div>
             )}
+
+            {/* Plan header */}
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-primary">{plan.name}</h3>
+              <p className="text-sm text-secondary mt-1">{plan.description}</p>
+            </div>
+
+            {/* Price */}
+            <div className="text-center mb-4 pb-4 border-b">
+              {plan.price > 0 ? (
+                <>
+                  <span className="text-3xl font-bold text-primary">${plan.price}</span>
+                  <span className="text-secondary">/seat/mo</span>
+                </>
+              ) : (
+                <span className="text-xl font-semibold text-primary">Contact us</span>
+              )}
+            </div>
+
+            {/* Features list */}
+            <ul className="space-y-3 flex-1">
+              {plan.features.map((feature) => (
+                <li key={feature} className="flex items-start gap-2 text-sm text-secondary">
+                  <Check className="h-4 w-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
           </button>
         ))}
       </div>
