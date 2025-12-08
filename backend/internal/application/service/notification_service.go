@@ -556,8 +556,8 @@ func (s *NotificationService) NotifyOutlineReady(ctx context.Context, userID uui
 		}
 	}
 
-	// Link to dashboard with edit param to auto-open course modal
-	actionURL := fmt.Sprintf("/dashboard?edit=%s", courseID.String())
+	// Link to dedicated outline review page
+	actionURL := fmt.Sprintf("/course/%s/outline", courseID.String())
 
 	// Create in-app notification
 	notifReq := CreateNotificationRequest{
@@ -622,7 +622,7 @@ func (s *NotificationService) NotifyOutlineFailed(ctx context.Context, userID uu
 		}
 	}
 
-	actionURL := fmt.Sprintf("/dashboard?edit=%s", courseID.String())
+	actionURL := fmt.Sprintf("/course/%s/outline", courseID.String())
 
 	// Create in-app notification
 	notifReq := CreateNotificationRequest{

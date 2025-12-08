@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle, FileText, Sparkles, Users, Target, Palette, ClipboardList } from 'lucide-react';
+import { CheckCircle, FileText, Sparkles, Users, Target, Palette, Loader2 } from 'lucide-react';
 import type { WizardStep } from '@/machines/courseWizardMachine';
 import { getStepNumber, getAllSteps, getStepLabel } from '@/machines/courseWizardMachine';
 
@@ -17,7 +17,7 @@ const stepIcons: Record<WizardStep, React.ComponentType<{ className?: string }>>
   audienceSelection: Target,
   toneSelection: Palette,
   additionalContext: FileText,
-  outlineReview: ClipboardList,
+  outlineJobQueued: Loader2,
 };
 
 export default function WizardProgress({ currentStep, isGenerating = false }: WizardProgressProps) {

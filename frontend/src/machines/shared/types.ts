@@ -29,6 +29,8 @@ export type AuthErrorCode =
   | 'INVITATION_REVOKED'
   | 'INVITATION_ALREADY_ACCEPTED'
   | 'VALIDATION_ERROR'
+  | 'NOT_FOUND'
+  | 'GENERATION_FAILED'
   | 'UNKNOWN';
 
 /**
@@ -66,6 +68,8 @@ export const ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   INVITATION_REVOKED: 'This invitation has been revoked.',
   INVITATION_ALREADY_ACCEPTED: 'This invitation has already been used.',
   VALIDATION_ERROR: 'Please check your input and try again.',
+  NOT_FOUND: 'The requested resource was not found.',
+  GENERATION_FAILED: 'Content generation failed. Please try again.',
   UNKNOWN: 'An unexpected error occurred. Please try again.',
 };
 

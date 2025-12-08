@@ -18,17 +18,11 @@ import {
   useGetWizardState,
   useSaveWizardState,
   useDeleteWizardState,
-  useCreateCourseFromOutline,
 } from '@/hooks/useCourseWizard';
 import {
   useGenerateCourseOutline,
 } from '@/hooks/useAIGeneration';
 import { useCreateCourse } from '@/hooks/useCourses';
-import {
-  getJob as getJobClient,
-  getCourseOutline as getCourseOutlineClient,
-  GenerationJobStatus,
-} from '@/lib/aiGenerationClient';
 import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
@@ -39,7 +33,7 @@ import AudiencePersonasStep from './steps/AudiencePersonasStep';
 import ToneSelectionStep from './steps/ToneSelectionStep';
 import AdditionalContextStep from './steps/AdditionalContextStep';
 import GeneratingStep from './steps/GeneratingStep';
-import OutlineReviewStep from './steps/OutlineReviewStep';
+import { GenerationQueuedConfirmation } from '@/components/ai-generation/GenerationQueuedConfirmation';
 import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 
@@ -54,7 +48,6 @@ export default function CourseWizard() {
   const getSavedState = useGetWizardState();
   const saveWizardState = useSaveWizardState();
   const deleteWizardState = useDeleteWizardState();
-  const createCourseFromOutline = useCreateCourseFromOutline();
 
   // API hooks - course & outline generation
   const createCourse = useCreateCourse();
@@ -135,7 +128,7 @@ export default function CourseWizard() {
 
             const courseId = courseResult.course.id;
 
-            // Step 2: Generate the course outline
+            // Step 2: Generate the course outline (starts background job)
             const outlineResult = await generateCourseOutline.mutate({
               courseId,
               desiredOutcome: input.description,
@@ -146,65 +139,12 @@ export default function CourseWizard() {
               throw new Error('Failed to start outline generation');
             }
 
-            // Return both courseId and job info for later use
+            // Return courseId and job info - wizard will offer wait/background choice
             return {
+              courseId,
               job: {
                 id: outlineResult.job.id,
-                courseId,
               },
-            };
-          }
-        ),
-        pollOutlineJobActor: fromPromise(
-          async ({ input }: { input: { jobId: string } }) => {
-            const job = await getJobClient(input.jobId);
-
-            return {
-              job: {
-                id: job.id,
-                status: job.status,
-                courseId: job.courseId,
-                errorMessage: job.errorMessage,
-              },
-            };
-          }
-        ),
-        getOutlineActor: fromPromise(
-          async ({ input }: { input: { jobId: string } }) => {
-            // First get the job to find the courseId
-            const job = await getJobClient(input.jobId);
-            const courseId = job.courseId;
-
-            if (!courseId) {
-              throw new Error('Job has no courseId');
-            }
-
-            // Now fetch the outline for that course
-            const outline = await getCourseOutlineClient(courseId);
-
-            if (!outline) {
-              throw new Error('Failed to fetch outline');
-            }
-
-            return {
-              outline,
-              courseId,
-            };
-          }
-        ),
-        createCourseActor: fromPromise(
-          async ({
-            input,
-          }: {
-            input: { outlineId: string; wizardData: Record<string, unknown> };
-          }) => {
-            const result = await createCourseFromOutline.mutate({
-              outlineId: input.outlineId,
-              wizardData: input.wizardData,
-            });
-            return {
-              courseId: result.courseId,
-              courseTitle: result.courseTitle,
             };
           }
         ),
@@ -233,7 +173,6 @@ export default function CourseWizard() {
     generateToneOptions,
     createCourse,
     generateCourseOutline,
-    createCourseFromOutline,
     saveWizardState,
     deleteWizardState,
   ]);
@@ -253,16 +192,16 @@ export default function CourseWizard() {
     }
   }, [getSavedState.data, getSavedState.isLoading, send]);
 
-  // Handle completion - redirect to course
+  // Handle redirect to outline review page
   useEffect(() => {
-    if (state.matches('complete') && context.courseId) {
-      router.push(`/course/${context.courseId}/preview`);
+    if (state.matches('redirectToOutline') && context.courseId) {
+      router.push(`/course/${context.courseId}/outline`);
     }
   }, [state, context.courseId, router]);
 
-  // Handle cancellation - redirect to dashboard
+  // Handle redirect to dashboard (background generation or cancellation)
   useEffect(() => {
-    if (state.matches('cancelled')) {
+    if (state.matches('redirectToDashboard') || state.matches('cancelled')) {
       router.push('/dashboard');
     }
   }, [state, router]);
@@ -403,21 +342,33 @@ export default function CourseWizard() {
         <WizardProgress currentStep="additionalContext" isGenerating={true} />
         <GeneratingStep
           title="Building Your Outline"
-          description="Creating a comprehensive course outline. This may take a minute..."
+          description="Starting outline generation..."
           onCancel={handleCancel}
         />
       </>
     );
   }
 
-  if (state.matches('creatingCourse')) {
+  // Outline job queued - show choice
+  if (state.matches('outlineJobQueued') || (typeof stateValue === 'object' && 'outlineJobQueued' in stateValue)) {
     return (
       <>
-        <WizardProgress currentStep="outlineReview" isGenerating={true} />
-        <GeneratingStep
-          title="Creating Your Course"
-          description="Setting up your course and preparing for content generation..."
-        />
+        <WizardProgress currentStep="outlineJobQueued" />
+        <Card>
+          <CardContent className="p-0">
+            <GenerationQueuedConfirmation
+              jobId={context.outlineJobId || ''}
+              title="Outline Generation Started!"
+              description="Your course outline is being created. This typically takes 1-2 minutes."
+              infoTitle="What happens next?"
+              infoDescription="Once your outline is ready, you'll review it and can make edits before generating the full course content."
+              waitButtonLabel="Wait for Outline"
+              navigateButtonLabel="Notify Me When Ready"
+              onWaitForCompletion={() => send({ type: 'WAIT_FOR_OUTLINE' })}
+              onNavigateAway={() => send({ type: 'GENERATE_BACKGROUND' })}
+            />
+          </CardContent>
+        </Card>
       </>
     );
   }
@@ -500,17 +451,6 @@ export default function CourseWizard() {
           onContextChange={(ctx) => send({ type: 'SET_ADDITIONAL_CONTEXT', context: ctx })}
           onNext={() => send({ type: 'SUBMIT_CONTEXT' })}
           onSkip={() => send({ type: 'SKIP_CONTEXT' })}
-          onBack={() => send({ type: 'GO_BACK' })}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-        />
-      )}
-
-      {state.matches('outlineReview') && (
-        <OutlineReviewStep
-          outline={context.outline}
-          onApprove={() => send({ type: 'APPROVE_OUTLINE' })}
-          onRegenerate={() => send({ type: 'REGENERATE_OUTLINE' })}
           onBack={() => send({ type: 'GO_BACK' })}
           onCancel={handleCancel}
           isLoading={isLoading}

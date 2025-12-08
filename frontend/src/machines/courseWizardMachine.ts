@@ -23,7 +23,7 @@ export type WizardStep =
   | 'audienceSelection'
   | 'toneSelection'
   | 'additionalContext'
-  | 'outlineReview';
+  | 'outlineJobQueued';
 
 /**
  * Context for the course wizard state machine
@@ -95,10 +95,9 @@ export type CourseWizardEvent =
   | { type: 'SET_ADDITIONAL_CONTEXT'; context: string }
   | { type: 'SUBMIT_CONTEXT' }
   | { type: 'SKIP_CONTEXT' }
-  // Step 7: Outline
-  | { type: 'POLL_OUTLINE' }
-  | { type: 'APPROVE_OUTLINE' }
-  | { type: 'REGENERATE_OUTLINE' }
+  // Step 7: Outline Job Queued - user choice
+  | { type: 'WAIT_FOR_OUTLINE' }      // User wants to go to outline page
+  | { type: 'GENERATE_BACKGROUND' }   // User wants to go to dashboard
   // Navigation
   | { type: 'GO_BACK' }
   | { type: 'CANCEL' }
@@ -130,34 +129,12 @@ interface GenerateToneOptionsResponse {
 
 interface GenerateOutlineResponse {
   job: GenerationJob;
-}
-
-interface GetJobResponse {
-  job: GenerationJob;
-}
-
-interface GetOutlineResponse {
-  outline: CourseOutline;
-}
-
-interface CreateCourseResponse {
   courseId: string;
-  courseTitle: string;
 }
 
 interface SaveWizardStateResponse {
   state: WizardState;
 }
-
-// Job status constants
-const JOB_STATUS = {
-  UNSPECIFIED: 0,
-  QUEUED: 1,
-  PROCESSING: 2,
-  COMPLETED: 3,
-  FAILED: 4,
-  CANCELLED: 5,
-} as const;
 
 // ============================================================
 // Initial Context
@@ -244,29 +221,8 @@ export const generateOutlineActor = fromPromise<
   throw new NetworkError('generateOutlineActor must be provided by the component');
 });
 
-/**
- * Poll outline job status
- */
-export const pollOutlineJobActor = fromPromise<GetJobResponse, { jobId: string }>(async () => {
-  throw new NetworkError('pollOutlineJobActor must be provided by the component');
-});
-
-/**
- * Fetch generated outline
- */
-export const getOutlineActor = fromPromise<GetOutlineResponse, { jobId: string }>(async () => {
-  throw new NetworkError('getOutlineActor must be provided by the component');
-});
-
-/**
- * Create course from approved outline
- */
-export const createCourseActor = fromPromise<
-  CreateCourseResponse,
-  { outlineId: string; wizardData: Partial<WizardStepData> }
->(async () => {
-  throw new NetworkError('createCourseActor must be provided by the component');
-});
+// Note: pollOutlineJobActor, getOutlineActor, and createCourseActor removed
+// The wizard now redirects to the outline review page after starting outline generation
 
 /**
  * Save wizard state to backend
@@ -729,180 +685,70 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Generating Outline (Async Job)
+    // Generating Outline (Async Job) - Just submit, don't poll
     // --------------------------------------------------------
     generatingOutline: {
-      initial: 'submitting',
-      states: {
-        submitting: {
-          invoke: {
-            id: 'generateOutline',
-            src: 'generateOutlineActor',
-            input: ({ context }) => ({
-              title: context.improvedTitle,
-              description: context.description,
-              smePersonas: context.smePersonas.filter((p) => context.selectedSMEIds.includes(p.id)),
-              audiencePersonas: context.audiencePersonas.filter((p) =>
-                context.selectedAudienceIds.includes(p.id)
-              ),
-              toneOption: context.toneOptions.find((t) => t.id === context.selectedToneId),
-              additionalContext: context.additionalContext,
-            }),
-            onDone: {
-              target: 'polling',
-              actions: assign({
-                outlineJobId: ({ event }) => event.output.job.id,
-              }),
-            },
-            onError: {
-              target: '#courseWizard.additionalContext',
-              actions: assign({
-                error: ({ event }) =>
-                  createAuthError(
-                    'NETWORK_ERROR',
-                    event.error instanceof Error
-                      ? event.error.message
-                      : 'Failed to start outline generation',
-                    true
-                  ),
-              }),
-            },
-          },
-        },
-        polling: {
-          invoke: {
-            id: 'pollOutlineJob',
-            src: 'pollOutlineJobActor',
-            input: ({ context }) => ({ jobId: context.outlineJobId! }),
-            onDone: [
-              {
-                target: 'fetchingOutline',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.COMPLETED,
-              },
-              {
-                target: '#courseWizard.additionalContext',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.FAILED,
-                actions: assign({
-                  error: ({ event }) =>
-                    createAuthError(
-                      'NETWORK_ERROR',
-                      event.output.job.errorMessage || 'Outline generation failed',
-                      true
-                    ),
-                }),
-              },
-              {
-                target: 'waiting',
-              },
-            ],
-            onError: {
-              target: '#courseWizard.additionalContext',
-              actions: assign({
-                error: ({ event }) =>
-                  createAuthError(
-                    'NETWORK_ERROR',
-                    event.error instanceof Error ? event.error.message : 'Failed to poll job status',
-                    true
-                  ),
-              }),
-            },
-          },
-        },
-        waiting: {
-          after: {
-            3000: 'polling',
-          },
-          on: {
-            CANCEL: '#courseWizard.additionalContext',
-          },
-        },
-        fetchingOutline: {
-          invoke: {
-            id: 'getOutline',
-            src: 'getOutlineActor',
-            input: ({ context }) => ({ jobId: context.outlineJobId! }),
-            onDone: {
-              target: '#courseWizard.outlineReview',
-              actions: assign({
-                outline: ({ event }) => event.output.outline,
-                error: null,
-              }),
-            },
-            onError: {
-              target: '#courseWizard.additionalContext',
-              actions: assign({
-                error: ({ event }) =>
-                  createAuthError(
-                    'NETWORK_ERROR',
-                    event.error instanceof Error ? event.error.message : 'Failed to fetch outline',
-                    true
-                  ),
-              }),
-            },
-          },
-        },
-      },
-    },
-
-    // --------------------------------------------------------
-    // Step 7: Outline Review
-    // --------------------------------------------------------
-    outlineReview: {
-      entry: assign({
-        currentStep: 'outlineReview' as const,
-      }),
-      on: {
-        APPROVE_OUTLINE: 'creatingCourse',
-        REGENERATE_OUTLINE: 'generatingOutline',
-        GO_BACK: 'additionalContext',
-        CANCEL: 'cancelled',
-      },
-    },
-
-    // --------------------------------------------------------
-    // Creating Course from Outline
-    // --------------------------------------------------------
-    creatingCourse: {
       invoke: {
-        id: 'createCourse',
-        src: 'createCourseActor',
+        id: 'generateOutline',
+        src: 'generateOutlineActor',
         input: ({ context }) => ({
-          outlineId: context.outline!.id,
-          wizardData: {
-            courseName: context.courseName,
-            improvedTitle: context.improvedTitle,
-            description: context.description,
-            smePersonas: context.smePersonas.filter((p) => context.selectedSMEIds.includes(p.id)),
-            selectedSmeIds: context.selectedSMEIds,
-            audiencePersonas: context.audiencePersonas.filter((p) =>
-              context.selectedAudienceIds.includes(p.id)
-            ),
-            selectedAudienceIds: context.selectedAudienceIds,
-            toneOptions: [context.toneOptions.find((t) => t.id === context.selectedToneId)!],
-            selectedToneId: context.selectedToneId,
-            additionalContext: context.additionalContext,
-          },
+          title: context.improvedTitle,
+          description: context.description,
+          smePersonas: context.smePersonas.filter((p) => context.selectedSMEIds.includes(p.id)),
+          audiencePersonas: context.audiencePersonas.filter((p) =>
+            context.selectedAudienceIds.includes(p.id)
+          ),
+          toneOption: context.toneOptions.find((t) => t.id === context.selectedToneId),
+          additionalContext: context.additionalContext,
         }),
         onDone: {
-          target: 'complete',
+          target: 'outlineJobQueued',
           actions: assign({
+            outlineJobId: ({ event }) => event.output.job.id,
             courseId: ({ event }) => event.output.courseId,
-            courseTitle: ({ event }) => event.output.courseTitle,
-            error: null,
           }),
         },
         onError: {
-          target: 'outlineReview',
+          target: 'additionalContext',
           actions: assign({
             error: ({ event }) =>
               createAuthError(
                 'NETWORK_ERROR',
-                event.error instanceof Error ? event.error.message : 'Failed to create course',
+                event.error instanceof Error
+                  ? event.error.message
+                  : 'Failed to start outline generation',
                 true
               ),
           }),
         },
       },
+    },
+
+    // --------------------------------------------------------
+    // Step 7: Outline Job Queued - User chooses wait or background
+    // --------------------------------------------------------
+    outlineJobQueued: {
+      entry: assign({
+        currentStep: 'outlineJobQueued' as const,
+      }),
+      on: {
+        WAIT_FOR_OUTLINE: 'redirectToOutline',
+        GENERATE_BACKGROUND: 'redirectToDashboard',
+      },
+    },
+
+    // --------------------------------------------------------
+    // Redirect to Outline Review Page
+    // --------------------------------------------------------
+    redirectToOutline: {
+      type: 'final' as const,
+    },
+
+    // --------------------------------------------------------
+    // Redirect to Dashboard (background generation)
+    // --------------------------------------------------------
+    redirectToDashboard: {
+      type: 'final' as const,
     },
 
     // --------------------------------------------------------
@@ -934,7 +780,8 @@ export const courseWizardMachine = createMachine({
 // ============================================================
 
 /**
- * Get step number (1-7) from step identifier
+ * Get step number (1-6) from step identifier
+ * Note: Step 7 (outlineJobQueued) is a confirmation screen, not a wizard step
  */
 export function getStepNumber(step: WizardStep): number {
   const stepMap: Record<WizardStep, number> = {
@@ -944,7 +791,7 @@ export function getStepNumber(step: WizardStep): number {
     audienceSelection: 4,
     toneSelection: 5,
     additionalContext: 6,
-    outlineReview: 7,
+    outlineJobQueued: 6, // Same as additionalContext since it's a confirmation
   };
   return stepMap[step];
 }
@@ -960,13 +807,13 @@ export function getStepLabel(step: WizardStep): string {
     audienceSelection: 'Target Audience',
     toneSelection: 'Tone & Style',
     additionalContext: 'Additional Context',
-    outlineReview: 'Review Outline',
+    outlineJobQueued: 'Generation Started',
   };
   return labelMap[step];
 }
 
 /**
- * Get all steps in order
+ * Get all steps in order (excluding confirmation states)
  */
 export function getAllSteps(): WizardStep[] {
   return [
@@ -976,7 +823,6 @@ export function getAllSteps(): WizardStep[] {
     'audienceSelection',
     'toneSelection',
     'additionalContext',
-    'outlineReview',
   ];
 }
 
@@ -991,11 +837,7 @@ export function isGenerating(stateValue: unknown): boolean {
       'generatingAudiences',
       'generatingTones',
       'generatingOutline',
-      'creatingCourse',
     ].includes(stateValue);
-  }
-  if (typeof stateValue === 'object' && stateValue !== null) {
-    return 'generatingOutline' in stateValue;
   }
   return false;
 }
