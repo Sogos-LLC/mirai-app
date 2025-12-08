@@ -135,12 +135,14 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 
 	// Store generation input
 	genInput := &entity.CourseGenerationInput{
-		ID:             uuid.New(),
-		TenantID:       *user.TenantID,
-		CourseID:       req.CourseID,
-		DesiredOutcome: req.DesiredOutcome,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		ID:                uuid.New(),
+		TenantID:          *user.TenantID,
+		CourseID:          req.CourseID,
+		SMEIDs:            []uuid.UUID{}, // Initialize as empty slice (DB requires NOT NULL)
+		TargetAudienceIDs: []uuid.UUID{}, // Initialize as empty slice (DB requires NOT NULL)
+		DesiredOutcome:    req.DesiredOutcome,
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
 	}
 	if req.AdditionalContext != "" {
 		genInput.AdditionalContext = &req.AdditionalContext
