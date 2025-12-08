@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
     '/settings',
     '/teams',
     '/onboard',
-    '/course-builder',
+    '/course',
     '/content-library',
     '/templates',
     '/tutorials',

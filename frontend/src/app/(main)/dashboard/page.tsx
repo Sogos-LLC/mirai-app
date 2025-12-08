@@ -93,7 +93,7 @@ export default function Dashboard() {
   });
 
   const handleEditCourse = (courseId: string) => {
-    router.push(`/course-builder?id=${courseId}`);
+    router.push(`/course/${courseId}/editor`);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -170,7 +170,7 @@ export default function Dashboard() {
             <p className="text-gray-600 dark:text-gray-400">Create engaging courses with AI or import existing materials</p>
           </div>
           <button
-            onClick={() => router.push('/course-builder')}
+            onClick={() => router.push('/course/wizard')}
             className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl"
           >
             <Plus className="w-5 h-5" />
@@ -307,7 +307,7 @@ export default function Dashboard() {
               Get started by creating your first course using AI prompts or importing existing materials
             </p>
             <button
-              onClick={() => router.push('/course-builder')}
+              onClick={() => router.push('/course/wizard')}
               className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
             >
               Create your first course

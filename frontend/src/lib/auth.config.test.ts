@@ -141,7 +141,7 @@ describe('Auth Contract Constants', () => {
       expect(PUBLIC_ROUTES).not.toContain('/dashboard');
       expect(PUBLIC_ROUTES).not.toContain('/teams');
       expect(PUBLIC_ROUTES).not.toContain('/settings');
-      expect(PUBLIC_ROUTES).not.toContain('/course-builder');
+      expect(PUBLIC_ROUTES).not.toContain('/course/wizard');
     });
   });
 

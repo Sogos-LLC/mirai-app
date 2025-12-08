@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
     icon: <Library className="w-5 h-5" />,
   },
   {
-    href: '/course-builder',
+    href: '/course/wizard',
     label: 'Create',
     icon: <Plus className="w-6 h-6" />,
     isCreate: true,

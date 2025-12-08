@@ -102,7 +102,7 @@ export default function ContentLibrary() {
   };
 
   const handleCourseClick = (courseId: string) => {
-    router.push(`/course-builder?id=${courseId}`);
+    router.push(`/course/${courseId}/editor`);
   };
 
   // Folder creation handlers
