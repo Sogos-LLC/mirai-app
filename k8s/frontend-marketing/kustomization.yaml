@@ -9,4 +9,4 @@ resources:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-marketing
   newName: ghcr.io/sogos-llc/mirai-app/mirai-marketing
-  newTag: a314ae8
+  newTag: ad28bcf
