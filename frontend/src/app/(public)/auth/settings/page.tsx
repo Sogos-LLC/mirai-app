@@ -134,27 +134,27 @@ export default function SettingsPage() {
   const activeTabConfig = tabs.find((t) => t.id === activeTab);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-dark-page dark:to-dark-page py-12 px-4">
+    <div className="min-h-screen bg-page py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Back link */}
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white mb-6"
+          className="inline-flex items-center gap-2 text-secondary hover:text-primary mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Link>
 
         {/* Card */}
-        <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-xl dark:shadow-glow-md border border-slate-200 dark:border-dark-border overflow-hidden">
+        <div className="bg-surface rounded-2xl shadow-xl dark:shadow-glow-md border overflow-hidden">
           {/* Header */}
-          <div className="px-8 py-6 border-b border-slate-200 dark:border-dark-border">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Account Settings</h1>
-            <p className="text-slate-600 dark:text-gray-400 mt-1">Manage your profile and security settings</p>
+          <div className="px-8 py-6 border-b border">
+            <h1 className="text-2xl font-bold text-primary">Account Settings</h1>
+            <p className="text-secondary mt-1">Manage your profile and security settings</p>
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-slate-200 dark:border-dark-border">
+          <div className="flex border-b border">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -162,7 +162,7 @@ export default function SettingsPage() {
                 className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
-                    : 'text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-300'
+                    : 'text-muted hover:text-secondary'
                 }`}
               >
                 <tab.icon className="h-5 w-5" />

@@ -9,9 +9,9 @@ interface TeamMembersPanelProps {
 }
 
 const ROLE_LABELS: Record<number, { label: string; color: string }> = {
-  0: { label: 'Unknown', color: 'bg-gray-100 text-gray-800' },
-  1: { label: 'Lead', color: 'bg-purple-100 text-purple-800' },
-  2: { label: 'Member', color: 'bg-blue-100 text-blue-800' },
+  0: { label: 'Unknown', color: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300' },
+  1: { label: 'Lead', color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
+  2: { label: 'Member', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
 };
 
 function getInitials(firstName?: string, lastName?: string): string {
@@ -58,12 +58,12 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Team Members</h2>
+      <div className="bg-surface shadow dark:shadow-glow-sm rounded-lg border">
+        <div className="px-4 py-5 sm:px-6 border-b border">
+          <h2 className="text-lg font-medium text-primary">Team Members</h2>
         </div>
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 dark:border-blue-400" />
         </div>
       </div>
     );
@@ -71,13 +71,13 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
 
   if (error) {
     return (
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Team Members</h2>
+      <div className="bg-surface shadow dark:shadow-glow-sm rounded-lg border">
+        <div className="px-4 py-5 sm:px-6 border-b border">
+          <h2 className="text-lg font-medium text-primary">Team Members</h2>
         </div>
         <div className="px-4 py-5 sm:px-6">
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="text-sm text-red-700">Failed to load team members.</div>
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+            <div className="text-sm text-red-700 dark:text-red-400">Failed to load team members.</div>
           </div>
         </div>
       </div>
@@ -85,18 +85,18 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg">
+    <div className="bg-surface shadow dark:shadow-glow-sm rounded-lg border">
       {/* Header */}
-      <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex items-center justify-between">
+      <div className="px-4 py-5 sm:px-6 border-b border flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium text-gray-900">Team Members</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-lg font-medium text-primary">Team Members</h2>
+          <p className="mt-1 text-sm text-secondary">
             {members.length} {members.length === 1 ? 'member' : 'members'}
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
         >
           <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -106,11 +106,11 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
       </div>
 
       {/* Members List */}
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-border">{/* Using semantic divide color */}
         {members.length === 0 ? (
           <div className="px-4 py-8 text-center">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-muted"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -122,11 +122,11 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
                 d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
               />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No members yet</h3>
-            <p className="mt-1 text-sm text-gray-500">Add members to this team to get started.</p>
+            <h3 className="mt-2 text-sm font-medium text-primary">No members yet</h3>
+            <p className="mt-1 text-sm text-secondary">Add members to this team to get started.</p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               Add First Member
             </button>
@@ -145,21 +145,21 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
               >
                 <div className="flex items-center">
                   {/* Avatar with initials */}
-                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                  <div className="h-10 w-10 rounded-full bg-hover flex items-center justify-center text-sm font-medium text-secondary">
                     {member.user?.firstName || member.user?.lastName ? (
                       initials
                     ) : (
-                      <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-6 w-6 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     )}
                   </div>
                   <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-primary">
                       {displayName}
                     </div>
                     {member.user?.email && displayName !== member.user.email && (
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-secondary">
                         {member.user.email}
                       </div>
                     )}
@@ -173,11 +173,11 @@ export function TeamMembersPanel({ teamId }: TeamMembersPanelProps) {
                 <button
                   onClick={() => handleRemoveMember(member)}
                   disabled={isRemoving}
-                  className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm font-medium disabled:opacity-50"
                   title="Remove from team"
                 >
                   {isRemoving ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600" />
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600 dark:border-red-400" />
                   ) : (
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

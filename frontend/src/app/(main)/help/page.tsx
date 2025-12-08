@@ -90,20 +90,20 @@ export default function HelpPage() {
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+          <h1 className="text-4xl font-bold text-primary mb-3">
             How can we help you?
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-8">
+          <p className="text-secondary mb-8">
             Search our knowledge base or browse common questions
           </p>
           <div className="max-w-2xl mx-auto relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted w-5 h-5" />
             <input
               type="text"
               placeholder="Search for help..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 border border-gray-300 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg shadow-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              className="w-full pl-12 pr-4 py-4 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg shadow-sm bg-surface text-primary placeholder:text-muted"
             />
           </div>
         </div>
@@ -116,26 +116,26 @@ export default function HelpPage() {
               <a
                 key={idx}
                 href={resource.link}
-                className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-6 hover:shadow-lg dark:hover:shadow-glow-sm transition-all hover:border-primary-300 dark:hover:border-primary-700 group"
+                className="bg-surface border rounded-xl p-6 hover:shadow-lg dark:hover:shadow-glow-sm transition-all hover:border-primary-300 dark:hover:border-primary-700 group"
               >
                 <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary-200 dark:group-hover:bg-primary-900/50 transition-colors">
                   <Icon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2">
                   {resource.title}
                   <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">{resource.description}</p>
+                <p className="text-secondary text-sm">{resource.description}</p>
               </a>
             );
           })}
         </div>
 
         {/* FAQ Section */}
-        <section className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-8 mb-12 shadow-sm dark:shadow-glow-sm">
+        <section className="bg-surface border rounded-xl p-8 mb-12 shadow-sm dark:shadow-glow-sm">
           <div className="flex items-center gap-3 mb-6">
             <HelpCircle className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-bold text-primary">
               Frequently Asked Questions
             </h2>
           </div>
@@ -143,13 +143,13 @@ export default function HelpPage() {
             {faqs.map((faq, idx) => (
               <div
                 key={idx}
-                className="border border-gray-200 dark:border-dark-border rounded-lg overflow-hidden"
+                className="border rounded-lg overflow-hidden"
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                  className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-dark-50 transition-colors"
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-hover transition-colors"
                 >
-                  <span className="font-semibold text-gray-900 dark:text-white pr-4">
+                  <span className="font-semibold text-primary pr-4">
                     {faq.question}
                   </span>
                   <ChevronDown
@@ -160,7 +160,7 @@ export default function HelpPage() {
                 </button>
                 {openFaq === idx && (
                   <div className="px-4 pb-4 pt-0">
-                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                    <p className="text-secondary leading-relaxed">
                       {faq.answer}
                     </p>
                   </div>
@@ -177,7 +177,7 @@ export default function HelpPage() {
             Our support team is here to assist you
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <button className="bg-white text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 flex items-center gap-2">
+            <button className="bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-lg font-semibold hover:bg-white/30 flex items-center gap-2">
               <MessageCircle className="w-5 h-5" />
               Live Chat
             </button>

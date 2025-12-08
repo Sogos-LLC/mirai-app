@@ -8,21 +8,21 @@ export default function CourseBuilder() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-page flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Construction className="w-8 h-8 text-amber-600" />
+        <div className="bg-surface rounded-xl shadow-sm dark:shadow-glow-sm border p-8">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Construction className="w-8 h-8 text-amber-600 dark:text-amber-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">
+          <h1 className="text-2xl font-bold text-primary mb-3">
             Course Builder Coming Soon
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-secondary mb-6">
             We're working on an amazing new course creation experience. Check back soon!
           </p>
           <button
             onClick={() => router.push('/content-library')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 dark:bg-violet-500 text-white rounded-lg hover:bg-violet-700 dark:hover:bg-violet-600 transition-colors font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Content Library

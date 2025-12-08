@@ -134,7 +134,7 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
         <div className="flex-1 space-y-4">
           {/* User Search Input */}
           <div className="relative">
-            <label htmlFor="userSearch" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="userSearch" className="block text-sm font-medium text-primary mb-1">
               Search User
             </label>
             <div className="relative">
@@ -149,7 +149,7 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-base border-gray-300 rounded-md px-3 py-3 lg:py-2 border min-h-[44px] ${
+                className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-base border-input rounded-md px-3 py-3 lg:py-2 border min-h-[44px] bg-surface text-primary placeholder:text-muted ${
                   selectedUser ? 'pr-10' : ''
                 }`}
                 placeholder="Search by name or email..."
@@ -159,7 +159,7 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
                 <button
                   type="button"
                   onClick={handleClearSelection}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -167,7 +167,7 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
                 </button>
               )}
             </div>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-secondary">
               {isLoadingUsers ? 'Loading users...' : 'Type at least 2 characters to search'}
             </p>
 
@@ -175,26 +175,26 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
             {showSuggestions && searchQuery.length >= 2 && filteredUsers.length > 0 && (
               <div
                 ref={suggestionsRef}
-                className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
+                className="absolute z-10 mt-1 w-full bg-surface-elevated border border rounded-md shadow-lg dark:shadow-glow-sm max-h-60 overflow-auto"
               >
                 {filteredUsers.map((user) => (
                   <button
                     key={user.id}
                     type="button"
                     onClick={() => handleSelectUser(user)}
-                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 text-left border-b border-gray-100 last:border-b-0"
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-hover text-left border-b border last:border-b-0"
                   >
                     {/* Avatar with initials */}
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-hover flex items-center justify-center text-sm font-medium text-secondary">
                       {getInitials(user.firstName, user.lastName)}
                     </div>
                     {/* Name and email */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">
+                      <div className="text-sm font-medium text-primary truncate">
                         {getDisplayName(user)}
                       </div>
                       {user.email && (
-                        <div className="text-sm text-gray-500 truncate">
+                        <div className="text-sm text-secondary truncate">
                           {user.email}
                         </div>
                       )}
@@ -208,7 +208,7 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
             {showSuggestions && searchQuery.length >= 2 && filteredUsers.length === 0 && !isLoadingUsers && (
               <div
                 ref={suggestionsRef}
-                className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg p-4 text-center text-sm text-gray-500"
+                className="absolute z-10 mt-1 w-full bg-surface border border rounded-md shadow-lg p-4 text-center text-sm text-secondary"
               >
                 No users found matching &quot;{searchQuery}&quot;
               </div>
@@ -217,19 +217,19 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
 
           {/* Selected User Display */}
           {selectedUser && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 flex items-center gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center text-sm font-medium text-blue-700">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 flex items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center text-sm font-medium text-blue-700 dark:text-blue-300">
                 {getInitials(selectedUser.firstName, selectedUser.lastName)}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900">
+                <div className="text-sm font-medium text-primary">
                   {getDisplayName(selectedUser)}
                 </div>
                 {selectedUser.email && (
-                  <div className="text-sm text-gray-600">{selectedUser.email}</div>
+                  <div className="text-sm text-secondary">{selectedUser.email}</div>
                 )}
               </div>
-              <svg className="h-5 w-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             </div>
@@ -237,15 +237,15 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
 
           {/* Role Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+            <label className="block text-sm font-medium text-primary mb-2">Role</label>
             <div className="space-y-2">
               {ROLE_OPTIONS.map((option) => (
                 <label
                   key={option.value}
                   className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
                     role === option.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border hover:bg-hover'
                   }`}
                 >
                   <input
@@ -257,8 +257,8 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
                     className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
                   />
                   <div className="ml-3">
-                    <span className="block text-sm font-medium text-gray-900">{option.label}</span>
-                    <span className="block text-xs text-gray-500">{option.description}</span>
+                    <span className="block text-sm font-medium text-primary">{option.label}</span>
+                    <span className="block text-xs text-secondary">{option.description}</span>
                   </div>
                 </label>
               ))}
@@ -274,12 +274,12 @@ export function AddTeamMemberModal({ teamId, existingMemberIds, onClose }: AddTe
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col-reverse sm:flex-row gap-3 mt-6 pt-4 border-t border-gray-200">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 mt-6 pt-4 border-t border">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="w-full sm:w-auto px-4 py-3 lg:py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 font-medium min-h-[44px]"
+            className="w-full sm:w-auto px-4 py-3 lg:py-2 rounded-md border border bg-surface text-primary hover:bg-hover font-medium min-h-[44px]"
           >
             Cancel
           </button>
