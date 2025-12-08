@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -1783,7 +1782,6 @@ func (s *AIGenerationService) publishJobEvent(ctx context.Context, eventType str
 
 // refreshImageURLs generates fresh presigned URLs for image components.
 // This ensures images load correctly on any device by regenerating URLs from stored paths.
-// Handles backwards compatibility: extracts storage path from old presigned URLs if needed.
 func (s *AIGenerationService) refreshImageURLs(ctx context.Context, components []entity.LessonComponent) {
 	if s.imageStorage == nil {
 		return
@@ -1800,21 +1798,8 @@ func (s *AIGenerationService) refreshImageURLs(ctx context.Context, components [
 			continue
 		}
 
-		// Get storage path (new format) or extract from URL (backwards compatibility)
-		storagePath, _ := content["storagePath"].(string)
-		if storagePath == "" {
-			// Try to extract path from old presigned URL for backwards compatibility
-			// Old URLs look like: http://192.168.1.226:9768/mirai/data/tenants/.../image.png?X-Amz-...
-			if oldURL, ok := content["url"].(string); ok && oldURL != "" {
-				storagePath = s.extractStoragePathFromURL(oldURL)
-				if storagePath != "" {
-					// Store the extracted path for future requests
-					content["storagePath"] = storagePath
-				}
-			}
-		}
-
-		if storagePath == "" {
+		storagePath, ok := content["storagePath"].(string)
+		if !ok || storagePath == "" {
 			continue
 		}
 
@@ -1836,27 +1821,4 @@ func (s *AIGenerationService) refreshImageURLs(ctx context.Context, components [
 		}
 		comp.ContentJSON = updatedJSON
 	}
-}
-
-// extractStoragePathFromURL extracts the storage path from an old presigned URL.
-// For example: http://192.168.1.226:9768/mirai/data/tenants/abc/images/x.png?X-Amz-...
-// Returns: tenants/abc/images/x.png
-func (s *AIGenerationService) extractStoragePathFromURL(url string) string {
-	// Find the path after the bucket name (/mirai/data/)
-	// Pattern: http(s)://host:port/bucket/basePath/actual/path?signature
-	markers := []string{"/mirai/data/", "/mirai/"} // Try common bucket/basePath patterns
-	for _, marker := range markers {
-		idx := strings.Index(url, marker)
-		if idx == -1 {
-			continue
-		}
-		// Extract path after marker, before query string
-		pathStart := idx + len(marker)
-		pathEnd := strings.Index(url[pathStart:], "?")
-		if pathEnd == -1 {
-			return url[pathStart:]
-		}
-		return url[pathStart : pathStart+pathEnd]
-	}
-	return ""
 }
