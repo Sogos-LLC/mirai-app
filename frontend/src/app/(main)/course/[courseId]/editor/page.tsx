@@ -20,6 +20,8 @@ import {
   Heading,
   Trash2,
   Menu,
+  Download,
+  Check,
 } from 'lucide-react';
 import {
   DndContext,
@@ -50,6 +52,10 @@ import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mir
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
+import {
+  useExportCourse,
+  ExportFormat,
+} from '@/hooks/useExport';
 
 interface SortableComponentProps {
   component: LessonComponent;
@@ -120,6 +126,9 @@ const COMPONENT_TYPES = [
   { type: 6, name: 'Callout', icon: AlertCircle },
 ];
 
+// Export modal states
+type ExportModalState = 'idle' | 'starting' | 'queued';
+
 export default function CourseEditorPage() {
   const params = useParams();
   const router = useRouter();
@@ -135,6 +144,10 @@ export default function CourseEditorPage() {
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [deletingComponentId, setDeletingComponentId] = useState<string | null>(null);
 
+  // Export state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportModalState, setExportModalState] = useState<ExportModalState>('idle');
+
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
 
@@ -144,6 +157,9 @@ export default function CourseEditorPage() {
 
   // Mutation for saving components
   const { mutate: saveComponents, isLoading: isSaving } = useUpdateLessonComponents();
+
+  // Export hooks
+  const { mutate: startExport, isLoading: isStarting } = useExportCourse();
 
   // DnD sensors with 8px activation distance to prevent accidental drags
   const sensors = useSensors(
@@ -304,6 +320,25 @@ export default function CourseEditorPage() {
     }
   };
 
+  // Export handlers
+  const handleExport = async () => {
+    setExportModalState('starting');
+    try {
+      await startExport(courseId, ExportFormat.SCORM_2004);
+      setExportModalState('queued');
+    } catch (err) {
+      console.error('Failed to start export:', err);
+      // Reset to idle on error so user can try again
+      setExportModalState('idle');
+    }
+  };
+
+  const handleCloseExportModal = useCallback(() => {
+    setShowExportModal(false);
+    // Reset state after animation
+    setTimeout(() => setExportModalState('idle'), 300);
+  }, []);
+
   // Loading state
   if (outlineLoading || lessonsLoading) {
     return (
@@ -357,7 +392,16 @@ export default function CourseEditorPage() {
             onClick={() => router.push(`/course/${courseId}/preview`)}
           >
             <Eye className="w-4 h-4 mr-2" />
-            Preview
+            <span className="hidden sm:inline">Preview</span>
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowExportModal(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+          >
+            <Download className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
           <Button
             variant="primary"
@@ -368,9 +412,9 @@ export default function CourseEditorPage() {
             {isSaving ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4 sm:mr-2" />
             )}
-            {isSaving ? 'Saving...' : 'Save'}
+            <span className="hidden sm:inline">{isSaving ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
       </div>
@@ -685,6 +729,76 @@ export default function CourseEditorPage() {
             Are you sure you want to delete this component? This action cannot be undone.
           </p>
         </div>
+      </ResponsiveModal>
+
+      {/* Export Modal */}
+      <ResponsiveModal
+        isOpen={showExportModal}
+        onClose={handleCloseExportModal}
+        title={exportModalState === 'queued' ? "Export Started!" : "Export Course"}
+        size="md"
+        mobileHeight="auto"
+      >
+        {/* Idle state - initial format selection */}
+        {exportModalState === 'idle' && (
+          <>
+            <p className="text-secondary mb-6">
+              Export your course to SCORM 2004 format for use in your LMS (Docebo compatible).
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleCloseExportModal}
+                className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={isStarting}
+                className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                Export SCORM
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Starting state - initiating export */}
+        {exportModalState === 'starting' && (
+          <div className="text-center py-6">
+            <Loader2 className="w-12 h-12 text-purple-600 dark:text-purple-400 animate-spin mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-primary mb-2">Starting Export...</h3>
+            <p className="text-secondary">Preparing your course for export.</p>
+          </div>
+        )}
+
+        {/* Queued state - export is running in background */}
+        {exportModalState === 'queued' && (
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-primary mb-2">Export Started!</h3>
+            <p className="text-secondary mb-4">
+              Your course is being exported in the background.
+            </p>
+
+            {/* Info box */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 text-left">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>You&apos;ll receive a notification</strong> when your SCORM package is ready to download.
+                You can continue working in the meantime.
+              </p>
+            </div>
+
+            <button
+              onClick={handleCloseExportModal}
+              className="w-full px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              OK
+            </button>
+          </div>
+        )}
       </ResponsiveModal>
     </div>
   );

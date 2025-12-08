@@ -13,6 +13,7 @@ import {
   Circle,
   Loader2,
   Menu,
+  Edit3,
 } from 'lucide-react';
 import { useGetCourseOutline, useListGeneratedLessons } from '@/hooks/useAIGeneration';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
@@ -260,9 +261,17 @@ export default function CoursePreviewPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
-          <span className="text-xs sm:text-sm text-secondary">
+          <span className="text-xs sm:text-sm text-secondary hidden sm:inline">
             {progressPercent}% complete
           </span>
+          <button
+            onClick={() => router.push(`/course/${courseId}/editor`)}
+            className="flex items-center gap-2 px-3 py-2 min-h-[44px] text-secondary hover:text-primary hover:bg-hover rounded-lg transition-colors"
+            aria-label="Back to Editor"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">Edit</span>
+          </button>
           <button
             onClick={handleClose}
             className="p-2 text-secondary hover:text-primary hover:bg-hover rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
