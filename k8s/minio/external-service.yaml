@@ -1,0 +1,35 @@
+# MinIO External Service
+# Routes traffic from the cluster to the MinIO instance running on NAS
+# This allows cloudflared to proxy minio.sogos.io -> external MinIO
+#
+# Architecture:
+#   Browser -> Cloudflare -> cloudflared -> minio-proxy.mirai.svc -> 192.168.1.226:9768 (NAS)
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-proxy
+  namespace: mirai
+  labels:
+    app: minio-proxy
+spec:
+  # No selector - manually defined endpoints
+  ports:
+    - name: api
+      port: 9768
+      targetPort: 9768
+      protocol: TCP
+---
+# Endpoints define the external IP address
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: minio-proxy
+  namespace: mirai
+subsets:
+  - addresses:
+      - ip: 192.168.1.226
+    ports:
+      - name: api
+        port: 9768
+        protocol: TCP
