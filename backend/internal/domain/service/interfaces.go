@@ -231,6 +231,9 @@ type EmailProvider interface {
 
 	// SendAlert sends an administrative alert email (e.g., for orphaned payments).
 	SendAlert(ctx context.Context, req SendAlertRequest) error
+
+	// SendExportReady sends an export ready notification email with download link.
+	SendExportReady(ctx context.Context, req SendExportReadyRequest) error
 }
 
 // SendInvitationRequest contains data for sending an invitation email.
@@ -324,6 +327,16 @@ type SendCourseCompleteRequest struct {
 type SendAlertRequest struct {
 	Subject string
 	Body    string
+}
+
+// SendExportReadyRequest contains data for export ready notification email.
+type SendExportReadyRequest struct {
+	To          string
+	UserName    string
+	CourseTitle string
+	Format      string // "SCORM 2004", etc.
+	DownloadURL string
+	ExpiresIn   string // Human readable expiry like "7 days"
 }
 
 // AIProvider abstracts AI generation operations (Gemini, OpenAI, etc.).

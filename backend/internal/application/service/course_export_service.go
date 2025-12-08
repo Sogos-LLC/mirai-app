@@ -24,7 +24,7 @@ type ExportTaskEnqueuer interface {
 
 // ExportNotifier sends notifications for export events.
 type ExportNotifier interface {
-	NotifyExportComplete(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string) error
+	NotifyExportComplete(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string, format string, downloadURL string) error
 	NotifyExportFailed(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string, errorMsg string) error
 }
 
@@ -419,9 +419,18 @@ func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export
 		return s.failExport(ctx, export.ID, "failed to finalize export")
 	}
 
-	// Send notification to user
+	// Send notification to user with download URL
 	if s.notifier != nil {
-		if err := s.notifier.NotifyExportComplete(ctx, export.CreatedByUserID, export.CourseID, export.ID, course.Title); err != nil {
+		// Generate presigned URL with 7 days expiry for email/notification
+		downloadExpiry := 7 * 24 * time.Hour
+		downloadURL, err := s.storage.GenerateDownloadURL(ctx, storagePath, downloadExpiry)
+		if err != nil {
+			log.Warn("failed to generate download URL for notification", "error", err)
+			downloadURL = "" // Notification will still work, just without direct download link
+		}
+
+		formatDisplay := "SCORM 2004"
+		if err := s.notifier.NotifyExportComplete(ctx, export.CreatedByUserID, export.CourseID, export.ID, course.Title, formatDisplay, downloadURL); err != nil {
 			log.Warn("failed to send export completion notification", "error", err)
 		}
 	}

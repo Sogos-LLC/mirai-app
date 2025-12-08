@@ -861,3 +861,95 @@ func (c *Client) renderAlertEmail(req service.SendAlertRequest) string {
 </body>
 </html>`, req.Subject, req.Subject, req.Body)
 }
+
+// SendExportReady sends an export ready notification email with download link.
+func (c *Client) SendExportReady(ctx context.Context, req service.SendExportReadyRequest) error {
+	subject := fmt.Sprintf("Export Ready: %s", req.CourseTitle)
+
+	body, err := c.renderExportReadyEmail(req)
+	if err != nil {
+		return fmt.Errorf("failed to render email template: %w", err)
+	}
+
+	return c.sendEmail(req.To, subject, body)
+}
+
+// renderExportReadyEmail renders the export ready email template.
+func (c *Client) renderExportReadyEmail(req service.SendExportReadyRequest) (string, error) {
+	const emailTemplate = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Ready</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background-color: #f5f5f5;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f5f5;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="padding: 40px 40px 20px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #7c3aed; font-size: 28px; font-weight: 700;">Mirai</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px;">
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <span style="display: inline-block; background-color: #ecfdf5; color: #059669; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">Export Ready</span>
+                            </div>
+                            <h2 style="margin: 0 0 20px 0; color: #1f2937; font-size: 24px; font-weight: 600; text-align: center;">{{.CourseTitle}}</h2>
+                            <p style="margin: 0 0 20px 0; color: #4b5563; font-size: 16px; line-height: 1.6; text-align: center;">
+                                Hi {{.UserName}},<br><br>
+                                Your {{.Format}} export is ready for download!
+                            </p>
+                            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <table cellspacing="0" cellpadding="0" style="width: 100%;">
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">Format</td>
+                                        <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">{{.Format}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #4b5563; font-size: 14px;">Link expires in</td>
+                                        <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">{{.ExpiresIn}}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="padding: 20px 0; text-align: center;">
+                                        <a href="{{.DownloadURL}}" style="display: inline-block; padding: 14px 32px; background-color: #7c3aed; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px;">Download Export</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; text-align: center;">
+                                This download link will expire in {{.ExpiresIn}}. You can generate a new export from the course editor if needed.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px 40px 40px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                                This is an automated notification from Mirai.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`
+
+	tmpl, err := template.New("export_ready").Parse(emailTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, req); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}

@@ -663,8 +663,8 @@ func (s *NotificationService) NotifyOutlineFailed(ctx context.Context, userID uu
 	return nil
 }
 
-// NotifyExportComplete sends in-app notification when export is ready for download.
-func (s *NotificationService) NotifyExportComplete(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string) error {
+// NotifyExportComplete sends in-app notification and email when export is ready for download.
+func (s *NotificationService) NotifyExportComplete(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, exportID uuid.UUID, courseTitle string, format string, downloadURL string) error {
 	log := s.logger.With("userID", userID, "courseID", courseID, "exportID", exportID)
 
 	user, err := s.userRepo.GetByID(ctx, userID)
@@ -673,14 +673,21 @@ func (s *NotificationService) NotifyExportComplete(ctx context.Context, userID u
 		return domainerrors.ErrUserNotFound
 	}
 
-	actionURL := fmt.Sprintf("/course/%s/editor", courseID.String())
+	// Use download URL as action URL if available, otherwise fall back to editor page
+	var actionURL string
+	if downloadURL != "" {
+		actionURL = downloadURL
+	} else {
+		actionURL = fmt.Sprintf("/course/%s/editor", courseID.String())
+	}
+
 	notification := &entity.Notification{
 		TenantID:  *user.TenantID,
 		UserID:    userID,
 		Type:      valueobject.NotificationTypeExportComplete,
 		Priority:  valueobject.NotificationPriorityNormal,
 		Title:     "Export Ready",
-		Message:   fmt.Sprintf("Your SCORM export for \"%s\" is ready to download.", courseTitle),
+		Message:   fmt.Sprintf("Your %s export for \"%s\" is ready to download.", format, courseTitle),
 		CourseID:  &courseID,
 		ExportID:  &exportID,
 		ActionURL: &actionURL,
@@ -693,6 +700,39 @@ func (s *NotificationService) NotifyExportComplete(ctx context.Context, userID u
 
 	s.publishNotificationEvent(ctx, userID, v1.NotificationEventType_NOTIFICATION_EVENT_TYPE_CREATED, notification)
 	log.Info("export complete notification created")
+
+	// Send email if we have the email provider and download URL
+	if s.emailProvider != nil && downloadURL != "" {
+		// Look up identity from Kratos to get email
+		var userEmail, userName string
+		if s.identityProvider != nil {
+			identity, err := s.identityProvider.GetIdentity(ctx, user.KratosID.String())
+			if err != nil {
+				log.Warn("failed to get identity for email", "error", err)
+			} else if identity != nil {
+				userEmail = identity.Email
+				userName = identity.FirstName
+			}
+		}
+
+		if userEmail != "" {
+			emailReq := service.SendExportReadyRequest{
+				To:          userEmail,
+				UserName:    userName,
+				CourseTitle: courseTitle,
+				Format:      format,
+				DownloadURL: downloadURL,
+				ExpiresIn:   "7 days",
+			}
+
+			if err := s.emailProvider.SendExportReady(ctx, emailReq); err != nil {
+				log.Error("failed to send export ready email", "error", err)
+			} else {
+				log.Info("export ready email sent", "to", userEmail)
+			}
+		}
+	}
+
 	return nil
 }
 
