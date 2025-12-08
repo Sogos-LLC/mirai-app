@@ -121,6 +121,8 @@ message CourseExport {
   string file_path = 5;
   ExportStatus status = 6;
   optional string error_message = 7;
+  int32 progress_percent = 8;
+  optional string progress_message = 9;
 }
 
 // CourseSettings contains the configurable settings for a course.

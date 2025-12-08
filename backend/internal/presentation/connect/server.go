@@ -22,6 +22,7 @@ type ServerConfig struct {
 	BillingService        *service.BillingService
 	InvitationService     *service.InvitationService
 	CourseService         *service.CourseService
+	CourseExportService   *service.CourseExportService
 	TenantSettingsService *service.TenantSettingsService
 	NotificationService   *service.NotificationService
 	AIGenerationService   *service.AIGenerationService
@@ -95,10 +96,10 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	)
 	mux.Handle(path, handler)
 
-	// CourseService - content management
+	// CourseService - content management (includes export endpoints)
 	if cfg.CourseService != nil {
 		path, handler = miraiv1connect.NewCourseServiceHandler(
-			NewCourseServiceServer(cfg.CourseService),
+			NewCourseServiceServer(cfg.CourseService, cfg.CourseExportService),
 			interceptors,
 		)
 		mux.Handle(path, handler)

@@ -79,4 +79,27 @@ func (c *Client) EnqueueAIGeneration(jobID, jobType string) error {
 	return nil
 }
 
-// EnqueueSMEIngestion was removed as part of SME cleanup (Phase 3)
+// EnqueueCourseExport enqueues a course export task.
+func (c *Client) EnqueueCourseExport(exportID string) error {
+	task, err := worker.NewCourseExportTask(exportID)
+	if err != nil {
+		c.logger.Error("failed to create course export task", "error", err)
+		return err
+	}
+
+	info, err := c.client.Enqueue(task)
+	if err != nil {
+		c.logger.Error("failed to enqueue course export task",
+			"exportID", exportID,
+			"error", err,
+		)
+		return err
+	}
+
+	c.logger.Info("enqueued course export task",
+		"taskID", info.ID,
+		"queue", info.Queue,
+		"exportID", exportID,
+	)
+	return nil
+}

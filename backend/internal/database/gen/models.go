@@ -101,6 +101,94 @@ func (ns NullCalloutStyle) Value() (driver.Value, error) {
 	return string(ns.CalloutStyle), nil
 }
 
+type ExportFormat string
+
+const (
+	ExportFormatScorm12   ExportFormat = "scorm_12"
+	ExportFormatScorm2004 ExportFormat = "scorm_2004"
+	ExportFormatXapi      ExportFormat = "xapi"
+	ExportFormatPdf       ExportFormat = "pdf"
+)
+
+func (e *ExportFormat) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ExportFormat(s)
+	case string:
+		*e = ExportFormat(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ExportFormat: %T", src)
+	}
+	return nil
+}
+
+type NullExportFormat struct {
+	ExportFormat ExportFormat `json:"export_format"`
+	Valid        bool         `json:"valid"` // Valid is true if ExportFormat is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullExportFormat) Scan(value interface{}) error {
+	if value == nil {
+		ns.ExportFormat, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ExportFormat.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullExportFormat) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ExportFormat), nil
+}
+
+type ExportStatus string
+
+const (
+	ExportStatusPending    ExportStatus = "pending"
+	ExportStatusProcessing ExportStatus = "processing"
+	ExportStatusCompleted  ExportStatus = "completed"
+	ExportStatusFailed     ExportStatus = "failed"
+)
+
+func (e *ExportStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ExportStatus(s)
+	case string:
+		*e = ExportStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ExportStatus: %T", src)
+	}
+	return nil
+}
+
+type NullExportStatus struct {
+	ExportStatus ExportStatus `json:"export_status"`
+	Valid        bool         `json:"valid"` // Valid is true if ExportStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullExportStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ExportStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ExportStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullExportStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ExportStatus), nil
+}
+
 type GenerationJobStatus string
 
 const (
@@ -489,6 +577,27 @@ type Course struct {
 	CreatedAt       time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt       time.Time      `db:"updated_at" json:"updated_at"`
 	FolderID        uuid.NullUUID  `db:"folder_id" json:"folder_id"`
+}
+
+// Tracks SCORM and other format export jobs for courses
+type CourseExport struct {
+	ID       uuid.UUID    `db:"id" json:"id"`
+	TenantID uuid.UUID    `db:"tenant_id" json:"tenant_id"`
+	CourseID uuid.UUID    `db:"course_id" json:"course_id"`
+	Format   ExportFormat `db:"format" json:"format"`
+	Status   ExportStatus `db:"status" json:"status"`
+	Version  int32        `db:"version" json:"version"`
+	// MinIO object path for the exported ZIP file
+	FilePath      sql.NullString `db:"file_path" json:"file_path"`
+	FileSizeBytes sql.NullInt64  `db:"file_size_bytes" json:"file_size_bytes"`
+	ErrorMessage  sql.NullString `db:"error_message" json:"error_message"`
+	// Export progress from 0-100
+	ProgressPercent int32          `db:"progress_percent" json:"progress_percent"`
+	ProgressMessage sql.NullString `db:"progress_message" json:"progress_message"`
+	CreatedByUserID uuid.UUID      `db:"created_by_user_id" json:"created_by_user_id"`
+	CreatedAt       time.Time      `db:"created_at" json:"created_at"`
+	StartedAt       **time.Time    `db:"started_at" json:"started_at"`
+	CompletedAt     **time.Time    `db:"completed_at" json:"completed_at"`
 }
 
 type CourseGenerationInput struct {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 
 	appservice "github.com/sogos/mirai-backend/internal/application/service"
@@ -18,6 +19,7 @@ type Handlers struct {
 	provisioningService *appservice.ProvisioningService
 	cleanupService      *appservice.CleanupService
 	aiGenService        *appservice.AIGenerationService
+	exportService       *appservice.CourseExportService
 	workerClient        *Client
 	logger              domainservice.Logger
 }
@@ -27,6 +29,7 @@ func NewHandlers(
 	provisioningService *appservice.ProvisioningService,
 	cleanupService *appservice.CleanupService,
 	aiGenService *appservice.AIGenerationService,
+	exportService *appservice.CourseExportService,
 	workerClient *Client,
 	logger domainservice.Logger,
 ) *Handlers {
@@ -34,6 +37,7 @@ func NewHandlers(
 		provisioningService: provisioningService,
 		cleanupService:      cleanupService,
 		aiGenService:        aiGenService,
+		exportService:       exportService,
 		workerClient:        workerClient,
 		logger:              logger,
 	}
@@ -198,4 +202,67 @@ func (h *Handlers) HandleAIGenerationPoll(ctx context.Context, t *asynq.Task) er
 
 	log.Debug("AI generation poll task completed")
 	return nil
+}
+
+// HandleCourseExport processes a course export task.
+// This is called when a course export is requested.
+func (h *Handlers) HandleCourseExport(ctx context.Context, t *asynq.Task) error {
+	var payload worker.CourseExportPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("failed to unmarshal payload: %w", asynq.SkipRetry)
+	}
+
+	log := h.logger.With(
+		"task", worker.TypeCourseExport,
+		"exportID", payload.ExportID,
+	)
+	log.Info("processing course export task")
+
+	// Only process if service is available
+	if h.exportService == nil {
+		log.Warn("export service not available, skipping task")
+		return nil
+	}
+
+	// Call the export service to process this specific export
+	err := h.exportService.ProcessExport(ctx, parseUUID(payload.ExportID))
+	if err != nil {
+		log.Error("failed to process course export", "error", err)
+		return err
+	}
+
+	log.Info("course export completed")
+	return nil
+}
+
+// HandleCourseExportPoll processes course export jobs by polling the database.
+// This is called periodically by the scheduler.
+func (h *Handlers) HandleCourseExportPoll(ctx context.Context, t *asynq.Task) error {
+	log := h.logger.With("task", worker.TypeCourseExportPoll)
+	log.Debug("course export poll task started")
+
+	// Only process if service is available
+	if h.exportService == nil {
+		log.Warn("export service not available, skipping poll")
+		return nil
+	}
+
+	// Process next pending export (uses FOR UPDATE SKIP LOCKED in DB)
+	err := h.exportService.ProcessNextPending(ctx)
+	if err != nil {
+		log.Error("failed to process course export", "error", err)
+		return err
+	}
+
+	log.Debug("course export poll task completed")
+	return nil
+}
+
+// parseUUID parses a UUID string, returning uuid.Nil on error.
+func parseUUID(s string) uuid.UUID {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return uuid.Nil
+	}
+	return id
 }

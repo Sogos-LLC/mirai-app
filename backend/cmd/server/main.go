@@ -30,6 +30,7 @@ import (
 
 	// Domain
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
+	"github.com/sogos/mirai-backend/internal/domain/scorm"
 
 	// Application services
 	"github.com/sogos/mirai-backend/internal/application/service"
@@ -68,6 +69,9 @@ func main() {
 	pendingRegRepo := sqlc.NewPendingRegistrationRepository(db.DB)
 	courseRepo := sqlc.NewCourseRepository(db.DB)
 	folderRepo := sqlc.NewFolderRepository(db.DB)
+
+	// Export repository
+	exportRepo := sqlc.NewCourseExportRepository(db.DB)
 
 	// AI & Generation repositories
 	aiSettingsRepo := sqlc.NewTenantAISettingsRepository(db.DB)
@@ -206,12 +210,32 @@ func main() {
 	// Notification service (created first for dependency injection)
 	notificationService := service.NewNotificationService(userRepo, notificationRepo, kratosClient, emailClient, notificationPubSub, cfg.FrontendURL, logger)
 
+	// SCORM packager for course exports (no external dependencies)
+	scormPackager := scorm.NewPackager()
+
 	// Initialize Asynq worker client for enqueueing tasks (needed by AI services)
 	// Strip redis:// prefix if present (Asynq expects host:port format)
 	redisAddr := strings.TrimPrefix(cfg.RedisURL, "redis://")
 	workerClient := worker.NewClient(redisAddr, logger)
 	defer workerClient.Close()
 	logger.Info("Asynq worker client initialized", "redisAddr", redisAddr)
+
+	// Course export service (uses baseStorage for exports bucket)
+	courseExportService := service.NewCourseExportService(
+		userRepo,
+		courseRepo,
+		exportRepo,
+		outlineRepo,
+		sectionRepo,
+		lessonRepo,
+		genLessonRepo,
+		componentRepo,
+		scormPackager,
+		baseStorage,   // Use base storage, export paths are tenant-prefixed internally
+		workerClient,  // Implements ExportTaskEnqueuer
+		logger,
+	)
+	logger.Info("course export service initialized")
 
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
@@ -270,6 +294,7 @@ func main() {
 		BillingService:        billingService,
 		InvitationService:     invitationService,
 		CourseService:         courseService,
+		CourseExportService:   courseExportService,
 		TenantSettingsService: tenantSettingsService,
 		NotificationService:   notificationService,
 		AIGenerationService:   aiGenerationService,
@@ -311,6 +336,7 @@ func main() {
 		provisioningService,
 		cleanupService,
 		aiGenerationService,
+		courseExportService,
 		workerClient,
 		logger,
 	)

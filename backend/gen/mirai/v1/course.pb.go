@@ -846,16 +846,18 @@ func (x *CourseContent) GetCourseBlocks() []*CourseBlock {
 
 // CourseExport represents an export record for the course.
 type CourseExport struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Format        ExportFormat           `protobuf:"varint,3,opt,name=format,proto3,enum=mirai.v1.ExportFormat" json:"format,omitempty"`
-	Version       int32                  `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
-	FilePath      string                 `protobuf:"bytes,5,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
-	Status        ExportStatus           `protobuf:"varint,6,opt,name=status,proto3,enum=mirai.v1.ExportStatus" json:"status,omitempty"`
-	ErrorMessage  *string                `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Timestamp       *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Format          ExportFormat           `protobuf:"varint,3,opt,name=format,proto3,enum=mirai.v1.ExportFormat" json:"format,omitempty"`
+	Version         int32                  `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
+	FilePath        string                 `protobuf:"bytes,5,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
+	Status          ExportStatus           `protobuf:"varint,6,opt,name=status,proto3,enum=mirai.v1.ExportStatus" json:"status,omitempty"`
+	ErrorMessage    *string                `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"`
+	ProgressPercent int32                  `protobuf:"varint,8,opt,name=progress_percent,json=progressPercent,proto3" json:"progress_percent,omitempty"`
+	ProgressMessage *string                `protobuf:"bytes,9,opt,name=progress_message,json=progressMessage,proto3,oneof" json:"progress_message,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CourseExport) Reset() {
@@ -933,6 +935,20 @@ func (x *CourseExport) GetStatus() ExportStatus {
 func (x *CourseExport) GetErrorMessage() string {
 	if x != nil && x.ErrorMessage != nil {
 		return *x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *CourseExport) GetProgressPercent() int32 {
+	if x != nil {
+		return x.ProgressPercent
+	}
+	return 0
+}
+
+func (x *CourseExport) GetProgressMessage() string {
+	if x != nil && x.ProgressMessage != nil {
+		return *x.ProgressMessage
 	}
 	return ""
 }
@@ -2937,7 +2953,7 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x11enable_final_exam\x18\x02 \x01(\bR\x0fenableFinalExam\"\x80\x01\n" +
 	"\rCourseContent\x123\n" +
 	"\bsections\x18\x01 \x03(\v2\x17.mirai.v1.CourseSectionR\bsections\x12:\n" +
-	"\rcourse_blocks\x18\x02 \x03(\v2\x15.mirai.v1.CourseBlockR\fcourseBlocks\"\xab\x02\n" +
+	"\rcourse_blocks\x18\x02 \x03(\v2\x15.mirai.v1.CourseBlockR\fcourseBlocks\"\x9b\x03\n" +
 	"\fCourseExport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12.\n" +
@@ -2945,8 +2961,11 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\aversion\x18\x04 \x01(\x05R\aversion\x12\x1b\n" +
 	"\tfile_path\x18\x05 \x01(\tR\bfilePath\x12.\n" +
 	"\x06status\x18\x06 \x01(\x0e2\x16.mirai.v1.ExportStatusR\x06status\x12(\n" +
-	"\rerror_message\x18\a \x01(\tH\x00R\ferrorMessage\x88\x01\x01B\x10\n" +
-	"\x0e_error_message\"\xd9\x01\n" +
+	"\rerror_message\x18\a \x01(\tH\x00R\ferrorMessage\x88\x01\x01\x12)\n" +
+	"\x10progress_percent\x18\b \x01(\x05R\x0fprogressPercent\x12.\n" +
+	"\x10progress_message\x18\t \x01(\tH\x01R\x0fprogressMessage\x88\x01\x01B\x10\n" +
+	"\x0e_error_messageB\x13\n" +
+	"\x11_progress_message\"\xd9\x01\n" +
 	"\x0eCourseSettings\x12 \n" +
 	"\x05title\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05title\x120\n" +

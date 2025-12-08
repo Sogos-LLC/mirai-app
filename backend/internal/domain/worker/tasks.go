@@ -13,6 +13,8 @@ const (
 	TypeCleanupExpired   = "cleanup:expired"
 	TypeAIGeneration     = "ai:generation"
 	TypeAIGenerationPoll = "ai:generation:poll" // Scheduled polling task
+	TypeCourseExport     = "course:export"
+	TypeCourseExportPoll = "course:export:poll" // Scheduled polling task
 )
 
 // Queue names for priority handling
@@ -33,6 +35,11 @@ type StripeProvisionPayload struct {
 type AIGenerationPayload struct {
 	JobID   string `json:"job_id"`
 	JobType string `json:"job_type"` // "outline" or "lesson"
+}
+
+// CourseExportPayload contains data for course export jobs
+type CourseExportPayload struct {
+	ExportID string `json:"export_id"`
 }
 
 // NewStripeProvisionTask creates a new Stripe provisioning task
@@ -73,4 +80,20 @@ func NewCleanupExpiredTask() *asynq.Task {
 // NewAIGenerationPollTask creates a new AI generation polling task (scheduled)
 func NewAIGenerationPollTask() *asynq.Task {
 	return asynq.NewTask(TypeAIGenerationPoll, nil, asynq.Queue(QueueDefault), asynq.MaxRetry(1))
+}
+
+// NewCourseExportTask creates a new course export task
+func NewCourseExportTask(exportID string) (*asynq.Task, error) {
+	payload, err := json.Marshal(CourseExportPayload{
+		ExportID: exportID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TypeCourseExport, payload, asynq.Queue(QueueDefault), asynq.MaxRetry(3)), nil
+}
+
+// NewCourseExportPollTask creates a new course export polling task (scheduled)
+func NewCourseExportPollTask() *asynq.Task {
+	return asynq.NewTask(TypeCourseExportPoll, nil, asynq.Queue(QueueDefault), asynq.MaxRetry(1))
 }

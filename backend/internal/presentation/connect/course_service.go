@@ -10,17 +10,22 @@ import (
 	"github.com/sogos/mirai-backend/gen/mirai/v1/miraiv1connect"
 	"github.com/sogos/mirai-backend/internal/application/service"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
+	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 )
 
 // CourseServiceServer implements the CourseService Connect handler.
 type CourseServiceServer struct {
 	miraiv1connect.UnimplementedCourseServiceHandler
 	courseService *service.CourseService
+	exportService *service.CourseExportService
 }
 
 // NewCourseServiceServer creates a new CourseServiceServer.
-func NewCourseServiceServer(courseService *service.CourseService) *CourseServiceServer {
-	return &CourseServiceServer{courseService: courseService}
+func NewCourseServiceServer(courseService *service.CourseService, exportService *service.CourseExportService) *CourseServiceServer {
+	return &CourseServiceServer{
+		courseService: courseService,
+		exportService: exportService,
+	}
 }
 
 // ListCourses returns a filtered list of courses.
@@ -608,4 +613,210 @@ func anySlice(s []map[string]any) []any {
 		result[i] = v
 	}
 	return result
+}
+
+// =============================================================================
+// Export Handlers
+// =============================================================================
+
+// ExportCourse initiates a course export job.
+func (s *CourseServiceServer) ExportCourse(
+	ctx context.Context,
+	req *connect.Request[v1.ExportCourseRequest],
+) (*connect.Response[v1.ExportCourseResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	courseID, err := parseUUID(req.Msg.CourseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	// Convert proto format to domain format
+	format := exportFormatFromProto(req.Msg.Format)
+
+	result, err := s.exportService.ExportCourse(ctx, kratosID, service.ExportCourseRequest{
+		CourseID: courseID,
+		Format:   format,
+	})
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.ExportCourseResponse{
+		Export: courseExportToProto(result.Export),
+	}), nil
+}
+
+// GetExportStatus returns the status of an export job.
+func (s *CourseServiceServer) GetExportStatus(
+	ctx context.Context,
+	req *connect.Request[v1.GetExportStatusRequest],
+) (*connect.Response[v1.GetExportStatusResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	exportID, err := parseUUID(req.Msg.ExportId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	export, err := s.exportService.GetExportStatus(ctx, kratosID, exportID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.GetExportStatusResponse{
+		Export: courseExportToProto(export),
+	}), nil
+}
+
+// DownloadExport returns a presigned URL for downloading the export.
+func (s *CourseServiceServer) DownloadExport(
+	ctx context.Context,
+	req *connect.Request[v1.DownloadExportRequest],
+) (*connect.Response[v1.DownloadExportResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	exportID, err := parseUUID(req.Msg.ExportId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	result, err := s.exportService.GetDownloadURL(ctx, kratosID, exportID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.DownloadExportResponse{
+		DownloadUrl: result.URL,
+		ExpiresAt:   timestamppb.New(result.ExpiresAt),
+	}), nil
+}
+
+// ListExports returns all exports for a course.
+func (s *CourseServiceServer) ListExports(
+	ctx context.Context,
+	req *connect.Request[v1.ListExportsRequest],
+) (*connect.Response[v1.ListExportsResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	courseID, err := parseUUID(req.Msg.CourseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	exports, err := s.exportService.ListExports(ctx, kratosID, courseID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	protoExports := make([]*v1.CourseExport, len(exports))
+	for i, e := range exports {
+		protoExports[i] = courseExportToProto(e)
+	}
+
+	return connect.NewResponse(&v1.ListExportsResponse{
+		Exports: protoExports,
+	}), nil
+}
+
+// =============================================================================
+// Export Conversion Helpers
+// =============================================================================
+
+func courseExportToProto(e *entity.CourseExport) *v1.CourseExport {
+	export := &v1.CourseExport{
+		Id:              e.ID.String(),
+		Timestamp:       timestamppb.New(e.CreatedAt),
+		Format:          exportFormatToProto(e.Format),
+		Version:         e.Version,
+		Status:          exportStatusToProto(e.Status),
+		ProgressPercent: e.ProgressPercent,
+	}
+	if e.FilePath != nil {
+		export.FilePath = *e.FilePath
+	}
+	if e.ErrorMessage != nil {
+		export.ErrorMessage = e.ErrorMessage
+	}
+	if e.ProgressMessage != nil {
+		export.ProgressMessage = e.ProgressMessage
+	}
+	return export
+}
+
+func exportFormatToProto(f valueobject.ExportFormat) v1.ExportFormat {
+	switch f {
+	case valueobject.ExportFormatSCORM12:
+		return v1.ExportFormat_EXPORT_FORMAT_SCORM_12
+	case valueobject.ExportFormatSCORM2004:
+		return v1.ExportFormat_EXPORT_FORMAT_SCORM_2004
+	case valueobject.ExportFormatXAPI:
+		return v1.ExportFormat_EXPORT_FORMAT_XAPI
+	case valueobject.ExportFormatPDF:
+		return v1.ExportFormat_EXPORT_FORMAT_PDF
+	default:
+		return v1.ExportFormat_EXPORT_FORMAT_UNSPECIFIED
+	}
+}
+
+func exportFormatFromProto(f v1.ExportFormat) valueobject.ExportFormat {
+	switch f {
+	case v1.ExportFormat_EXPORT_FORMAT_SCORM_12:
+		return valueobject.ExportFormatSCORM12
+	case v1.ExportFormat_EXPORT_FORMAT_SCORM_2004:
+		return valueobject.ExportFormatSCORM2004
+	case v1.ExportFormat_EXPORT_FORMAT_XAPI:
+		return valueobject.ExportFormatXAPI
+	case v1.ExportFormat_EXPORT_FORMAT_PDF:
+		return valueobject.ExportFormatPDF
+	default:
+		return valueobject.ExportFormatSCORM2004 // Default to SCORM 2004
+	}
+}
+
+func exportStatusToProto(s valueobject.ExportStatus) v1.ExportStatus {
+	switch s {
+	case valueobject.ExportStatusPending:
+		return v1.ExportStatus_EXPORT_STATUS_PENDING
+	case valueobject.ExportStatusProcessing:
+		return v1.ExportStatus_EXPORT_STATUS_PROCESSING
+	case valueobject.ExportStatusCompleted:
+		return v1.ExportStatus_EXPORT_STATUS_COMPLETED
+	case valueobject.ExportStatusFailed:
+		return v1.ExportStatus_EXPORT_STATUS_FAILED
+	default:
+		return v1.ExportStatus_EXPORT_STATUS_UNSPECIFIED
+	}
 }

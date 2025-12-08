@@ -25,6 +25,7 @@ func NewServer(
 	provisioningService *appservice.ProvisioningService,
 	cleanupService *appservice.CleanupService,
 	aiGenService *appservice.AIGenerationService,
+	exportService *appservice.CourseExportService,
 	workerClient *Client,
 	logger domainservice.Logger,
 ) *Server {
@@ -63,6 +64,7 @@ func NewServer(
 		provisioningService,
 		cleanupService,
 		aiGenService,
+		exportService,
 		workerClient,
 		logger,
 	)
@@ -74,6 +76,8 @@ func NewServer(
 	mux.HandleFunc(worker.TypeCleanupExpired, handlers.HandleCleanupExpired)
 	mux.HandleFunc(worker.TypeAIGeneration, handlers.HandleAIGeneration)
 	mux.HandleFunc(worker.TypeAIGenerationPoll, handlers.HandleAIGenerationPoll)
+	mux.HandleFunc(worker.TypeCourseExport, handlers.HandleCourseExport)
+	mux.HandleFunc(worker.TypeCourseExportPoll, handlers.HandleCourseExportPoll)
 
 	return &Server{
 		server:    server,
@@ -116,6 +120,15 @@ func (s *Server) Run() error {
 		return err
 	}
 	s.logger.Info("registered AI generation poll task", "schedule", "@every 5m")
+
+	// Course export sweep polling every 5 minutes (crash recovery)
+	// Primary job pickup is event-driven via EnqueueCourseExport on job creation.
+	_, err = s.scheduler.Register("@every 5m", worker.NewCourseExportPollTask())
+	if err != nil {
+		s.logger.Error("failed to register course export poll task", "error", err)
+		return err
+	}
+	s.logger.Info("registered course export poll task", "schedule", "@every 5m")
 
 	// Start the scheduler in a goroutine
 	go func() {

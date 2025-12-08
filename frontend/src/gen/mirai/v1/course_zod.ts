@@ -86,6 +86,8 @@ export const CourseExportSchema = z.object({
   filePath: z.string(),
   status: z.nativeEnum(ExportStatus),
   errorMessage: z.string().optional(),
+  progressPercent: z.number().int(),
+  progressMessage: z.string().optional(),
 });
 
 export type CourseExport = z.infer<typeof CourseExportSchema>;

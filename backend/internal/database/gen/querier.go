@@ -16,8 +16,12 @@ type Querier interface {
 	// Team Members
 	AddTeamMember(ctx context.Context, arg AddTeamMemberParams) (TeamMember, error)
 	CheckAllChildrenComplete(ctx context.Context, parentJobID uuid.NullUUID) (bool, error)
+	// Claim a specific export by ID, only if pending
+	ClaimExportByID(ctx context.Context, id uuid.UUID) (CourseExport, error)
 	// Claim a specific job by ID, only if queued
 	ClaimJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error)
+	// Atomic claim using FOR UPDATE SKIP LOCKED to prevent race conditions
+	ClaimPendingExport(ctx context.Context) (CourseExport, error)
 	// Atomic claim: UPDATE with subquery SELECT FOR UPDATE SKIP LOCKED
 	// This ensures only one worker can claim each job
 	ClaimQueuedJob(ctx context.Context) (GenerationJob, error)
@@ -26,6 +30,7 @@ type Querier interface {
 	// Count with same filters as ListCourses
 	CountCourses(ctx context.Context, arg CountCoursesParams) (int32, error)
 	CountCoursesByFolderID(ctx context.Context, folderID uuid.NullUUID) (int32, error)
+	CountExportsByStatus(ctx context.Context, courseID uuid.UUID) (CountExportsByStatusRow, error)
 	CountNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
 	CountPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) (int32, error)
 	CountUnreadNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
@@ -36,6 +41,9 @@ type Querier interface {
 	// Course CRUD operations
 	// Schema: courses table with RLS isolation by tenant_id
 	CreateCourse(ctx context.Context, arg CreateCourseParams) (Course, error)
+	// Course Export CRUD operations
+	// Schema: course_exports table with RLS isolation by tenant_id
+	CreateCourseExport(ctx context.Context, arg CreateCourseExportParams) (CourseExport, error)
 	// ============================================================================
 	// Course Generation Inputs
 	// ============================================================================
@@ -116,6 +124,7 @@ type Querier interface {
 	GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, error)
 	GetCompanyByStripeCustomerID(ctx context.Context, stripeCustomerID sql.NullString) (Company, error)
 	GetCourseByID(ctx context.Context, id uuid.UUID) (Course, error)
+	GetCourseExportByID(ctx context.Context, id uuid.UUID) (CourseExport, error)
 	GetCourseGenerationInputByCourseID(ctx context.Context, courseID uuid.UUID) (CourseGenerationInput, error)
 	GetCourseOutlineByCourseIDAndVersion(ctx context.Context, arg GetCourseOutlineByCourseIDAndVersionParams) (CourseOutline, error)
 	GetCourseOutlineByID(ctx context.Context, id uuid.UUID) (CourseOutline, error)
@@ -160,6 +169,7 @@ type Querier interface {
 	// Retrieves the wizard state for a specific user
 	GetWizardStateByUserID(ctx context.Context, userID uuid.UUID) (WizardState, error)
 	IncrementTenantAITokenUsage(ctx context.Context, arg IncrementTenantAITokenUsageParams) error
+	ListCourseExportsByCourseID(ctx context.Context, courseID uuid.UUID) ([]CourseExport, error)
 	// Dynamic filtering using nullable parameters
 	// NULL param = skip filter, non-NULL = apply filter
 	ListCourses(ctx context.Context, arg ListCoursesParams) ([]Course, error)
@@ -191,6 +201,10 @@ type Querier interface {
 	UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error)
 	UpdateCompanyStripeFields(ctx context.Context, arg UpdateCompanyStripeFieldsParams) error
 	UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Course, error)
+	UpdateCourseExportComplete(ctx context.Context, arg UpdateCourseExportCompleteParams) error
+	UpdateCourseExportFailed(ctx context.Context, arg UpdateCourseExportFailedParams) error
+	UpdateCourseExportProcessing(ctx context.Context, arg UpdateCourseExportProcessingParams) error
+	UpdateCourseExportProgress(ctx context.Context, arg UpdateCourseExportProgressParams) error
 	UpdateCourseGenerationInput(ctx context.Context, arg UpdateCourseGenerationInputParams) (CourseGenerationInput, error)
 	UpdateCourseOutline(ctx context.Context, arg UpdateCourseOutlineParams) error
 	UpdateFolder(ctx context.Context, arg UpdateFolderParams) (Folder, error)
