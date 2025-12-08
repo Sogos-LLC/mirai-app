@@ -1563,3 +1563,154 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		Component: component,
 	}, nil
 }
+
+// UpdateLessonComponentsRequest contains the inputs for updating lesson components.
+type UpdateLessonComponentsRequest struct {
+	CourseID   uuid.UUID
+	LessonID   uuid.UUID
+	Components []UpdateComponentInput
+}
+
+// UpdateComponentInput represents a single component update.
+type UpdateComponentInput struct {
+	ID                   string // Can be existing UUID or temp-* for new components
+	Type                 valueobject.LessonComponentType
+	Order                int32
+	ContentJSON          json.RawMessage
+	LearningObjectiveIDs []string
+}
+
+// UpdateLessonComponentsResult contains the updated lesson.
+type UpdateLessonComponentsResult struct {
+	Lesson *entity.GeneratedLesson
+}
+
+// UpdateLessonComponents saves manual edits to lesson components.
+// It handles create, update, and delete operations for components in a lesson.
+func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratosID uuid.UUID, req UpdateLessonComponentsRequest) (*UpdateLessonComponentsResult, error) {
+	// Get user and tenant
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	// Set tenant context
+	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+
+	// Verify the lesson exists
+	_, err = s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
+	if err != nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
+	}
+
+	// Get existing components for this lesson
+	existingComponents, err := s.componentRepo.ListByLessonID(tenantCtx, req.LessonID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Build map of existing component IDs for quick lookup
+	existingMap := make(map[uuid.UUID]*entity.LessonComponent)
+	for _, comp := range existingComponents {
+		existingMap[comp.ID] = comp
+	}
+
+	// Track which components are in the new list (for deletion detection)
+	updatedIDs := make(map[uuid.UUID]bool)
+
+	// Process each component in the request
+	now := time.Now()
+	for _, input := range req.Components {
+		// Check if this is a new component (temp-* prefix) or existing
+		isNew := len(input.ID) > 5 && input.ID[:5] == "temp-"
+
+		if isNew {
+			// Create new component
+			newID := uuid.New()
+			component := &entity.LessonComponent{
+				ID:                   newID,
+				TenantID:             *user.TenantID,
+				LessonID:             req.LessonID,
+				Type:                 input.Type,
+				Position:             input.Order,
+				ContentJSON:          input.ContentJSON,
+				LearningObjectiveIDs: input.LearningObjectiveIDs,
+				CreatedAt:            now,
+				UpdatedAt:            now,
+			}
+
+			if err := s.componentRepo.Create(tenantCtx, component); err != nil {
+				s.logger.Error("failed to create component", "error", err, "lessonID", req.LessonID)
+				return nil, domainerrors.ErrInternal.WithCause(err)
+			}
+
+			updatedIDs[newID] = true
+		} else {
+			// Parse existing component ID
+			compID, err := uuid.Parse(input.ID)
+			if err != nil {
+				s.logger.Warn("invalid component ID, skipping", "id", input.ID)
+				continue
+			}
+
+			existing, exists := existingMap[compID]
+			if !exists {
+				s.logger.Warn("component not found, skipping", "id", input.ID)
+				continue
+			}
+
+			// Update existing component
+			existing.Type = input.Type
+			existing.Position = input.Order
+			existing.ContentJSON = input.ContentJSON
+			existing.LearningObjectiveIDs = input.LearningObjectiveIDs
+			existing.UpdatedAt = now
+
+			if err := s.componentRepo.Update(tenantCtx, existing); err != nil {
+				s.logger.Error("failed to update component", "error", err, "componentID", compID)
+				return nil, domainerrors.ErrInternal.WithCause(err)
+			}
+
+			updatedIDs[compID] = true
+		}
+	}
+
+	// Delete components that were removed (not in the updated list)
+	for id := range existingMap {
+		if !updatedIDs[id] {
+			if err := s.componentRepo.Delete(tenantCtx, id); err != nil {
+				s.logger.Error("failed to delete component", "error", err, "componentID", id)
+				// Continue with other deletions, don't fail the whole operation
+			}
+		}
+	}
+
+	// Reload the lesson with updated components
+	updatedLesson, err := s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Load components
+	components, err := s.componentRepo.ListByLessonID(tenantCtx, req.LessonID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	updatedLesson.Components = make([]entity.LessonComponent, len(components))
+	for i, c := range components {
+		updatedLesson.Components[i] = *c
+	}
+
+	s.logger.Info("lesson components updated",
+		"lessonID", req.LessonID,
+		"componentCount", len(req.Components),
+	)
+
+	return &UpdateLessonComponentsResult{
+		Lesson: updatedLesson,
+	}, nil
+}

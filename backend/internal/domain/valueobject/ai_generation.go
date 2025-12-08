@@ -126,7 +126,6 @@ func ParseOutlineApprovalStatus(str string) (OutlineApprovalStatus, error) {
 }
 
 // LessonComponentType represents content block types for lessons.
-// MVP: Text, Heading, Image, Quiz.
 type LessonComponentType string
 
 const (
@@ -134,6 +133,8 @@ const (
 	LessonComponentTypeHeading LessonComponentType = "heading"
 	LessonComponentTypeImage   LessonComponentType = "image"
 	LessonComponentTypeQuiz    LessonComponentType = "quiz"
+	LessonComponentTypeCode    LessonComponentType = "code"
+	LessonComponentTypeCallout LessonComponentType = "callout"
 )
 
 func (t LessonComponentType) String() string {
@@ -143,7 +144,8 @@ func (t LessonComponentType) String() string {
 func (t LessonComponentType) IsValid() bool {
 	switch t {
 	case LessonComponentTypeText, LessonComponentTypeHeading,
-		LessonComponentTypeImage, LessonComponentTypeQuiz:
+		LessonComponentTypeImage, LessonComponentTypeQuiz,
+		LessonComponentTypeCode, LessonComponentTypeCallout:
 		return true
 	}
 	return false

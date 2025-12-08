@@ -275,6 +275,9 @@ service AIGenerationService {
 
   // GenerateComponentImage generates an image for an image component placeholder.
   rpc GenerateComponentImage(GenerateComponentImageRequest) returns (GenerateComponentImageResponse);
+
+  // UpdateLessonComponents saves manual edits to lesson components.
+  rpc UpdateLessonComponents(UpdateLessonComponentsRequest) returns (UpdateLessonComponentsResponse);
 }
 
 // GenerateCourseOutlineRequest starts outline generation.
@@ -432,4 +435,16 @@ message GenerateComponentImageRequest {
 message GenerateComponentImageResponse {
   string image_url = 1;           // MinIO URL to the generated image
   LessonComponent component = 2;  // Updated component with image URL
+}
+
+// UpdateLessonComponentsRequest saves manual edits to lesson components.
+message UpdateLessonComponentsRequest {
+  string course_id = 1;                    // Course context for validation
+  string lesson_id = 2;                    // Lesson to update
+  repeated LessonComponent components = 3; // Full list of components with edits
+}
+
+// UpdateLessonComponentsResponse returns the updated lesson.
+message UpdateLessonComponentsResponse {
+  GeneratedLesson lesson = 1; // Updated lesson with new components
 }

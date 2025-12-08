@@ -42,7 +42,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useGetCourseOutline, useListGeneratedLessons } from '@/hooks/useAIGeneration';
+import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, LessonComponentType } from '@/hooks/useAIGeneration';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 import { EditModal } from '@/components/course/modals/EditModal';
 import { useCourseEditorStore, setOnSaveCallback } from '@/store/zustand/courseEditorStore';
@@ -141,6 +141,9 @@ export default function CourseEditorPage() {
   // Fetch outline and lessons
   const { data: outline, isLoading: outlineLoading } = useGetCourseOutline(courseId);
   const { data: generatedLessons, isLoading: lessonsLoading } = useListGeneratedLessons(courseId);
+
+  // Mutation for saving components
+  const { mutate: saveComponents, isLoading: isSaving } = useUpdateLessonComponents();
 
   // DnD sensors with 8px activation distance to prevent accidental drags
   const sensors = useSensors(
@@ -278,9 +281,27 @@ export default function CourseEditorPage() {
   };
 
   const handleSave = async () => {
-    // TODO: Implement save via API
-    console.log('Saving components:', localComponents);
-    setHasChanges(false);
+    if (!selectedLessonId || localComponents.length === 0) return;
+
+    try {
+      await saveComponents({
+        courseId,
+        lessonId: selectedLessonId,
+        components: localComponents.map((c) => ({
+          id: c.id,
+          type: c.type as LessonComponentType,
+          order: c.order,
+          contentJson: c.contentJson,
+          alignment: c.alignment
+            ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
+            : undefined,
+        })),
+      });
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Failed to save components:', error);
+      // Error handling - could show a toast notification here
+    }
   };
 
   // Loading state
@@ -342,10 +363,14 @@ export default function CourseEditorPage() {
             variant="primary"
             size="sm"
             onClick={handleSave}
-            disabled={!hasChanges}
+            disabled={!hasChanges || isSaving}
           >
-            <Save className="w-4 h-4 mr-2" />
-            Save
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>

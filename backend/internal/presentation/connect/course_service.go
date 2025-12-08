@@ -574,10 +574,59 @@ func convertBlocks(blocks []any) []*v1.CourseBlock {
 			if prompt, ok := blockMap["prompt"].(string); ok {
 				block.Prompt = &prompt
 			}
+			// Extract alignment field if present
+			if alignmentMap, ok := blockMap["alignment"].(map[string]any); ok {
+				block.Alignment = blockAlignmentFromMap(alignmentMap)
+			}
 			result = append(result, block)
 		}
 	}
 	return result
+}
+
+// blockAlignmentFromMap converts a map to BlockAlignment proto.
+func blockAlignmentFromMap(m map[string]any) *v1.BlockAlignment {
+	if m == nil {
+		return nil
+	}
+	alignment := &v1.BlockAlignment{}
+
+	// Extract personas
+	if personas, ok := m["personas"].([]any); ok {
+		for _, p := range personas {
+			if s, ok := p.(string); ok {
+				alignment.Personas = append(alignment.Personas, s)
+			}
+		}
+	}
+
+	// Extract learning_objectives (camelCase in JSON)
+	if los, ok := m["learningObjectives"].([]any); ok {
+		for _, lo := range los {
+			if s, ok := lo.(string); ok {
+				alignment.LearningObjectives = append(alignment.LearningObjectives, s)
+			}
+		}
+	}
+	// Also check snake_case for proto field name
+	if los, ok := m["learning_objectives"].([]any); ok {
+		for _, lo := range los {
+			if s, ok := lo.(string); ok {
+				alignment.LearningObjectives = append(alignment.LearningObjectives, s)
+			}
+		}
+	}
+
+	// Extract kpis
+	if kpis, ok := m["kpis"].([]any); ok {
+		for _, k := range kpis {
+			if s, ok := k.(string); ok {
+				alignment.Kpis = append(alignment.Kpis, s)
+			}
+		}
+	}
+
+	return alignment
 }
 
 func blockTypeFromMap(m map[string]any) v1.BlockType {

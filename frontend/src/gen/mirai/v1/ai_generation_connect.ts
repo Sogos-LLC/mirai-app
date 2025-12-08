@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse } from "./ai_generation_pb.js";
+import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -166,6 +166,17 @@ export const AIGenerationService = {
       name: "GenerateComponentImage",
       I: GenerateComponentImageRequest,
       O: GenerateComponentImageResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * UpdateLessonComponents saves manual edits to lesson components.
+     *
+     * @generated from rpc mirai.v1.AIGenerationService.UpdateLessonComponents
+     */
+    updateLessonComponents: {
+      name: "UpdateLessonComponents",
+      I: UpdateLessonComponentsRequest,
+      O: UpdateLessonComponentsResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -582,6 +582,64 @@ func (s *AIGenerationServiceServer) GenerateComponentImage(
 	}), nil
 }
 
+// UpdateLessonComponents saves manual edits to lesson components.
+func (s *AIGenerationServiceServer) UpdateLessonComponents(
+	ctx context.Context,
+	req *connect.Request[v1.UpdateLessonComponentsRequest],
+) (*connect.Response[v1.UpdateLessonComponentsResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	courseID, err := parseUUID(req.Msg.CourseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	lessonID, err := parseUUID(req.Msg.LessonId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	// Convert proto components to service input
+	components := make([]service.UpdateComponentInput, len(req.Msg.Components))
+	for i, c := range req.Msg.Components {
+		var learningObjectiveIDs []string
+		if c.Alignment != nil {
+			learningObjectiveIDs = c.Alignment.LearningObjectiveIds
+		}
+
+		components[i] = service.UpdateComponentInput{
+			ID:                   c.Id,
+			Type:                 protoToLessonComponentType(c.Type),
+			Order:                c.Order,
+			ContentJSON:          []byte(c.ContentJson),
+			LearningObjectiveIDs: learningObjectiveIDs,
+		}
+	}
+
+	serviceReq := service.UpdateLessonComponentsRequest{
+		CourseID:   courseID,
+		LessonID:   lessonID,
+		Components: components,
+	}
+
+	result, err := s.aiService.UpdateLessonComponents(ctx, kratosID, serviceReq)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.UpdateLessonComponentsResponse{
+		Lesson: generatedLessonToProto(result.Lesson),
+	}), nil
+}
+
 // Helper functions for proto conversion
 
 func generationJobToProto(job *entity.GenerationJob) *v1.GenerationJob {
@@ -840,7 +898,30 @@ func lessonComponentTypeToProto(t valueobject.LessonComponentType) v1.LessonComp
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_IMAGE
 	case valueobject.LessonComponentTypeQuiz:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_QUIZ
+	case valueobject.LessonComponentTypeCode:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CODE
+	case valueobject.LessonComponentTypeCallout:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CALLOUT
 	default:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_UNSPECIFIED
+	}
+}
+
+func protoToLessonComponentType(t v1.LessonComponentType) valueobject.LessonComponentType {
+	switch t {
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_TEXT:
+		return valueobject.LessonComponentTypeText
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_HEADING:
+		return valueobject.LessonComponentTypeHeading
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_IMAGE:
+		return valueobject.LessonComponentTypeImage
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_QUIZ:
+		return valueobject.LessonComponentTypeQuiz
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_CODE:
+		return valueobject.LessonComponentTypeCode
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_CALLOUT:
+		return valueobject.LessonComponentTypeCallout
+	default:
+		return valueobject.LessonComponentTypeText // Default to text
 	}
 }

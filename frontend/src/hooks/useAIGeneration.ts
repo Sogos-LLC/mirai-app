@@ -15,6 +15,7 @@ import {
   getGeneratedLesson,
   listGeneratedLessons,
   generateComponentImage,
+  updateLessonComponents,
 } from '@/gen/mirai/v1/ai_generation-AIGenerationService_connectquery';
 import {
   listNotifications,
@@ -41,6 +42,9 @@ import {
   CancelJobRequestSchema,
   CourseGenerationInputSchema,
   GenerateComponentImageRequestSchema,
+  UpdateLessonComponentsRequestSchema,
+  LessonComponentSchema,
+  ComponentAlignmentSchema,
 } from '@/gen/mirai/v1/ai_generation_pb';
 
 // Re-export types and enums
@@ -410,6 +414,67 @@ export function useGenerateComponentImage() {
       await queryClient.invalidateQueries({
         queryKey: createConnectQueryKey({ schema: getGeneratedLesson, cardinality: undefined }),
       });
+      return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Hook to update lesson components (manual edits).
+ * Used by the course editor to save component changes.
+ */
+export function useUpdateLessonComponents() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(updateLessonComponents);
+
+  return {
+    mutate: async (data: {
+      courseId: string;
+      lessonId: string;
+      components: Array<{
+        id: string;
+        type: LessonComponentType;
+        order: number;
+        contentJson: string;
+        alignment?: {
+          learningObjectiveIds?: string[];
+        };
+      }>;
+    }) => {
+      // Convert components to proto schema
+      const protoComponents = data.components.map((c) =>
+        create(LessonComponentSchema, {
+          id: c.id,
+          type: c.type,
+          order: c.order,
+          contentJson: c.contentJson,
+          alignment: c.alignment
+            ? create(ComponentAlignmentSchema, {
+                learningObjectiveIds: c.alignment.learningObjectiveIds ?? [],
+              })
+            : undefined,
+        })
+      );
+
+      const request = create(UpdateLessonComponentsRequestSchema, {
+        courseId: data.courseId,
+        lessonId: data.lessonId,
+        components: protoComponents,
+      });
+
+      const result = await mutation.mutateAsync(request);
+      // Invalidate lesson data to refresh with saved changes
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: getGeneratedLesson, cardinality: undefined }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: createConnectQueryKey({ schema: listGeneratedLessons, cardinality: undefined }),
+        }),
+      ]);
       return result;
     },
     isLoading: mutation.isPending,

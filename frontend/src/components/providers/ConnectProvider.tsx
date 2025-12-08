@@ -16,8 +16,11 @@ export function ConnectProvider({ children }: ConnectProviderProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000, // 1 minute
-            refetchOnWindowFocus: false,
+            staleTime: 30 * 1000, // 30 seconds - balance between freshness and performance
+            gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
+            refetchOnWindowFocus: true, // Refetch when user returns to tab
+            refetchOnReconnect: true, // Refetch when network reconnects
+            retry: 1, // Retry once on failure
           },
         },
       })

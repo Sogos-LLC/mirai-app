@@ -75,6 +75,9 @@ const (
 	// AIGenerationServiceGenerateComponentImageProcedure is the fully-qualified name of the
 	// AIGenerationService's GenerateComponentImage RPC.
 	AIGenerationServiceGenerateComponentImageProcedure = "/mirai.v1.AIGenerationService/GenerateComponentImage"
+	// AIGenerationServiceUpdateLessonComponentsProcedure is the fully-qualified name of the
+	// AIGenerationService's UpdateLessonComponents RPC.
+	AIGenerationServiceUpdateLessonComponentsProcedure = "/mirai.v1.AIGenerationService/UpdateLessonComponents"
 )
 
 // AIGenerationServiceClient is a client for the mirai.v1.AIGenerationService service.
@@ -107,6 +110,8 @@ type AIGenerationServiceClient interface {
 	ListGeneratedLessons(context.Context, *connect.Request[v1.ListGeneratedLessonsRequest]) (*connect.Response[v1.ListGeneratedLessonsResponse], error)
 	// GenerateComponentImage generates an image for an image component placeholder.
 	GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error)
+	// UpdateLessonComponents saves manual edits to lesson components.
+	UpdateLessonComponents(context.Context, *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error)
 }
 
 // NewAIGenerationServiceClient constructs a client for the mirai.v1.AIGenerationService service. By
@@ -204,6 +209,12 @@ func NewAIGenerationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(aIGenerationServiceMethods.ByName("GenerateComponentImage")),
 			connect.WithClientOptions(opts...),
 		),
+		updateLessonComponents: connect.NewClient[v1.UpdateLessonComponentsRequest, v1.UpdateLessonComponentsResponse](
+			httpClient,
+			baseURL+AIGenerationServiceUpdateLessonComponentsProcedure,
+			connect.WithSchema(aIGenerationServiceMethods.ByName("UpdateLessonComponents")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -223,6 +234,7 @@ type aIGenerationServiceClient struct {
 	getGeneratedLesson     *connect.Client[v1.GetGeneratedLessonRequest, v1.GetGeneratedLessonResponse]
 	listGeneratedLessons   *connect.Client[v1.ListGeneratedLessonsRequest, v1.ListGeneratedLessonsResponse]
 	generateComponentImage *connect.Client[v1.GenerateComponentImageRequest, v1.GenerateComponentImageResponse]
+	updateLessonComponents *connect.Client[v1.UpdateLessonComponentsRequest, v1.UpdateLessonComponentsResponse]
 }
 
 // GenerateCourseOutline calls mirai.v1.AIGenerationService.GenerateCourseOutline.
@@ -295,6 +307,11 @@ func (c *aIGenerationServiceClient) GenerateComponentImage(ctx context.Context, 
 	return c.generateComponentImage.CallUnary(ctx, req)
 }
 
+// UpdateLessonComponents calls mirai.v1.AIGenerationService.UpdateLessonComponents.
+func (c *aIGenerationServiceClient) UpdateLessonComponents(ctx context.Context, req *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error) {
+	return c.updateLessonComponents.CallUnary(ctx, req)
+}
+
 // AIGenerationServiceHandler is an implementation of the mirai.v1.AIGenerationService service.
 type AIGenerationServiceHandler interface {
 	// GenerateCourseOutline starts outline generation job.
@@ -325,6 +342,8 @@ type AIGenerationServiceHandler interface {
 	ListGeneratedLessons(context.Context, *connect.Request[v1.ListGeneratedLessonsRequest]) (*connect.Response[v1.ListGeneratedLessonsResponse], error)
 	// GenerateComponentImage generates an image for an image component placeholder.
 	GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error)
+	// UpdateLessonComponents saves manual edits to lesson components.
+	UpdateLessonComponents(context.Context, *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error)
 }
 
 // NewAIGenerationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -418,6 +437,12 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 		connect.WithSchema(aIGenerationServiceMethods.ByName("GenerateComponentImage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aIGenerationServiceUpdateLessonComponentsHandler := connect.NewUnaryHandler(
+		AIGenerationServiceUpdateLessonComponentsProcedure,
+		svc.UpdateLessonComponents,
+		connect.WithSchema(aIGenerationServiceMethods.ByName("UpdateLessonComponents")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.AIGenerationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIGenerationServiceGenerateCourseOutlineProcedure:
@@ -448,6 +473,8 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 			aIGenerationServiceListGeneratedLessonsHandler.ServeHTTP(w, r)
 		case AIGenerationServiceGenerateComponentImageProcedure:
 			aIGenerationServiceGenerateComponentImageHandler.ServeHTTP(w, r)
+		case AIGenerationServiceUpdateLessonComponentsProcedure:
+			aIGenerationServiceUpdateLessonComponentsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -511,4 +538,8 @@ func (UnimplementedAIGenerationServiceHandler) ListGeneratedLessons(context.Cont
 
 func (UnimplementedAIGenerationServiceHandler) GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.GenerateComponentImage is not implemented"))
+}
+
+func (UnimplementedAIGenerationServiceHandler) UpdateLessonComponents(context.Context, *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.UpdateLessonComponents is not implemented"))
 }

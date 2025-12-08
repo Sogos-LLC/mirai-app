@@ -421,3 +421,15 @@ export const GeneratedLessonSchema = z.object({
 
 export type GeneratedLesson = z.infer<typeof GeneratedLessonSchema>;
 
+/**
+ * Zod schema for UpdateLessonComponentsRequest
+ * @generated from message mirai.v1.UpdateLessonComponentsRequest
+ */
+export const UpdateLessonComponentsRequestSchema = z.object({
+  courseId: z.string(),
+  lessonId: z.string(),
+  components: z.array(LessonComponentSchema),
+});
+
+export type UpdateLessonComponentsRequest = z.infer<typeof UpdateLessonComponentsRequestSchema>;
+

@@ -101,3 +101,10 @@ export const listGeneratedLessons = AIGenerationService.method.listGeneratedLess
  * @generated from rpc mirai.v1.AIGenerationService.GenerateComponentImage
  */
 export const generateComponentImage = AIGenerationService.method.generateComponentImage;
+
+/**
+ * UpdateLessonComponents saves manual edits to lesson components.
+ *
+ * @generated from rpc mirai.v1.AIGenerationService.UpdateLessonComponents
+ */
+export const updateLessonComponents = AIGenerationService.method.updateLessonComponents;
