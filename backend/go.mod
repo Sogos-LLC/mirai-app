@@ -13,6 +13,7 @@ require (
 	github.com/hibiken/asynq v0.25.1
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.17.1
+	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/stripe/stripe-go/v76 v76.25.0
 	golang.org/x/crypto v0.45.0
 	golang.org/x/net v0.47.0

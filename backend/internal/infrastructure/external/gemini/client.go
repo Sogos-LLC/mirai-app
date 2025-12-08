@@ -1182,6 +1182,481 @@ Improve the above content by:
 Return only the improved content without any additional commentary.`, content)
 }
 
+// =============================================================================
+// Wizard AI Generation Methods
+// =============================================================================
+
+// GenerateImprovedTitle improves the course name and generates a description.
+func (c *Client) GenerateImprovedTitle(ctx context.Context, courseName string) (*service.GenerateTitleResult, error) {
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("title generation cancelled: %w", ctx.Err())
+	default:
+	}
+
+	prompt := buildImprovedTitlePrompt(courseName)
+	config := &genai.GenerateContentConfig{
+		ResponseMIMEType:   "application/json",
+		ResponseJsonSchema: improvedTitleSchema(),
+	}
+
+	result, err := c.generateWithRetry(ctx, "generate improved title", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(ctx, c.model, genai.Text(prompt), config)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate improved title: %w", err)
+	}
+
+	var resp improvedTitleResponse
+	if err := json.Unmarshal([]byte(result.Text()), &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse improved title response: %w", err)
+	}
+
+	return &service.GenerateTitleResult{
+		ImprovedTitle: resp.ImprovedTitle,
+		Description:   resp.Description,
+		TokensUsed:    extractTokensUsed(result),
+	}, nil
+}
+
+// GenerateSMEPersonas generates 3 diverse SME personas based on course topic.
+func (c *Client) GenerateSMEPersonas(ctx context.Context, title, description string) (*service.GenerateSMEPersonasResult, error) {
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("SME persona generation cancelled: %w", ctx.Err())
+	default:
+	}
+
+	prompt := buildSMEPersonasPrompt(title, description)
+	config := &genai.GenerateContentConfig{
+		ResponseMIMEType:   "application/json",
+		ResponseJsonSchema: smePersonasSchema(),
+	}
+
+	result, err := c.generateWithRetry(ctx, "generate SME personas", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(ctx, c.model, genai.Text(prompt), config)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate SME personas: %w", err)
+	}
+
+	var resp smePersonasResponse
+	if err := json.Unmarshal([]byte(result.Text()), &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse SME personas response: %w", err)
+	}
+
+	personas := make([]service.WizardSMEPersona, len(resp.Personas))
+	for i, p := range resp.Personas {
+		personas[i] = service.WizardSMEPersona{
+			ID:          p.ID,
+			JobTitle:    p.JobTitle,
+			Description: p.Description,
+			Skills:      p.Skills,
+			Voice:       p.Voice,
+		}
+	}
+
+	return &service.GenerateSMEPersonasResult{
+		Personas:   personas,
+		TokensUsed: extractTokensUsed(result),
+	}, nil
+}
+
+// GenerateAudiencePersonas generates 3 diverse audience personas.
+func (c *Client) GenerateAudiencePersonas(ctx context.Context, req service.GenerateAudiencePersonasRequest) (*service.GenerateAudiencePersonasResult, error) {
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("audience persona generation cancelled: %w", ctx.Err())
+	default:
+	}
+
+	prompt := buildAudiencePersonasPrompt(req)
+	config := &genai.GenerateContentConfig{
+		ResponseMIMEType:   "application/json",
+		ResponseJsonSchema: audiencePersonasSchema(),
+	}
+
+	result, err := c.generateWithRetry(ctx, "generate audience personas", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(ctx, c.model, genai.Text(prompt), config)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate audience personas: %w", err)
+	}
+
+	var resp audiencePersonasResponse
+	if err := json.Unmarshal([]byte(result.Text()), &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse audience personas response: %w", err)
+	}
+
+	personas := make([]service.WizardAudiencePersona, len(resp.Personas))
+	for i, p := range resp.Personas {
+		personas[i] = service.WizardAudiencePersona{
+			ID:          p.ID,
+			Name:        p.Name,
+			Role:        p.Role,
+			Description: p.Description,
+			Goals:       p.Goals,
+		}
+	}
+
+	return &service.GenerateAudiencePersonasResult{
+		Personas:   personas,
+		TokensUsed: extractTokensUsed(result),
+	}, nil
+}
+
+// GenerateToneOptions generates 3 tone/style options for the course.
+func (c *Client) GenerateToneOptions(ctx context.Context, req service.GenerateToneOptionsRequest) (*service.GenerateToneOptionsResult, error) {
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("tone options generation cancelled: %w", ctx.Err())
+	default:
+	}
+
+	prompt := buildToneOptionsPrompt(req)
+	config := &genai.GenerateContentConfig{
+		ResponseMIMEType:   "application/json",
+		ResponseJsonSchema: toneOptionsSchema(),
+	}
+
+	result, err := c.generateWithRetry(ctx, "generate tone options", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(ctx, c.model, genai.Text(prompt), config)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate tone options: %w", err)
+	}
+
+	var resp toneOptionsResponse
+	if err := json.Unmarshal([]byte(result.Text()), &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse tone options response: %w", err)
+	}
+
+	options := make([]service.WizardToneOption, len(resp.Options))
+	for i, o := range resp.Options {
+		options[i] = service.WizardToneOption{
+			ID:            o.ID,
+			Name:          o.Name,
+			Description:   o.Description,
+			LevelOfDetail: o.LevelOfDetail,
+		}
+	}
+
+	return &service.GenerateToneOptionsResult{
+		Options:    options,
+		TokensUsed: extractTokensUsed(result),
+	}, nil
+}
+
+// =============================================================================
+// Wizard Response Types
+// =============================================================================
+
+type improvedTitleResponse struct {
+	ImprovedTitle string `json:"improved_title"`
+	Description   string `json:"description"`
+}
+
+type smePersonasResponse struct {
+	Personas []smePersonaItem `json:"personas"`
+}
+
+type smePersonaItem struct {
+	ID          string   `json:"id"`
+	JobTitle    string   `json:"job_title"`
+	Description string   `json:"description"`
+	Skills      []string `json:"skills"`
+	Voice       string   `json:"voice"`
+}
+
+type audiencePersonasResponse struct {
+	Personas []audiencePersonaItem `json:"personas"`
+}
+
+type audiencePersonaItem struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Role        string   `json:"role"`
+	Description string   `json:"description"`
+	Goals       []string `json:"goals"`
+}
+
+type toneOptionsResponse struct {
+	Options []toneOptionItem `json:"options"`
+}
+
+type toneOptionItem struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	LevelOfDetail string `json:"level_of_detail"`
+}
+
+// =============================================================================
+// Wizard Schema Definitions
+// =============================================================================
+
+func improvedTitleSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"improved_title": map[string]any{
+				"type":        "string",
+				"description": "A polished, professional course title that is clear, engaging, and accurately represents the content.",
+			},
+			"description": map[string]any{
+				"type":        "string",
+				"description": "A compelling 2-3 sentence description of the course that highlights what learners will gain.",
+			},
+		},
+		"required": []string{"improved_title", "description"},
+	}
+}
+
+func smePersonasSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"personas": map[string]any{
+				"type":        "array",
+				"description": "3 diverse SME personas with different expertise angles",
+				"minItems":    3,
+				"maxItems":    3,
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id": map[string]any{
+							"type":        "string",
+							"description": "Unique identifier (e.g., 'sme-1', 'sme-2', 'sme-3')",
+						},
+						"job_title": map[string]any{
+							"type":        "string",
+							"description": "Professional job title (e.g., 'Senior Data Scientist', 'UX Research Lead')",
+						},
+						"description": map[string]any{
+							"type":        "string",
+							"description": "2-3 sentence background describing their expertise and experience",
+						},
+						"skills": map[string]any{
+							"type":        "array",
+							"description": "3-5 key skills or areas of expertise",
+							"items":       map[string]any{"type": "string"},
+						},
+						"voice": map[string]any{
+							"type":        "string",
+							"description": "Their teaching voice/style (e.g., 'Practical and hands-on', 'Academic and thorough')",
+						},
+					},
+					"required": []string{"id", "job_title", "description", "skills", "voice"},
+				},
+			},
+		},
+		"required": []string{"personas"},
+	}
+}
+
+func audiencePersonasSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"personas": map[string]any{
+				"type":        "array",
+				"description": "3 diverse audience personas representing different learner profiles",
+				"minItems":    3,
+				"maxItems":    3,
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id": map[string]any{
+							"type":        "string",
+							"description": "Unique identifier (e.g., 'audience-1', 'audience-2', 'audience-3')",
+						},
+						"name": map[string]any{
+							"type":        "string",
+							"description": "A representative name for this persona (e.g., 'Alex the Career Changer')",
+						},
+						"role": map[string]any{
+							"type":        "string",
+							"description": "Their current job role or position",
+						},
+						"description": map[string]any{
+							"type":        "string",
+							"description": "2-3 sentence description of their background and current situation",
+						},
+						"goals": map[string]any{
+							"type":        "array",
+							"description": "2-4 learning goals or outcomes they want to achieve",
+							"items":       map[string]any{"type": "string"},
+						},
+					},
+					"required": []string{"id", "name", "role", "description", "goals"},
+				},
+			},
+		},
+		"required": []string{"personas"},
+	}
+}
+
+func toneOptionsSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"options": map[string]any{
+				"type":        "array",
+				"description": "3 distinct tone/style options for the course",
+				"minItems":    3,
+				"maxItems":    3,
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id": map[string]any{
+							"type":        "string",
+							"description": "Unique identifier (e.g., 'tone-1', 'tone-2', 'tone-3')",
+						},
+						"name": map[string]any{
+							"type":        "string",
+							"description": "Short name for this tone (e.g., 'Quick Start Guide', 'Deep Dive', 'Hands-on Workshop')",
+						},
+						"description": map[string]any{
+							"type":        "string",
+							"description": "2-3 sentence description of the tone and teaching style",
+						},
+						"level_of_detail": map[string]any{
+							"type":        "string",
+							"enum":        []string{"brief", "moderate", "comprehensive"},
+							"description": "The depth of content coverage",
+						},
+					},
+					"required": []string{"id", "name", "description", "level_of_detail"},
+				},
+			},
+		},
+		"required": []string{"options"},
+	}
+}
+
+// =============================================================================
+// Wizard Prompt Builders
+// =============================================================================
+
+func buildImprovedTitlePrompt(courseName string) string {
+	return fmt.Sprintf(`You are an expert course designer who creates compelling course titles and descriptions.
+
+## Original Course Name
+%s
+
+## Instructions
+Based on the course name provided, create:
+
+1. **Improved Title**: A polished, professional course title that:
+   - Is clear and specific about what learners will learn
+   - Is engaging and motivating
+   - Uses proper capitalization (Title Case)
+   - Is concise (typically 3-8 words)
+   - Avoids jargon unless the topic requires it
+
+2. **Description**: A compelling 2-3 sentence course description that:
+   - Clearly states what the course covers
+   - Highlights the key benefits for learners
+   - Sets appropriate expectations for the content
+   - Uses active, engaging language
+
+Keep the improved title close to the original intent, but make it more professional and marketable.`, courseName)
+}
+
+func buildSMEPersonasPrompt(title, description string) string {
+	return fmt.Sprintf(`You are an expert instructional designer creating subject matter expert (SME) personas for a course.
+
+## Course Information
+**Title:** %s
+**Description:** %s
+
+## Instructions
+Generate 3 diverse SME personas who could teach this course. Each persona should:
+
+1. Have a unique professional background and expertise angle
+2. Bring different perspectives to the subject matter
+3. Have distinct teaching styles that would appeal to different learners
+
+Make the personas realistic and specific to the course topic. Consider:
+- Different career paths that lead to expertise in this area
+- Varying years of experience and specializations
+- Different industries or contexts where this knowledge applies
+
+The personas should complement each other, covering different aspects of the course material from different angles.`, title, description)
+}
+
+func buildAudiencePersonasPrompt(req service.GenerateAudiencePersonasRequest) string {
+	var sb strings.Builder
+
+	sb.WriteString("You are an expert instructional designer creating target audience personas for a course.\n\n")
+
+	sb.WriteString("## Course Information\n")
+	sb.WriteString(fmt.Sprintf("**Title:** %s\n", req.Title))
+	sb.WriteString(fmt.Sprintf("**Description:** %s\n\n", req.Description))
+
+	if len(req.SMEPersonas) > 0 {
+		sb.WriteString("## Subject Matter Experts Teaching This Course\n")
+		for _, sme := range req.SMEPersonas {
+			sb.WriteString(fmt.Sprintf("- **%s**: %s\n", sme.JobTitle, sme.Description))
+		}
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString(`## Instructions
+Generate 3 diverse audience personas who would benefit from this course. Each persona should:
+
+1. Have a distinct background and current role
+2. Have different motivations for taking the course
+3. Represent different experience levels (e.g., beginner, intermediate, career-changer)
+
+Make the personas realistic and relatable. Consider:
+- Different career stages (early career, mid-career, transitioning)
+- Different industries or contexts
+- Different learning goals and motivations
+- What challenges they face that this course would address
+
+Each persona should feel like a real person with specific goals and challenges.`)
+
+	return sb.String()
+}
+
+func buildToneOptionsPrompt(req service.GenerateToneOptionsRequest) string {
+	var sb strings.Builder
+
+	sb.WriteString("You are an expert instructional designer creating tone and style options for a course.\n\n")
+
+	sb.WriteString("## Course Information\n")
+	sb.WriteString(fmt.Sprintf("**Title:** %s\n", req.Title))
+	sb.WriteString(fmt.Sprintf("**Description:** %s\n\n", req.Description))
+
+	if len(req.AudiencePersonas) > 0 {
+		sb.WriteString("## Target Audience\n")
+		for _, p := range req.AudiencePersonas {
+			sb.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", p.Name, p.Role, p.Description))
+		}
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString(`## Instructions
+Generate 3 distinct tone/style options for this course. Each option should:
+
+1. Have a clear, descriptive name (e.g., "Quick Start Guide", "Deep Dive", "Hands-on Workshop")
+2. Define a specific teaching approach and content depth
+3. Match one of these detail levels:
+   - "brief": Concise, focused on essentials, quick to complete
+   - "moderate": Balanced coverage, includes examples and practice
+   - "comprehensive": In-depth, thorough explanations, extensive practice
+
+The options should offer meaningful variety:
+- One focused on practical, quick application
+- One balanced for general learning
+- One thorough for deep understanding
+
+Consider what tone would best serve the target audience's goals.`)
+
+	return sb.String()
+}
+
 // Helper functions
 
 func extractTokensUsed(result *genai.GenerateContentResponse) int64 {

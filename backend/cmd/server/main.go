@@ -79,6 +79,7 @@ func main() {
 	componentRepo := sqlc.NewLessonComponentRepository(db.DB)
 	genInputRepo := sqlc.NewCourseGenerationInputRepository(db.DB)
 	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
+	wizardStateRepo := sqlc.NewWizardStateRepository(db.DB)
 
 	// Initialize shared HTTP client
 	httpClient := httputil.NewClient()
@@ -215,6 +216,7 @@ func main() {
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
+	var courseWizardService *service.CourseWizardService
 	if encryptor != nil {
 		tenantSettingsService = service.NewTenantSettingsService(userRepo, aiSettingsRepo, encryptor, logger)
 
@@ -240,6 +242,15 @@ func main() {
 			logger,
 		)
 
+		// Course Wizard service (AI-guided course creation)
+		courseWizardService = service.NewCourseWizardService(
+			userRepo,
+			wizardStateRepo,
+			geminiProviderFactory,
+			aiSettingsRepo,
+			logger,
+		)
+
 		logger.Info("AI services initialized")
 	} else {
 		logger.Warn("AI services not initialized (encryption key required)")
@@ -261,6 +272,7 @@ func main() {
 		TenantSettingsService: tenantSettingsService,
 		NotificationService:   notificationService,
 		AIGenerationService:   aiGenerationService,
+		CourseWizardService:   courseWizardService,
 		PendingRegRepo:         pendingRegRepo,
 		UserRepo:               userRepo,               // For tenant context in auth interceptor
 		Cache:                  globalCache,            // For caching user tenant mappings (not tenant-scoped)

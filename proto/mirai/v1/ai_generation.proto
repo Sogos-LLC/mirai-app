@@ -33,22 +33,24 @@ enum OutlineApprovalStatus {
 }
 
 // LessonComponentType - content block types for lessons.
-// MVP: Text, Heading, Image, Quiz. Expand later.
 enum LessonComponentType {
   LESSON_COMPONENT_TYPE_UNSPECIFIED = 0;
   LESSON_COMPONENT_TYPE_TEXT = 1;
   LESSON_COMPONENT_TYPE_HEADING = 2;
   LESSON_COMPONENT_TYPE_IMAGE = 3;
   LESSON_COMPONENT_TYPE_QUIZ = 4;
-  // Future expansion:
-  // LESSON_COMPONENT_TYPE_VIDEO = 5;
-  // LESSON_COMPONENT_TYPE_VIDEO_EMBED = 6;
-  // LESSON_COMPONENT_TYPE_ACCORDION = 7;
-  // LESSON_COMPONENT_TYPE_TABLE = 8;
-  // LESSON_COMPONENT_TYPE_CALLOUT = 9;
-  // LESSON_COMPONENT_TYPE_CODE_BLOCK = 10;
-  // LESSON_COMPONENT_TYPE_GALLERY = 11;
-  // LESSON_COMPONENT_TYPE_TABS = 12;
+  LESSON_COMPONENT_TYPE_CODE = 5;
+  LESSON_COMPONENT_TYPE_CALLOUT = 6;
+}
+
+// CalloutStyle defines the visual style for callout components.
+enum CalloutStyle {
+  CALLOUT_STYLE_UNSPECIFIED = 0;
+  CALLOUT_STYLE_INFO = 1;
+  CALLOUT_STYLE_WARNING = 2;
+  CALLOUT_STYLE_SUCCESS = 3;
+  CALLOUT_STYLE_ERROR = 4;
+  CALLOUT_STYLE_TIP = 5;
 }
 
 // HeadingLevel for heading components.
@@ -58,6 +60,8 @@ enum HeadingLevel {
   HEADING_LEVEL_H2 = 2;
   HEADING_LEVEL_H3 = 3;
   HEADING_LEVEL_H4 = 4;
+  HEADING_LEVEL_H5 = 5;
+  HEADING_LEVEL_H6 = 6;
 }
 
 // GenerationJob represents an AI generation job.
@@ -200,6 +204,19 @@ message QuizContent {
 message QuizOption {
   string id = 1;
   string text = 2;
+}
+
+// CodeContent for code block components.
+message CodeContent {
+  string code = 1;
+  string language = 2; // e.g., "javascript", "python", "go"
+}
+
+// CalloutContent for callout/alert components.
+message CalloutContent {
+  CalloutStyle style = 1;
+  optional string title = 2;
+  string content = 3;
 }
 
 // CourseGenerationInput captures inputs for AI course generation.

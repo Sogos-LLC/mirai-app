@@ -6,6 +6,8 @@ import { TextRenderer } from './TextRenderer';
 import { HeadingRenderer } from './HeadingRenderer';
 import { ImageRenderer } from './ImageRenderer';
 import { QuizRenderer } from './QuizRenderer';
+import { CodeRenderer } from './CodeRenderer';
+import { CalloutRenderer, type CalloutContent } from './CalloutRenderer';
 
 // Component type enum values from proto
 const COMPONENT_TYPES = {
@@ -14,6 +16,8 @@ const COMPONENT_TYPES = {
   HEADING: 2,
   IMAGE: 3,
   QUIZ: 4,
+  CODE: 5,
+  CALLOUT: 6,
 } as const;
 
 // Content types matching the new Gemini schema
@@ -44,6 +48,11 @@ interface QuizContent {
   options: QuizOption[];
   correctAnswerId: string;
   explanation: string;
+}
+
+interface CodeContent {
+  code: string;
+  language: string;
 }
 
 interface ComponentRendererProps {
@@ -184,6 +193,38 @@ export function ComponentRenderer({
       );
     }
 
+    case COMPONENT_TYPES.CODE: {
+      const codeContent = content as CodeContent | null;
+      if (!codeContent) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid code content</div>;
+      }
+      return (
+        <Wrapper>
+          <CodeRenderer
+            content={codeContent}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.CALLOUT: {
+      const calloutContent = content as CalloutContent | null;
+      if (!calloutContent) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid callout content</div>;
+      }
+      return (
+        <Wrapper>
+          <CalloutRenderer
+            content={calloutContent}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
     default:
       return (
         <div className="p-4 bg-gray-100 text-gray-500 rounded">
@@ -203,6 +244,8 @@ export function getComponentTypeName(type: number): string {
     [COMPONENT_TYPES.HEADING]: 'Heading',
     [COMPONENT_TYPES.IMAGE]: 'Image',
     [COMPONENT_TYPES.QUIZ]: 'Quiz',
+    [COMPONENT_TYPES.CODE]: 'Code',
+    [COMPONENT_TYPES.CALLOUT]: 'Callout',
   };
   return names[type] || 'Unknown';
 }
@@ -217,6 +260,8 @@ export function getComponentTypeIcon(type: number): string {
     [COMPONENT_TYPES.HEADING]: 'H',
     [COMPONENT_TYPES.IMAGE]: 'I',
     [COMPONENT_TYPES.QUIZ]: 'Q',
+    [COMPONENT_TYPES.CODE]: '<>',
+    [COMPONENT_TYPES.CALLOUT]: '!',
   };
   return icons[type] || '?';
 }

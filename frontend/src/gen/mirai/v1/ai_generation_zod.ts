@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import { z } from "zod";
-import { GenerationJobStatus, GenerationJobType, HeadingLevel, LessonComponentType, OutlineApprovalStatus } from "./ai_generation_pb";
+import { CalloutStyle, GenerationJobStatus, GenerationJobType, HeadingLevel, LessonComponentType, OutlineApprovalStatus } from "./ai_generation_pb";
 
 /**
  * Zod schema for GenerationJobType enum
@@ -32,6 +32,13 @@ export type OutlineApprovalStatusType = z.infer<typeof OutlineApprovalStatusSche
  */
 export const LessonComponentTypeSchema = z.nativeEnum(LessonComponentType);
 export type LessonComponentTypeType = z.infer<typeof LessonComponentTypeSchema>;
+
+/**
+ * Zod schema for CalloutStyle enum
+ * @generated from enum mirai.v1.CalloutStyle
+ */
+export const CalloutStyleSchema = z.nativeEnum(CalloutStyle);
+export type CalloutStyleType = z.infer<typeof CalloutStyleSchema>;
 
 /**
  * Zod schema for HeadingLevel enum
@@ -138,6 +145,29 @@ export const QuizOptionSchema = z.object({
 });
 
 export type QuizOption = z.infer<typeof QuizOptionSchema>;
+
+/**
+ * Zod schema for CodeContent
+ * @generated from message mirai.v1.CodeContent
+ */
+export const CodeContentSchema = z.object({
+  code: z.string(),
+  language: z.string(),
+});
+
+export type CodeContent = z.infer<typeof CodeContentSchema>;
+
+/**
+ * Zod schema for CalloutContent
+ * @generated from message mirai.v1.CalloutContent
+ */
+export const CalloutContentSchema = z.object({
+  style: z.nativeEnum(CalloutStyle),
+  title: z.string().optional(),
+  content: z.string(),
+});
+
+export type CalloutContent = z.infer<typeof CalloutContentSchema>;
 
 /**
  * Zod schema for CourseGenerationInput

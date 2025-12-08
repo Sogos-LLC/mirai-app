@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type AiProvider string
@@ -53,6 +54,51 @@ func (ns NullAiProvider) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.AiProvider), nil
+}
+
+type CalloutStyle string
+
+const (
+	CalloutStyleInfo    CalloutStyle = "info"
+	CalloutStyleWarning CalloutStyle = "warning"
+	CalloutStyleSuccess CalloutStyle = "success"
+	CalloutStyleError   CalloutStyle = "error"
+	CalloutStyleTip     CalloutStyle = "tip"
+)
+
+func (e *CalloutStyle) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CalloutStyle(s)
+	case string:
+		*e = CalloutStyle(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CalloutStyle: %T", src)
+	}
+	return nil
+}
+
+type NullCalloutStyle struct {
+	CalloutStyle CalloutStyle `json:"callout_style"`
+	Valid        bool         `json:"valid"` // Valid is true if CalloutStyle is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCalloutStyle) Scan(value interface{}) error {
+	if value == nil {
+		ns.CalloutStyle, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CalloutStyle.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCalloutStyle) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CalloutStyle), nil
 }
 
 type GenerationJobStatus string
@@ -152,6 +198,8 @@ const (
 	HeadingLevelH2 HeadingLevel = "h2"
 	HeadingLevelH3 HeadingLevel = "h3"
 	HeadingLevelH4 HeadingLevel = "h4"
+	HeadingLevelH5 HeadingLevel = "h5"
+	HeadingLevelH6 HeadingLevel = "h6"
 )
 
 func (e *HeadingLevel) Scan(src interface{}) error {
@@ -196,6 +244,8 @@ const (
 	LessonComponentTypeHeading LessonComponentType = "heading"
 	LessonComponentTypeImage   LessonComponentType = "image"
 	LessonComponentTypeQuiz    LessonComponentType = "quiz"
+	LessonComponentTypeCode    LessonComponentType = "code"
+	LessonComponentTypeCallout LessonComponentType = "callout"
 )
 
 func (e *LessonComponentType) Scan(src interface{}) error {
@@ -364,6 +414,49 @@ func (ns NullOutlineApprovalStatus) Value() (driver.Value, error) {
 	return string(ns.OutlineApprovalStatus), nil
 }
 
+type ToneDetailLevel string
+
+const (
+	ToneDetailLevelBrief         ToneDetailLevel = "brief"
+	ToneDetailLevelModerate      ToneDetailLevel = "moderate"
+	ToneDetailLevelComprehensive ToneDetailLevel = "comprehensive"
+)
+
+func (e *ToneDetailLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ToneDetailLevel(s)
+	case string:
+		*e = ToneDetailLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ToneDetailLevel: %T", src)
+	}
+	return nil
+}
+
+type NullToneDetailLevel struct {
+	ToneDetailLevel ToneDetailLevel `json:"tone_detail_level"`
+	Valid           bool            `json:"valid"` // Valid is true if ToneDetailLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullToneDetailLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.ToneDetailLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ToneDetailLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullToneDetailLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ToneDetailLevel), nil
+}
+
 type Company struct {
 	ID                   uuid.UUID      `db:"id" json:"id"`
 	TenantID             uuid.UUID      `db:"tenant_id" json:"tenant_id"`
@@ -408,6 +501,13 @@ type CourseGenerationInput struct {
 	AdditionalContext sql.NullString `db:"additional_context" json:"additional_context"`
 	CreatedAt         time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt         time.Time      `db:"updated_at" json:"updated_at"`
+	// Selected SME personas from wizard as JSONB array
+	SmePersonas pqtype.NullRawMessage `db:"sme_personas" json:"sme_personas"`
+	// Selected audience personas from wizard as JSONB array
+	AudiencePersonas pqtype.NullRawMessage `db:"audience_personas" json:"audience_personas"`
+	// Selected tone option from wizard as JSONB object
+	ToneOption        pqtype.NullRawMessage `db:"tone_option" json:"tone_option"`
+	CourseDescription sql.NullString        `db:"course_description" json:"course_description"`
 }
 
 type CourseModule struct {
@@ -644,4 +744,17 @@ type User struct {
 	Role      string        `db:"role" json:"role"`
 	CreatedAt time.Time     `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time     `db:"updated_at" json:"updated_at"`
+}
+
+// Stores wizard progress for course creation, allowing users to resume later
+type WizardState struct {
+	ID       uuid.UUID `db:"id" json:"id"`
+	TenantID uuid.UUID `db:"tenant_id" json:"tenant_id"`
+	UserID   uuid.UUID `db:"user_id" json:"user_id"`
+	// Current wizard step: courseName, titleDescription, smeSelection, audienceSelection, toneSelection, additionalContext, generateOutline, outlineReview
+	CurrentStep string `db:"current_step" json:"current_step"`
+	// JSONB containing all wizard form data accumulated across steps
+	Data      json.RawMessage `db:"data" json:"data"`
+	CreatedAt time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time       `db:"updated_at" json:"updated_at"`
 }

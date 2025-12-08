@@ -25,6 +25,7 @@ type ServerConfig struct {
 	TenantSettingsService *service.TenantSettingsService
 	NotificationService   *service.NotificationService
 	AIGenerationService   *service.AIGenerationService
+	CourseWizardService   *service.CourseWizardService
 
 	PendingRegRepo         repository.PendingRegistrationRepository
 	UserRepo               repository.UserRepository // For tenant context in auth interceptor
@@ -125,6 +126,15 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	if cfg.AIGenerationService != nil {
 		path, handler = miraiv1connect.NewAIGenerationServiceHandler(
 			NewAIGenerationServiceServer(cfg.AIGenerationService),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// CourseWizardService - AI-guided course creation wizard
+	if cfg.CourseWizardService != nil {
+		path, handler = miraiv1connect.NewCourseWizardServiceHandler(
+			NewCourseWizardServiceServer(cfg.CourseWizardService),
 			interceptors,
 		)
 		mux.Handle(path, handler)

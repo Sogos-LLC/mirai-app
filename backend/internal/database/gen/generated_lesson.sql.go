@@ -18,7 +18,7 @@ const createCourseGenerationInput = `-- name: CreateCourseGenerationInput :one
 
 INSERT INTO course_generation_inputs (tenant_id, course_id, sme_ids, target_audience_ids, desired_outcome, additional_context)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, tenant_id, course_id, sme_ids, target_audience_ids, desired_outcome, additional_context, created_at, updated_at
+RETURNING id, tenant_id, course_id, sme_ids, target_audience_ids, desired_outcome, additional_context, created_at, updated_at, sme_personas, audience_personas, tone_option, course_description
 `
 
 type CreateCourseGenerationInputParams struct {
@@ -53,6 +53,10 @@ func (q *Queries) CreateCourseGenerationInput(ctx context.Context, arg CreateCou
 		&i.AdditionalContext,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SmePersonas,
+		&i.AudiencePersonas,
+		&i.ToneOption,
+		&i.CourseDescription,
 	)
 	return i, err
 }
@@ -158,7 +162,7 @@ func (q *Queries) DeleteLessonComponent(ctx context.Context, id uuid.UUID) error
 }
 
 const getCourseGenerationInputByCourseID = `-- name: GetCourseGenerationInputByCourseID :one
-SELECT id, tenant_id, course_id, sme_ids, target_audience_ids, desired_outcome, additional_context, created_at, updated_at FROM course_generation_inputs WHERE course_id = $1
+SELECT id, tenant_id, course_id, sme_ids, target_audience_ids, desired_outcome, additional_context, created_at, updated_at, sme_personas, audience_personas, tone_option, course_description FROM course_generation_inputs WHERE course_id = $1
 `
 
 func (q *Queries) GetCourseGenerationInputByCourseID(ctx context.Context, courseID uuid.UUID) (CourseGenerationInput, error) {
@@ -174,6 +178,10 @@ func (q *Queries) GetCourseGenerationInputByCourseID(ctx context.Context, course
 		&i.AdditionalContext,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SmePersonas,
+		&i.AudiencePersonas,
+		&i.ToneOption,
+		&i.CourseDescription,
 	)
 	return i, err
 }
@@ -322,7 +330,7 @@ const updateCourseGenerationInput = `-- name: UpdateCourseGenerationInput :one
 UPDATE course_generation_inputs
 SET sme_ids = $1, target_audience_ids = $2, desired_outcome = $3, additional_context = $4, updated_at = NOW()
 WHERE id = $5
-RETURNING id, tenant_id, course_id, sme_ids, target_audience_ids, desired_outcome, additional_context, created_at, updated_at
+RETURNING id, tenant_id, course_id, sme_ids, target_audience_ids, desired_outcome, additional_context, created_at, updated_at, sme_personas, audience_personas, tone_option, course_description
 `
 
 type UpdateCourseGenerationInputParams struct {
@@ -352,6 +360,10 @@ func (q *Queries) UpdateCourseGenerationInput(ctx context.Context, arg UpdateCou
 		&i.AdditionalContext,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SmePersonas,
+		&i.AudiencePersonas,
+		&i.ToneOption,
+		&i.CourseDescription,
 	)
 	return i, err
 }

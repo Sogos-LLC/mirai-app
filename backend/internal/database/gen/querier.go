@@ -21,6 +21,8 @@ type Querier interface {
 	// Atomic claim: UPDATE with subquery SELECT FOR UPDATE SKIP LOCKED
 	// This ensures only one worker can claim each job
 	ClaimQueuedJob(ctx context.Context) (GenerationJob, error)
+	// Count active wizards for a tenant (for analytics)
+	CountActiveWizards(ctx context.Context, tenantID uuid.UUID) (int32, error)
 	// Count with same filters as ListCourses
 	CountCourses(ctx context.Context, arg CountCoursesParams) (int32, error)
 	CountCoursesByFolderID(ctx context.Context, folderID uuid.NullUUID) (int32, error)
@@ -102,6 +104,10 @@ type Querier interface {
 	DeletePendingRegistration(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
 	DeleteTenant(ctx context.Context, id uuid.UUID) error
+	// Removes wizard state for a user (called after course creation or cancellation)
+	DeleteWizardState(ctx context.Context, userID uuid.UUID) error
+	// Removes wizard state by ID
+	DeleteWizardStateByID(ctx context.Context, id uuid.UUID) error
 	ExistsPendingRegistrationByEmail(ctx context.Context, email string) (bool, error)
 	FinalizeParentJob(ctx context.Context, arg FinalizeParentJobParams) error
 	// Find registrations stuck in "paid" status older than cutoff time
@@ -147,6 +153,11 @@ type Querier interface {
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByKratosID(ctx context.Context, kratosID uuid.UUID) (User, error)
+	// Wizard state CRUD operations
+	// Schema: wizard_states table with RLS isolation by tenant_id
+	// Each user can have only one active wizard state at a time
+	// Retrieves the wizard state for a specific user
+	GetWizardStateByUserID(ctx context.Context, userID uuid.UUID) (WizardState, error)
 	IncrementTenantAITokenUsage(ctx context.Context, arg IncrementTenantAITokenUsageParams) error
 	// Dynamic filtering using nullable parameters
 	// NULL param = skip filter, non-NULL = apply filter
@@ -169,6 +180,8 @@ type Querier interface {
 	ListTeamsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Team, error)
 	ListUnreadNotificationsByUserID(ctx context.Context, arg ListUnreadNotificationsByUserIDParams) ([]Notification, error)
 	ListUsersByCompanyID(ctx context.Context, companyID uuid.NullUUID) ([]User, error)
+	// Admin query to list all wizard states for a tenant
+	ListWizardStatesByTenant(ctx context.Context, tenantID uuid.UUID) ([]WizardState, error)
 	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error
 	MarkNotificationsAsRead(ctx context.Context, arg MarkNotificationsAsReadParams) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
@@ -189,6 +202,11 @@ type Querier interface {
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateTenantAISettings(ctx context.Context, arg UpdateTenantAISettingsParams) (TenantAiSetting, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	// Updates an existing wizard state
+	UpdateWizardState(ctx context.Context, arg UpdateWizardStateParams) (WizardState, error)
+	// Creates or updates wizard state for a user
+	// Uses ON CONFLICT to handle the unique constraint on (tenant_id, user_id)
+	UpsertWizardState(ctx context.Context, arg UpsertWizardStateParams) (WizardState, error)
 }
 
 var _ Querier = (*Queries)(nil)
