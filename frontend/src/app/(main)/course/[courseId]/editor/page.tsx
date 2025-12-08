@@ -395,10 +395,9 @@ export default function CourseEditorPage() {
             <span className="hidden sm:inline">Preview</span>
           </Button>
           <Button
-            variant="secondary"
+            variant="primary"
             size="sm"
             onClick={() => setShowExportModal(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
           >
             <Download className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Export</span>
