@@ -17,7 +17,7 @@ interface ImageEditorProps {
   onSave: (contentJson: string) => void;
   // Context for AI generation
   courseId?: string;
-  lessonId?: string;
+  generatedLessonId?: string;
   componentId?: string;
 }
 
@@ -25,7 +25,7 @@ export function ImageEditor({
   contentJson,
   onSave,
   courseId,
-  lessonId,
+  generatedLessonId,
   componentId,
 }: ImageEditorProps) {
   const parsed = JSON.parse(contentJson) as ImageContent;
@@ -43,7 +43,7 @@ export function ImageEditor({
   } = useGenerateComponentImage();
 
   // Check if we can generate images (have all required context)
-  const canGenerate = courseId && lessonId && componentId;
+  const canGenerate = courseId && generatedLessonId && componentId;
 
   // Check if we have a real URL (not placeholder)
   const hasRealUrl = url && !url.includes('example.com');
@@ -55,7 +55,7 @@ export function ImageEditor({
     try {
       const result = await generateImage({
         courseId,
-        lessonId,
+        generatedLessonId,
         componentId,
         prompt: imageDescription.trim(),
         aspectRatio: '16:9',

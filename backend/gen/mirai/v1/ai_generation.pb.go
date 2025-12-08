@@ -2356,7 +2356,7 @@ func (x *GenerateAllLessonsResponse) GetJob() *GenerationJob {
 type RegenerateComponentRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	CourseId           string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
-	LessonId           string                 `protobuf:"bytes,2,opt,name=lesson_id,json=lessonId,proto3" json:"lesson_id,omitempty"`
+	GeneratedLessonId  string                 `protobuf:"bytes,2,opt,name=generated_lesson_id,json=generatedLessonId,proto3" json:"generated_lesson_id,omitempty"` // Generated lesson ID (NOT outline_lesson_id)
 	ComponentId        string                 `protobuf:"bytes,3,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`
 	ModificationPrompt string                 `protobuf:"bytes,4,opt,name=modification_prompt,json=modificationPrompt,proto3" json:"modification_prompt,omitempty"` // Instructions for regeneration
 	unknownFields      protoimpl.UnknownFields
@@ -2400,9 +2400,9 @@ func (x *RegenerateComponentRequest) GetCourseId() string {
 	return ""
 }
 
-func (x *RegenerateComponentRequest) GetLessonId() string {
+func (x *RegenerateComponentRequest) GetGeneratedLessonId() string {
 	if x != nil {
-		return x.LessonId
+		return x.GeneratedLessonId
 	}
 	return ""
 }
@@ -2934,14 +2934,14 @@ func (x *ListGeneratedLessonsResponse) GetLessons() []*GeneratedLesson {
 
 // GenerateComponentImageRequest generates an image for an image placeholder.
 type GenerateComponentImageRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CourseId      string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`                // Course context
-	LessonId      string                 `protobuf:"bytes,2,opt,name=lesson_id,json=lessonId,proto3" json:"lesson_id,omitempty"`                // Lesson containing the component
-	ComponentId   string                 `protobuf:"bytes,3,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`       // Component to update with generated image
-	Prompt        string                 `protobuf:"bytes,4,opt,name=prompt,proto3" json:"prompt,omitempty"`                                    // Image generation prompt (from imageDescription)
-	AspectRatio   *string                `protobuf:"bytes,5,opt,name=aspect_ratio,json=aspectRatio,proto3,oneof" json:"aspect_ratio,omitempty"` // Optional: 1:1, 16:9, 4:3, etc. (default: 16:9)
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	CourseId          string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`                              // Course context
+	GeneratedLessonId string                 `protobuf:"bytes,2,opt,name=generated_lesson_id,json=generatedLessonId,proto3" json:"generated_lesson_id,omitempty"` // Generated lesson ID (NOT outline_lesson_id)
+	ComponentId       string                 `protobuf:"bytes,3,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`                     // Component to update with generated image
+	Prompt            string                 `protobuf:"bytes,4,opt,name=prompt,proto3" json:"prompt,omitempty"`                                                  // Image generation prompt (from imageDescription)
+	AspectRatio       *string                `protobuf:"bytes,5,opt,name=aspect_ratio,json=aspectRatio,proto3,oneof" json:"aspect_ratio,omitempty"`               // Optional: 1:1, 16:9, 4:3, etc. (default: 16:9)
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *GenerateComponentImageRequest) Reset() {
@@ -2981,9 +2981,9 @@ func (x *GenerateComponentImageRequest) GetCourseId() string {
 	return ""
 }
 
-func (x *GenerateComponentImageRequest) GetLessonId() string {
+func (x *GenerateComponentImageRequest) GetGeneratedLessonId() string {
 	if x != nil {
-		return x.LessonId
+		return x.GeneratedLessonId
 	}
 	return ""
 }
@@ -3064,12 +3064,12 @@ func (x *GenerateComponentImageResponse) GetComponent() *LessonComponent {
 
 // UpdateLessonComponentsRequest saves manual edits to lesson components.
 type UpdateLessonComponentsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CourseId      string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"` // Course context for validation
-	LessonId      string                 `protobuf:"bytes,2,opt,name=lesson_id,json=lessonId,proto3" json:"lesson_id,omitempty"` // Lesson to update
-	Components    []*LessonComponent     `protobuf:"bytes,3,rep,name=components,proto3" json:"components,omitempty"`             // Full list of components with edits
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	CourseId          string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`                              // Course context for validation
+	GeneratedLessonId string                 `protobuf:"bytes,2,opt,name=generated_lesson_id,json=generatedLessonId,proto3" json:"generated_lesson_id,omitempty"` // Generated lesson ID (NOT outline_lesson_id)
+	Components        []*LessonComponent     `protobuf:"bytes,3,rep,name=components,proto3" json:"components,omitempty"`                                          // Full list of components with edits
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateLessonComponentsRequest) Reset() {
@@ -3109,9 +3109,9 @@ func (x *UpdateLessonComponentsRequest) GetCourseId() string {
 	return ""
 }
 
-func (x *UpdateLessonComponentsRequest) GetLessonId() string {
+func (x *UpdateLessonComponentsRequest) GetGeneratedLessonId() string {
 	if x != nil {
-		return x.LessonId
+		return x.GeneratedLessonId
 	}
 	return ""
 }
@@ -3439,10 +3439,10 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\x19GenerateAllLessonsRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"G\n" +
 	"\x1aGenerateAllLessonsResponse\x12)\n" +
-	"\x03job\x18\x01 \x01(\v2\x17.mirai.v1.GenerationJobR\x03job\"\xaa\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\x17.mirai.v1.GenerationJobR\x03job\"\xbd\x01\n" +
 	"\x1aRegenerateComponentRequest\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x1b\n" +
-	"\tlesson_id\x18\x02 \x01(\tR\blessonId\x12!\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12.\n" +
+	"\x13generated_lesson_id\x18\x02 \x01(\tR\x11generatedLessonId\x12!\n" +
 	"\fcomponent_id\x18\x03 \x01(\tR\vcomponentId\x12/\n" +
 	"\x13modification_prompt\x18\x04 \x01(\tR\x12modificationPrompt\"H\n" +
 	"\x1bRegenerateComponentResponse\x12)\n" +
@@ -3472,20 +3472,20 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\x1bListGeneratedLessonsRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"S\n" +
 	"\x1cListGeneratedLessonsResponse\x123\n" +
-	"\alessons\x18\x01 \x03(\v2\x19.mirai.v1.GeneratedLessonR\alessons\"\xcd\x01\n" +
+	"\alessons\x18\x01 \x03(\v2\x19.mirai.v1.GeneratedLessonR\alessons\"\xe0\x01\n" +
 	"\x1dGenerateComponentImageRequest\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x1b\n" +
-	"\tlesson_id\x18\x02 \x01(\tR\blessonId\x12!\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12.\n" +
+	"\x13generated_lesson_id\x18\x02 \x01(\tR\x11generatedLessonId\x12!\n" +
 	"\fcomponent_id\x18\x03 \x01(\tR\vcomponentId\x12\x16\n" +
 	"\x06prompt\x18\x04 \x01(\tR\x06prompt\x12&\n" +
 	"\faspect_ratio\x18\x05 \x01(\tH\x00R\vaspectRatio\x88\x01\x01B\x0f\n" +
 	"\r_aspect_ratio\"v\n" +
 	"\x1eGenerateComponentImageResponse\x12\x1b\n" +
 	"\timage_url\x18\x01 \x01(\tR\bimageUrl\x127\n" +
-	"\tcomponent\x18\x02 \x01(\v2\x19.mirai.v1.LessonComponentR\tcomponent\"\x94\x01\n" +
+	"\tcomponent\x18\x02 \x01(\v2\x19.mirai.v1.LessonComponentR\tcomponent\"\xa7\x01\n" +
 	"\x1dUpdateLessonComponentsRequest\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x1b\n" +
-	"\tlesson_id\x18\x02 \x01(\tR\blessonId\x129\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12.\n" +
+	"\x13generated_lesson_id\x18\x02 \x01(\tR\x11generatedLessonId\x129\n" +
 	"\n" +
 	"components\x18\x03 \x03(\v2\x19.mirai.v1.LessonComponentR\n" +
 	"components\"S\n" +

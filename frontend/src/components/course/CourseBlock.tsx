@@ -23,7 +23,7 @@ import {
 interface CourseBlockProps {
   block: CourseBlockType;
   courseId?: string;
-  lessonId?: string;
+  generatedLessonId?: string;
   onUpdate: (block: CourseBlockType) => void;
   onDelete: (blockId: string) => void;
   onAlignmentClick: (blockId: string) => void;
@@ -33,7 +33,7 @@ interface CourseBlockProps {
 export default function CourseBlock({
   block,
   courseId,
-  lessonId,
+  generatedLessonId,
   onUpdate,
   onDelete,
   onAlignmentClick,
@@ -47,7 +47,7 @@ export default function CourseBlock({
   // Regeneration hooks
   const regenerateHook = useRegenerateComponent();
   const { data: currentJob } = useGetJob(currentJobId || undefined);
-  const { data: lesson, refetch: refetchLesson } = useGetGeneratedLesson(lessonId);
+  const { data: lesson, refetch: refetchLesson } = useGetGeneratedLesson(generatedLessonId);
 
   // Watch for job completion
   useEffect(() => {
@@ -109,8 +109,8 @@ export default function CourseBlock({
   const handlePromptSubmit = async () => {
     if (!promptValue.trim()) return;
 
-    // If no courseId/lessonId, fall back to mock behavior
-    if (!courseId || !lessonId) {
+    // If no courseId/generatedLessonId, fall back to mock behavior
+    if (!courseId || !generatedLessonId) {
       setIsRegenerating(true);
       await new Promise(resolve => setTimeout(resolve, 1500));
       onUpdate({
@@ -129,7 +129,7 @@ export default function CourseBlock({
     try {
       const result = await regenerateHook.mutate({
         courseId,
-        lessonId,
+        generatedLessonId,
         componentId: block.id,
         modificationPrompt: promptValue,
       });

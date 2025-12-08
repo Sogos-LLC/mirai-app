@@ -333,7 +333,7 @@ func (s *AIGenerationServiceServer) RegenerateComponent(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	lessonID, err := parseUUID(req.Msg.LessonId)
+	generatedLessonID, err := parseUUID(req.Msg.GeneratedLessonId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -345,7 +345,7 @@ func (s *AIGenerationServiceServer) RegenerateComponent(
 
 	serviceReq := service.RegenerateComponentRequest{
 		CourseID:           courseID,
-		LessonID:           lessonID,
+		LessonID:           generatedLessonID,
 		ComponentID:        componentID,
 		ModificationPrompt: req.Msg.ModificationPrompt,
 	}
@@ -553,7 +553,7 @@ func (s *AIGenerationServiceServer) GenerateComponentImage(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	lessonID, err := parseUUID(req.Msg.LessonId)
+	generatedLessonID, err := parseUUID(req.Msg.GeneratedLessonId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -571,7 +571,7 @@ func (s *AIGenerationServiceServer) GenerateComponentImage(
 
 	serviceReq := service.GenerateComponentImageRequest{
 		CourseID:    courseID,
-		LessonID:    lessonID,
+		LessonID:    generatedLessonID,
 		ComponentID: componentID,
 		Prompt:      req.Msg.Prompt,
 		AspectRatio: aspectRatio,
@@ -608,7 +608,7 @@ func (s *AIGenerationServiceServer) UpdateLessonComponents(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	lessonID, err := parseUUID(req.Msg.LessonId)
+	generatedLessonID, err := parseUUID(req.Msg.GeneratedLessonId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -632,7 +632,7 @@ func (s *AIGenerationServiceServer) UpdateLessonComponents(
 
 	serviceReq := service.UpdateLessonComponentsRequest{
 		CourseID:   courseID,
-		LessonID:   lessonID,
+		LessonID:   generatedLessonID,
 		Components: components,
 	}
 

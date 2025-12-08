@@ -1638,8 +1638,8 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
 
 	// Verify the lesson exists
-	_, err = s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
-	if err != nil {
+	lesson, err := s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
+	if err != nil || lesson == nil {
 		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
 	}
 
@@ -1729,6 +1729,9 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 	updatedLesson, err := s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
 	if err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	if updatedLesson == nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found after update")
 	}
 
 	// Load components

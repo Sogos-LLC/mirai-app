@@ -14,7 +14,7 @@ import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
 
 export interface EditingComponent {
   courseId: string;
-  lessonId: string;
+  generatedLessonId: string;
   component: LessonComponent;
 }
 
@@ -36,7 +36,7 @@ interface CourseEditorUIActions {
   setActiveBlockId: (id: string | null) => void;
 
   // Modal editing actions
-  openEditModal: (courseId: string, lessonId: string, component: LessonComponent) => void;
+  openEditModal: (courseId: string, generatedLessonId: string, component: LessonComponent) => void;
   closeEditModal: () => void;
   saveEditModal: (contentJson: string) => void;
 
@@ -83,8 +83,8 @@ export const useCourseEditorStore = create<CourseEditorUIStore>()(
       setActiveBlockId: (id) => set({ activeBlockId: id }),
 
       // Modal editing actions
-      openEditModal: (courseId, lessonId, component) => {
-        set({ editingComponent: { courseId, lessonId, component } });
+      openEditModal: (courseId, generatedLessonId, component) => {
+        set({ editingComponent: { courseId, generatedLessonId, component } });
       },
 
       closeEditModal: () => {

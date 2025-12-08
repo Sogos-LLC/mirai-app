@@ -45,7 +45,7 @@ export function EditModal() {
             contentJson={component.contentJson}
             onSave={handleSave}
             courseId={editingComponent.courseId}
-            lessonId={editingComponent.lessonId}
+            generatedLessonId={editingComponent.generatedLessonId}
             componentId={component.id}
           />
         );

@@ -10,7 +10,7 @@ interface ImageRendererProps {
   onEdit?: (content: ImageContent) => void;
   // Context needed for AI image generation
   courseId?: string;
-  lessonId?: string;
+  generatedLessonId?: string;
   componentId?: string;
 }
 
@@ -19,7 +19,7 @@ export function ImageRenderer({
   isEditing = false,
   onEdit,
   courseId,
-  lessonId,
+  generatedLessonId,
   componentId,
 }: ImageRendererProps) {
   const [imageError, setImageError] = useState(false);
@@ -30,7 +30,7 @@ export function ImageRenderer({
   const hasRealUrl = content.url && !content.url.includes('example.com');
 
   // Check if we can generate images (have all required IDs)
-  const canGenerate = courseId && lessonId && componentId;
+  const canGenerate = courseId && generatedLessonId && componentId;
 
   const handleGenerateImage = async () => {
     if (!canGenerate || !editingPrompt.trim()) return;
@@ -39,7 +39,7 @@ export function ImageRenderer({
     try {
       const result = await generateImage({
         courseId,
-        lessonId,
+        generatedLessonId,
         componentId,
         prompt: editingPrompt.trim(),
         aspectRatio: '16:9',

@@ -128,7 +128,7 @@ export default function CourseEditor({ courseId, onPreview }: CourseEditorProps)
     try {
       const result = await regenerateHook.mutate({
         courseId: courseId,
-        lessonId: activeBlockLessonId,
+        generatedLessonId: activeBlockLessonId,
         componentId: activeBlock.id,
         modificationPrompt: 'Regenerate this content with the current alignment settings',
       });
@@ -369,7 +369,7 @@ export default function CourseEditor({ courseId, onPreview }: CourseEditorProps)
               key={block.id}
               block={block}
               courseId={courseId}
-              lessonId={findLessonIdForBlock(block.id)}
+              generatedLessonId={findLessonIdForBlock(block.id)}
               onUpdate={handleBlockUpdate}
               onDelete={handleBlockDelete}
               onAlignmentClick={handleAlignmentClick}

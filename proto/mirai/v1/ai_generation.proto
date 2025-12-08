@@ -375,7 +375,7 @@ message GenerateAllLessonsResponse {
 // RegenerateComponentRequest regenerates a single component.
 message RegenerateComponentRequest {
   string course_id = 1;
-  string lesson_id = 2;
+  string generated_lesson_id = 2;  // Generated lesson ID (NOT outline_lesson_id)
   string component_id = 3;
   string modification_prompt = 4; // Instructions for regeneration
 }
@@ -439,10 +439,10 @@ message ListGeneratedLessonsResponse {
 
 // GenerateComponentImageRequest generates an image for an image placeholder.
 message GenerateComponentImageRequest {
-  string course_id = 1;       // Course context
-  string lesson_id = 2;       // Lesson containing the component
-  string component_id = 3;    // Component to update with generated image
-  string prompt = 4;          // Image generation prompt (from imageDescription)
+  string course_id = 1;            // Course context
+  string generated_lesson_id = 2;  // Generated lesson ID (NOT outline_lesson_id)
+  string component_id = 3;         // Component to update with generated image
+  string prompt = 4;               // Image generation prompt (from imageDescription)
   optional string aspect_ratio = 5; // Optional: 1:1, 16:9, 4:3, etc. (default: 16:9)
 }
 
@@ -455,7 +455,7 @@ message GenerateComponentImageResponse {
 // UpdateLessonComponentsRequest saves manual edits to lesson components.
 message UpdateLessonComponentsRequest {
   string course_id = 1;                    // Course context for validation
-  string lesson_id = 2;                    // Lesson to update
+  string generated_lesson_id = 2;          // Generated lesson ID (NOT outline_lesson_id)
   repeated LessonComponent components = 3; // Full list of components with edits
 }
 

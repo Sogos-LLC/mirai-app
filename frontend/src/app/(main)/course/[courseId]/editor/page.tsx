@@ -297,12 +297,14 @@ export default function CourseEditorPage() {
   };
 
   const handleSave = async () => {
-    if (!selectedLessonId || localComponents.length === 0) return;
+    // Need the generated lesson ID, not the outline lesson ID
+    const generatedLessonId = currentLesson?.generated?.id;
+    if (!generatedLessonId || localComponents.length === 0) return;
 
     try {
       await saveComponents({
         courseId,
-        lessonId: selectedLessonId,
+        generatedLessonId,
         components: localComponents.map((c) => ({
           id: c.id,
           type: c.type as LessonComponentType,

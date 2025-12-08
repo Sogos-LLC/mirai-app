@@ -230,13 +230,13 @@ export function useRegenerateComponent() {
   return {
     mutate: async (data: {
       courseId: string;
-      lessonId: string;
+      generatedLessonId: string;
       componentId: string;
       modificationPrompt: string;
     }) => {
       const request = create(RegenerateComponentRequestSchema, {
         courseId: data.courseId,
-        lessonId: data.lessonId,
+        generatedLessonId: data.generatedLessonId,
         componentId: data.componentId,
         modificationPrompt: data.modificationPrompt,
       });
@@ -378,14 +378,14 @@ export function useGenerateComponentImage() {
   return {
     mutate: async (data: {
       courseId: string;
-      lessonId: string;
+      generatedLessonId: string;
       componentId: string;
       prompt: string;
       aspectRatio?: string;
     }) => {
       const request = create(GenerateComponentImageRequestSchema, {
         courseId: data.courseId,
-        lessonId: data.lessonId,
+        generatedLessonId: data.generatedLessonId,
         componentId: data.componentId,
         prompt: data.prompt,
         aspectRatio: data.aspectRatio,
@@ -415,7 +415,7 @@ export function useUpdateLessonComponents() {
   return {
     mutate: async (data: {
       courseId: string;
-      lessonId: string;
+      generatedLessonId: string;
       components: Array<{
         id: string;
         type: LessonComponentType;
@@ -443,7 +443,7 @@ export function useUpdateLessonComponents() {
 
       const request = create(UpdateLessonComponentsRequestSchema, {
         courseId: data.courseId,
-        lessonId: data.lessonId,
+        generatedLessonId: data.generatedLessonId,
         components: protoComponents,
       });
 

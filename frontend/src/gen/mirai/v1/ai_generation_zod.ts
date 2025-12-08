@@ -252,7 +252,7 @@ export type GenerateAllLessonsRequest = z.infer<typeof GenerateAllLessonsRequest
  */
 export const RegenerateComponentRequestSchema = z.object({
   courseId: z.string(),
-  lessonId: z.string(),
+  generatedLessonId: z.string(),
   componentId: z.string(),
   modificationPrompt: z.string(),
 });
@@ -317,7 +317,7 @@ export type ListGeneratedLessonsRequest = z.infer<typeof ListGeneratedLessonsReq
  */
 export const GenerateComponentImageRequestSchema = z.object({
   courseId: z.string(),
-  lessonId: z.string(),
+  generatedLessonId: z.string(),
   componentId: z.string(),
   prompt: z.string(),
   aspectRatio: z.string().optional(),
@@ -443,7 +443,7 @@ export type GeneratedLesson = z.infer<typeof GeneratedLessonSchema>;
  */
 export const UpdateLessonComponentsRequestSchema = z.object({
   courseId: z.string(),
-  lessonId: z.string(),
+  generatedLessonId: z.string(),
   components: z.array(LessonComponentSchema),
 });
 
