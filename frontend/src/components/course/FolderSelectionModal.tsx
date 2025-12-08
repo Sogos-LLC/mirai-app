@@ -149,9 +149,9 @@ export default function FolderSelectionModal({
       <div key={node.id}>
         <div
           className={`
-            group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer
-            hover:bg-gray-100 transition-colors
-            ${isSelected ? 'bg-primary-100 border border-primary-300' : ''}
+            group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer min-h-[44px]
+            hover:bg-hover transition-colors
+            ${isSelected ? 'bg-primary-100 dark:bg-primary-900/30 border border-primary-300' : ''}
           `}
           style={{ paddingLeft: `${level * 20 + 12}px` }}
           onClick={() => {
@@ -169,12 +169,12 @@ export default function FolderSelectionModal({
                 e.stopPropagation();
                 toggleFolder(node.id);
               }}
-              className="p-0.5 hover:bg-gray-200 rounded"
+              className="p-0.5 hover:bg-active rounded min-w-[24px] min-h-[24px] flex items-center justify-center"
             >
               {isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
+                <ChevronDown className="w-4 h-4 text-muted" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-gray-500" />
+                <ChevronRight className="w-4 h-4 text-muted" />
               )}
             </button>
           ) : (
@@ -185,7 +185,7 @@ export default function FolderSelectionModal({
 
           <span className={`
             flex-1 font-medium
-            ${node.type === 'team' || node.type === 'personal' ? 'text-gray-900 font-semibold' : 'text-gray-700'}
+            ${node.type === 'team' || node.type === 'personal' ? 'text-primary font-semibold' : 'text-secondary'}
           `}>
             {node.name}
           </span>
@@ -197,10 +197,10 @@ export default function FolderSelectionModal({
                 e.stopPropagation();
                 handleStartCreateFolder(node.id);
               }}
-              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-active rounded transition-opacity min-w-[24px] min-h-[24px] flex items-center justify-center"
               title="Create subfolder"
             >
-              <Plus className="w-4 h-4 text-gray-500" />
+              <Plus className="w-4 h-4 text-muted" />
             </button>
           )}
         </div>
@@ -213,11 +213,11 @@ export default function FolderSelectionModal({
             {/* New folder input row */}
             {isCreatingHere && (
               <div
-                className="flex items-center gap-2 px-3 py-2"
+                className="flex items-center gap-2 px-3 py-2 min-h-[44px]"
                 style={{ paddingLeft: `${(level + 1) * 20 + 12}px` }}
               >
                 <div className="w-5" />
-                <Folder className="w-5 h-5 text-gray-400" />
+                <Folder className="w-5 h-5 text-muted" />
                 <input
                   type="text"
                   value={newFolderName}
@@ -230,14 +230,14 @@ export default function FolderSelectionModal({
                     }
                   }}
                   placeholder="New folder name"
-                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="flex-1 px-2 py-2 text-sm border bg-surface text-primary rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent min-h-[36px] placeholder:text-muted"
                   autoFocus
                   disabled={isCreating}
                 />
                 <button
                   onClick={handleCreateFolder}
                   disabled={!newFolderName.trim() || isCreating}
-                  className="p-1 hover:bg-green-100 rounded text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1 hover:bg-green-100 dark:hover:bg-green-900/20 rounded text-green-600 dark:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed min-w-[24px] min-h-[24px] flex items-center justify-center"
                   title="Create folder"
                 >
                   <Check className="w-4 h-4" />
@@ -245,7 +245,7 @@ export default function FolderSelectionModal({
                 <button
                   onClick={handleCancelCreateFolder}
                   disabled={isCreating}
-                  className="p-1 hover:bg-red-100 rounded text-red-600"
+                  className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-600 dark:text-red-400 min-w-[24px] min-h-[24px] flex items-center justify-center"
                   title="Cancel"
                 >
                   <X className="w-4 h-4" />
@@ -256,7 +256,7 @@ export default function FolderSelectionModal({
             {/* Error message */}
             {isCreatingHere && createError && (
               <div
-                className="flex items-center gap-2 px-3 py-1 text-sm text-red-600"
+                className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 dark:text-red-400"
                 style={{ paddingLeft: `${(level + 1) * 20 + 12 + 28}px` }}
               >
                 {createError}
@@ -279,12 +279,12 @@ export default function FolderSelectionModal({
         {/* Loading State */}
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-12">
-            <div className="text-gray-600">Loading folders...</div>
+            <div className="text-secondary">Loading folders...</div>
           </div>
         ) : (
           <>
             {/* Info text */}
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-secondary mb-4">
               Select a folder or create a new one (max {MAX_FOLDER_DEPTH} levels deep). Hover over a folder to see the create option.
             </p>
 
@@ -296,10 +296,10 @@ export default function FolderSelectionModal({
             </div>
 
             {/* Footer */}
-            <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 pt-4 border-t border-gray-200">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 pt-4 border-t border">
               <button
                 onClick={onClose}
-                className="w-full sm:w-auto px-4 py-3 lg:py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium min-h-[44px]"
+                className="w-full sm:w-auto px-4 py-3 lg:py-2 text-primary bg-hover rounded-lg hover:bg-active transition-colors font-medium min-h-[44px]"
               >
                 Cancel
               </button>

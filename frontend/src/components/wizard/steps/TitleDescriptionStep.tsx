@@ -38,12 +38,12 @@ export default function TitleDescriptionStep({
     <Card>
       <CardContent className="py-8">
         <div className="max-w-2xl mx-auto">
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-primary mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-primary mb-2">
                 Review Your Course Title
               </h2>
-              <p className="text-secondary">
+              <p className="text-sm sm:text-base text-secondary">
                 We&apos;ve improved your course name. Feel free to edit or regenerate.
               </p>
             </div>
@@ -52,6 +52,7 @@ export default function TitleDescriptionStep({
               size="sm"
               onClick={onRegenerate}
               disabled={isLoading}
+              className="self-start sm:self-auto"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Regenerate
@@ -74,7 +75,7 @@ export default function TitleDescriptionStep({
                 value={title}
                 onChange={(e) => onTitleChange(e.target.value)}
                 placeholder="Course title"
-                className="text-lg font-medium"
+                className="font-medium"
               />
             </div>
 
@@ -88,7 +89,7 @@ export default function TitleDescriptionStep({
                 onChange={(e) => onDescriptionChange(e.target.value)}
                 placeholder="Course description"
                 rows={4}
-                className="w-full px-4 py-3 border rounded-lg outline-none transition-all
+                className="w-full px-4 py-3 text-base border rounded-lg outline-none transition-all
                   bg-white dark:bg-dark-400
                   border-gray-300 dark:border-dark-border-input
                   text-gray-900 dark:text-dark-text

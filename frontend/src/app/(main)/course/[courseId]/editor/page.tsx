@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Heading,
   Trash2,
+  Menu,
 } from 'lucide-react';
 import {
   DndContext,
@@ -46,6 +47,8 @@ import { ComponentRenderer } from '@/components/course/renderers/ComponentRender
 import { EditModal } from '@/components/course/modals/EditModal';
 import { useCourseEditorStore, setOnSaveCallback } from '@/store/zustand/courseEditorStore';
 import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
+import { useIsMobile } from '@/hooks/useBreakpoint';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 
 interface SortableComponentProps {
   component: LessonComponent;
@@ -74,11 +77,11 @@ function SortableComponent({ component, onClick, isDragging }: SortableComponent
       className={`group relative cursor-pointer ${isDragging ? 'opacity-0' : ''}`}
       onClick={onClick}
     >
-      {/* Drag handle - only visible on hover */}
+      {/* Drag handle - visible on hover (desktop) or always visible (mobile) */}
       <button
         {...attributes}
         {...listeners}
-        className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing -translate-x-10 z-10"
+        className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing -translate-x-full z-10 min-h-[44px] min-w-[44px]"
         onClick={(e) => e.stopPropagation()}
       >
         <GripVertical className="w-5 h-5 text-muted" />
@@ -97,7 +100,7 @@ function DragPreview({ component }: { component: LessonComponent }) {
   return (
     <div className="relative bg-surface rounded-lg border-2 border-purple-400 shadow-2xl cursor-grabbing">
       {/* Drag handle visible during drag */}
-      <div className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center -translate-x-10">
+      <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center -translate-x-full">
         <GripVertical className="w-5 h-5 text-purple-400" />
       </div>
       <div className="p-4">
@@ -120,6 +123,7 @@ export default function CourseEditorPage() {
   const params = useParams();
   const router = useRouter();
   const courseId = params.courseId as string;
+  const isMobile = useIsMobile();
 
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
@@ -127,6 +131,7 @@ export default function CourseEditorPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [showMobileNav, setShowMobileNav] = useState(false);
 
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
@@ -336,9 +341,79 @@ export default function CourseEditorPage() {
         </div>
       </div>
 
+      {/* Mobile navigation button */}
+      <button
+        onClick={() => setShowMobileNav(true)}
+        className="lg:hidden fixed bottom-6 left-6 z-20 p-4 bg-primary-600 text-white rounded-full shadow-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
+        aria-label="Open course outline"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Mobile navigation sheet */}
+      <BottomSheet
+        isOpen={showMobileNav}
+        onClose={() => setShowMobileNav(false)}
+        title="Course Outline"
+        height="half"
+      >
+        <nav className="space-y-2">
+          {outline?.sections?.map((section: OutlineSection, sectionIndex: number) => {
+            const isExpanded = expandedSections.has(sectionIndex);
+            const sectionLessons = lessonsList.filter((l) => l.sectionIndex === sectionIndex);
+
+            return (
+              <div key={section.id} className="mb-1">
+                <button
+                  onClick={() => toggleSection(sectionIndex)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-hover transition-colors rounded-lg min-h-[44px]"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-5 h-5 text-muted" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-muted" />
+                  )}
+                  <span className="text-base font-medium text-primary truncate">
+                    {section.title}
+                  </span>
+                </button>
+
+                {isExpanded && (
+                  <div className="ml-4 space-y-1">
+                    {sectionLessons.map((lesson) => {
+                      const isActive = lesson.id === selectedLessonId;
+                      const hasContent = !!lesson.generated;
+
+                      return (
+                        <button
+                          key={lesson.id}
+                          onClick={() => {
+                            setSelectedLessonId(lesson.id);
+                            setShowMobileNav(false);
+                          }}
+                          disabled={!hasContent}
+                          className={`
+                            w-full flex items-center gap-2 px-4 py-3 text-left text-base transition-colors rounded-lg min-h-[44px]
+                            ${isActive ? 'bg-primary-50 text-primary-700 border-l-2 border-primary-600' : 'hover:bg-hover text-secondary'}
+                            ${!hasContent ? 'opacity-50 cursor-not-allowed' : ''}
+                          `}
+                        >
+                          <FileText className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{lesson.title}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+      </BottomSheet>
+
       {/* Editor layout */}
       <div className="flex gap-6">
-        {/* Sidebar - Course outline */}
+        {/* Desktop Sidebar - Course outline */}
         <aside className="w-64 flex-shrink-0 hidden lg:block">
           <Card>
             <CardHeader className="py-3">
@@ -403,30 +478,57 @@ export default function CourseEditorPage() {
           {selectedLessonId && currentLesson ? (
             <Card>
               <CardHeader className="py-4 border-b">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <CardTitle as="h2">{currentLesson.title}</CardTitle>
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto">
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => setShowAddMenu(!showAddMenu)}
+                      className="w-full sm:w-auto min-h-[44px]"
                     >
                       <Plus className="w-4 h-4 mr-1" />
                       Add Component
                     </Button>
                     {showAddMenu && (
-                      <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-default rounded-lg shadow-lg z-20">
-                        {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                          <button
-                            key={type}
-                            onClick={() => handleAddComponent(type)}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
+                      <>
+                        {/* Mobile: Bottom sheet for add menu */}
+                        {isMobile ? (
+                          <BottomSheet
+                            isOpen={showAddMenu}
+                            onClose={() => setShowAddMenu(false)}
+                            title="Add Component"
+                            height="auto"
                           >
-                            <Icon className="w-4 h-4" />
-                            {name}
-                          </button>
-                        ))}
-                      </div>
+                            <div className="space-y-2">
+                              {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
+                                <button
+                                  key={type}
+                                  onClick={() => handleAddComponent(type)}
+                                  className="w-full flex items-center gap-3 px-4 py-4 text-base text-secondary hover:bg-hover transition-colors rounded-lg min-h-[44px]"
+                                >
+                                  <Icon className="w-5 h-5" />
+                                  {name}
+                                </button>
+                              ))}
+                            </div>
+                          </BottomSheet>
+                        ) : (
+                          /* Desktop: Dropdown menu */
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-default rounded-lg shadow-lg z-20">
+                            {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
+                              <button
+                                key={type}
+                                onClick={() => handleAddComponent(type)}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
+                              >
+                                <Icon className="w-4 h-4" />
+                                {name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -444,7 +546,7 @@ export default function CourseEditorPage() {
                       items={localComponents.map((c) => c.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <div className="space-y-4 pl-10">
+                      <div className="space-y-4 pl-4 md:pl-10">
                         {localComponents.map((component) => (
                           <div key={component.id} className="group/item relative">
                             <SortableComponent
@@ -452,16 +554,17 @@ export default function CourseEditorPage() {
                               onClick={() => handleComponentClick(component)}
                               isDragging={activeId === component.id}
                             />
-                            {/* Delete button on hover */}
+                            {/* Delete button - visible on mobile, hover on desktop */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteComponent(component.id);
                               }}
-                              className="absolute -right-2 -top-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-600 z-20"
+                              className="absolute -right-2 -top-2 p-2 bg-red-500 text-white rounded-full lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity hover:bg-red-600 z-20 min-h-[44px] min-w-[44px] flex items-center justify-center"
                               title="Delete component"
+                              aria-label="Delete component"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         ))}
@@ -506,8 +609,8 @@ export default function CourseEditorPage() {
         </main>
       </div>
 
-      {/* Click outside to close add menu */}
-      {showAddMenu && (
+      {/* Click outside to close add menu (desktop only) */}
+      {showAddMenu && !isMobile && (
         <div
           className="fixed inset-0 z-10"
           onClick={() => setShowAddMenu(false)}

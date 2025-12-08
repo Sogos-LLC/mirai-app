@@ -36,10 +36,10 @@ export default function CourseNameStep({
             <Sparkles className="w-8 h-8 text-primary-600" />
           </div>
 
-          <h2 className="text-2xl font-bold text-primary mb-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-primary mb-2">
             What would you like to teach?
           </h2>
-          <p className="text-secondary mb-8">
+          <p className="text-sm sm:text-base text-secondary mb-8">
             Enter a course name or topic. Our AI will help you refine it and generate
             engaging content.
           </p>
@@ -50,7 +50,6 @@ export default function CourseNameStep({
               placeholder="e.g., Introduction to Machine Learning, Leadership Skills for Managers"
               value={courseName}
               onChange={(e) => onCourseNameChange(e.target.value)}
-              className="text-lg"
               autoFocus
             />
             <p className="text-sm text-muted mt-2">

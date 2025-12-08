@@ -67,16 +67,16 @@ export default function AudiencePersonasStep({
     <Card>
       <CardContent className="py-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <Target className="w-6 h-6 text-primary-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-primary">
+                <h2 className="text-xl sm:text-2xl font-bold text-primary">
                   Define Your Target Audience
                 </h2>
-                <p className="text-secondary">
+                <p className="text-sm sm:text-base text-secondary">
                   Select who this course is for. This helps tailor content to their needs.
                 </p>
               </div>
@@ -86,6 +86,7 @@ export default function AudiencePersonasStep({
               size="sm"
               onClick={onRegenerate}
               disabled={isLoading}
+              className="self-start sm:self-auto"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Regenerate
@@ -122,7 +123,7 @@ export default function AudiencePersonasStep({
                           value={editForm.description}
                           onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                           rows={3}
-                          className="w-full px-3 py-2 text-sm border rounded-lg outline-none
+                          className="w-full px-3 py-2 text-base border rounded-lg outline-none
                             bg-white dark:bg-dark-400
                             border-gray-300 dark:border-dark-border-input
                             text-gray-900 dark:text-dark-text
@@ -173,7 +174,7 @@ export default function AudiencePersonasStep({
                           e.stopPropagation();
                           handleStartEdit(persona);
                         }}
-                        className="p-1 rounded hover:bg-hover"
+                        className="p-2 rounded hover:bg-hover min-h-[44px] min-w-[44px] flex items-center justify-center"
                       >
                         <Edit2 className="w-4 h-4 text-muted" />
                       </button>

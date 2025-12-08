@@ -19,7 +19,7 @@ export default function Input({
         </label>
       )}
       <input
-        className={`w-full px-4 py-2 border rounded-lg outline-none transition-all
+        className={`w-full px-4 py-2 text-base border rounded-lg outline-none transition-all
           bg-white dark:bg-dark-400
           border-gray-300 dark:border-dark-border-input
           text-gray-900 dark:text-dark-text

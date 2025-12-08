@@ -29,10 +29,10 @@ export default function CourseWizardPage() {
       <div className="mb-8">
         <button
           onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2 text-secondary hover:text-primary transition-colors mb-4"
+          className="flex items-center gap-2 text-secondary hover:text-primary transition-colors mb-4 min-h-[44px] -ml-2 px-2"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Back to Dashboard</span>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-base">Back to Dashboard</span>
         </button>
         <h1 className="text-2xl md:text-3xl font-bold text-primary">Create New Course</h1>
         <p className="text-secondary mt-2">

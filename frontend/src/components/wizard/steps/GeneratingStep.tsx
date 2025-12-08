@@ -29,10 +29,10 @@ export default function GeneratingStep({
 
           <div className="flex items-center justify-center gap-2 mb-4">
             <Loader2 className="w-5 h-5 text-primary-600 animate-spin" />
-            <h2 className="text-xl font-bold text-primary">{title}</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-primary">{title}</h2>
           </div>
 
-          <p className="text-secondary mb-8">{description}</p>
+          <p className="text-sm sm:text-base text-secondary mb-8">{description}</p>
 
           <div className="flex justify-center gap-2 mb-6">
             <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

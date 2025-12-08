@@ -35,6 +35,7 @@ import {
 } from '@/lib/aiGenerationClient';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { useIsTouchDevice } from '@/hooks/useBreakpoint';
 
 // Inline edit state type
 interface EditState {
@@ -49,6 +50,7 @@ export default function OutlineReviewPage() {
   const params = useParams();
   const router = useRouter();
   const courseId = params.courseId as string;
+  const isTouch = useIsTouchDevice();
 
   // Inline editing state
   const [editState, setEditState] = useState<EditState | null>(null);
@@ -259,11 +261,11 @@ export default function OutlineReviewPage() {
     <div className="min-h-screen bg-page">
       {/* Header */}
       <div className="border-b bg-surface sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-4 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-secondary hover:text-primary transition-colors"
+              className="flex items-center gap-2 text-secondary hover:text-primary transition-colors min-h-[44px]"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Back to Dashboard</span>
@@ -273,20 +275,20 @@ export default function OutlineReviewPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-4 py-6 sm:py-8">
         <Card>
           <CardContent className="py-8">
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                   <ClipboardList className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-primary">
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-bold text-primary">
                     Review Your Course Outline
                   </h1>
-                  <p className="text-secondary">
+                  <p className="text-sm sm:text-base text-secondary">
                     {context.outline?.sections?.length ?? 0} sections • {totalLessons} lessons
                   </p>
                 </div>
@@ -296,6 +298,7 @@ export default function OutlineReviewPage() {
                 size="sm"
                 onClick={() => send({ type: 'REGENERATE_OUTLINE' })}
                 disabled={loading}
+                className="w-full sm:w-auto min-h-[44px]"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Regenerate
@@ -313,7 +316,7 @@ export default function OutlineReviewPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => toggleSection(sectionIndex)}
-                          className="flex-shrink-0 p-3 hover:bg-hover transition-colors"
+                          className="flex-shrink-0 p-3 hover:bg-hover transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                         >
                           {expandedSections.has(sectionIndex) ? (
                             <ChevronDown className="w-5 h-5 text-muted" />
@@ -323,12 +326,12 @@ export default function OutlineReviewPage() {
                         </button>
 
                         {isEditingSection ? (
-                          <div className="flex-1 flex items-center gap-2 py-2 pr-4">
+                          <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 py-2 pr-2 sm:pr-4">
                             <input
                               type="text"
                               value={editState.title}
                               onChange={(e) => setEditState({ ...editState, title: e.target.value })}
-                              className="flex-1 px-3 py-1.5 text-sm font-semibold border rounded bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              className="flex-1 px-3 py-2 text-sm font-semibold border rounded bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -339,25 +342,27 @@ export default function OutlineReviewPage() {
                                 }
                               }}
                             />
-                            <button
-                              onClick={() => {
-                                send({ type: 'UPDATE_SECTION_TITLE', sectionIndex, title: editState.title });
-                                setEditState(null);
-                              }}
-                              className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setEditState(null)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => {
+                                  send({ type: 'UPDATE_SECTION_TITLE', sectionIndex, title: editState.title });
+                                  setEditState(null);
+                                }}
+                                className="flex-1 sm:flex-none p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+                              >
+                                <Check className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => setEditState(null)}
+                                className="flex-1 sm:flex-none p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                              >
+                                <X className="w-5 h-5" />
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div
-                            className="flex-1 py-3 pr-4 cursor-pointer group"
+                            className="flex-1 py-3 pr-4 cursor-pointer group min-h-[44px] flex flex-col justify-center"
                             onClick={() => setEditState({
                               type: 'section',
                               sectionIndex,
@@ -371,7 +376,7 @@ export default function OutlineReviewPage() {
                               <span className="text-xs text-muted">
                                 ({section.lessons?.length ?? 0} lessons)
                               </span>
-                              <Pencil className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
                             </div>
                             <h3 className="font-semibold text-primary">
                               {section.title || `Section ${sectionIndex + 1}`}
@@ -381,8 +386,8 @@ export default function OutlineReviewPage() {
                       </div>
 
                       {expandedSections.has(sectionIndex) && section.lessons && (
-                        <div className="px-4 pb-3">
-                          <div className="ml-8 space-y-2">
+                        <div className="px-2 sm:px-4 pb-3">
+                          <div className="ml-4 sm:ml-8 space-y-2">
                             {section.lessons.map((lesson, lessonIndex) => {
                               const isEditingLesson = editState?.type === 'lesson' &&
                                 editState.sectionIndex === sectionIndex &&
@@ -391,26 +396,26 @@ export default function OutlineReviewPage() {
                               return (
                                 <div key={lessonIndex}>
                                   {isEditingLesson ? (
-                                    <div className="p-3 border rounded bg-surface space-y-2">
+                                    <div className="p-3 border rounded bg-surface space-y-3">
                                       <input
                                         type="text"
                                         value={editState.title}
                                         onChange={(e) => setEditState({ ...editState, title: e.target.value })}
-                                        className="w-full px-3 py-1.5 text-sm font-medium border rounded bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        className="w-full px-3 py-2 text-sm font-medium border rounded bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
                                         placeholder="Lesson title"
                                         autoFocus
                                       />
                                       <textarea
                                         value={editState.description || ''}
                                         onChange={(e) => setEditState({ ...editState, description: e.target.value })}
-                                        className="w-full px-3 py-1.5 text-xs border rounded bg-surface text-secondary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                                        className="w-full px-3 py-2 text-sm border rounded bg-surface text-secondary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y min-h-[80px]"
                                         placeholder="Lesson description (optional)"
-                                        rows={2}
+                                        rows={3}
                                       />
-                                      <div className="flex justify-end gap-2">
+                                      <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
                                         <button
                                           onClick={() => setEditState(null)}
-                                          className="px-3 py-1 text-xs text-secondary hover:bg-hover rounded"
+                                          className="w-full sm:w-auto px-4 py-2 min-h-[44px] text-sm text-secondary hover:bg-hover rounded"
                                         >
                                           Cancel
                                         </button>
@@ -425,7 +430,7 @@ export default function OutlineReviewPage() {
                                             });
                                             setEditState(null);
                                           }}
-                                          className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                                          className="w-full sm:w-auto px-4 py-2 min-h-[44px] text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
                                         >
                                           Save
                                         </button>
@@ -433,7 +438,7 @@ export default function OutlineReviewPage() {
                                     </div>
                                   ) : (
                                     <div
-                                      className="flex items-start gap-3 p-2 rounded hover:bg-hover cursor-pointer group"
+                                      className="flex items-start gap-3 p-2 rounded hover:bg-hover cursor-pointer group min-h-[44px]"
                                       onClick={() => setEditState({
                                         type: 'lesson',
                                         sectionIndex,
@@ -448,7 +453,7 @@ export default function OutlineReviewPage() {
                                           <p className="text-sm font-medium text-primary">
                                             {lesson.title || `Lesson ${lessonIndex + 1}`}
                                           </p>
-                                          <Pencil className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                                          <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
                                         </div>
                                         {lesson.description && (
                                           <p className="text-xs text-secondary line-clamp-2">
@@ -484,10 +489,11 @@ export default function OutlineReviewPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4 justify-end">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 sm:justify-end">
               <Button
                 variant="secondary"
                 onClick={() => router.push('/dashboard')}
+                className="w-full sm:w-auto min-h-[44px]"
               >
                 Cancel
               </Button>
@@ -495,6 +501,7 @@ export default function OutlineReviewPage() {
                 variant="primary"
                 onClick={() => send({ type: 'APPROVE_OUTLINE' })}
                 disabled={loading || !context.outline}
+                className="w-full sm:w-auto min-h-[44px]"
               >
                 {loading ? (
                   <>

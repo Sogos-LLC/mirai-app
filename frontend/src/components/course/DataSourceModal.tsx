@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  X,
   Globe,
   Upload,
   Link,
@@ -16,6 +15,7 @@ import {
   CheckCircle,
   Circle
 } from 'lucide-react';
+import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 
 interface DataSource {
   id: string;
@@ -179,163 +179,148 @@ export default function DataSourceModal({
     ? dataSources
     : dataSources.filter(source => source.category === selectedCategory);
 
-  if (!isOpen) return null;
-
   const handleSelect = (source: DataSource) => {
     onSourceSelect(source.id);
     onClose();
   };
 
+  const footer = (
+    <div className="flex flex-col gap-3">
+      <div className="text-sm text-secondary text-center sm:text-left">
+        {selectedSource ? (
+          <span className="flex items-center justify-center sm:justify-start gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            {dataSources.find(s => s.id === selectedSource)?.name} selected
+          </span>
+        ) : (
+          'No data source selected'
+        )}
+      </div>
+      <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+        <button
+          onClick={onClose}
+          className="w-full sm:w-auto px-4 py-3 sm:py-2 text-primary bg-hover rounded-lg hover:bg-active transition-colors font-medium min-h-[44px]"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => {
+            if (selectedSource) {
+              onClose();
+            }
+          }}
+          disabled={!selectedSource}
+          className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+        >
+          Select Source
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                Select Data Source
-                <button className="p-1 hover:bg-gray-100 rounded-full group relative">
-                  <Info className="w-4 h-4 text-gray-400" />
-                  <div className="absolute left-0 top-8 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50">
-                    Data sources determine where the AI will gather information to create your course content. You can combine multiple sources for comprehensive coverage.
-                    <div className="absolute -top-1 left-3 w-2 h-2 bg-gray-900 rotate-45"></div>
-                  </div>
-                </button>
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">Choose where to pull content and information from</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+    <ResponsiveModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Select Data Source"
+      size="xl"
+      mobileHeight="full"
+      footer={footer}
+    >
+      <div className="flex flex-col h-full">
+        {/* Header Info */}
+        <div className="flex items-start gap-2 mb-4 p-3 bg-page rounded-lg">
+          <Info className="w-4 h-4 text-muted flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-secondary">Choose where to pull content and information from</p>
+            <p className="text-xs text-muted mt-1">
+              Data sources determine where the AI will gather information to create your course content.
+            </p>
           </div>
+        </div>
 
-          {/* Category Tabs */}
-          <div className="flex gap-2 px-6 pt-4 border-b border-gray-200">
-            {categories.map((category) => (
+        {/* Category Tabs */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`
+                px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap min-h-[44px]
+                ${selectedCategory === category.id
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-hover text-secondary hover:bg-active'
+                }
+              `}
+            >
+              {category.name}
+              <span className="ml-2 text-xs opacity-70">({category.count})</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="grid gap-3 sm:gap-4">
+            {filteredSources.map((source) => (
               <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
+                key={source.id}
+                onClick={() => handleSelect(source)}
                 className={`
-                  px-4 py-2 rounded-t-lg font-medium text-sm transition-all
-                  ${selectedCategory === category.id
-                    ? 'bg-white border-t border-l border-r border-gray-200 text-gray-900 -mb-px'
-                    : 'text-gray-600 hover:text-gray-900'
+                  relative border rounded-xl p-4 cursor-pointer transition-all text-left w-full min-h-[44px]
+                  ${selectedSource === source.id
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-2 ring-primary-200'
+                    : 'border hover:border-primary-300 hover:shadow-md bg-surface'
                   }
                 `}
               >
-                {category.name}
-                <span className="ml-2 text-xs text-gray-400">({category.count})</span>
+                {source.recommended && (
+                  <span className="absolute -top-2 right-4 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full font-medium">
+                    Recommended
+                  </span>
+                )}
+
+                <div className="flex gap-4">
+                  {/* Icon and Selection */}
+                  <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                    <div className="p-3 bg-surface rounded-lg shadow-sm border">
+                      {source.icon}
+                    </div>
+                    {selectedSource === source.id ? (
+                      <CheckCircle className="w-5 h-5 text-primary-600" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-muted" />
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-primary mb-1">{source.name}</h3>
+                    <p className="text-sm text-secondary mb-3">{source.description}</p>
+
+                    {source.features && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {source.features.map((feature, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-2 py-1 bg-hover text-secondary rounded-md text-xs"
+                          >
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {source.limitText && (
+                      <p className="text-xs text-muted italic">{source.limitText}</p>
+                    )}
+                  </div>
+                </div>
               </button>
             ))}
           </div>
-
-          {/* Content */}
-          <div className="p-6 max-h-[60vh] overflow-y-auto">
-            <div className="grid gap-4">
-              {filteredSources.map((source) => (
-                <div
-                  key={source.id}
-                  onClick={() => handleSelect(source)}
-                  className={`
-                    relative border rounded-xl p-4 cursor-pointer transition-all
-                    ${selectedSource === source.id
-                      ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                    }
-                  `}
-                >
-                  {source.recommended && (
-                    <span className="absolute -top-2 right-4 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full font-medium">
-                      Recommended
-                    </span>
-                  )}
-
-                  <div className="flex gap-4">
-                    {/* Icon and Selection */}
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="p-3 bg-white rounded-lg shadow-sm">
-                        {source.icon}
-                      </div>
-                      {selectedSource === source.id ? (
-                        <CheckCircle className="w-5 h-5 text-primary-600" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-gray-300" />
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">{source.name}</h3>
-                      <p className="text-sm text-gray-600 mb-3">{source.description}</p>
-
-                      {source.features && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {source.features.map((feature, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs"
-                            >
-                              {feature}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {source.limitText && (
-                        <p className="text-xs text-gray-500 italic">{source.limitText}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex justify-between items-center px-6 pb-6 pt-3 border-t border-gray-200">
-            <div className="text-sm text-gray-500">
-              {selectedSource ? (
-                <span className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  {dataSources.find(s => s.id === selectedSource)?.name} selected
-                </span>
-              ) : (
-                'No data source selected'
-              )}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (selectedSource) {
-                    onClose();
-                  }
-                }}
-                disabled={!selectedSource}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Select Source
-              </button>
-            </div>
-          </div>
         </div>
       </div>
-    </>
+    </ResponsiveModal>
   );
 }

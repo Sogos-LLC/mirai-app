@@ -77,22 +77,22 @@ export default function TagsSelectionModal({
       <div className="flex flex-col h-full">
         {/* Selected Tags */}
         {selectedTags.length > 0 && (
-          <div className="pb-3 mb-3 border-b border-gray-100">
+          <div className="pb-3 mb-3 border-b border-subtle">
             <div className="flex items-center gap-2 mb-2">
-              <Tag className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Selected ({selectedTags.length})</span>
+              <Tag className="w-4 h-4 text-muted" />
+              <span className="text-sm font-medium text-secondary">Selected ({selectedTags.length})</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {selectedTags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-100 text-primary-700 rounded-full text-sm font-medium"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 rounded-full text-sm font-medium"
                 >
                   <Hash className="w-3 h-3" />
                   {tag}
                   <button
                     onClick={() => handleRemoveTag(tag)}
-                    className="ml-1 hover:bg-primary-200 rounded-full p-0.5 min-w-[24px] min-h-[24px] flex items-center justify-center"
+                    className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-800 rounded-full p-0.5 min-w-[24px] min-h-[24px] flex items-center justify-center"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -111,7 +111,7 @@ export default function TagsSelectionModal({
               placeholder="Search existing tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 lg:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px]"
+              className="w-full px-4 py-3 lg:py-2 border bg-surface text-primary rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px] placeholder:text-muted"
             />
 
             <div className="flex flex-col sm:flex-row gap-2">
@@ -125,7 +125,7 @@ export default function TagsSelectionModal({
                     handleAddCustomTag();
                   }
                 }}
-                className="flex-1 px-4 py-3 lg:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px]"
+                className="flex-1 px-4 py-3 lg:py-2 border bg-surface text-primary rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px] placeholder:text-muted"
               />
               <button
                 onClick={handleAddCustomTag}
@@ -141,7 +141,7 @@ export default function TagsSelectionModal({
           {/* Suggested Tags */}
           {filteredSuggestedTags.length > 0 && (
             <div className="mb-4 lg:mb-6">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Suggested Tags</h3>
+              <h3 className="text-sm font-semibold text-secondary mb-3">Suggested Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {filteredSuggestedTags.map((tag) => (
                   <button
@@ -152,8 +152,8 @@ export default function TagsSelectionModal({
                       inline-flex items-center gap-1 px-3 py-2 lg:py-1.5 rounded-full text-sm font-medium
                       transition-all min-h-[36px]
                       ${selectedTags.includes(tag)
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                        ? 'bg-hover text-muted cursor-not-allowed'
+                        : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30'
                       }
                     `}
                   >
@@ -171,7 +171,7 @@ export default function TagsSelectionModal({
           {/* Categorized Tags */}
           {Object.entries(filteredPredefinedTags).map(([category, tags]) => (
             <div key={category} className="mb-4 lg:mb-6">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">{category}</h3>
+              <h3 className="text-sm font-semibold text-secondary mb-3">{category}</h3>
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag) => (
                   <button
@@ -182,8 +182,8 @@ export default function TagsSelectionModal({
                       inline-flex items-center gap-1 px-3 py-2 lg:py-1.5 rounded-full text-sm font-medium
                       transition-all min-h-[36px]
                       ${selectedTags.includes(tag)
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        ? 'bg-hover text-muted cursor-not-allowed'
+                        : 'bg-hover text-secondary hover:bg-active'
                       }
                     `}
                   >
@@ -200,8 +200,8 @@ export default function TagsSelectionModal({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-4 pt-4 border-t border-gray-200">
-          <div className="text-sm text-gray-500 text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-4 pt-4 border-t border">
+          <div className="text-sm text-secondary text-center sm:text-left">
             {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''} selected
           </div>
           <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
@@ -209,7 +209,7 @@ export default function TagsSelectionModal({
               onClick={() => {
                 onTagsChange([]);
               }}
-              className="px-4 py-3 lg:py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium min-h-[44px]"
+              className="px-4 py-3 lg:py-2 text-primary bg-hover rounded-lg hover:bg-active transition-colors font-medium min-h-[44px]"
             >
               Clear All
             </button>

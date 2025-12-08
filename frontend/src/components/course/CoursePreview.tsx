@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react';
 import { useGetCourse } from '@/hooks/useCourses';
+import { useIsMobile } from '@/hooks/useBreakpoint';
+import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import {
   Download,
   Check,
@@ -19,13 +22,14 @@ interface CoursePreviewProps {
 export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) {
   // Connect-Query: fetch course data
   const { data: course, isLoading } = useGetCourse(courseId);
+  const isMobile = useIsMobile();
 
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState<{[key: string]: number}>({});
   const [showQuizFeedback, setShowQuizFeedback] = useState<{[key: string]: boolean}>({});
 
@@ -80,7 +84,7 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-600">
+      <div className="h-screen flex items-center justify-center bg-page">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 dark:border-primary-400"></div>
       </div>
     );
@@ -88,11 +92,11 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
 
   if (!course || courseSections.length === 0) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-dark-600">
-        <p className="text-gray-500 dark:text-gray-400 mb-4">No course content available</p>
+      <div className="h-screen flex flex-col items-center justify-center bg-page">
+        <p className="text-secondary mb-4">No course content available</p>
         <button
           onClick={onBack}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+          className="min-h-[44px] px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
           Go Back
         </button>
@@ -101,47 +105,56 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-dark-600">
+    <div className="h-screen flex flex-col bg-page">
       {/* Top Navigation Bar */}
-      <div className="bg-white dark:bg-dark-surface border-b border-gray-200 dark:border-dark-border px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="bg-surface border-b border px-4 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            className="flex items-center gap-1 md:gap-2 text-secondary hover:text-primary min-h-[44px] touch-target shrink-0"
+            aria-label="Back to Editor"
           >
             <ChevronLeft size={20} />
-            <span>Back to Editor</span>
+            <span className="hidden sm:inline">Back to Editor</span>
           </button>
-          <div className="h-6 w-px bg-gray-300 dark:bg-dark-border" />
-          <h1 className="font-semibold text-gray-900 dark:text-white">{course.settings?.title || 'Course Preview'}</h1>
+          <div className="hidden sm:block h-6 w-px bg-border" />
+          <h1 className="font-semibold text-primary truncate text-sm sm:text-base">{course.settings?.title || 'Course Preview'}</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-50 rounded-lg"
+            className="min-h-[44px] min-w-[44px] p-2 text-secondary hover:bg-hover rounded-lg touch-target flex items-center justify-center"
+            aria-label="Toggle lesson navigation"
           >
-            {showSidebar ? <X size={20} /> : <Menu size={20} />}
+            <Menu size={20} />
           </button>
           <button
             onClick={() => setShowExportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            className="flex items-center gap-2 px-3 md:px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700"
           >
             <Download size={18} />
-            Export Course
+            <span className="hidden sm:inline">Export Course</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Course Structure */}
-        <div className={`${showSidebar ? 'block' : 'hidden'} lg:block w-64 bg-white dark:bg-dark-surface border-r border-gray-200 dark:border-dark-border overflow-y-auto`}>
-          <div className="p-4">
-            <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Course Content</h2>
+        {/* Sidebar - Course Structure (Desktop: sidebar, Mobile: BottomSheet) */}
+        {isMobile ? (
+          <BottomSheet
+            isOpen={showSidebar}
+            onClose={() => setShowSidebar(false)}
+            title="Course Content"
+            height="half"
+            showDragHandle={true}
+            showCloseButton={true}
+          >
             <div className="space-y-2">
               {courseSections.map((section, sIdx) => (
                 <div key={section.id}>
-                  <div className="font-medium text-gray-700 dark:text-gray-300 py-2">{section.name}</div>
+                  <div className="font-medium text-primary py-2">{section.name}</div>
                   <div className="ml-2 space-y-1">
                     {section.lessons?.map((lesson, lIdx) => (
                       <button
@@ -151,11 +164,12 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
                           setCurrentLessonIndex(lIdx);
                           setQuizAnswers({});
                           setShowQuizFeedback({});
+                          setShowSidebar(false);
                         }}
-                        className={`w-full text-left px-3 py-2 rounded text-sm ${
+                        className={`w-full text-left px-3 py-2 rounded text-sm min-h-[44px] touch-target ${
                           sIdx === currentSectionIndex && lIdx === currentLessonIndex
                             ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-50'
+                            : 'text-secondary hover:bg-hover'
                         }`}
                       >
                         {lesson.title}
@@ -165,20 +179,53 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
                 </div>
               ))}
             </div>
+          </BottomSheet>
+        ) : (
+          <div className="w-64 bg-surface border-r border overflow-y-auto">
+            <div className="p-4">
+              <h2 className="font-semibold text-primary mb-4">Course Content</h2>
+              <div className="space-y-2">
+                {courseSections.map((section, sIdx) => (
+                  <div key={section.id}>
+                    <div className="font-medium text-primary py-2">{section.name}</div>
+                    <div className="ml-2 space-y-1">
+                      {section.lessons?.map((lesson, lIdx) => (
+                        <button
+                          key={lesson.id}
+                          onClick={() => {
+                            setCurrentSectionIndex(sIdx);
+                            setCurrentLessonIndex(lIdx);
+                            setQuizAnswers({});
+                            setShowQuizFeedback({});
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded text-sm ${
+                            sIdx === currentSectionIndex && lIdx === currentLessonIndex
+                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                              : 'text-secondary hover:bg-hover'
+                          }`}
+                        >
+                          {lesson.title}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-6 py-8">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
             {currentLesson ? (
               <>
                 {/* Section & Lesson Header */}
-                <div className="mb-6">
-                  <div className="text-sm text-purple-600 dark:text-purple-400 font-medium mb-1">
+                <div className="mb-4 sm:mb-6">
+                  <div className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 font-medium mb-1">
                     {currentSection?.name}
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <h2 className="text-xl sm:text-2xl font-bold text-primary">
                     {currentLesson.title}
                   </h2>
                 </div>
@@ -186,9 +233,9 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
                 {/* Lesson Content */}
                 <div className="prose prose-gray dark:prose-invert max-w-none">
                   {currentLesson.blocks?.map((block) => (
-                    <div key={block.id} className="mb-6">
+                    <div key={block.id} className="mb-4 sm:mb-6">
                       {block.type === 1 ? ( // HEADING
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{block.content}</h3>
+                        <h3 className="text-lg sm:text-xl font-semibold text-primary">{block.content}</h3>
                       ) : block.type === 4 ? ( // KNOWLEDGE_CHECK
                         (() => {
                           try {
@@ -199,25 +246,25 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
                             const isCorrect = selectedAnswer === quiz.correctAnswer;
 
                             return (
-                              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800/40 rounded-lg p-6">
-                                <h4 className="font-semibold text-green-800 dark:text-green-400 mb-3">Knowledge Check</h4>
-                                <p className="text-gray-800 dark:text-white mb-4">{quiz.question}</p>
+                              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800/40 rounded-lg p-4 sm:p-6">
+                                <h4 className="font-semibold text-green-800 dark:text-green-400 mb-3 text-sm sm:text-base">Knowledge Check</h4>
+                                <p className="text-primary mb-4 text-sm sm:text-base">{quiz.question}</p>
                                 <div className="space-y-2">
                                   {quiz.options?.map((option: string, idx: number) => (
                                     <button
                                       key={idx}
                                       onClick={() => !showFeedback && handleQuizAnswer(quizId, idx)}
                                       disabled={showFeedback}
-                                      className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                                      className={`w-full text-left px-3 sm:px-4 py-3 rounded-lg border transition-colors min-h-[44px] touch-target text-sm sm:text-base ${
                                         showFeedback
                                           ? idx === quiz.correctAnswer
                                             ? 'bg-green-100 dark:bg-green-900/40 border-green-500 text-green-800 dark:text-green-300'
                                             : idx === selectedAnswer
                                               ? 'bg-red-100 dark:bg-red-900/40 border-red-500 text-red-800 dark:text-red-300'
-                                              : 'bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300'
+                                              : 'bg-surface border text-secondary'
                                           : selectedAnswer === idx
                                             ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-800 dark:text-purple-300'
-                                            : 'bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-border hover:border-purple-300 dark:hover:border-purple-600 text-gray-700 dark:text-gray-300'
+                                            : 'bg-surface border hover:border-purple-300 dark:hover:border-purple-600 text-secondary'
                                       }`}
                                     >
                                       {option}
@@ -227,43 +274,43 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
                                 {!showFeedback && selectedAnswer !== undefined && (
                                   <button
                                     onClick={() => checkQuizAnswer(quizId)}
-                                    className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                    className="mt-4 px-4 py-2 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm sm:text-base"
                                   >
                                     Check Answer
                                   </button>
                                 )}
                                 {showFeedback && (
                                   <div className={`mt-4 p-3 rounded-lg ${isCorrect ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                                    <p className={`font-medium ${isCorrect ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
+                                    <p className={`font-medium text-sm sm:text-base ${isCorrect ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
                                       {isCorrect ? 'Correct!' : 'Incorrect'}
                                     </p>
                                     {quiz.explanation && (
-                                      <p className="text-gray-700 dark:text-gray-300 mt-1 text-sm">{quiz.explanation}</p>
+                                      <p className="text-secondary mt-1 text-xs sm:text-sm">{quiz.explanation}</p>
                                     )}
                                   </div>
                                 )}
                               </div>
                             );
                           } catch {
-                            return <div className="text-gray-700 dark:text-gray-300">{block.content}</div>;
+                            return <div className="text-secondary">{block.content}</div>;
                           }
                         })()
                       ) : (
-                        <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{block.content}</div>
+                        <div className="text-secondary whitespace-pre-wrap text-sm sm:text-base">{block.content}</div>
                       )}
                     </div>
                   ))}
                 </div>
 
                 {/* Navigation Buttons */}
-                <div className="mt-8 pt-6 border-t border-gray-200 dark:border-dark-border flex justify-between">
+                <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border flex flex-col sm:flex-row gap-3 sm:justify-between">
                   <button
                     onClick={() => navigateLesson('prev')}
                     disabled={currentSectionIndex === 0 && currentLessonIndex === 0}
-                    className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 min-h-[44px] text-secondary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed order-2 sm:order-1"
                   >
                     <ChevronLeft size={20} />
-                    Previous Lesson
+                    <span>Previous Lesson</span>
                   </button>
                   <button
                     onClick={() => navigateLesson('next')}
@@ -271,16 +318,16 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
                       currentSectionIndex === courseSections.length - 1 &&
                       currentLessonIndex === (currentSection?.lessons?.length || 1) - 1
                     }
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
                   >
-                    Next Lesson
+                    <span>Next Lesson</span>
                     <ChevronRight size={20} />
                   </button>
                 </div>
               </>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-500 dark:text-gray-400">Select a lesson from the sidebar to begin.</p>
+                <p className="text-secondary">Select a lesson from the sidebar to begin.</p>
               </div>
             )}
           </div>
@@ -288,44 +335,45 @@ export default function CoursePreview({ courseId, onBack }: CoursePreviewProps) 
       </div>
 
       {/* Export Modal */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-dark-surface-elevated rounded-xl p-6 max-w-md w-full mx-4 dark:border dark:border-dark-border">
-            {exportComplete ? (
-              <div className="text-center py-6">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Export Complete!</h3>
-                <p className="text-gray-600 dark:text-gray-400">Your course has been exported successfully.</p>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Export Course</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Export your course to SCORM format for use in your LMS.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowExportModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-50 text-gray-700 dark:text-gray-300"
-                    disabled={isExporting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleExport}
-                    disabled={isExporting}
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-                  >
-                    {isExporting ? 'Exporting...' : 'Export SCORM'}
-                  </button>
-                </div>
-              </>
-            )}
+      <ResponsiveModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title={exportComplete ? "Export Complete!" : "Export Course"}
+        size="md"
+        mobileHeight="auto"
+      >
+        {exportComplete ? (
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-primary mb-2">Export Complete!</h3>
+            <p className="text-secondary">Your course has been exported successfully.</p>
           </div>
-        </div>
-      )}
+        ) : (
+          <>
+            <p className="text-secondary mb-6">
+              Export your course to SCORM format for use in your LMS.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
+                disabled={isExporting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={isExporting}
+                className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {isExporting ? 'Exporting...' : 'Export SCORM'}
+              </button>
+            </div>
+          </>
+        )}
+      </ResponsiveModal>
     </div>
   );
 }
