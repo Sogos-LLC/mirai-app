@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -1229,6 +1230,9 @@ func (s *AIGenerationService) GetGeneratedLesson(ctx context.Context, kratosID u
 		lesson.Components[i] = *c
 	}
 
+	// Refresh image URLs to ensure they work across devices
+	s.refreshImageURLs(ctx, lesson.Components)
+
 	return lesson, nil
 }
 
@@ -1254,6 +1258,8 @@ func (s *AIGenerationService) ListGeneratedLessons(ctx context.Context, kratosID
 		for i, c := range components {
 			lesson.Components[i] = *c
 		}
+		// Refresh image URLs to ensure they work across devices
+		s.refreshImageURLs(ctx, lesson.Components)
 	}
 
 	return lessons, nil
@@ -1564,7 +1570,8 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		imageContent = make(map[string]interface{})
 	}
 
-	imageContent["url"] = imageURL
+	imageContent["storagePath"] = storagePath // Store path for fresh URL generation on load
+	imageContent["url"] = imageURL             // Include URL for immediate display
 	// Keep the original image_description as a reference
 	if _, exists := imageContent["image_description"]; !exists {
 		imageContent["image_description"] = req.Prompt
@@ -1735,6 +1742,9 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 		updatedLesson.Components[i] = *c
 	}
 
+	// Refresh image URLs to ensure they work across devices
+	s.refreshImageURLs(tenantCtx, updatedLesson.Components)
+
 	s.logger.Info("lesson components updated",
 		"lessonID", req.LessonID,
 		"componentCount", len(req.Components),
@@ -1769,4 +1779,84 @@ func (s *AIGenerationService) publishJobEvent(ctx context.Context, eventType str
 			"jobID", job.ID,
 		)
 	}
+}
+
+// refreshImageURLs generates fresh presigned URLs for image components.
+// This ensures images load correctly on any device by regenerating URLs from stored paths.
+// Handles backwards compatibility: extracts storage path from old presigned URLs if needed.
+func (s *AIGenerationService) refreshImageURLs(ctx context.Context, components []entity.LessonComponent) {
+	if s.imageStorage == nil {
+		return
+	}
+
+	for i := range components {
+		comp := &components[i]
+		if comp.Type != valueobject.LessonComponentTypeImage {
+			continue
+		}
+
+		var content map[string]interface{}
+		if err := json.Unmarshal(comp.ContentJSON, &content); err != nil {
+			continue
+		}
+
+		// Get storage path (new format) or extract from URL (backwards compatibility)
+		storagePath, _ := content["storagePath"].(string)
+		if storagePath == "" {
+			// Try to extract path from old presigned URL for backwards compatibility
+			// Old URLs look like: http://192.168.1.226:9768/mirai/data/tenants/.../image.png?X-Amz-...
+			if oldURL, ok := content["url"].(string); ok && oldURL != "" {
+				storagePath = s.extractStoragePathFromURL(oldURL)
+				if storagePath != "" {
+					// Store the extracted path for future requests
+					content["storagePath"] = storagePath
+				}
+			}
+		}
+
+		if storagePath == "" {
+			continue
+		}
+
+		// Generate fresh presigned URL (1 hour expiry for viewing)
+		url, err := s.imageStorage.GenerateDownloadURL(ctx, storagePath, 1*time.Hour)
+		if err != nil {
+			s.logger.Warn("failed to generate image URL",
+				"componentID", comp.ID,
+				"storagePath", storagePath,
+				"error", err,
+			)
+			continue
+		}
+
+		content["url"] = url
+		updatedJSON, err := json.Marshal(content)
+		if err != nil {
+			continue
+		}
+		comp.ContentJSON = updatedJSON
+	}
+}
+
+// extractStoragePathFromURL extracts the storage path from an old presigned URL.
+// For example: http://192.168.1.226:9768/mirai/data/tenants/abc/images/x.png?X-Amz-...
+// Returns: tenants/abc/images/x.png
+func (s *AIGenerationService) extractStoragePathFromURL(url string) string {
+	// Find the path after the bucket name (/mirai/data/)
+	// Pattern: http(s)://host:port/bucket/basePath/actual/path?signature
+	markers := []string{"/mirai/data/", "/mirai/"} // Try common bucket/basePath patterns
+	for _, marker := range markers {
+		idx := strings.Index(url, marker)
+		if idx == -1 {
+			continue
+		}
+		// Extract path after marker, before query string
+		pathStart := idx + len(marker)
+		pathEnd := strings.Index(url[pathStart:], "?")
+		if pathEnd == -1 {
+			return url[pathStart:]
+		}
+		return url[pathStart : pathStart+pathEnd]
+	}
+	return ""
 }
