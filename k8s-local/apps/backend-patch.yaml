@@ -168,6 +168,16 @@ spec:
             secretKeyRef:
               name: mirai-encryption-secret
               key: encryption-key
+        # Trust mkcert CA for internal HTTPS calls to *.mirai.test
+        - name: SSL_CERT_FILE
+          value: "/etc/ssl/certs/mkcert-ca.pem"
+
+        # Mount mkcert CA certificate
+        volumeMounts:
+        - name: mkcert-ca
+          mountPath: /etc/ssl/certs/mkcert-ca.pem
+          subPath: rootCA.pem
+          readOnly: true
 
         # Faster startup probes for local development
         startupProbe:
@@ -191,3 +201,9 @@ spec:
             port: 8080
           initialDelaySeconds: 3
           periodSeconds: 5
+
+      # Volumes for mkcert CA certificate
+      volumes:
+      - name: mkcert-ca
+        configMap:
+          name: mkcert-ca

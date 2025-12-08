@@ -86,6 +86,10 @@ if ! command -v mkcert >/dev/null 2>&1; then
     MISSING_DEPS+=("mkcert - Run: brew install mkcert")
 fi
 
+if ! command -v jq >/dev/null 2>&1; then
+    MISSING_DEPS+=("jq - Run: brew install jq")
+fi
+
 if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
     log_error "Missing required dependencies:"
     echo ""
@@ -94,7 +98,7 @@ if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
     done
     echo ""
     log_info "Install all missing dependencies with:"
-    echo -e "  ${YELLOW}brew install k3d kubectl helm mkcert${NC}"
+    echo -e "  ${YELLOW}brew install k3d kubectl helm mkcert jq${NC}"
     echo ""
     exit 1
 fi
@@ -183,6 +187,40 @@ helm upgrade --install traefik traefik/traefik \
     --timeout 5m
 log_success "Traefik installed"
 
+# Step 6b: Configure CoreDNS for .test domain resolution inside pods
+# This allows backend pods to reach auth.mirai.test, api.mirai.test, etc.
+log_info "Step 6b/17: Configuring CoreDNS for internal .test domain resolution..."
+
+# Get Traefik service cluster IP
+TRAEFIK_IP=$(kubectl get svc -n kube-system traefik -o jsonpath='{.spec.clusterIP}')
+log_info "  Traefik ClusterIP: ${TRAEFIK_IP}"
+
+# Get current NodeHosts from CoreDNS
+CURRENT_NODEHOSTS=$(kubectl get configmap coredns -n kube-system -o jsonpath='{.data.NodeHosts}')
+
+# Add .test domains pointing to Traefik (only if not already present)
+if echo "${CURRENT_NODEHOSTS}" | grep -q "mirai.test"; then
+    log_info "  CoreDNS already configured for .test domains"
+else
+    # Append .test domain entries
+    NEW_NODEHOSTS="${CURRENT_NODEHOSTS}
+${TRAEFIK_IP} mirai.test
+${TRAEFIK_IP} api.mirai.test
+${TRAEFIK_IP} auth.mirai.test
+${TRAEFIK_IP} get-mirai.test
+${TRAEFIK_IP} mailpit.mirai.test
+${TRAEFIK_IP} minio.mirai.test"
+
+    # Patch CoreDNS configmap
+    kubectl patch configmap coredns -n kube-system --type merge -p "{\"data\":{\"NodeHosts\":$(echo "${NEW_NODEHOSTS}" | jq -Rs .)}}"
+
+    # Restart CoreDNS to pick up changes
+    kubectl rollout restart deployment/coredns -n kube-system
+    kubectl rollout status deployment/coredns -n kube-system --timeout=60s
+
+    log_success "CoreDNS configured for .test domain resolution"
+fi
+
 # Step 7: Generate mkcert certificates
 log_info "Step 7/17: Generating TLS certificates with mkcert..."
 
@@ -232,6 +270,16 @@ kubectl create secret tls mirai-tls \
     --dry-run=client -o yaml | kubectl apply -f -
 
 log_success "TLS certificates generated and secrets created"
+
+# Step 7b: Create mkcert CA ConfigMap for backend TLS trust
+# This allows the backend to trust internal HTTPS calls to *.mirai.test
+log_info "Step 7b/17: Creating mkcert CA ConfigMap for backend..."
+MKCERT_CAROOT=$(mkcert -CAROOT)
+kubectl create configmap mkcert-ca \
+    --from-file=rootCA.pem="${MKCERT_CAROOT}/rootCA.pem" \
+    -n mirai-local \
+    --dry-run=client -o yaml | kubectl apply -f -
+log_success "mkcert CA ConfigMap created"
 
 # Step 8: Deploy infrastructure
 log_info "Step 8/17: Deploying infrastructure (PostgreSQL, Redis, MinIO)..."
@@ -442,9 +490,16 @@ else
 fi
 
 echo ""
+log_warning "IMPORTANT: Stripe Webhook Setup (required for registration/payments):"
+echo "  1. In a new terminal: stripe listen --forward-to https://api.mirai.test/api/v1/billing/webhook"
+echo "  2. Copy the webhook secret (whsec_...)"
+echo "  3. Run: ./stripe-webhook.sh whsec_your_secret_here"
+echo ""
 log_info "Quick commands:"
-echo "  ./status.sh       - View cluster status"
-echo "  ./logs.sh backend - View backend logs"
-echo "  ./stop.sh         - Stop cluster"
-echo "  ./reset.sh        - Full reset"
+echo "  ./status.sh            - View cluster status"
+echo "  ./logs.sh backend      - View backend logs"
+echo "  ./stripe-webhook.sh    - Update Stripe webhook secret"
+echo "  ./build-local.sh       - Rebuild and deploy images"
+echo "  ./stop.sh              - Stop cluster"
+echo "  ./reset.sh             - Full reset"
 echo ""

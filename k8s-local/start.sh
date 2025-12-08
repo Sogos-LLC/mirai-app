@@ -168,8 +168,14 @@ else
 fi
 
 echo ""
+log_warning "Stripe Webhook Setup (required for registration/payments):"
+echo "  1. In a new terminal: stripe listen --forward-to https://api.mirai.test/api/v1/billing/webhook"
+echo "  2. Copy the webhook secret (whsec_...)"
+echo "  3. Run: ./stripe-webhook.sh whsec_your_secret_here"
+echo ""
 log_info "Quick commands:"
-echo "  ./status.sh       - View full status"
-echo "  ./logs.sh backend - View logs"
-echo "  ./stop.sh         - Stop cluster"
+echo "  ./status.sh            - View full status"
+echo "  ./logs.sh backend      - View logs"
+echo "  ./stripe-webhook.sh    - Update Stripe webhook secret"
+echo "  ./stop.sh              - Stop cluster"
 echo ""
