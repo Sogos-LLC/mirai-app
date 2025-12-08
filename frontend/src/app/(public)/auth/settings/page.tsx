@@ -134,12 +134,12 @@ export default function SettingsPage() {
   const activeTabConfig = tabs.find((t) => t.id === activeTab);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-dark-page dark:to-dark-surface py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-dark-page dark:to-dark-page py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Back link */}
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white mb-6"
+          className="inline-flex items-center gap-2 text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard

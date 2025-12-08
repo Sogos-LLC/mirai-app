@@ -66,8 +66,8 @@ export default function UpdatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Product Updates</h1>
-          <p className="text-gray-600">Stay up to date with the latest features and improvements</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Product Updates</h1>
+          <p className="text-gray-600 dark:text-gray-400">Stay up to date with the latest features and improvements</p>
         </div>
       </div>
 
@@ -104,29 +104,29 @@ export default function UpdatesPage() {
           return (
             <div
               key={update.id}
-              className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow cursor-pointer"
+              className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-6 hover:shadow-lg dark:hover:shadow-glow-sm transition-shadow cursor-pointer"
             >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-primary-600" />
+                <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                  <Icon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
                 </div>
-                <span className="text-xs font-medium text-gray-500">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                   {update.date}
                 </span>
               </div>
-              <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full mb-3">
+              <span className="inline-block px-3 py-1 bg-gray-100 dark:bg-dark-50 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-full mb-3">
                 {update.type}
               </span>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 {update.title}
               </h3>
-              <p className="text-gray-600 text-sm mb-4">{update.description}</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{update.description}</p>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-gray-500 text-sm">
+                <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm">
                   <Clock className="w-4 h-4" />
                   <span>{update.date}</span>
                 </div>
-                <button className="text-primary-600 font-semibold text-sm hover:text-primary-700">
+                <button className="text-primary-600 dark:text-primary-400 font-semibold text-sm hover:text-primary-700 dark:hover:text-primary-300">
                   View Details
                 </button>
               </div>
