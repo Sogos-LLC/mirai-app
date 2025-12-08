@@ -1,7 +1,6 @@
 'use client';
 
 import './globals.css';
-import BuildInfo from '@/components/BuildInfo';
 
 /**
  * Marketing site layout - minimal, no Redux/Connect providers needed
@@ -16,7 +15,6 @@ export default function RootLayout({
     <html lang="en">
       <body>
         {children}
-        <BuildInfo />
       </body>
     </html>
   );

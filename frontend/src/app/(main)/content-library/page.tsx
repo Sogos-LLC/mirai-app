@@ -408,7 +408,7 @@ export default function ContentLibrary() {
         <div className="mb-4">
           <button
             onClick={() => setIsFolderSheetOpen(true)}
-            className="flex items-center gap-2 px-4 py-3 bg-primary-50 text-primary-700 rounded-lg border border-primary-200 w-full justify-between min-h-[44px]"
+            className="flex items-center gap-2 px-4 py-3 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-lg border border-primary-200 dark:border-primary-800 w-full justify-between min-h-[44px]"
           >
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4" />

@@ -3,7 +3,6 @@
 import './globals.css';
 import { AuthProvider, ThemeProvider } from '@/contexts';
 import { ConnectProvider } from '@/components/providers';
-import BuildInfo from '@/components/BuildInfo';
 
 export default function RootLayout({
   children,
@@ -17,7 +16,6 @@ export default function RootLayout({
           <ConnectProvider>
             <AuthProvider>
               {children}
-              <BuildInfo />
             </AuthProvider>
           </ConnectProvider>
         </ThemeProvider>
