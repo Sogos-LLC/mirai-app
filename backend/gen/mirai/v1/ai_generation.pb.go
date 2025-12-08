@@ -674,14 +674,16 @@ func (x *CourseOutline) GetApprovedByUserId() string {
 
 // OutlineSection represents a section in the outline.
 type OutlineSection struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Order         int32                  `protobuf:"varint,4,opt,name=order,proto3" json:"order,omitempty"`
-	Lessons       []*OutlineLesson       `protobuf:"bytes,5,rep,name=lessons,proto3" json:"lessons,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title          string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Description    string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Order          int32                  `protobuf:"varint,4,opt,name=order,proto3" json:"order,omitempty"`
+	Lessons        []*OutlineLesson       `protobuf:"bytes,5,rep,name=lessons,proto3" json:"lessons,omitempty"`
+	IsFirstSection bool                   `protobuf:"varint,6,opt,name=is_first_section,json=isFirstSection,proto3" json:"is_first_section,omitempty"` // First section in course (for introduction context)
+	IsLastSection  bool                   `protobuf:"varint,7,opt,name=is_last_section,json=isLastSection,proto3" json:"is_last_section,omitempty"`    // Last section in course (for conclusion context)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *OutlineSection) Reset() {
@@ -749,6 +751,20 @@ func (x *OutlineSection) GetLessons() []*OutlineLesson {
 	return nil
 }
 
+func (x *OutlineSection) GetIsFirstSection() bool {
+	if x != nil {
+		return x.IsFirstSection
+	}
+	return false
+}
+
+func (x *OutlineSection) GetIsLastSection() bool {
+	if x != nil {
+		return x.IsLastSection
+	}
+	return false
+}
+
 // OutlineLesson represents a lesson in the outline.
 type OutlineLesson struct {
 	state                    protoimpl.MessageState `protogen:"open.v1"`
@@ -758,8 +774,10 @@ type OutlineLesson struct {
 	Order                    int32                  `protobuf:"varint,4,opt,name=order,proto3" json:"order,omitempty"`
 	EstimatedDurationMinutes int32                  `protobuf:"varint,5,opt,name=estimated_duration_minutes,json=estimatedDurationMinutes,proto3" json:"estimated_duration_minutes,omitempty"`
 	LearningObjectives       []string               `protobuf:"bytes,6,rep,name=learning_objectives,json=learningObjectives,proto3" json:"learning_objectives,omitempty"`
-	IsLastInSection          bool                   `protobuf:"varint,7,opt,name=is_last_in_section,json=isLastInSection,proto3" json:"is_last_in_section,omitempty"` // Flag for segue generation
-	IsLastInCourse           bool                   `protobuf:"varint,8,opt,name=is_last_in_course,json=isLastInCourse,proto3" json:"is_last_in_course,omitempty"`    // Flag for course conclusion
+	IsFirstInSection         bool                   `protobuf:"varint,7,opt,name=is_first_in_section,json=isFirstInSection,proto3" json:"is_first_in_section,omitempty"` // First lesson in section (for section intro)
+	IsLastInSection          bool                   `protobuf:"varint,8,opt,name=is_last_in_section,json=isLastInSection,proto3" json:"is_last_in_section,omitempty"`    // Last lesson in section (for section conclusion/segue)
+	IsFirstInCourse          bool                   `protobuf:"varint,9,opt,name=is_first_in_course,json=isFirstInCourse,proto3" json:"is_first_in_course,omitempty"`    // First lesson in entire course (for course intro)
+	IsLastInCourse           bool                   `protobuf:"varint,10,opt,name=is_last_in_course,json=isLastInCourse,proto3" json:"is_last_in_course,omitempty"`      // Last lesson in entire course (for course conclusion)
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -836,9 +854,23 @@ func (x *OutlineLesson) GetLearningObjectives() []string {
 	return nil
 }
 
+func (x *OutlineLesson) GetIsFirstInSection() bool {
+	if x != nil {
+		return x.IsFirstInSection
+	}
+	return false
+}
+
 func (x *OutlineLesson) GetIsLastInSection() bool {
 	if x != nil {
 		return x.IsLastInSection
+	}
+	return false
+}
+
+func (x *OutlineLesson) GetIsFirstInCourse() bool {
+	if x != nil {
+		return x.IsFirstInCourse
 	}
 	return false
 }
@@ -2892,22 +2924,27 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\x13approved_by_user_id\x18\t \x01(\tH\x02R\x10approvedByUserId\x88\x01\x01B\x13\n" +
 	"\x11_rejection_reasonB\x0e\n" +
 	"\f_approved_atB\x16\n" +
-	"\x14_approved_by_user_id\"\xa1\x01\n" +
+	"\x14_approved_by_user_id\"\xf3\x01\n" +
 	"\x0eOutlineSection\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05order\x18\x04 \x01(\x05R\x05order\x121\n" +
-	"\alessons\x18\x05 \x03(\v2\x17.mirai.v1.OutlineLessonR\alessons\"\xb4\x02\n" +
+	"\alessons\x18\x05 \x03(\v2\x17.mirai.v1.OutlineLessonR\alessons\x12(\n" +
+	"\x10is_first_section\x18\x06 \x01(\bR\x0eisFirstSection\x12&\n" +
+	"\x0fis_last_section\x18\a \x01(\bR\risLastSection\"\x90\x03\n" +
 	"\rOutlineLesson\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05order\x18\x04 \x01(\x05R\x05order\x12<\n" +
 	"\x1aestimated_duration_minutes\x18\x05 \x01(\x05R\x18estimatedDurationMinutes\x12/\n" +
-	"\x13learning_objectives\x18\x06 \x03(\tR\x12learningObjectives\x12+\n" +
-	"\x12is_last_in_section\x18\a \x01(\bR\x0fisLastInSection\x12)\n" +
-	"\x11is_last_in_course\x18\b \x01(\bR\x0eisLastInCourse\"\xcc\x02\n" +
+	"\x13learning_objectives\x18\x06 \x03(\tR\x12learningObjectives\x12-\n" +
+	"\x13is_first_in_section\x18\a \x01(\bR\x10isFirstInSection\x12+\n" +
+	"\x12is_last_in_section\x18\b \x01(\bR\x0fisLastInSection\x12+\n" +
+	"\x12is_first_in_course\x18\t \x01(\bR\x0fisFirstInCourse\x12)\n" +
+	"\x11is_last_in_course\x18\n" +
+	" \x01(\bR\x0eisLastInCourse\"\xcc\x02\n" +
 	"\x0fGeneratedLesson\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12\x1d\n" +

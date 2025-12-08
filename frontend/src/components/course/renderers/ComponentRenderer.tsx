@@ -85,20 +85,12 @@ export function ComponentRenderer({
       return (
         <div
           className={`
-            relative group
+            relative
             ${onSelect ? 'cursor-pointer' : ''}
-            ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 rounded-lg' : ''}
+            ${isSelected ? 'ring-2 ring-purple-500 ring-offset-2 rounded-lg' : ''}
           `}
           onClick={() => !isEditing && onSelect?.()}
         >
-          {/* Edit indicator */}
-          {onSelect && !isEditing && (
-            <div className="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded shadow">
-                Click to edit
-              </div>
-            </div>
-          )}
           {children}
         </div>
       );

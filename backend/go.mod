@@ -15,8 +15,8 @@ require (
 	github.com/redis/go-redis/v9 v9.17.1
 	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/stripe/stripe-go/v76 v76.25.0
-	golang.org/x/crypto v0.45.0
 	golang.org/x/net v0.47.0
+	golang.org/x/sync v0.18.0
 	golang.org/x/time v0.8.0
 	google.golang.org/genai v1.36.0
 	google.golang.org/protobuf v1.36.10
@@ -54,6 +54,7 @@ require (
 	github.com/spf13/cast v1.7.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect

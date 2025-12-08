@@ -42,13 +42,13 @@ WHERE course_id = $1;
 -- ============================================================================
 
 -- name: CreateOutlineSection :one
-INSERT INTO outline_sections (tenant_id, outline_id, title, description, position)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO outline_sections (tenant_id, outline_id, title, description, position, is_first_section, is_last_section)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: CreateOutlineSectionWithID :exec
-INSERT INTO outline_sections (id, tenant_id, outline_id, title, description, position, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, NOW());
+INSERT INTO outline_sections (id, tenant_id, outline_id, title, description, position, is_first_section, is_last_section, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW());
 
 -- name: GetOutlineSectionByID :one
 SELECT * FROM outline_sections WHERE id = $1;
@@ -60,8 +60,8 @@ ORDER BY position ASC;
 
 -- name: UpdateOutlineSection :exec
 UPDATE outline_sections
-SET title = $1, description = $2, position = $3
-WHERE id = $4;
+SET title = $1, description = $2, position = $3, is_first_section = $4, is_last_section = $5
+WHERE id = $6;
 
 -- name: DeleteOutlineSection :exec
 DELETE FROM outline_sections WHERE id = $1;
@@ -71,13 +71,13 @@ DELETE FROM outline_sections WHERE id = $1;
 -- ============================================================================
 
 -- name: CreateOutlineLesson :one
-INSERT INTO outline_lessons (tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO outline_lessons (tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_first_in_section, is_last_in_section, is_first_in_course, is_last_in_course)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: CreateOutlineLessonWithID :exec
-INSERT INTO outline_lessons (id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW());
+INSERT INTO outline_lessons (id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_first_in_section, is_last_in_section, is_first_in_course, is_last_in_course, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW());
 
 -- name: GetOutlineLessonByID :one
 SELECT * FROM outline_lessons WHERE id = $1;
@@ -89,8 +89,8 @@ ORDER BY position ASC;
 
 -- name: UpdateOutlineLesson :exec
 UPDATE outline_lessons
-SET title = $1, description = $2, position = $3, estimated_duration_minutes = $4, learning_objectives = $5, is_last_in_section = $6, is_last_in_course = $7
-WHERE id = $8;
+SET title = $1, description = $2, position = $3, estimated_duration_minutes = $4, learning_objectives = $5, is_first_in_section = $6, is_last_in_section = $7, is_first_in_course = $8, is_last_in_course = $9
+WHERE id = $10;
 
 -- name: DeleteOutlineLesson :exec
 DELETE FROM outline_lessons WHERE id = $1;

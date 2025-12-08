@@ -649,16 +649,20 @@ type OutlineLesson struct {
 	IsLastInSection          bool           `db:"is_last_in_section" json:"is_last_in_section"`
 	IsLastInCourse           bool           `db:"is_last_in_course" json:"is_last_in_course"`
 	CreatedAt                time.Time      `db:"created_at" json:"created_at"`
+	IsFirstInSection         bool           `db:"is_first_in_section" json:"is_first_in_section"`
+	IsFirstInCourse          bool           `db:"is_first_in_course" json:"is_first_in_course"`
 }
 
 type OutlineSection struct {
-	ID          uuid.UUID      `db:"id" json:"id"`
-	TenantID    uuid.UUID      `db:"tenant_id" json:"tenant_id"`
-	OutlineID   uuid.UUID      `db:"outline_id" json:"outline_id"`
-	Title       string         `db:"title" json:"title"`
-	Description sql.NullString `db:"description" json:"description"`
-	Position    int32          `db:"position" json:"position"`
-	CreatedAt   time.Time      `db:"created_at" json:"created_at"`
+	ID             uuid.UUID      `db:"id" json:"id"`
+	TenantID       uuid.UUID      `db:"tenant_id" json:"tenant_id"`
+	OutlineID      uuid.UUID      `db:"outline_id" json:"outline_id"`
+	Title          string         `db:"title" json:"title"`
+	Description    sql.NullString `db:"description" json:"description"`
+	Position       int32          `db:"position" json:"position"`
+	CreatedAt      time.Time      `db:"created_at" json:"created_at"`
+	IsFirstSection bool           `db:"is_first_section" json:"is_first_section"`
+	IsLastSection  bool           `db:"is_last_section" json:"is_last_section"`
 }
 
 type PendingRegistration struct {

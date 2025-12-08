@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 	"google.golang.org/genai"
 
@@ -15,15 +17,15 @@ import (
 
 const (
 	// DefaultModel is the default Gemini model to use.
-	// Using 2.0-flash for better API limits (15 RPM) and larger context window (1M tokens)
+	// Using 2.0-flash for larger context window (1M tokens)
 	DefaultModel = "gemini-2.0-flash"
 
-	// Rate limiting constants for Gemini Flash 2.0 free tier
-	// Free tier: 15 RPM (requests per minute), 1M token context
-	defaultRPM          = 15
-	defaultBurstSize    = 5           // Allow small bursts for better UX
-	defaultMaxRetries   = 3           // Max retries on rate limit errors
-	defaultBaseDelay    = 4 * time.Second // Base delay for backoff (60s / 15 RPM)
+	// Rate limiting constants for Gemini Flash 2.0 paid tier
+	// Paid tier: 2000 RPM (requests per minute), 1M token context
+	defaultRPM        = 2000
+	defaultBurstSize  = 100                          // Allow larger bursts for parallel generation
+	defaultMaxRetries = 3                            // Max retries on rate limit errors
+	defaultBaseDelay  = 30 * time.Millisecond        // Base delay for backoff (60s / 2000 RPM = 30ms)
 )
 
 // Client implements service.AIProvider using Google Gemini.
@@ -44,8 +46,8 @@ func NewClient(ctx context.Context, apiKey string) (*Client, error) {
 		return nil, fmt.Errorf("failed to create Gemini client: %w", err)
 	}
 
-	// Create rate limiter: 15 requests per minute with burst of 5
-	// rate.Every(4*time.Second) = 1 token every 4 seconds = 15/minute
+	// Create rate limiter: 2000 requests per minute with burst of 100
+	// rate.Every(30ms) = ~33 tokens/second = ~2000/minute
 	limiter := rate.NewLimiter(rate.Every(defaultBaseDelay), defaultBurstSize)
 
 	return &Client{
@@ -188,67 +190,84 @@ func (c *Client) GenerateCourseOutline(ctx context.Context, req service.Generate
 		return nil, fmt.Errorf("failed to parse sections response: %w", err)
 	}
 
-	// Step 2: Generate detailed lessons for each section
+	// Step 2: Generate detailed lessons for each section IN PARALLEL
 	sections := make([]service.OutlineSectionResult, len(sectionsResp.Sections))
-	totalLessons := 0
+	var tokensUsedAtomic atomic.Int64
+
+	g, gctx := errgroup.WithContext(ctx)
 
 	for i, section := range sectionsResp.Sections {
-		// Check for cancellation before each section
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("outline generation cancelled after %d sections: %w", i, ctx.Err())
-		default:
-		}
+		i, section := i, section // Capture loop variables
 
-		lessonsPrompt := buildSectionLessonsPrompt(req, section.Title, section.Description, section.LessonTitles)
-		lessonsConfig := &genai.GenerateContentConfig{
-			ResponseMIMEType:   "application/json",
-			ResponseJsonSchema: sectionLessonsSchema(),
-		}
-
-		lessonsResult, err := c.generateWithRetry(ctx, fmt.Sprintf("generate lessons for section %d", i+1), func() (*genai.GenerateContentResponse, error) {
-			return c.client.Models.GenerateContent(
-				ctx,
-				c.model,
-				genai.Text(lessonsPrompt),
-				lessonsConfig,
-			)
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate lessons for section %q: %w", section.Title, err)
-		}
-		totalTokensUsed += extractTokensUsed(lessonsResult)
-
-		// Parse lessons response
-		var lessonsResp sectionLessonsResponse
-		if err := json.Unmarshal([]byte(lessonsResult.Text()), &lessonsResp); err != nil {
-			return nil, fmt.Errorf("failed to parse lessons response for section %q: %w", section.Title, err)
-		}
-
-		// Convert to domain result
-		lessons := make([]service.OutlineLessonResult, len(lessonsResp.Lessons))
-		for j, l := range lessonsResp.Lessons {
-			lessons[j] = service.OutlineLessonResult{
-				Title:                    l.Title,
-				Description:              l.Description,
-				Order:                    j + 1,
-				EstimatedDurationMinutes: l.EstimatedDurationMinutes,
-				LearningObjectives:       l.LearningObjectives,
-				IsLastInSection:          j == len(lessonsResp.Lessons)-1,
+		g.Go(func() error {
+			lessonsPrompt := buildSectionLessonsPrompt(req, section.Title, section.Description, section.LessonTitles)
+			lessonsConfig := &genai.GenerateContentConfig{
+				ResponseMIMEType:   "application/json",
+				ResponseJsonSchema: sectionLessonsSchema(),
 			}
-			totalLessons++
-		}
 
-		sections[i] = service.OutlineSectionResult{
-			Title:       section.Title,
-			Description: section.Description,
-			Order:       i + 1,
-			Lessons:     lessons,
-		}
+			lessonsResult, err := c.generateWithRetry(gctx, fmt.Sprintf("generate lessons for section %d", i+1), func() (*genai.GenerateContentResponse, error) {
+				return c.client.Models.GenerateContent(
+					gctx,
+					c.model,
+					genai.Text(lessonsPrompt),
+					lessonsConfig,
+				)
+			})
+			if err != nil {
+				return fmt.Errorf("failed to generate lessons for section %q: %w", section.Title, err)
+			}
+			tokensUsedAtomic.Add(extractTokensUsed(lessonsResult))
+
+			// Parse lessons response
+			var lessonsResp sectionLessonsResponse
+			if err := json.Unmarshal([]byte(lessonsResult.Text()), &lessonsResp); err != nil {
+				return fmt.Errorf("failed to parse lessons response for section %q: %w", section.Title, err)
+			}
+
+			// Convert to domain result with positional flags
+			lessons := make([]service.OutlineLessonResult, len(lessonsResp.Lessons))
+			for j, l := range lessonsResp.Lessons {
+				lessons[j] = service.OutlineLessonResult{
+					Title:                    l.Title,
+					Description:              l.Description,
+					Order:                    j + 1,
+					EstimatedDurationMinutes: l.EstimatedDurationMinutes,
+					LearningObjectives:       l.LearningObjectives,
+					IsFirstInSection:         j == 0,
+					IsLastInSection:          j == len(lessonsResp.Lessons)-1,
+					// IsFirstInCourse and IsLastInCourse set after all sections complete
+				}
+			}
+
+			sections[i] = service.OutlineSectionResult{
+				Title:          section.Title,
+				Description:    section.Description,
+				Order:          i + 1,
+				Lessons:        lessons,
+				IsFirstSection: i == 0,
+				IsLastSection:  i == len(sectionsResp.Sections)-1,
+			}
+
+			return nil
+		})
 	}
 
-	// Set IsLastInCourse on the last lesson
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	totalTokensUsed += tokensUsedAtomic.Load()
+
+	// Set course-level positional flags (IsFirstInCourse on first lesson, IsLastInCourse on last lesson)
 	if len(sections) > 0 {
+		// Set IsFirstInCourse on the very first lesson
+		firstSection := &sections[0]
+		if len(firstSection.Lessons) > 0 {
+			firstSection.Lessons[0].IsFirstInCourse = true
+		}
+
+		// Set IsLastInCourse on the very last lesson
 		lastSection := &sections[len(sections)-1]
 		if len(lastSection.Lessons) > 0 {
 			lastSection.Lessons[len(lastSection.Lessons)-1].IsLastInCourse = true
@@ -293,9 +312,10 @@ func (c *Client) GenerateLessonContent(ctx context.Context, req service.Generate
 		return nil, fmt.Errorf("failed to parse component plan: %w", err)
 	}
 
-	// Step 2: Generate each component individually
+	// Step 2: Generate each component individually with position awareness
 	var components []service.LessonComponentResult
 	var previousComponentsContext strings.Builder
+	totalComponents := len(plan.Components)
 
 	for i, planned := range plan.Components {
 		// Check for cancellation before each component
@@ -305,15 +325,23 @@ func (c *Client) GenerateLessonContent(ctx context.Context, req service.Generate
 		default:
 		}
 
-		// Build prompt for this single component
-		compPrompt := buildSingleComponentPrompt(req, planned, previousComponentsContext.String())
+		// Build position information for this component
+		pos := componentPosition{
+			Index:   i,
+			Total:   totalComponents,
+			IsFirst: i == 0,
+			IsLast:  i == totalComponents-1,
+		}
+
+		// Build prompt for this single component with position awareness
+		compPrompt := buildSingleComponentPromptWithPosition(req, planned, previousComponentsContext.String(), pos)
 		compSchema := singleComponentSchema(planned.ComponentType)
 		compConfig := &genai.GenerateContentConfig{
 			ResponseMIMEType:   "application/json",
 			ResponseJsonSchema: compSchema,
 		}
 
-		compResult, err := c.generateWithRetry(ctx, fmt.Sprintf("generate %s component", planned.ComponentType), func() (*genai.GenerateContentResponse, error) {
+		compResult, err := c.generateWithRetry(ctx, fmt.Sprintf("generate %s component %d/%d", planned.ComponentType, i+1, totalComponents), func() (*genai.GenerateContentResponse, error) {
 			return c.client.Models.GenerateContent(ctx, c.model, genai.Text(compPrompt), compConfig)
 		})
 		if err != nil {
@@ -341,9 +369,11 @@ func (c *Client) GenerateLessonContent(ctx context.Context, req service.Generate
 		previousComponentsContext.WriteString(fmt.Sprintf("- [%s] %s\n", planned.ComponentType, summary))
 	}
 
-	// Step 3: Generate segue text
+	// Step 3: Generate segue text (for all lessons, including last one for course conclusion)
 	segueText := ""
-	if !req.IsLastInCourse && req.NextLessonTitle != "" {
+	// Generate segue for: transitions to next lesson, section transitions, or course conclusion
+	shouldGenerateSegue := req.NextLessonTitle != "" || req.NextSectionTitle != "" || req.IsLastInCourse
+	if shouldGenerateSegue {
 		seguePrompt := buildSeguePrompt(req)
 		segueConfig := &genai.GenerateContentConfig{
 			ResponseMIMEType:   "application/json",
@@ -1392,34 +1422,151 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 
 	sb.WriteString("You are an expert instructional designer planning components for a lesson.\n\n")
 
-	sb.WriteString("## Lesson Information\n")
-	sb.WriteString(fmt.Sprintf("**Course:** %s\n", req.CourseTitle))
-	sb.WriteString(fmt.Sprintf("**Section:** %s\n", req.SectionTitle))
-	sb.WriteString(fmt.Sprintf("**Lesson:** %s\n", req.LessonTitle))
-	sb.WriteString(fmt.Sprintf("**Description:** %s\n\n", req.LessonDescription))
+	// Course context
+	sb.WriteString("## Course Overview\n")
+	sb.WriteString(fmt.Sprintf("**Course Title:** %s\n", req.CourseTitle))
+	if req.CourseDescription != "" {
+		sb.WriteString(fmt.Sprintf("**Course Description:** %s\n", req.CourseDescription))
+	}
+	sb.WriteString("\n")
 
+	// Course outline for context
+	if len(req.CourseOutline) > 0 {
+		sb.WriteString("## Course Structure\n")
+		for _, section := range req.CourseOutline {
+			marker := ""
+			if section.Order == req.SectionOrder {
+				marker = " ← CURRENT SECTION"
+			}
+			sb.WriteString(fmt.Sprintf("**Section %d: %s**%s\n", section.Order, section.Title, marker))
+			for _, lesson := range section.Lessons {
+				lessonMarker := ""
+				if section.Order == req.SectionOrder && lesson.Order == req.LessonOrder {
+					lessonMarker = " ← CURRENT LESSON"
+				}
+				sb.WriteString(fmt.Sprintf("  - Lesson %d: %s%s\n", lesson.Order, lesson.Title, lessonMarker))
+			}
+		}
+		sb.WriteString("\n")
+	}
+
+	// Section context
+	sb.WriteString("## Current Section\n")
+	sb.WriteString(fmt.Sprintf("**Section %d:** %s\n", req.SectionOrder, req.SectionTitle))
+	if req.SectionDescription != "" {
+		sb.WriteString(fmt.Sprintf("**Description:** %s\n", req.SectionDescription))
+	}
+	if req.IsFirstSection {
+		sb.WriteString("*This is the FIRST section of the course.*\n")
+	}
+	if req.IsLastSection {
+		sb.WriteString("*This is the LAST section of the course.*\n")
+	}
+	sb.WriteString("\n")
+
+	// Lesson context with position
+	sb.WriteString("## Current Lesson\n")
+	sb.WriteString(fmt.Sprintf("**Lesson %d:** %s\n", req.LessonOrder, req.LessonTitle))
+	sb.WriteString(fmt.Sprintf("**Description:** %s\n", req.LessonDescription))
+
+	// Position indicators
+	var positionNotes []string
+	if req.IsFirstInCourse {
+		positionNotes = append(positionNotes, "FIRST lesson in the entire course")
+	}
+	if req.IsLastInCourse {
+		positionNotes = append(positionNotes, "LAST lesson in the entire course")
+	}
+	if req.IsFirstInSection && !req.IsFirstInCourse {
+		positionNotes = append(positionNotes, "First lesson in this section")
+	}
+	if req.IsLastInSection && !req.IsLastInCourse {
+		positionNotes = append(positionNotes, "Last lesson in this section")
+	}
+	if len(positionNotes) > 0 {
+		sb.WriteString(fmt.Sprintf("**Position:** %s\n", strings.Join(positionNotes, ", ")))
+	}
+	sb.WriteString("\n")
+
+	// Learning objectives
 	sb.WriteString("## Learning Objectives\n")
 	for _, obj := range req.LearningObjectives {
 		sb.WriteString(fmt.Sprintf("- %s\n", obj))
 	}
 	sb.WriteString("\n")
 
+	// Previously generated content in this section
+	if len(req.PreviousLessonsInSection) > 0 {
+		sb.WriteString("## Previously Completed Lessons in This Section\n")
+		for _, prev := range req.PreviousLessonsInSection {
+			sb.WriteString(fmt.Sprintf("**%s** (%d components)\n", prev.Title, prev.ComponentCount))
+			if len(prev.KeyPoints) > 0 {
+				sb.WriteString("Key points covered:\n")
+				for _, point := range prev.KeyPoints {
+					sb.WriteString(fmt.Sprintf("  - %s\n", point))
+				}
+			}
+		}
+		sb.WriteString("\n")
+	}
+
+	// Navigation context
+	if req.PreviousLessonTitle != "" {
+		sb.WriteString(fmt.Sprintf("**Previous Lesson:** %s\n", req.PreviousLessonTitle))
+		if req.PreviousLessonSummary != "" {
+			sb.WriteString(fmt.Sprintf("  Summary: %s\n", req.PreviousLessonSummary))
+		}
+	}
+	if req.NextLessonTitle != "" {
+		sb.WriteString(fmt.Sprintf("**Next Lesson:** %s\n", req.NextLessonTitle))
+	}
+	if req.NextSectionTitle != "" && req.IsLastInSection {
+		sb.WriteString(fmt.Sprintf("**Next Section:** %s\n", req.NextSectionTitle))
+	}
+	sb.WriteString("\n")
+
+	// Target audience
 	sb.WriteString("## Target Audience\n")
 	sb.WriteString(fmt.Sprintf("**Role:** %s\n", req.TargetAudience.Role))
 	sb.WriteString(fmt.Sprintf("**Experience Level:** %s\n\n", req.TargetAudience.ExperienceLevel))
 
-	sb.WriteString("## Instructions\n")
+	// Instructions with position-aware guidance
+	sb.WriteString("## Component Planning Instructions\n")
 	sb.WriteString("Plan 5-8 components for this lesson. For each component, specify:\n")
 	sb.WriteString("1. The type (text, heading, image, or quiz)\n")
 	sb.WriteString("2. A brief purpose describing what it will contain\n\n")
 
-	sb.WriteString("The lesson should include:\n")
+	sb.WriteString("Required components:\n")
 	sb.WriteString("- At least 1 heading (for structure)\n")
 	sb.WriteString("- At least 2 text components (for content)\n")
 	sb.WriteString("- At least 1 image (for visual learning)\n")
 	sb.WriteString("- At least 1 quiz (for knowledge check)\n\n")
 
-	sb.WriteString("Structure the lesson with:\n")
+	// Position-specific guidance
+	if req.IsFirstInCourse {
+		sb.WriteString("**IMPORTANT - First Lesson of Course:**\n")
+		sb.WriteString("- Start with a welcoming introduction to the entire course\n")
+		sb.WriteString("- Set expectations for what learners will achieve\n")
+		sb.WriteString("- Build excitement and motivation\n\n")
+	} else if req.IsFirstInSection {
+		sb.WriteString("**IMPORTANT - First Lesson of Section:**\n")
+		sb.WriteString("- Introduce the section's theme and goals\n")
+		sb.WriteString("- Connect to what was learned in the previous section\n")
+		sb.WriteString("- Set expectations for this section\n\n")
+	}
+
+	if req.IsLastInCourse {
+		sb.WriteString("**IMPORTANT - Final Lesson of Course:**\n")
+		sb.WriteString("- Include a comprehensive summary/conclusion component\n")
+		sb.WriteString("- Celebrate the learner's achievement\n")
+		sb.WriteString("- Provide next steps or resources for continued learning\n\n")
+	} else if req.IsLastInSection {
+		sb.WriteString("**IMPORTANT - Last Lesson of Section:**\n")
+		sb.WriteString("- Include a section summary component\n")
+		sb.WriteString("- Prepare learners for the transition to the next section\n\n")
+	}
+
+	sb.WriteString("General structure:\n")
 	sb.WriteString("1. Introduction heading and text\n")
 	sb.WriteString("2. Main content with explanations and examples\n")
 	sb.WriteString("3. Visual element (image or diagram)\n")
@@ -1429,57 +1576,152 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 	return sb.String()
 }
 
+// componentPosition tracks where a component is in the lesson
+type componentPosition struct {
+	Index       int
+	Total       int
+	IsFirst     bool
+	IsLast      bool
+}
+
 func buildSingleComponentPrompt(req service.GenerateLessonRequest, planned plannedComponent, previousComponents string) string {
+	return buildSingleComponentPromptWithPosition(req, planned, previousComponents, componentPosition{})
+}
+
+func buildSingleComponentPromptWithPosition(req service.GenerateLessonRequest, planned plannedComponent, previousComponents string, pos componentPosition) string {
 	var sb strings.Builder
 
-	sb.WriteString("You are generating a single educational component.\n\n")
+	sb.WriteString("You are generating a single educational component for a lesson.\n\n")
 
+	// Course and lesson context
 	sb.WriteString("## Context\n")
 	sb.WriteString(fmt.Sprintf("**Course:** %s\n", req.CourseTitle))
-	sb.WriteString(fmt.Sprintf("**Section:** %s\n", req.SectionTitle))
-	sb.WriteString(fmt.Sprintf("**Lesson:** %s\n\n", req.LessonTitle))
+	sb.WriteString(fmt.Sprintf("**Section %d:** %s\n", req.SectionOrder, req.SectionTitle))
+	sb.WriteString(fmt.Sprintf("**Lesson %d:** %s\n", req.LessonOrder, req.LessonTitle))
+	sb.WriteString(fmt.Sprintf("**Lesson Description:** %s\n\n", req.LessonDescription))
 
+	// Lesson position context
+	var lessonPosition []string
+	if req.IsFirstInCourse {
+		lessonPosition = append(lessonPosition, "First lesson of the entire course")
+	}
+	if req.IsLastInCourse {
+		lessonPosition = append(lessonPosition, "Final lesson of the entire course")
+	}
+	if req.IsFirstInSection && !req.IsFirstInCourse {
+		lessonPosition = append(lessonPosition, "First lesson in this section")
+	}
+	if req.IsLastInSection && !req.IsLastInCourse {
+		lessonPosition = append(lessonPosition, "Last lesson in this section")
+	}
+	if len(lessonPosition) > 0 {
+		sb.WriteString(fmt.Sprintf("**Lesson Position:** %s\n\n", strings.Join(lessonPosition, ", ")))
+	}
+
+	// Component position context
 	sb.WriteString("## Component to Generate\n")
 	sb.WriteString(fmt.Sprintf("**Type:** %s\n", planned.ComponentType))
-	sb.WriteString(fmt.Sprintf("**Purpose:** %s\n\n", planned.Purpose))
+	sb.WriteString(fmt.Sprintf("**Purpose:** %s\n", planned.Purpose))
+	if pos.Total > 0 {
+		sb.WriteString(fmt.Sprintf("**Position:** Component %d of %d in this lesson\n", pos.Index+1, pos.Total))
+		if pos.IsFirst {
+			sb.WriteString("*This is the FIRST component of the lesson.*\n")
+		}
+		if pos.IsLast {
+			sb.WriteString("*This is the LAST component of the lesson.*\n")
+		}
+	}
+	sb.WriteString("\n")
 
+	// Previous components
 	if previousComponents != "" {
-		sb.WriteString("## Previously Generated Components\n")
+		sb.WriteString("## Previously Generated Components in This Lesson\n")
 		sb.WriteString(previousComponents)
 		sb.WriteString("\n")
 	}
 
+	// Navigation context for transitions
+	if pos.IsFirst && req.PreviousLessonTitle != "" {
+		sb.WriteString("## Coming From\n")
+		sb.WriteString(fmt.Sprintf("The previous lesson was: %s\n", req.PreviousLessonTitle))
+		if req.PreviousLessonSummary != "" {
+			sb.WriteString(fmt.Sprintf("Summary: %s\n", req.PreviousLessonSummary))
+		}
+		sb.WriteString("\n")
+	}
+
+	if pos.IsLast {
+		sb.WriteString("## Going To\n")
+		if req.IsLastInCourse {
+			sb.WriteString("This is the final lesson of the course - conclude with accomplishment and next steps.\n")
+		} else if req.IsLastInSection && req.NextSectionTitle != "" {
+			sb.WriteString(fmt.Sprintf("Next section: %s\n", req.NextSectionTitle))
+			if req.NextLessonTitle != "" {
+				sb.WriteString(fmt.Sprintf("First lesson of next section: %s\n", req.NextLessonTitle))
+			}
+		} else if req.NextLessonTitle != "" {
+			sb.WriteString(fmt.Sprintf("Next lesson: %s\n", req.NextLessonTitle))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Target audience
 	sb.WriteString("## Target Audience\n")
 	sb.WriteString(fmt.Sprintf("**Role:** %s\n", req.TargetAudience.Role))
 	sb.WriteString(fmt.Sprintf("**Experience Level:** %s\n\n", req.TargetAudience.ExperienceLevel))
 
-	// Type-specific instructions
+	// Type-specific instructions with position awareness
+	sb.WriteString("## Instructions\n")
 	switch planned.ComponentType {
 	case "heading":
-		sb.WriteString("## Instructions\n")
 		sb.WriteString("Generate a heading with:\n")
 		sb.WriteString("- heading_level: 2 for main sections, 3 for subsections\n")
 		sb.WriteString("- heading_text: Clear, descriptive heading text\n")
+		if pos.IsFirst && req.IsFirstInCourse {
+			sb.WriteString("\n*As the first heading of the course, make it welcoming and set the stage.*\n")
+		} else if pos.IsFirst && req.IsFirstInSection {
+			sb.WriteString("\n*As the first heading of this section, introduce the section's theme.*\n")
+		}
 	case "text":
-		sb.WriteString("## Instructions\n")
 		sb.WriteString("Generate text content with:\n")
 		sb.WriteString("- text_html: 2-4 paragraphs of HTML-formatted content\n")
 		sb.WriteString("- Use <p> tags for paragraphs\n")
 		sb.WriteString("- Can include <strong>, <em>, <ul>, <li> for emphasis and lists\n")
 		sb.WriteString("- Be educational and engaging\n")
+		if pos.IsFirst && req.IsFirstInCourse {
+			sb.WriteString("\n*As the first text of the course, welcome learners and set expectations.*\n")
+		}
+		if pos.IsLast && req.IsLastInCourse {
+			sb.WriteString("\n*As the final text of the course, provide a strong conclusion and celebrate completion.*\n")
+		} else if pos.IsLast && req.IsLastInSection {
+			sb.WriteString("\n*As the last text in this section, summarize key takeaways and prepare for the next section.*\n")
+		}
 	case "image":
-		sb.WriteString("## Instructions\n")
 		sb.WriteString("Generate an image placeholder with:\n")
 		sb.WriteString("- image_description: Detailed description of the image to show\n")
 		sb.WriteString("- image_alt_text: Accessibility description\n")
 		sb.WriteString("- image_caption: Optional caption\n")
 	case "quiz":
-		sb.WriteString("## Instructions\n")
 		sb.WriteString("Generate a quiz question with:\n")
 		sb.WriteString("- quiz_question: Clear question text\n")
 		sb.WriteString("- quiz_options: 3-4 answer options with id (a,b,c,d) and text\n")
 		sb.WriteString("- quiz_correct_answer_id: The correct option's id\n")
 		sb.WriteString("- quiz_explanation: Why the correct answer is right\n")
+		if pos.IsLast {
+			sb.WriteString("\n*As the final component, make this quiz reinforce the key learning objectives.*\n")
+		}
+	case "code":
+		sb.WriteString("Generate a code snippet with:\n")
+		sb.WriteString("- code: Relevant code example (5-15 lines)\n")
+		sb.WriteString("- language: Programming language (javascript, python, go, etc.)\n")
+	case "callout":
+		sb.WriteString("Generate a callout with:\n")
+		sb.WriteString("- style: info, warning, success, error, or tip\n")
+		sb.WriteString("- title: Optional short title\n")
+		sb.WriteString("- content: Important information (1-2 sentences)\n")
+		if pos.IsLast && req.IsLastInSection {
+			sb.WriteString("\n*Consider using a 'tip' or 'success' callout to summarize key section takeaways.*\n")
+		}
 	}
 
 	return sb.String()
@@ -1488,13 +1730,45 @@ func buildSingleComponentPrompt(req service.GenerateLessonRequest, planned plann
 func buildSeguePrompt(req service.GenerateLessonRequest) string {
 	var sb strings.Builder
 
-	sb.WriteString("You are writing a transition to the next lesson.\n\n")
+	sb.WriteString("You are writing a transition to connect lessons.\n\n")
 
+	// Context
+	sb.WriteString("## Current Context\n")
+	sb.WriteString(fmt.Sprintf("**Course:** %s\n", req.CourseTitle))
+	sb.WriteString(fmt.Sprintf("**Current Section:** %s\n", req.SectionTitle))
 	sb.WriteString(fmt.Sprintf("**Current Lesson:** %s\n", req.LessonTitle))
-	sb.WriteString(fmt.Sprintf("**Next Lesson:** %s\n\n", req.NextLessonTitle))
 
-	sb.WriteString("Write 1-2 sentences that smoothly transition from this lesson to the next.\n")
-	sb.WriteString("The segue should connect the concepts and motivate learners to continue.\n")
+	// Determine transition type
+	if req.IsLastInCourse {
+		sb.WriteString("\n## Transition Type: COURSE CONCLUSION\n")
+		sb.WriteString("This is the final lesson of the entire course.\n\n")
+		sb.WriteString("## Instructions\n")
+		sb.WriteString("Write 2-3 sentences that:\n")
+		sb.WriteString("- Congratulate the learner on completing the course\n")
+		sb.WriteString("- Summarize the key achievement\n")
+		sb.WriteString("- Encourage applying the learned skills\n")
+		sb.WriteString("- Optionally suggest next steps or resources\n")
+	} else if req.IsLastInSection && req.NextSectionTitle != "" {
+		sb.WriteString(fmt.Sprintf("\n## Transition Type: SECTION TO SECTION\n"))
+		sb.WriteString(fmt.Sprintf("**Next Section:** %s\n", req.NextSectionTitle))
+		if req.NextLessonTitle != "" {
+			sb.WriteString(fmt.Sprintf("**First Lesson of Next Section:** %s\n", req.NextLessonTitle))
+		}
+		sb.WriteString("\n## Instructions\n")
+		sb.WriteString("Write 2-3 sentences that:\n")
+		sb.WriteString("- Acknowledge completion of the current section\n")
+		sb.WriteString("- Preview what's coming in the next section\n")
+		sb.WriteString("- Build excitement for the new topics\n")
+		sb.WriteString("- Create a smooth bridge between sections\n")
+	} else {
+		sb.WriteString(fmt.Sprintf("\n## Transition Type: LESSON TO LESSON\n"))
+		sb.WriteString(fmt.Sprintf("**Next Lesson:** %s\n", req.NextLessonTitle))
+		sb.WriteString("\n## Instructions\n")
+		sb.WriteString("Write 1-2 sentences that:\n")
+		sb.WriteString("- Connect the concepts just learned to the next topic\n")
+		sb.WriteString("- Create natural flow between lessons\n")
+		sb.WriteString("- Motivate the learner to continue\n")
+	}
 
 	return sb.String()
 }

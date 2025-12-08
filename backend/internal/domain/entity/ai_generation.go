@@ -107,6 +107,10 @@ type OutlineSection struct {
 	Description string
 	Position    int32
 
+	// Position flags for contextual generation
+	IsFirstSection bool
+	IsLastSection  bool
+
 	Lessons []OutlineLesson // Loaded separately or populated
 
 	CreatedAt time.Time
@@ -124,9 +128,11 @@ type OutlineLesson struct {
 	EstimatedDurationMinutes *int32
 	LearningObjectives       []string
 
-	// Flags for segue generation
-	IsLastInSection bool
-	IsLastInCourse  bool
+	// Position flags for contextual generation
+	IsFirstInSection bool // First lesson in this section
+	IsLastInSection  bool // Last lesson in this section
+	IsFirstInCourse  bool // First lesson in entire course
+	IsLastInCourse   bool // Last lesson in entire course
 
 	CreatedAt time.Time
 }

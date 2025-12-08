@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -17,10 +17,8 @@ import {
   HelpCircle,
   Code,
   AlertCircle,
-  Type,
   Heading,
-  X,
-  Check,
+  Trash2,
 } from 'lucide-react';
 import {
   DndContext,
@@ -29,7 +27,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -43,69 +43,66 @@ import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useGetCourseOutline, useListGeneratedLessons } from '@/hooks/useAIGeneration';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
+import { EditModal } from '@/components/course/modals/EditModal';
+import { useCourseEditorStore, setOnSaveCallback } from '@/store/zustand/courseEditorStore';
 import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
 
 interface SortableComponentProps {
   component: LessonComponent;
-  isSelected: boolean;
-  onSelect: () => void;
-  onEdit: (contentJson: string) => void;
+  onClick: () => void;
+  isDragging: boolean;
 }
 
-function SortableComponent({ component, isSelected, onSelect, onEdit }: SortableComponentProps) {
+function SortableComponent({ component, onClick, isDragging }: SortableComponentProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-    isDragging,
   } = useSortable({ id: component.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const getComponentIcon = (type: number) => {
-    switch (type) {
-      case 1: return <FileText className="w-4 h-4" />;
-      case 2: return <Heading className="w-4 h-4" />;
-      case 3: return <Image className="w-4 h-4" />;
-      case 4: return <HelpCircle className="w-4 h-4" />;
-      case 5: return <Code className="w-4 h-4" />;
-      case 6: return <AlertCircle className="w-4 h-4" />;
-      default: return <Type className="w-4 h-4" />;
-    }
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative ${isSelected ? 'z-10' : ''}`}
+      className={`group relative cursor-pointer ${isDragging ? 'opacity-0' : ''}`}
+      onClick={onClick}
     >
-      {/* Drag handle and type indicator */}
-      <div className="absolute left-0 top-0 bottom-0 flex items-center -translate-x-10 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          {...attributes}
-          {...listeners}
-          className="p-1 text-muted hover:text-secondary cursor-grab active:cursor-grabbing"
-        >
-          <GripVertical className="w-5 h-5" />
-        </button>
-        <span className="text-muted ml-1">{getComponentIcon(component.type)}</span>
-      </div>
+      {/* Drag handle - only visible on hover */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing -translate-x-10 z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="w-5 h-5 text-muted" />
+      </button>
 
       {/* Component content */}
-      <ComponentRenderer
-        component={component}
-        isEditing={false}
-        isSelected={isSelected}
-        onSelect={onSelect}
-        onUpdate={onEdit}
-      />
+      <div className="hover:ring-2 hover:ring-purple-300 hover:ring-offset-2 rounded-lg transition-all">
+        <ComponentRenderer component={component} isEditing={false} />
+      </div>
+    </div>
+  );
+}
+
+// Preview component for drag overlay - renders outside DOM flow for smooth dragging
+function DragPreview({ component }: { component: LessonComponent }) {
+  return (
+    <div className="relative bg-surface rounded-lg border-2 border-purple-400 shadow-2xl cursor-grabbing">
+      {/* Drag handle visible during drag */}
+      <div className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center -translate-x-10">
+        <GripVertical className="w-5 h-5 text-purple-400" />
+      </div>
+      <div className="p-4">
+        <ComponentRenderer component={component} isEditing={false} />
+      </div>
     </div>
   );
 }
@@ -125,25 +122,40 @@ export default function CourseEditorPage() {
   const courseId = params.courseId as string;
 
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
-  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [localComponents, setLocalComponents] = useState<LessonComponent[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Zustand store for modal editing
+  const openEditModal = useCourseEditorStore((s) => s.openEditModal);
 
   // Fetch outline and lessons
   const { data: outline, isLoading: outlineLoading } = useGetCourseOutline(courseId);
   const { data: generatedLessons, isLoading: lessonsLoading } = useListGeneratedLessons(courseId);
 
-  // DnD sensors
+  // DnD sensors with 8px activation distance to prevent accidental drags
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
+      activationConstraint: { distance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Set up save callback for zustand store
+  useEffect(() => {
+    setOnSaveCallback((componentId: string, contentJson: string) => {
+      setLocalComponents((items) =>
+        items.map((item) =>
+          item.id === componentId ? { ...item, contentJson } : item
+        )
+      );
+      setHasChanges(true);
+    });
+  }, []);
 
   // Build lesson list from outline
   const lessonsList = useMemo(() => {
@@ -163,13 +175,18 @@ export default function CourseEditorPage() {
     return items;
   }, [outline, generatedLessons]);
 
-  // Get current lesson's components
+  // Get current lesson
   const currentLesson = useMemo(() => {
     return lessonsList.find((l) => l.id === selectedLessonId);
   }, [lessonsList, selectedLessonId]);
 
+  // Get active component for drag overlay
+  const activeComponent = useMemo(() => {
+    return localComponents.find((c) => c.id === activeId);
+  }, [localComponents, activeId]);
+
   // Initialize local components when lesson changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentLesson?.generated?.components) {
       const sorted = [...currentLesson.generated.components].sort((a, b) => a.order - b.order);
       setLocalComponents(sorted);
@@ -177,7 +194,6 @@ export default function CourseEditorPage() {
     } else {
       setLocalComponents([]);
     }
-    setSelectedComponentId(null);
   }, [currentLesson?.generated?.components, selectedLessonId]);
 
   const toggleSection = (sectionIndex: number) => {
@@ -192,14 +208,19 @@ export default function CourseEditorPage() {
     });
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
+
     if (over && active.id !== over.id) {
       setLocalComponents((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id);
         const newIndex = items.findIndex((item) => item.id === over.id);
         const reordered = arrayMove(items, oldIndex, newIndex);
-        // Update order values
         return reordered.map((item, index) => ({
           ...item,
           order: index,
@@ -209,14 +230,15 @@ export default function CourseEditorPage() {
     }
   }, []);
 
-  const handleComponentEdit = useCallback((componentId: string, contentJson: string) => {
-    setLocalComponents((items) =>
-      items.map((item) =>
-        item.id === componentId ? { ...item, contentJson } : item
-      )
-    );
-    setHasChanges(true);
-  }, []);
+  const handleDragCancel = () => {
+    setActiveId(null);
+  };
+
+  const handleComponentClick = useCallback((component: LessonComponent) => {
+    if (selectedLessonId) {
+      openEditModal(selectedLessonId, component);
+    }
+  }, [selectedLessonId, openEditModal]);
 
   const handleAddComponent = (type: number) => {
     const newComponent: LessonComponent = {
@@ -227,15 +249,17 @@ export default function CourseEditorPage() {
       $typeName: 'mirai.v1.LessonComponent',
     };
     setLocalComponents([...localComponents, newComponent]);
-    setSelectedComponentId(newComponent.id);
     setShowAddMenu(false);
     setHasChanges(true);
+
+    // Open edit modal for the new component
+    if (selectedLessonId) {
+      openEditModal(selectedLessonId, newComponent);
+    }
   };
 
-  const handleDeleteComponent = () => {
-    if (!selectedComponentId) return;
-    setLocalComponents((items) => items.filter((item) => item.id !== selectedComponentId));
-    setSelectedComponentId(null);
+  const handleDeleteComponent = (componentId: string) => {
+    setLocalComponents((items) => items.filter((item) => item.id !== componentId));
     setHasChanges(true);
   };
 
@@ -381,42 +405,29 @@ export default function CourseEditorPage() {
               <CardHeader className="py-4 border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle as="h2">{currentLesson.title}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    {selectedComponentId && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleDeleteComponent}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Delete
-                      </Button>
+                  <div className="relative">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowAddMenu(!showAddMenu)}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Component
+                    </Button>
+                    {showAddMenu && (
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-default rounded-lg shadow-lg z-20">
+                        {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
+                          <button
+                            key={type}
+                            onClick={() => handleAddComponent(type)}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
+                          >
+                            <Icon className="w-4 h-4" />
+                            {name}
+                          </button>
+                        ))}
+                      </div>
                     )}
-                    <div className="relative">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setShowAddMenu(!showAddMenu)}
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add Component
-                      </Button>
-                      {showAddMenu && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border rounded-lg shadow-lg z-20">
-                          {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                            <button
-                              key={type}
-                              onClick={() => handleAddComponent(type)}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-surface transition-colors first:rounded-t-lg last:rounded-b-lg"
-                            >
-                              <Icon className="w-4 h-4" />
-                              {name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -425,7 +436,9 @@ export default function CourseEditorPage() {
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
+                    onDragCancel={handleDragCancel}
                   >
                     <SortableContext
                       items={localComponents.map((c) => c.id)}
@@ -433,18 +446,34 @@ export default function CourseEditorPage() {
                     >
                       <div className="space-y-4 pl-10">
                         {localComponents.map((component) => (
-                          <SortableComponent
-                            key={component.id}
-                            component={component}
-                            isSelected={component.id === selectedComponentId}
-                            onSelect={() => setSelectedComponentId(
-                              component.id === selectedComponentId ? null : component.id
-                            )}
-                            onEdit={(contentJson) => handleComponentEdit(component.id, contentJson)}
-                          />
+                          <div key={component.id} className="group/item relative">
+                            <SortableComponent
+                              component={component}
+                              onClick={() => handleComponentClick(component)}
+                              isDragging={activeId === component.id}
+                            />
+                            {/* Delete button on hover */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteComponent(component.id);
+                              }}
+                              className="absolute -right-2 -top-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-600 z-20"
+                              title="Delete component"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </SortableContext>
+
+                    {/* Drag overlay - renders outside DOM flow for smooth dragging */}
+                    <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+                      {activeComponent ? (
+                        <DragPreview component={activeComponent} />
+                      ) : null}
+                    </DragOverlay>
                   </DndContext>
                 ) : (
                   <div className="text-center py-12">
@@ -484,6 +513,9 @@ export default function CourseEditorPage() {
           onClick={() => setShowAddMenu(false)}
         />
       )}
+
+      {/* Edit Modal */}
+      <EditModal />
     </div>
   );
 }

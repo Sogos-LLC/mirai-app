@@ -136,12 +136,14 @@ func (r *CourseOutlineRepository) CreateCompleteOutline(ctx context.Context, out
 		// 2. Insert all sections
 		for _, section := range sections {
 			err := q.CreateOutlineSectionWithID(ctx, gen.CreateOutlineSectionWithIDParams{
-				ID:          section.ID,
-				TenantID:    section.TenantID,
-				OutlineID:   section.OutlineID,
-				Title:       section.Title,
-				Description: stringToNullString(section.Description),
-				Position:    section.Position,
+				ID:             section.ID,
+				TenantID:       section.TenantID,
+				OutlineID:      section.OutlineID,
+				Title:          section.Title,
+				Description:    stringToNullString(section.Description),
+				Position:       section.Position,
+				IsFirstSection: section.IsFirstSection,
+				IsLastSection:  section.IsLastSection,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to insert section %s: %w", section.Title, err)
@@ -153,13 +155,15 @@ func (r *CourseOutlineRepository) CreateCompleteOutline(ctx context.Context, out
 			err := q.CreateOutlineLessonWithID(ctx, gen.CreateOutlineLessonWithIDParams{
 				ID:                       lesson.ID,
 				TenantID:                 lesson.TenantID,
-				SectionID:               lesson.SectionID,
+				SectionID:                lesson.SectionID,
 				Title:                    lesson.Title,
-				Description:             stringToNullString(lesson.Description),
+				Description:              stringToNullString(lesson.Description),
 				Position:                 lesson.Position,
 				EstimatedDurationMinutes: toNullInt32FromPtr(lesson.EstimatedDurationMinutes),
 				LearningObjectives:       pq.StringArray(lesson.LearningObjectives),
+				IsFirstInSection:         lesson.IsFirstInSection,
 				IsLastInSection:          lesson.IsLastInSection,
+				IsFirstInCourse:          lesson.IsFirstInCourse,
 				IsLastInCourse:           lesson.IsLastInCourse,
 			})
 			if err != nil {
@@ -212,11 +216,13 @@ func NewOutlineSectionRepository(db *sql.DB) repository.OutlineSectionRepository
 func (r *OutlineSectionRepository) Create(ctx context.Context, section *entity.OutlineSection) error {
 	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.OutlineSection, error) {
 		return q.CreateOutlineSection(ctx, gen.CreateOutlineSectionParams{
-			TenantID:    section.TenantID,
-			OutlineID:   section.OutlineID,
-			Title:       section.Title,
-			Description: stringToNullString(section.Description),
-			Position:    section.Position,
+			TenantID:       section.TenantID,
+			OutlineID:      section.OutlineID,
+			Title:          section.Title,
+			Description:    stringToNullString(section.Description),
+			Position:       section.Position,
+			IsFirstSection: section.IsFirstSection,
+			IsLastSection:  section.IsLastSection,
 		})
 	})
 	if err != nil {
@@ -262,10 +268,12 @@ func (r *OutlineSectionRepository) ListByOutlineID(ctx context.Context, outlineI
 func (r *OutlineSectionRepository) Update(ctx context.Context, section *entity.OutlineSection) error {
 	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
 		return q.UpdateOutlineSection(ctx, gen.UpdateOutlineSectionParams{
-			Title:       section.Title,
-			Description: stringToNullString(section.Description),
-			Position:    section.Position,
-			ID:          section.ID,
+			Title:          section.Title,
+			Description:    stringToNullString(section.Description),
+			Position:       section.Position,
+			IsFirstSection: section.IsFirstSection,
+			IsLastSection:  section.IsLastSection,
+			ID:             section.ID,
 		})
 	})
 	if err != nil {
@@ -287,13 +295,15 @@ func (r *OutlineSectionRepository) Delete(ctx context.Context, id uuid.UUID) err
 
 func toOutlineSectionEntity(s *gen.OutlineSection) *entity.OutlineSection {
 	return &entity.OutlineSection{
-		ID:          s.ID,
-		TenantID:    s.TenantID,
-		OutlineID:   s.OutlineID,
-		Title:       s.Title,
-		Description: fromNullString(s.Description),
-		Position:    s.Position,
-		CreatedAt:   s.CreatedAt,
+		ID:             s.ID,
+		TenantID:       s.TenantID,
+		OutlineID:      s.OutlineID,
+		Title:          s.Title,
+		Description:    fromNullString(s.Description),
+		Position:       s.Position,
+		IsFirstSection: s.IsFirstSection,
+		IsLastSection:  s.IsLastSection,
+		CreatedAt:      s.CreatedAt,
 	}
 }
 
@@ -316,13 +326,15 @@ func (r *OutlineLessonRepository) Create(ctx context.Context, lesson *entity.Out
 	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.OutlineLesson, error) {
 		return q.CreateOutlineLesson(ctx, gen.CreateOutlineLessonParams{
 			TenantID:                 lesson.TenantID,
-			SectionID:               lesson.SectionID,
+			SectionID:                lesson.SectionID,
 			Title:                    lesson.Title,
-			Description:             stringToNullString(lesson.Description),
+			Description:              stringToNullString(lesson.Description),
 			Position:                 lesson.Position,
 			EstimatedDurationMinutes: toNullInt32FromPtr(lesson.EstimatedDurationMinutes),
 			LearningObjectives:       pq.StringArray(lesson.LearningObjectives),
+			IsFirstInSection:         lesson.IsFirstInSection,
 			IsLastInSection:          lesson.IsLastInSection,
+			IsFirstInCourse:          lesson.IsFirstInCourse,
 			IsLastInCourse:           lesson.IsLastInCourse,
 		})
 	})
@@ -370,13 +382,15 @@ func (r *OutlineLessonRepository) Update(ctx context.Context, lesson *entity.Out
 	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
 		return q.UpdateOutlineLesson(ctx, gen.UpdateOutlineLessonParams{
 			Title:                    lesson.Title,
-			Description:             stringToNullString(lesson.Description),
+			Description:              stringToNullString(lesson.Description),
 			Position:                 lesson.Position,
 			EstimatedDurationMinutes: toNullInt32FromPtr(lesson.EstimatedDurationMinutes),
 			LearningObjectives:       pq.StringArray(lesson.LearningObjectives),
+			IsFirstInSection:         lesson.IsFirstInSection,
 			IsLastInSection:          lesson.IsLastInSection,
+			IsFirstInCourse:          lesson.IsFirstInCourse,
 			IsLastInCourse:           lesson.IsLastInCourse,
-			ID:                       lesson.ID,
+			ID:                        lesson.ID,
 		})
 	})
 	if err != nil {
@@ -400,13 +414,15 @@ func toOutlineLessonEntity(l *gen.OutlineLesson) *entity.OutlineLesson {
 	return &entity.OutlineLesson{
 		ID:                       l.ID,
 		TenantID:                 l.TenantID,
-		SectionID:               l.SectionID,
+		SectionID:                l.SectionID,
 		Title:                    l.Title,
-		Description:             fromNullString(l.Description),
+		Description:              fromNullString(l.Description),
 		Position:                 l.Position,
 		EstimatedDurationMinutes: fromNullInt32Ptr(l.EstimatedDurationMinutes),
 		LearningObjectives:       []string(l.LearningObjectives),
+		IsFirstInSection:         l.IsFirstInSection,
 		IsLastInSection:          l.IsLastInSection,
+		IsFirstInCourse:          l.IsFirstInCourse,
 		IsLastInCourse:           l.IsLastInCourse,
 		CreatedAt:                l.CreatedAt,
 	}

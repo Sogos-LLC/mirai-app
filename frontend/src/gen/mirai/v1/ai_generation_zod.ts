@@ -85,7 +85,9 @@ export const OutlineLessonSchema = z.object({
   order: z.number().int(),
   estimatedDurationMinutes: z.number().int(),
   learningObjectives: z.array(z.string()),
+  isFirstInSection: z.boolean(),
   isLastInSection: z.boolean(),
+  isFirstInCourse: z.boolean(),
   isLastInCourse: z.boolean(),
 });
 
@@ -312,6 +314,8 @@ export const OutlineSectionSchema = z.object({
   description: z.string(),
   order: z.number().int(),
   lessons: z.array(OutlineLessonSchema),
+  isFirstSection: z.boolean(),
+  isLastSection: z.boolean(),
 });
 
 export type OutlineSection = z.infer<typeof OutlineSectionSchema>;

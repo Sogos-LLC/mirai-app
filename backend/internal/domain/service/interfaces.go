@@ -467,10 +467,12 @@ type GenerateOutlineResult struct {
 
 // OutlineSectionResult represents a generated section.
 type OutlineSectionResult struct {
-	Title       string
-	Description string
-	Order       int
-	Lessons     []OutlineLessonResult
+	Title          string
+	Description    string
+	Order          int
+	Lessons        []OutlineLessonResult
+	IsFirstSection bool // First section in course
+	IsLastSection  bool // Last section in course
 }
 
 // OutlineLessonResult represents a generated lesson in the outline.
@@ -480,23 +482,75 @@ type OutlineLessonResult struct {
 	Order                    int
 	EstimatedDurationMinutes int
 	LearningObjectives       []string
-	IsLastInSection          bool
-	IsLastInCourse           bool
+	IsFirstInSection         bool // First lesson in section
+	IsLastInSection          bool // Last lesson in section
+	IsFirstInCourse          bool // First lesson in entire course
+	IsLastInCourse           bool // Last lesson in entire course
 }
 
 // GenerateLessonRequest contains inputs for lesson content generation.
 type GenerateLessonRequest struct {
-	CourseTitle        string
+	// Course context
+	CourseTitle       string
+	CourseDescription string
+	CourseOutline     []OutlineSectionSummary // Full outline for context
+
+	// Section context
 	SectionTitle       string
+	SectionDescription string
+	SectionOrder       int
+	IsFirstSection     bool
+	IsLastSection      bool
+
+	// Lesson context
 	LessonTitle        string
 	LessonDescription  string
+	LessonOrder        int // Order within section
 	LearningObjectives []string
-	SMEKnowledge       []SMEKnowledgeInput
-	TargetAudience     TargetAudienceInput
-	PreviousLessonTitle string // For continuity
-	NextLessonTitle    string  // For segue
-	IsLastInSection    bool
-	IsLastInCourse     bool
+
+	// Position flags
+	IsFirstInSection bool // First lesson in this section
+	IsLastInSection  bool // Last lesson in this section
+	IsFirstInCourse  bool // First lesson in entire course
+	IsLastInCourse   bool // Last lesson in entire course
+
+	// Navigation context for segues
+	PreviousLessonTitle   string // Previous lesson title
+	PreviousLessonSummary string // Summary of previous lesson content
+	NextLessonTitle       string // Next lesson title
+	NextSectionTitle      string // Next section title (for section transitions)
+
+	// Previously generated content in this section (for context building)
+	PreviousLessonsInSection []GeneratedLessonSummary
+
+	// Knowledge inputs
+	SMEKnowledge   []SMEKnowledgeInput
+	TargetAudience TargetAudienceInput
+}
+
+// OutlineSectionSummary provides outline context for lesson generation.
+type OutlineSectionSummary struct {
+	Title       string
+	Description string
+	Order       int
+	LessonCount int
+	Lessons     []OutlineLessonSummary
+}
+
+// OutlineLessonSummary provides lesson info within outline context.
+type OutlineLessonSummary struct {
+	Title              string
+	Description        string
+	Order              int
+	LearningObjectives []string
+}
+
+// GeneratedLessonSummary provides summary of previously generated content.
+type GeneratedLessonSummary struct {
+	Title           string
+	ComponentCount  int
+	KeyPoints       []string // Main points covered (extracted from text components)
+	SegueText       string   // How this lesson transitioned to the next
 }
 
 // GenerateLessonResult contains the generated lesson content.

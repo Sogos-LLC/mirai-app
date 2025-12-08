@@ -3,3 +3,5 @@ certs/
 
 # Local environment secrets (never commit)
 .env
+infrastructure/secrets.yaml
+kratos/secrets.yaml

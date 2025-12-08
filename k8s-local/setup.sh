@@ -281,6 +281,13 @@ kubectl create configmap mkcert-ca \
     --dry-run=client -o yaml | kubectl apply -f -
 log_success "mkcert CA ConfigMap created"
 
+# Step 7c: Copy secrets template if secrets.yaml doesn't exist
+if [ ! -f "${SCRIPT_DIR}/infrastructure/secrets.yaml" ]; then
+    log_info "  Creating secrets.yaml from template..."
+    cp "${SCRIPT_DIR}/infrastructure/secrets.yaml.template" "${SCRIPT_DIR}/infrastructure/secrets.yaml"
+    log_success "secrets.yaml created from template"
+fi
+
 # Step 8: Deploy infrastructure
 log_info "Step 8/17: Deploying infrastructure (PostgreSQL, Redis, MinIO)..."
 kubectl apply -k "${SCRIPT_DIR}/infrastructure"
@@ -340,6 +347,13 @@ log_success "Kratos database created"
 
 # Step 11: Deploy Kratos prerequisites
 log_info "Step 11/17: Deploying Kratos prerequisites (mailpit, secrets)..."
+
+# Copy kratos secrets template if secrets.yaml doesn't exist
+if [ ! -f "${SCRIPT_DIR}/kratos/secrets.yaml" ]; then
+    log_info "  Creating kratos/secrets.yaml from template..."
+    cp "${SCRIPT_DIR}/kratos/secrets.yaml.template" "${SCRIPT_DIR}/kratos/secrets.yaml"
+fi
+
 kubectl apply -k "${SCRIPT_DIR}/kratos"
 log_success "Kratos prerequisites deployed"
 

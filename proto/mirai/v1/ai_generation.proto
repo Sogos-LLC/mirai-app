@@ -123,6 +123,8 @@ message OutlineSection {
   string description = 3;
   int32 order = 4;
   repeated OutlineLesson lessons = 5;
+  bool is_first_section = 6; // First section in course (for introduction context)
+  bool is_last_section = 7;  // Last section in course (for conclusion context)
 }
 
 // OutlineLesson represents a lesson in the outline.
@@ -133,8 +135,10 @@ message OutlineLesson {
   int32 order = 4;
   int32 estimated_duration_minutes = 5;
   repeated string learning_objectives = 6;
-  bool is_last_in_section = 7; // Flag for segue generation
-  bool is_last_in_course = 8; // Flag for course conclusion
+  bool is_first_in_section = 7;  // First lesson in section (for section intro)
+  bool is_last_in_section = 8;   // Last lesson in section (for section conclusion/segue)
+  bool is_first_in_course = 9;   // First lesson in entire course (for course intro)
+  bool is_last_in_course = 10;   // Last lesson in entire course (for course conclusion)
 }
 
 // GeneratedLesson contains full lesson content.

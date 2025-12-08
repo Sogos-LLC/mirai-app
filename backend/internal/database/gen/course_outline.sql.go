@@ -86,9 +86,9 @@ func (q *Queries) CreateCourseOutlineWithID(ctx context.Context, arg CreateCours
 
 const createOutlineLesson = `-- name: CreateOutlineLesson :one
 
-INSERT INTO outline_lessons (tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course, created_at
+INSERT INTO outline_lessons (tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_first_in_section, is_last_in_section, is_first_in_course, is_last_in_course)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course, created_at, is_first_in_section, is_first_in_course
 `
 
 type CreateOutlineLessonParams struct {
@@ -99,7 +99,9 @@ type CreateOutlineLessonParams struct {
 	Position                 int32          `db:"position" json:"position"`
 	EstimatedDurationMinutes sql.NullInt32  `db:"estimated_duration_minutes" json:"estimated_duration_minutes"`
 	LearningObjectives       []string       `db:"learning_objectives" json:"learning_objectives"`
+	IsFirstInSection         bool           `db:"is_first_in_section" json:"is_first_in_section"`
 	IsLastInSection          bool           `db:"is_last_in_section" json:"is_last_in_section"`
+	IsFirstInCourse          bool           `db:"is_first_in_course" json:"is_first_in_course"`
 	IsLastInCourse           bool           `db:"is_last_in_course" json:"is_last_in_course"`
 }
 
@@ -115,7 +117,9 @@ func (q *Queries) CreateOutlineLesson(ctx context.Context, arg CreateOutlineLess
 		arg.Position,
 		arg.EstimatedDurationMinutes,
 		pq.Array(arg.LearningObjectives),
+		arg.IsFirstInSection,
 		arg.IsLastInSection,
+		arg.IsFirstInCourse,
 		arg.IsLastInCourse,
 	)
 	var i OutlineLesson
@@ -131,13 +135,15 @@ func (q *Queries) CreateOutlineLesson(ctx context.Context, arg CreateOutlineLess
 		&i.IsLastInSection,
 		&i.IsLastInCourse,
 		&i.CreatedAt,
+		&i.IsFirstInSection,
+		&i.IsFirstInCourse,
 	)
 	return i, err
 }
 
 const createOutlineLessonWithID = `-- name: CreateOutlineLessonWithID :exec
-INSERT INTO outline_lessons (id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+INSERT INTO outline_lessons (id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_first_in_section, is_last_in_section, is_first_in_course, is_last_in_course, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
 `
 
 type CreateOutlineLessonWithIDParams struct {
@@ -149,7 +155,9 @@ type CreateOutlineLessonWithIDParams struct {
 	Position                 int32          `db:"position" json:"position"`
 	EstimatedDurationMinutes sql.NullInt32  `db:"estimated_duration_minutes" json:"estimated_duration_minutes"`
 	LearningObjectives       []string       `db:"learning_objectives" json:"learning_objectives"`
+	IsFirstInSection         bool           `db:"is_first_in_section" json:"is_first_in_section"`
 	IsLastInSection          bool           `db:"is_last_in_section" json:"is_last_in_section"`
+	IsFirstInCourse          bool           `db:"is_first_in_course" json:"is_first_in_course"`
 	IsLastInCourse           bool           `db:"is_last_in_course" json:"is_last_in_course"`
 }
 
@@ -163,7 +171,9 @@ func (q *Queries) CreateOutlineLessonWithID(ctx context.Context, arg CreateOutli
 		arg.Position,
 		arg.EstimatedDurationMinutes,
 		pq.Array(arg.LearningObjectives),
+		arg.IsFirstInSection,
 		arg.IsLastInSection,
+		arg.IsFirstInCourse,
 		arg.IsLastInCourse,
 	)
 	return err
@@ -171,17 +181,19 @@ func (q *Queries) CreateOutlineLessonWithID(ctx context.Context, arg CreateOutli
 
 const createOutlineSection = `-- name: CreateOutlineSection :one
 
-INSERT INTO outline_sections (tenant_id, outline_id, title, description, position)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, tenant_id, outline_id, title, description, position, created_at
+INSERT INTO outline_sections (tenant_id, outline_id, title, description, position, is_first_section, is_last_section)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, tenant_id, outline_id, title, description, position, created_at, is_first_section, is_last_section
 `
 
 type CreateOutlineSectionParams struct {
-	TenantID    uuid.UUID      `db:"tenant_id" json:"tenant_id"`
-	OutlineID   uuid.UUID      `db:"outline_id" json:"outline_id"`
-	Title       string         `db:"title" json:"title"`
-	Description sql.NullString `db:"description" json:"description"`
-	Position    int32          `db:"position" json:"position"`
+	TenantID       uuid.UUID      `db:"tenant_id" json:"tenant_id"`
+	OutlineID      uuid.UUID      `db:"outline_id" json:"outline_id"`
+	Title          string         `db:"title" json:"title"`
+	Description    sql.NullString `db:"description" json:"description"`
+	Position       int32          `db:"position" json:"position"`
+	IsFirstSection bool           `db:"is_first_section" json:"is_first_section"`
+	IsLastSection  bool           `db:"is_last_section" json:"is_last_section"`
 }
 
 // ============================================================================
@@ -194,6 +206,8 @@ func (q *Queries) CreateOutlineSection(ctx context.Context, arg CreateOutlineSec
 		arg.Title,
 		arg.Description,
 		arg.Position,
+		arg.IsFirstSection,
+		arg.IsLastSection,
 	)
 	var i OutlineSection
 	err := row.Scan(
@@ -204,22 +218,26 @@ func (q *Queries) CreateOutlineSection(ctx context.Context, arg CreateOutlineSec
 		&i.Description,
 		&i.Position,
 		&i.CreatedAt,
+		&i.IsFirstSection,
+		&i.IsLastSection,
 	)
 	return i, err
 }
 
 const createOutlineSectionWithID = `-- name: CreateOutlineSectionWithID :exec
-INSERT INTO outline_sections (id, tenant_id, outline_id, title, description, position, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, NOW())
+INSERT INTO outline_sections (id, tenant_id, outline_id, title, description, position, is_first_section, is_last_section, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
 `
 
 type CreateOutlineSectionWithIDParams struct {
-	ID          uuid.UUID      `db:"id" json:"id"`
-	TenantID    uuid.UUID      `db:"tenant_id" json:"tenant_id"`
-	OutlineID   uuid.UUID      `db:"outline_id" json:"outline_id"`
-	Title       string         `db:"title" json:"title"`
-	Description sql.NullString `db:"description" json:"description"`
-	Position    int32          `db:"position" json:"position"`
+	ID             uuid.UUID      `db:"id" json:"id"`
+	TenantID       uuid.UUID      `db:"tenant_id" json:"tenant_id"`
+	OutlineID      uuid.UUID      `db:"outline_id" json:"outline_id"`
+	Title          string         `db:"title" json:"title"`
+	Description    sql.NullString `db:"description" json:"description"`
+	Position       int32          `db:"position" json:"position"`
+	IsFirstSection bool           `db:"is_first_section" json:"is_first_section"`
+	IsLastSection  bool           `db:"is_last_section" json:"is_last_section"`
 }
 
 func (q *Queries) CreateOutlineSectionWithID(ctx context.Context, arg CreateOutlineSectionWithIDParams) error {
@@ -230,6 +248,8 @@ func (q *Queries) CreateOutlineSectionWithID(ctx context.Context, arg CreateOutl
 		arg.Title,
 		arg.Description,
 		arg.Position,
+		arg.IsFirstSection,
+		arg.IsLastSection,
 	)
 	return err
 }
@@ -338,7 +358,7 @@ func (q *Queries) GetNextOutlineVersion(ctx context.Context, courseID uuid.UUID)
 }
 
 const getOutlineLessonByID = `-- name: GetOutlineLessonByID :one
-SELECT id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course, created_at FROM outline_lessons WHERE id = $1
+SELECT id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course, created_at, is_first_in_section, is_first_in_course FROM outline_lessons WHERE id = $1
 `
 
 func (q *Queries) GetOutlineLessonByID(ctx context.Context, id uuid.UUID) (OutlineLesson, error) {
@@ -356,12 +376,14 @@ func (q *Queries) GetOutlineLessonByID(ctx context.Context, id uuid.UUID) (Outli
 		&i.IsLastInSection,
 		&i.IsLastInCourse,
 		&i.CreatedAt,
+		&i.IsFirstInSection,
+		&i.IsFirstInCourse,
 	)
 	return i, err
 }
 
 const getOutlineSectionByID = `-- name: GetOutlineSectionByID :one
-SELECT id, tenant_id, outline_id, title, description, position, created_at FROM outline_sections WHERE id = $1
+SELECT id, tenant_id, outline_id, title, description, position, created_at, is_first_section, is_last_section FROM outline_sections WHERE id = $1
 `
 
 func (q *Queries) GetOutlineSectionByID(ctx context.Context, id uuid.UUID) (OutlineSection, error) {
@@ -375,12 +397,14 @@ func (q *Queries) GetOutlineSectionByID(ctx context.Context, id uuid.UUID) (Outl
 		&i.Description,
 		&i.Position,
 		&i.CreatedAt,
+		&i.IsFirstSection,
+		&i.IsLastSection,
 	)
 	return i, err
 }
 
 const listOutlineLessonsBySectionID = `-- name: ListOutlineLessonsBySectionID :many
-SELECT id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course, created_at FROM outline_lessons
+SELECT id, tenant_id, section_id, title, description, position, estimated_duration_minutes, learning_objectives, is_last_in_section, is_last_in_course, created_at, is_first_in_section, is_first_in_course FROM outline_lessons
 WHERE section_id = $1
 ORDER BY position ASC
 `
@@ -406,6 +430,8 @@ func (q *Queries) ListOutlineLessonsBySectionID(ctx context.Context, sectionID u
 			&i.IsLastInSection,
 			&i.IsLastInCourse,
 			&i.CreatedAt,
+			&i.IsFirstInSection,
+			&i.IsFirstInCourse,
 		); err != nil {
 			return nil, err
 		}
@@ -421,7 +447,7 @@ func (q *Queries) ListOutlineLessonsBySectionID(ctx context.Context, sectionID u
 }
 
 const listOutlineSectionsByOutlineID = `-- name: ListOutlineSectionsByOutlineID :many
-SELECT id, tenant_id, outline_id, title, description, position, created_at FROM outline_sections
+SELECT id, tenant_id, outline_id, title, description, position, created_at, is_first_section, is_last_section FROM outline_sections
 WHERE outline_id = $1
 ORDER BY position ASC
 `
@@ -443,6 +469,8 @@ func (q *Queries) ListOutlineSectionsByOutlineID(ctx context.Context, outlineID 
 			&i.Description,
 			&i.Position,
 			&i.CreatedAt,
+			&i.IsFirstSection,
+			&i.IsLastSection,
 		); err != nil {
 			return nil, err
 		}
@@ -484,8 +512,8 @@ func (q *Queries) UpdateCourseOutline(ctx context.Context, arg UpdateCourseOutli
 
 const updateOutlineLesson = `-- name: UpdateOutlineLesson :exec
 UPDATE outline_lessons
-SET title = $1, description = $2, position = $3, estimated_duration_minutes = $4, learning_objectives = $5, is_last_in_section = $6, is_last_in_course = $7
-WHERE id = $8
+SET title = $1, description = $2, position = $3, estimated_duration_minutes = $4, learning_objectives = $5, is_first_in_section = $6, is_last_in_section = $7, is_first_in_course = $8, is_last_in_course = $9
+WHERE id = $10
 `
 
 type UpdateOutlineLessonParams struct {
@@ -494,7 +522,9 @@ type UpdateOutlineLessonParams struct {
 	Position                 int32          `db:"position" json:"position"`
 	EstimatedDurationMinutes sql.NullInt32  `db:"estimated_duration_minutes" json:"estimated_duration_minutes"`
 	LearningObjectives       []string       `db:"learning_objectives" json:"learning_objectives"`
+	IsFirstInSection         bool           `db:"is_first_in_section" json:"is_first_in_section"`
 	IsLastInSection          bool           `db:"is_last_in_section" json:"is_last_in_section"`
+	IsFirstInCourse          bool           `db:"is_first_in_course" json:"is_first_in_course"`
 	IsLastInCourse           bool           `db:"is_last_in_course" json:"is_last_in_course"`
 	ID                       uuid.UUID      `db:"id" json:"id"`
 }
@@ -506,7 +536,9 @@ func (q *Queries) UpdateOutlineLesson(ctx context.Context, arg UpdateOutlineLess
 		arg.Position,
 		arg.EstimatedDurationMinutes,
 		pq.Array(arg.LearningObjectives),
+		arg.IsFirstInSection,
 		arg.IsLastInSection,
+		arg.IsFirstInCourse,
 		arg.IsLastInCourse,
 		arg.ID,
 	)
@@ -515,15 +547,17 @@ func (q *Queries) UpdateOutlineLesson(ctx context.Context, arg UpdateOutlineLess
 
 const updateOutlineSection = `-- name: UpdateOutlineSection :exec
 UPDATE outline_sections
-SET title = $1, description = $2, position = $3
-WHERE id = $4
+SET title = $1, description = $2, position = $3, is_first_section = $4, is_last_section = $5
+WHERE id = $6
 `
 
 type UpdateOutlineSectionParams struct {
-	Title       string         `db:"title" json:"title"`
-	Description sql.NullString `db:"description" json:"description"`
-	Position    int32          `db:"position" json:"position"`
-	ID          uuid.UUID      `db:"id" json:"id"`
+	Title          string         `db:"title" json:"title"`
+	Description    sql.NullString `db:"description" json:"description"`
+	Position       int32          `db:"position" json:"position"`
+	IsFirstSection bool           `db:"is_first_section" json:"is_first_section"`
+	IsLastSection  bool           `db:"is_last_section" json:"is_last_section"`
+	ID             uuid.UUID      `db:"id" json:"id"`
 }
 
 func (q *Queries) UpdateOutlineSection(ctx context.Context, arg UpdateOutlineSectionParams) error {
@@ -531,6 +565,8 @@ func (q *Queries) UpdateOutlineSection(ctx context.Context, arg UpdateOutlineSec
 		arg.Title,
 		arg.Description,
 		arg.Position,
+		arg.IsFirstSection,
+		arg.IsLastSection,
 		arg.ID,
 	)
 	return err
