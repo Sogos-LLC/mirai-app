@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/crypto"
 )
 
 // ProvisioningService handles background provisioning of paid registrations.
@@ -22,6 +24,7 @@ type ProvisioningService struct {
 	companyRepo    repository.CompanyRepository
 	identity       service.IdentityProvider
 	email          service.EmailProvider
+	encryptor      *crypto.Encryptor
 	logger         service.Logger
 	frontendURL    string
 }
@@ -34,6 +37,7 @@ func NewProvisioningService(
 	companyRepo repository.CompanyRepository,
 	identity service.IdentityProvider,
 	email service.EmailProvider,
+	encryptor *crypto.Encryptor,
 	logger service.Logger,
 	frontendURL string,
 ) *ProvisioningService {
@@ -44,6 +48,7 @@ func NewProvisioningService(
 		companyRepo:    companyRepo,
 		identity:       identity,
 		email:          email,
+		encryptor:      encryptor,
 		logger:         logger,
 		frontendURL:    frontendURL,
 	}
@@ -303,12 +308,22 @@ func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.
 
 	log.Info("provisioning account")
 
-	// Step 1: Create Kratos identity with pre-hashed password
-	identity, err := s.identity.CreateIdentityWithHash(ctx, service.CreateIdentityWithHashRequest{
-		Email:        reg.Email,
-		PasswordHash: reg.PasswordHash,
-		FirstName:    reg.FirstName,
-		LastName:     reg.LastName,
+	// Step 1: Decrypt the password
+	if s.encryptor == nil {
+		return fmt.Errorf("encryptor not configured")
+	}
+	password, err := s.encryptor.DecryptString(reg.PasswordEncrypted)
+	if err != nil {
+		log.Error("failed to decrypt password", "error", err)
+		return fmt.Errorf("failed to decrypt password: %w", err)
+	}
+
+	// Step 2: Create Kratos identity with plaintext password (Kratos will hash it)
+	identity, err := s.identity.CreateIdentity(ctx, service.CreateIdentityRequest{
+		Email:     reg.Email,
+		Password:  password,
+		FirstName: reg.FirstName,
+		LastName:  reg.LastName,
 	})
 	if err != nil {
 		log.Error("failed to create Kratos identity", "error", err)
@@ -323,7 +338,16 @@ func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.
 
 	log.Info("created Kratos identity", "kratosID", kratosID)
 
-	// Step 2: Create tenant for this organization
+	// Step 3: Verify password works by performing a login
+	// This ensures the password was correctly hashed and can be verified
+	_, err = s.identity.PerformLogin(ctx, reg.Email, password)
+	if err != nil {
+		log.Error("password verification failed after identity creation", "error", err)
+		return fmt.Errorf("password verification failed: %w", err)
+	}
+	log.Info("password verification successful")
+
+	// Step 4: Create tenant for this organization
 	tenant := &entity.Tenant{
 		Name:   reg.CompanyName,
 		Slug:   generateTenantSlug(reg.CompanyName),
@@ -337,7 +361,7 @@ func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.
 
 	log.Info("created tenant", "tenantID", tenant.ID, "slug", tenant.Slug)
 
-	// Step 3: Create company with subscription details and tenant reference
+	// Step 5: Create company with subscription details and tenant reference
 	company := &entity.Company{
 		TenantID:             tenant.ID,
 		Name:                 reg.CompanyName,
@@ -357,7 +381,7 @@ func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.
 
 	log.Info("created company", "companyID", company.ID, "seatCount", company.SeatCount)
 
-	// Step 4: Create user with admin role (owner of the organization)
+	// Step 6: Create user with admin role (owner of the organization)
 	user := &entity.User{
 		TenantID:  &tenant.ID,
 		KratosID:  kratosID,
@@ -372,13 +396,13 @@ func (s *ProvisioningService) provisionAccount(ctx context.Context, reg *entity.
 
 	log.Info("created user", "userID", user.ID)
 
-	// Step 5: Delete the pending registration (successful provisioning)
+	// Step 7: Delete the pending registration (successful provisioning)
 	if err := s.pendingRegRepo.Delete(ctx, reg.ID); err != nil {
 		log.Warn("failed to delete pending registration", "error", err)
 		// Don't fail - account is created successfully
 	}
 
-	// Step 6: Send welcome email (async, don't fail if email fails)
+	// Step 8: Send welcome email (async, don't fail if email fails)
 	if s.email != nil {
 		go s.sendWelcomeEmail(reg.Email, reg.FirstName, reg.CompanyName)
 	}

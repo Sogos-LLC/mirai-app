@@ -32,20 +32,24 @@ RETURNING *;
 DELETE FROM folders WHERE id = $1;
 
 -- name: ListFoldersByParentID :many
+-- Defense-in-depth: explicit tenant_id filter in addition to RLS
 SELECT * FROM folders
-WHERE parent_id = $1
+WHERE tenant_id = $1 AND parent_id = $2
 ORDER BY name ASC;
 
 -- name: ListRootFolders :many
+-- Defense-in-depth: explicit tenant_id filter in addition to RLS
 SELECT * FROM folders
-WHERE parent_id IS NULL
+WHERE tenant_id = $1 AND parent_id IS NULL
 ORDER BY name ASC;
 
 -- name: GetFolderHierarchy :many
 -- Retrieves all folders visible to a user for building nested tree.
 -- Filters PERSONAL folders to only show the user's own private folder.
+-- Defense-in-depth: explicit tenant_id filter in addition to RLS
 SELECT * FROM folders
-WHERE type != 'PERSONAL' OR (type = 'PERSONAL' AND user_id = $1)
+WHERE tenant_id = $1
+  AND (type != 'PERSONAL' OR (type = 'PERSONAL' AND user_id = $2))
 ORDER BY
     CASE type
         WHEN 'LIBRARY' THEN 1

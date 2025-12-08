@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/sogos/mirai-backend/internal/application/dto"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
@@ -13,6 +12,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/crypto"
 )
 
 // AuthService handles authentication and registration business logic.
@@ -23,6 +23,7 @@ type AuthService struct {
 	pendingRegRepo        repository.PendingRegistrationRepository
 	identity              service.IdentityProvider
 	payments              service.PaymentProvider
+	encryptor             *crypto.Encryptor
 	logger                service.Logger
 	frontendURL           string
 	marketingURL          string // Marketing site URL for checkout success redirects
@@ -37,6 +38,7 @@ func NewAuthService(
 	pendingRegRepo repository.PendingRegistrationRepository,
 	identity service.IdentityProvider,
 	payments service.PaymentProvider,
+	encryptor *crypto.Encryptor,
 	logger service.Logger,
 	frontendURL, marketingURL, backendURL string,
 ) *AuthService {
@@ -47,6 +49,7 @@ func NewAuthService(
 		pendingRegRepo: pendingRegRepo,
 		identity:       identity,
 		payments:       payments,
+		encryptor:      encryptor,
 		logger:         logger,
 		frontendURL:    frontendURL,
 		marketingURL:   marketingURL,
@@ -108,10 +111,16 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, domainerrors.ErrInvalidPlan.WithMessage("this registration flow requires a paid plan")
 	}
 
-	// Step 4: Hash password with bcrypt
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	// Step 4: Encrypt password with AES-256-GCM
+	// We encrypt (not hash) so we can decrypt during provisioning and let Kratos hash it.
+	// This ensures password verification works correctly after account creation.
+	if s.encryptor == nil {
+		log.Error("encryptor not configured")
+		return nil, domainerrors.ErrInternal.WithMessage("encryption not configured")
+	}
+	passwordEncrypted, err := s.encryptor.EncryptString(req.Password)
 	if err != nil {
-		log.Error("failed to hash password", "error", err)
+		log.Error("failed to encrypt password", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("failed to process credentials")
 	}
 
@@ -148,7 +157,7 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	pendingReg := &entity.PendingRegistration{
 		CheckoutSessionID: checkoutSession.ID,
 		Email:             req.Email,
-		PasswordHash:      string(passwordHash),
+		PasswordEncrypted: passwordEncrypted,
 		FirstName:         req.FirstName,
 		LastName:          req.LastName,
 		CompanyName:       req.CompanyName,

@@ -13,7 +13,7 @@ type PendingRegistration struct {
 	ID                   uuid.UUID
 	CheckoutSessionID    string
 	Email                string
-	PasswordHash         string // bcrypt hashed password
+	PasswordEncrypted    []byte // AES-256-GCM encrypted password (NOT a hash)
 	FirstName            string
 	LastName             string
 	CompanyName          string

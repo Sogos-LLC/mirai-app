@@ -129,7 +129,8 @@ func (q *Queries) GetFolderByUserID(ctx context.Context, userID uuid.NullUUID) (
 
 const getFolderHierarchy = `-- name: GetFolderHierarchy :many
 SELECT id, tenant_id, name, parent_id, type, created_at, updated_at, team_id, user_id FROM folders
-WHERE type != 'PERSONAL' OR (type = 'PERSONAL' AND user_id = $1)
+WHERE tenant_id = $1
+  AND (type != 'PERSONAL' OR (type = 'PERSONAL' AND user_id = $2))
 ORDER BY
     CASE type
         WHEN 'LIBRARY' THEN 1
@@ -140,10 +141,16 @@ ORDER BY
     name ASC
 `
 
+type GetFolderHierarchyParams struct {
+	TenantID uuid.UUID     `db:"tenant_id" json:"tenant_id"`
+	UserID   uuid.NullUUID `db:"user_id" json:"user_id"`
+}
+
 // Retrieves all folders visible to a user for building nested tree.
 // Filters PERSONAL folders to only show the user's own private folder.
-func (q *Queries) GetFolderHierarchy(ctx context.Context, userID uuid.NullUUID) ([]Folder, error) {
-	rows, err := q.db.QueryContext(ctx, getFolderHierarchy, userID)
+// Defense-in-depth: explicit tenant_id filter in addition to RLS
+func (q *Queries) GetFolderHierarchy(ctx context.Context, arg GetFolderHierarchyParams) ([]Folder, error) {
+	rows, err := q.db.QueryContext(ctx, getFolderHierarchy, arg.TenantID, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -200,12 +207,18 @@ func (q *Queries) GetSharedFolder(ctx context.Context, tenantID uuid.UUID) (Fold
 
 const listFoldersByParentID = `-- name: ListFoldersByParentID :many
 SELECT id, tenant_id, name, parent_id, type, created_at, updated_at, team_id, user_id FROM folders
-WHERE parent_id = $1
+WHERE tenant_id = $1 AND parent_id = $2
 ORDER BY name ASC
 `
 
-func (q *Queries) ListFoldersByParentID(ctx context.Context, parentID uuid.NullUUID) ([]Folder, error) {
-	rows, err := q.db.QueryContext(ctx, listFoldersByParentID, parentID)
+type ListFoldersByParentIDParams struct {
+	TenantID uuid.UUID     `db:"tenant_id" json:"tenant_id"`
+	ParentID uuid.NullUUID `db:"parent_id" json:"parent_id"`
+}
+
+// Defense-in-depth: explicit tenant_id filter in addition to RLS
+func (q *Queries) ListFoldersByParentID(ctx context.Context, arg ListFoldersByParentIDParams) ([]Folder, error) {
+	rows, err := q.db.QueryContext(ctx, listFoldersByParentID, arg.TenantID, arg.ParentID)
 	if err != nil {
 		return nil, err
 	}
@@ -239,12 +252,13 @@ func (q *Queries) ListFoldersByParentID(ctx context.Context, parentID uuid.NullU
 
 const listRootFolders = `-- name: ListRootFolders :many
 SELECT id, tenant_id, name, parent_id, type, created_at, updated_at, team_id, user_id FROM folders
-WHERE parent_id IS NULL
+WHERE tenant_id = $1 AND parent_id IS NULL
 ORDER BY name ASC
 `
 
-func (q *Queries) ListRootFolders(ctx context.Context) ([]Folder, error) {
-	rows, err := q.db.QueryContext(ctx, listRootFolders)
+// Defense-in-depth: explicit tenant_id filter in addition to RLS
+func (q *Queries) ListRootFolders(ctx context.Context, tenantID uuid.UUID) ([]Folder, error) {
+	rows, err := q.db.QueryContext(ctx, listRootFolders, tenantID)
 	if err != nil {
 		return nil, err
 	}

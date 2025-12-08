@@ -124,7 +124,8 @@ type Querier interface {
 	GetFolderByUserID(ctx context.Context, userID uuid.NullUUID) (Folder, error)
 	// Retrieves all folders visible to a user for building nested tree.
 	// Filters PERSONAL folders to only show the user's own private folder.
-	GetFolderHierarchy(ctx context.Context, userID uuid.NullUUID) ([]Folder, error)
+	// Defense-in-depth: explicit tenant_id filter in addition to RLS
+	GetFolderHierarchy(ctx context.Context, arg GetFolderHierarchyParams) ([]Folder, error)
 	GetGeneratedLessonByID(ctx context.Context, id uuid.UUID) (GeneratedLesson, error)
 	GetGeneratedLessonByOutlineLessonID(ctx context.Context, outlineLessonID uuid.UUID) (GeneratedLesson, error)
 	GetGenerationJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error)
@@ -164,7 +165,8 @@ type Querier interface {
 	ListCourses(ctx context.Context, arg ListCoursesParams) ([]Course, error)
 	ListCoursesByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Course, error)
 	ListCoursesByTeamID(ctx context.Context, teamID uuid.NullUUID) ([]Course, error)
-	ListFoldersByParentID(ctx context.Context, parentID uuid.NullUUID) ([]Folder, error)
+	// Defense-in-depth: explicit tenant_id filter in addition to RLS
+	ListFoldersByParentID(ctx context.Context, arg ListFoldersByParentIDParams) ([]Folder, error)
 	ListGeneratedLessonsByCourseID(ctx context.Context, courseID uuid.UUID) ([]GeneratedLesson, error)
 	ListGenerationJobs(ctx context.Context, arg ListGenerationJobsParams) ([]GenerationJob, error)
 	ListGenerationJobsByParentID(ctx context.Context, parentJobID uuid.NullUUID) ([]GenerationJob, error)
@@ -175,7 +177,8 @@ type Querier interface {
 	ListOutlineSectionsByOutlineID(ctx context.Context, outlineID uuid.UUID) ([]OutlineSection, error)
 	ListPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
 	ListPendingRegistrationsByStatus(ctx context.Context, status string) ([]PendingRegistration, error)
-	ListRootFolders(ctx context.Context) ([]Folder, error)
+	// Defense-in-depth: explicit tenant_id filter in addition to RLS
+	ListRootFolders(ctx context.Context, tenantID uuid.UUID) ([]Folder, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]TeamMember, error)
 	ListTeamsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Team, error)
 	ListUnreadNotificationsByUserID(ctx context.Context, arg ListUnreadNotificationsByUserIDParams) ([]Notification, error)

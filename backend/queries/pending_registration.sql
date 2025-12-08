@@ -3,7 +3,7 @@
 
 -- name: CreatePendingRegistration :one
 INSERT INTO pending_registrations (
-    checkout_session_id, email, password_hash, first_name, last_name,
+    checkout_session_id, email, password_encrypted, first_name, last_name,
     company_name, industry, team_size, plan, seat_count, status
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)

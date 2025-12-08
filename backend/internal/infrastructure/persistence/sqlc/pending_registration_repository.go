@@ -30,7 +30,7 @@ func (r *PendingRegistrationRepository) Create(ctx context.Context, pr *entity.P
 		return q.CreatePendingRegistration(ctx, gen.CreatePendingRegistrationParams{
 			CheckoutSessionID: pr.CheckoutSessionID,
 			Email:             pr.Email,
-			PasswordHash:      pr.PasswordHash,
+			PasswordEncrypted: pr.PasswordEncrypted,
 			FirstName:         pr.FirstName,
 			LastName:          pr.LastName,
 			CompanyName:       pr.CompanyName,
@@ -189,7 +189,7 @@ func toPendingRegistrationEntity(pr *gen.PendingRegistration) *entity.PendingReg
 		ID:                   pr.ID,
 		CheckoutSessionID:    pr.CheckoutSessionID,
 		Email:                pr.Email,
-		PasswordHash:         pr.PasswordHash,
+		PasswordEncrypted:    pr.PasswordEncrypted,
 		FirstName:            pr.FirstName,
 		LastName:             pr.LastName,
 		CompanyName:          pr.CompanyName,

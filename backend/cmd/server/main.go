@@ -195,7 +195,7 @@ func main() {
 	}
 
 	// Initialize application services
-	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, pendingRegRepo, kratosClient, stripeClient, logger, cfg.FrontendURL, cfg.MarketingURL, cfg.BackendURL)
+	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, pendingRegRepo, kratosClient, stripeClient, encryptor, logger, cfg.FrontendURL, cfg.MarketingURL, cfg.BackendURL)
 	billingService := service.NewBillingService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
 	userService := service.NewUserService(userRepo, companyRepo, kratosClient, stripeClient, logger, cfg.FrontendURL)
 	companyService := service.NewCompanyService(userRepo, companyRepo, logger)
@@ -257,7 +257,7 @@ func main() {
 	}
 
 	// Background services for deferred account provisioning
-	provisioningService := service.NewProvisioningService(pendingRegRepo, tenantRepo, userRepo, companyRepo, kratosClient, emailClient, logger, cfg.FrontendURL)
+	provisioningService := service.NewProvisioningService(pendingRegRepo, tenantRepo, userRepo, companyRepo, kratosClient, emailClient, encryptor, logger, cfg.FrontendURL)
 	cleanupService := service.NewCleanupService(pendingRegRepo, logger)
 
 	// Create Connect server mux

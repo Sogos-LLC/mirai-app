@@ -10,6 +10,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/database/gen"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
+	"github.com/sogos/mirai-backend/internal/domain/tenant"
 )
 
 // FolderRepository implements repository.FolderRepository using sqlc-generated code.
@@ -132,17 +133,27 @@ func (r *FolderRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // ListByParent retrieves all folders with a given parent.
+// Defense-in-depth: extracts tenant_id from context for explicit filtering.
 func (r *FolderRepository) ListByParent(ctx context.Context, parentID *uuid.UUID) ([]*entity.Folder, error) {
+	// Get tenant_id from context for defense-in-depth filtering
+	tenantID, ok := tenant.FromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("tenant_id not found in context")
+	}
+
 	var results []gen.Folder
 	var err error
 
 	if parentID == nil {
 		results, err = database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.Folder, error) {
-			return q.ListRootFolders(ctx)
+			return q.ListRootFolders(ctx, tenantID)
 		})
 	} else {
 		results, err = database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.Folder, error) {
-			return q.ListFoldersByParentID(ctx, uuid.NullUUID{UUID: *parentID, Valid: true})
+			return q.ListFoldersByParentID(ctx, gen.ListFoldersByParentIDParams{
+				TenantID: tenantID,
+				ParentID: uuid.NullUUID{UUID: *parentID, Valid: true},
+			})
 		})
 	}
 
@@ -158,9 +169,19 @@ func (r *FolderRepository) ListByParent(ctx context.Context, parentID *uuid.UUID
 }
 
 // GetHierarchy retrieves all folders visible to a user for building nested tree.
+// Defense-in-depth: extracts tenant_id from context for explicit filtering.
 func (r *FolderRepository) GetHierarchy(ctx context.Context, userID uuid.UUID) ([]*entity.Folder, error) {
+	// Get tenant_id from context for defense-in-depth filtering
+	tenantID, ok := tenant.FromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("tenant_id not found in context")
+	}
+
 	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.Folder, error) {
-		return q.GetFolderHierarchy(ctx, uuid.NullUUID{UUID: userID, Valid: true})
+		return q.GetFolderHierarchy(ctx, gen.GetFolderHierarchyParams{
+			TenantID: tenantID,
+			UserID:   uuid.NullUUID{UUID: userID, Valid: true},
+		})
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get folder hierarchy: %w", err)

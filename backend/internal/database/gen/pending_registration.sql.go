@@ -16,17 +16,17 @@ import (
 const createPendingRegistration = `-- name: CreatePendingRegistration :one
 
 INSERT INTO pending_registrations (
-    checkout_session_id, email, password_hash, first_name, last_name,
+    checkout_session_id, email, password_encrypted, first_name, last_name,
     company_name, industry, team_size, plan, seat_count, status
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, tenant_id, checkout_session_id, email, password_hash, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at
+RETURNING id, tenant_id, checkout_session_id, email, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at, password_encrypted
 `
 
 type CreatePendingRegistrationParams struct {
 	CheckoutSessionID string         `db:"checkout_session_id" json:"checkout_session_id"`
 	Email             string         `db:"email" json:"email"`
-	PasswordHash      string         `db:"password_hash" json:"password_hash"`
+	PasswordEncrypted []byte         `db:"password_encrypted" json:"password_encrypted"`
 	FirstName         string         `db:"first_name" json:"first_name"`
 	LastName          string         `db:"last_name" json:"last_name"`
 	CompanyName       string         `db:"company_name" json:"company_name"`
@@ -43,7 +43,7 @@ func (q *Queries) CreatePendingRegistration(ctx context.Context, arg CreatePendi
 	row := q.db.QueryRowContext(ctx, createPendingRegistration,
 		arg.CheckoutSessionID,
 		arg.Email,
-		arg.PasswordHash,
+		arg.PasswordEncrypted,
 		arg.FirstName,
 		arg.LastName,
 		arg.CompanyName,
@@ -59,7 +59,6 @@ func (q *Queries) CreatePendingRegistration(ctx context.Context, arg CreatePendi
 		&i.TenantID,
 		&i.CheckoutSessionID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CompanyName,
@@ -74,6 +73,7 @@ func (q *Queries) CreatePendingRegistration(ctx context.Context, arg CreatePendi
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.UpdatedAt,
+		&i.PasswordEncrypted,
 	)
 	return i, err
 }
@@ -111,7 +111,7 @@ func (q *Queries) ExistsPendingRegistrationByEmail(ctx context.Context, email st
 }
 
 const findStuckPaidRegistrations = `-- name: FindStuckPaidRegistrations :many
-SELECT id, tenant_id, checkout_session_id, email, password_hash, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at FROM pending_registrations
+SELECT id, tenant_id, checkout_session_id, email, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at, password_encrypted FROM pending_registrations
 WHERE status = 'paid' AND updated_at < $1
 ORDER BY updated_at ASC
 `
@@ -131,7 +131,6 @@ func (q *Queries) FindStuckPaidRegistrations(ctx context.Context, updatedAt time
 			&i.TenantID,
 			&i.CheckoutSessionID,
 			&i.Email,
-			&i.PasswordHash,
 			&i.FirstName,
 			&i.LastName,
 			&i.CompanyName,
@@ -146,6 +145,7 @@ func (q *Queries) FindStuckPaidRegistrations(ctx context.Context, updatedAt time
 			&i.CreatedAt,
 			&i.ExpiresAt,
 			&i.UpdatedAt,
+			&i.PasswordEncrypted,
 		); err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func (q *Queries) FindStuckPaidRegistrations(ctx context.Context, updatedAt time
 }
 
 const getPendingRegistrationByCheckoutSessionID = `-- name: GetPendingRegistrationByCheckoutSessionID :one
-SELECT id, tenant_id, checkout_session_id, email, password_hash, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at FROM pending_registrations WHERE checkout_session_id = $1
+SELECT id, tenant_id, checkout_session_id, email, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at, password_encrypted FROM pending_registrations WHERE checkout_session_id = $1
 `
 
 func (q *Queries) GetPendingRegistrationByCheckoutSessionID(ctx context.Context, checkoutSessionID string) (PendingRegistration, error) {
@@ -172,7 +172,6 @@ func (q *Queries) GetPendingRegistrationByCheckoutSessionID(ctx context.Context,
 		&i.TenantID,
 		&i.CheckoutSessionID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CompanyName,
@@ -187,12 +186,13 @@ func (q *Queries) GetPendingRegistrationByCheckoutSessionID(ctx context.Context,
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.UpdatedAt,
+		&i.PasswordEncrypted,
 	)
 	return i, err
 }
 
 const getPendingRegistrationByEmail = `-- name: GetPendingRegistrationByEmail :one
-SELECT id, tenant_id, checkout_session_id, email, password_hash, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at FROM pending_registrations
+SELECT id, tenant_id, checkout_session_id, email, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at, password_encrypted FROM pending_registrations
 WHERE email = $1 AND status IN ('pending', 'paid')
 ORDER BY created_at DESC
 LIMIT 1
@@ -206,7 +206,6 @@ func (q *Queries) GetPendingRegistrationByEmail(ctx context.Context, email strin
 		&i.TenantID,
 		&i.CheckoutSessionID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CompanyName,
@@ -221,12 +220,13 @@ func (q *Queries) GetPendingRegistrationByEmail(ctx context.Context, email strin
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.UpdatedAt,
+		&i.PasswordEncrypted,
 	)
 	return i, err
 }
 
 const getPendingRegistrationByID = `-- name: GetPendingRegistrationByID :one
-SELECT id, tenant_id, checkout_session_id, email, password_hash, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at FROM pending_registrations WHERE id = $1
+SELECT id, tenant_id, checkout_session_id, email, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at, password_encrypted FROM pending_registrations WHERE id = $1
 `
 
 func (q *Queries) GetPendingRegistrationByID(ctx context.Context, id uuid.UUID) (PendingRegistration, error) {
@@ -237,7 +237,6 @@ func (q *Queries) GetPendingRegistrationByID(ctx context.Context, id uuid.UUID) 
 		&i.TenantID,
 		&i.CheckoutSessionID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CompanyName,
@@ -252,12 +251,13 @@ func (q *Queries) GetPendingRegistrationByID(ctx context.Context, id uuid.UUID) 
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.UpdatedAt,
+		&i.PasswordEncrypted,
 	)
 	return i, err
 }
 
 const listPendingRegistrationsByStatus = `-- name: ListPendingRegistrationsByStatus :many
-SELECT id, tenant_id, checkout_session_id, email, password_hash, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at FROM pending_registrations
+SELECT id, tenant_id, checkout_session_id, email, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at, password_encrypted FROM pending_registrations
 WHERE status = $1 AND expires_at > NOW()
 ORDER BY created_at ASC
 `
@@ -276,7 +276,6 @@ func (q *Queries) ListPendingRegistrationsByStatus(ctx context.Context, status s
 			&i.TenantID,
 			&i.CheckoutSessionID,
 			&i.Email,
-			&i.PasswordHash,
 			&i.FirstName,
 			&i.LastName,
 			&i.CompanyName,
@@ -291,6 +290,7 @@ func (q *Queries) ListPendingRegistrationsByStatus(ctx context.Context, status s
 			&i.CreatedAt,
 			&i.ExpiresAt,
 			&i.UpdatedAt,
+			&i.PasswordEncrypted,
 		); err != nil {
 			return nil, err
 		}
@@ -310,7 +310,7 @@ UPDATE pending_registrations
 SET status = $1, stripe_customer_id = $2, stripe_subscription_id = $3,
     seat_count = $4, error_message = $5, updated_at = NOW()
 WHERE id = $6
-RETURNING id, tenant_id, checkout_session_id, email, password_hash, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at
+RETURNING id, tenant_id, checkout_session_id, email, first_name, last_name, company_name, industry, team_size, plan, seat_count, status, stripe_customer_id, stripe_subscription_id, error_message, created_at, expires_at, updated_at, password_encrypted
 `
 
 type UpdatePendingRegistrationParams struct {
@@ -337,7 +337,6 @@ func (q *Queries) UpdatePendingRegistration(ctx context.Context, arg UpdatePendi
 		&i.TenantID,
 		&i.CheckoutSessionID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CompanyName,
@@ -352,6 +351,7 @@ func (q *Queries) UpdatePendingRegistration(ctx context.Context, arg UpdatePendi
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.UpdatedAt,
+		&i.PasswordEncrypted,
 	)
 	return i, err
 }

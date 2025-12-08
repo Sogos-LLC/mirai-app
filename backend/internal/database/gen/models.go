@@ -666,7 +666,6 @@ type PendingRegistration struct {
 	TenantID             uuid.NullUUID  `db:"tenant_id" json:"tenant_id"`
 	CheckoutSessionID    string         `db:"checkout_session_id" json:"checkout_session_id"`
 	Email                string         `db:"email" json:"email"`
-	PasswordHash         string         `db:"password_hash" json:"password_hash"`
 	FirstName            string         `db:"first_name" json:"first_name"`
 	LastName             string         `db:"last_name" json:"last_name"`
 	CompanyName          string         `db:"company_name" json:"company_name"`
@@ -681,6 +680,7 @@ type PendingRegistration struct {
 	CreatedAt            time.Time      `db:"created_at" json:"created_at"`
 	ExpiresAt            time.Time      `db:"expires_at" json:"expires_at"`
 	UpdatedAt            time.Time      `db:"updated_at" json:"updated_at"`
+	PasswordEncrypted    []byte         `db:"password_encrypted" json:"password_encrypted"`
 }
 
 type ScormPackage struct {
