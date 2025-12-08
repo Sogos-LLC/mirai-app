@@ -191,13 +191,13 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Success state - celebration animation
+  // Success state - celebration with OK button
   if (isSuccess(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
             </div>
             <h2 className="text-2xl font-bold text-primary mb-2">
@@ -213,9 +213,14 @@ export default function OutlineReviewPage() {
                 Check the bell icon or your email.
               </p>
             </div>
-            <p className="text-sm text-muted animate-pulse">
-              Redirecting to dashboard...
-            </p>
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => send({ type: 'DISMISS_SUCCESS' })}
+              className="min-w-[200px]"
+            >
+              Got it!
+            </Button>
           </CardContent>
         </Card>
       </div>

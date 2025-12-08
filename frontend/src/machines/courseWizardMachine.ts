@@ -95,9 +95,8 @@ export type CourseWizardEvent =
   | { type: 'SET_ADDITIONAL_CONTEXT'; context: string }
   | { type: 'SUBMIT_CONTEXT' }
   | { type: 'SKIP_CONTEXT' }
-  // Step 7: Outline Job Queued - user choice
-  | { type: 'WAIT_FOR_OUTLINE' }      // User wants to go to outline page
-  | { type: 'GENERATE_BACKGROUND' }   // User wants to go to dashboard
+  // Step 7: Outline Job Queued - user dismisses success modal
+  | { type: 'DISMISS_SUCCESS' }       // User clicks OK to go to dashboard
   // Navigation
   | { type: 'GO_BACK' }
   | { type: 'CANCEL' }
@@ -725,23 +724,15 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 7: Outline Job Queued - User chooses wait or background
+    // Step 7: Outline Job Queued - Show success, user clicks OK to redirect
     // --------------------------------------------------------
     outlineJobQueued: {
       entry: assign({
         currentStep: 'outlineJobQueued' as const,
       }),
       on: {
-        WAIT_FOR_OUTLINE: 'redirectToOutline',
-        GENERATE_BACKGROUND: 'redirectToDashboard',
+        DISMISS_SUCCESS: 'redirectToDashboard',
       },
-    },
-
-    // --------------------------------------------------------
-    // Redirect to Outline Review Page
-    // --------------------------------------------------------
-    redirectToOutline: {
-      type: 'final' as const,
     },
 
     // --------------------------------------------------------

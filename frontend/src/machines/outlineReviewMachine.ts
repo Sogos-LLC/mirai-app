@@ -30,6 +30,8 @@ export type OutlineReviewEvent =
   | { type: 'REGENERATE_OUTLINE' }
   | { type: 'UPDATE_SECTION_TITLE'; sectionIndex: number; title: string }
   | { type: 'UPDATE_LESSON'; sectionIndex: number; lessonIndex: number; title: string; description: string }
+  // Success
+  | { type: 'DISMISS_SUCCESS' }
   // Common
   | { type: 'RETRY' }
   | { type: 'DISMISS_ERROR' };
@@ -429,11 +431,11 @@ export const outlineReviewMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Success - Show celebration then redirect to dashboard
+    // Success - Show celebration, user clicks OK to redirect
     // --------------------------------------------------------
     success: {
-      after: {
-        3000: 'backgroundGeneration', // Auto-redirect after 3 seconds
+      on: {
+        DISMISS_SUCCESS: 'backgroundGeneration',
       },
     },
 

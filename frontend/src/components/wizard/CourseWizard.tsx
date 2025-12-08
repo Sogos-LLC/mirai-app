@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { useMachine } from '@xstate/react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, X } from 'lucide-react';
+import { AlertCircle, X, CheckCircle2 } from 'lucide-react';
 import { fromPromise } from 'xstate';
 import {
   courseWizardMachine,
@@ -33,7 +33,6 @@ import AudiencePersonasStep from './steps/AudiencePersonasStep';
 import ToneSelectionStep from './steps/ToneSelectionStep';
 import AdditionalContextStep from './steps/AdditionalContextStep';
 import GeneratingStep from './steps/GeneratingStep';
-import { GenerationQueuedConfirmation } from '@/components/ai-generation/GenerationQueuedConfirmation';
 import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 
@@ -192,14 +191,7 @@ export default function CourseWizard() {
     }
   }, [getSavedState.data, getSavedState.isLoading, send]);
 
-  // Handle redirect to outline review page
-  useEffect(() => {
-    if (state.matches('redirectToOutline') && context.courseId) {
-      router.push(`/course/${context.courseId}/outline`);
-    }
-  }, [state, context.courseId, router]);
-
-  // Handle redirect to dashboard (background generation or cancellation)
+  // Handle redirect to dashboard (after success or cancellation)
   useEffect(() => {
     if (state.matches('redirectToDashboard') || state.matches('cancelled')) {
       router.push('/dashboard');
@@ -349,24 +341,47 @@ export default function CourseWizard() {
     );
   }
 
-  // Outline job queued - show choice
+  // Outline job queued - show success modal with OK button
   if (state.matches('outlineJobQueued') || (typeof stateValue === 'object' && 'outlineJobQueued' in stateValue)) {
     return (
       <>
         <WizardProgress currentStep="outlineJobQueued" />
         <Card>
-          <CardContent className="p-0">
-            <GenerationQueuedConfirmation
-              jobId={context.outlineJobId || ''}
-              title="Outline Generation Started!"
-              description="Your course outline is being created. This typically takes 1-2 minutes."
-              infoTitle="What happens next?"
-              infoDescription="Once your outline is ready, you'll review it and can make edits before generating the full course content."
-              waitButtonLabel="Wait for Outline"
-              navigateButtonLabel="Notify Me When Ready"
-              onWaitForCompletion={() => send({ type: 'WAIT_FOR_OUTLINE' })}
-              onNavigateAway={() => send({ type: 'GENERATE_BACKGROUND' })}
-            />
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center text-center max-w-md mx-auto">
+              {/* Success Icon */}
+              <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+              </div>
+
+              {/* Title */}
+              <h2 className="text-2xl font-bold text-primary mb-2">
+                Outline Generation Started!
+              </h2>
+
+              {/* Description */}
+              <p className="text-secondary mb-6">
+                Your course outline is being created. This typically takes 1-2 minutes.
+              </p>
+
+              {/* Info box */}
+              <div className="w-full p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>You&apos;ll be notified</strong> when your outline is ready for review.
+                  Check the bell icon or your email.
+                </p>
+              </div>
+
+              {/* OK Button */}
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => send({ type: 'DISMISS_SUCCESS' })}
+                className="min-w-[200px]"
+              >
+                Got it!
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </>
