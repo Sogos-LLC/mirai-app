@@ -20,15 +20,17 @@ import (
 // S3Storage implements StorageAdapter using S3-compatible object storage.
 // Works with MinIO locally and AWS S3 in production - same API.
 type S3Storage struct {
-	client        *s3.Client
-	presignClient *s3.PresignClient
-	bucket        string
-	basePath      string
+	client              *s3.Client
+	presignClient       *s3.PresignClient
+	publicPresignClient *s3.PresignClient // Uses public endpoint for URLs returned to clients
+	bucket              string
+	basePath            string
 }
 
 // S3Config holds S3/MinIO configuration.
 type S3Config struct {
 	Endpoint        string // MinIO: "http://192.168.1.226:9768", AWS: ""
+	PublicEndpoint  string // Public HTTPS endpoint for presigned URLs (e.g., "https://minio.sogos.io")
 	Region          string // "us-east-1"
 	Bucket          string // "mirai"
 	BasePath        string // "data"
@@ -88,11 +90,45 @@ func NewS3Storage(ctx context.Context, cfg S3Config) (*S3Storage, error) {
 
 	presignClient := s3.NewPresignClient(client)
 
+	// Create a separate presign client for public URLs if a public endpoint is configured
+	var publicPresignClient *s3.PresignClient
+	if cfg.PublicEndpoint != "" {
+		// Create a client configured with the public endpoint for presigned URLs
+		publicResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL:               cfg.PublicEndpoint,
+				HostnameImmutable: true,
+			}, nil
+		})
+
+		publicAwsCfg, err := config.LoadDefaultConfig(ctx,
+			config.WithRegion(cfg.Region),
+			config.WithEndpointResolverWithOptions(publicResolver),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+				cfg.AccessKeyID,
+				cfg.SecretAccessKey,
+				"",
+			)),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		publicClient := s3.NewFromConfig(publicAwsCfg, func(o *s3.Options) {
+			o.UsePathStyle = true // Path-style for MinIO behind proxy
+		})
+		publicPresignClient = s3.NewPresignClient(publicClient)
+	} else {
+		// Fall back to internal presign client if no public endpoint
+		publicPresignClient = presignClient
+	}
+
 	return &S3Storage{
-		client:        client,
-		presignClient: presignClient,
-		bucket:        cfg.Bucket,
-		basePath:      cfg.BasePath,
+		client:              client,
+		presignClient:       presignClient,
+		publicPresignClient: publicPresignClient,
+		bucket:              cfg.Bucket,
+		basePath:            cfg.BasePath,
 	}, nil
 }
 
@@ -209,8 +245,9 @@ func (s *S3Storage) GenerateUploadURL(ctx context.Context, p string, expiry time
 }
 
 // GenerateDownloadURL generates a presigned URL for downloading a file.
+// Uses the public endpoint (if configured) so URLs work in browsers over HTTPS.
 func (s *S3Storage) GenerateDownloadURL(ctx context.Context, p string, expiry time.Duration) (string, error) {
-	request, err := s.presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+	request, err := s.publicPresignClient.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(s.fullKey(p)),
 	}, s3.WithPresignExpires(expiry))

@@ -114,6 +114,7 @@ func main() {
 	if cfg.S3AccessKey != "" && cfg.S3SecretKey != "" {
 		s3Storage, err := storage.NewS3Storage(context.Background(), storage.S3Config{
 			Endpoint:        cfg.S3Endpoint,
+			PublicEndpoint:  cfg.S3PublicEndpoint,
 			Region:          cfg.S3Region,
 			Bucket:          cfg.S3Bucket,
 			BasePath:        cfg.S3BasePath,
@@ -125,7 +126,7 @@ func main() {
 			os.Exit(1)
 		}
 		baseStorage = s3Storage
-		logger.Info("using S3/MinIO storage", "endpoint", cfg.S3Endpoint, "bucket", cfg.S3Bucket)
+		logger.Info("using S3/MinIO storage", "endpoint", cfg.S3Endpoint, "publicEndpoint", cfg.S3PublicEndpoint, "bucket", cfg.S3Bucket)
 	} else {
 		baseStorage = storage.NewLocalStorage("./data")
 		logger.Warn("S3 credentials not configured, using local storage (not recommended for production)")

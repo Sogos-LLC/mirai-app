@@ -189,13 +189,13 @@ const lessonTemplate = `<!DOCTYPE html>
         // Quiz handling
         var quizAnswers = {};
 
-        function selectQuizAnswer(quizId, answerIndex) {
-            quizAnswers[quizId] = answerIndex;
+        function selectQuizAnswer(quizId, optionId) {
+            quizAnswers[quizId] = optionId;
             // Update UI to show selection
             var options = document.querySelectorAll('#quiz-' + quizId + ' .quiz-option');
-            options.forEach(function(opt, idx) {
+            options.forEach(function(opt) {
                 opt.classList.remove('selected');
-                if (idx === answerIndex) {
+                if (opt.getAttribute('data-option-id') === optionId) {
                     opt.classList.add('selected');
                 }
             });
@@ -203,18 +203,19 @@ const lessonTemplate = `<!DOCTYPE html>
             document.getElementById('check-' + quizId).style.display = 'inline-block';
         }
 
-        function checkQuizAnswer(quizId, correctAnswer, explanation) {
+        function checkQuizAnswer(quizId, correctAnswerId, explanation) {
             var selected = quizAnswers[quizId];
             if (selected === undefined) return;
 
-            var isCorrect = selected === correctAnswer;
+            var isCorrect = selected === correctAnswerId;
             var options = document.querySelectorAll('#quiz-' + quizId + ' .quiz-option');
 
-            options.forEach(function(opt, idx) {
+            options.forEach(function(opt) {
+                var optId = opt.getAttribute('data-option-id');
                 opt.classList.remove('selected');
-                if (idx === correctAnswer) {
+                if (optId === correctAnswerId) {
                     opt.classList.add('correct');
-                } else if (idx === selected && !isCorrect) {
+                } else if (optId === selected && !isCorrect) {
                     opt.classList.add('incorrect');
                 }
                 opt.onclick = null; // Disable further clicks
@@ -342,10 +343,13 @@ func renderQuiz(id string, quiz QuizContent, index int) string {
 	}
 
 	var options strings.Builder
-	for i, opt := range quiz.Options {
+	for _, opt := range quiz.Options {
 		options.WriteString(fmt.Sprintf(
-			`<button class="quiz-option" onclick="selectQuizAnswer('%s', %d)">%s</button>`,
-			quizID, i, html.EscapeString(opt),
+			`<button class="quiz-option" data-option-id="%s" onclick="selectQuizAnswer('%s', '%s')">%s</button>`,
+			html.EscapeString(opt.ID),
+			quizID,
+			html.EscapeString(opt.ID),
+			html.EscapeString(opt.Text),
 		))
 	}
 
@@ -361,7 +365,7 @@ func renderQuiz(id string, quiz QuizContent, index int) string {
     <div class="quiz-options">
         %s
     </div>
-    <button id="check-%s" class="check-answer-button" style="display:none" onclick="checkQuizAnswer('%s', %d, '%s')">
+    <button id="check-%s" class="check-answer-button" style="display:none" onclick="checkQuizAnswer('%s', '%s', '%s')">
         Check Answer
     </button>
     <div id="feedback-%s" class="quiz-feedback" style="display:none"></div>
@@ -370,7 +374,7 @@ func renderQuiz(id string, quiz QuizContent, index int) string {
 		html.EscapeString(quiz.Question),
 		options.String(),
 		quizID,
-		quizID, quiz.CorrectAnswer, escapeJSString(explanation),
+		quizID, html.EscapeString(quiz.CorrectAnswerID), escapeJSString(explanation),
 		quizID,
 	)
 }

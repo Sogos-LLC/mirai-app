@@ -54,10 +54,17 @@ const (
 
 // QuizContent represents the JSON structure for quiz components.
 type QuizContent struct {
-	Question      string   `json:"question"`
-	Options       []string `json:"options"`
-	CorrectAnswer int      `json:"correctAnswer"`
-	Explanation   string   `json:"explanation,omitempty"`
+	Question        string       `json:"question"`
+	QuestionType    string       `json:"question_type,omitempty"`
+	Options         []QuizOption `json:"options"`
+	CorrectAnswerID string       `json:"correct_answer_id"`
+	Explanation     string       `json:"explanation,omitempty"`
+}
+
+// QuizOption represents a single answer option in a quiz.
+type QuizOption struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
 }
 
 // ImageContent represents the JSON structure for image components.

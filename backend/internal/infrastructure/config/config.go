@@ -36,12 +36,13 @@ type Config struct {
 	CookieSecure bool   // Set to true for HTTPS (production), false for HTTP (local dev)
 
 	// S3/MinIO Storage (MinIO local → AWS S3 production)
-	S3Endpoint  string // MinIO: "http://192.168.1.226:9768", AWS: "" (empty)
-	S3Region    string
-	S3Bucket    string
-	S3BasePath  string
-	S3AccessKey string
-	S3SecretKey string
+	S3Endpoint       string // MinIO: "http://192.168.1.226:9768", AWS: "" (empty)
+	S3PublicEndpoint string // Public HTTPS endpoint for presigned URLs (e.g., "https://minio.sogos.io")
+	S3Region         string
+	S3Bucket         string
+	S3BasePath       string
+	S3AccessKey      string
+	S3SecretKey      string
 
 	// Cache
 	EnableRedisCache bool
@@ -86,12 +87,13 @@ func Load() (*Config, error) {
 		CookieDomain: getEnv("COOKIE_DOMAIN", ""),                       // Empty uses request domain; set to ".sogos.io" for cross-subdomain
 		CookieSecure: getEnv("COOKIE_SECURE", "true") == "true",         // false for local HTTP dev
 		// S3/MinIO Storage
-		S3Endpoint:  getEnv("S3_ENDPOINT", "http://192.168.1.226:9768"), // Empty for AWS S3
-		S3Region:    getEnv("S3_REGION", "us-east-1"),
-		S3Bucket:    getEnv("S3_BUCKET", "mirai"),
-		S3BasePath:  getEnv("S3_BASE_PATH", "data"),
-		S3AccessKey: getEnv("S3_ACCESS_KEY", ""),
-		S3SecretKey: getEnv("S3_SECRET_KEY", ""),
+		S3Endpoint:       getEnv("S3_ENDPOINT", "http://192.168.1.226:9768"), // Empty for AWS S3
+		S3PublicEndpoint: getEnv("S3_PUBLIC_ENDPOINT", ""),                   // HTTPS endpoint for presigned URLs
+		S3Region:         getEnv("S3_REGION", "us-east-1"),
+		S3Bucket:         getEnv("S3_BUCKET", "mirai"),
+		S3BasePath:       getEnv("S3_BASE_PATH", "data"),
+		S3AccessKey:      getEnv("S3_ACCESS_KEY", ""),
+		S3SecretKey:      getEnv("S3_SECRET_KEY", ""),
 		// Cache
 		EnableRedisCache: getEnv("ENABLE_REDIS_CACHE", "true") != "false",
 		RedisURL:         getEnv("REDIS_URL", "redis://redis.redis.svc.cluster.local:6379"),
