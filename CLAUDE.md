@@ -824,3 +824,4 @@ cd proto && buf lint
 cd proto && buf breaking --against '.git#branch=main'
 ```
 - remember always run playwright tests headless with reporting on list, and store screenshots that you will review yourself so the UI looks the way you expect and you can prove it. Also make sure you can see the console logs. mock anything external, or for example if we need to get an api response back, capture that on a successful test run and re use it as a mock so we don't hit the real api over and over.
+- this is a greenfield project DO NOT WRITE ANY CODE THAT IS FOR BACKWARDS COMPATIBILITY. IF THE NEW VERSION WORKS DELETE THE OLD WAY COMPLETELY.

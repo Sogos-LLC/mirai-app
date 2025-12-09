@@ -219,9 +219,9 @@ func (s *AuthService) CompleteCheckout(ctx context.Context, sessionID string) (*
 		}, nil
 	}
 
-	// Verify user has owner role (tenant admin)
-	if user.Role != valueobject.RoleOwner {
-		log.Error("user is not company owner", "userID", user.ID, "role", user.Role)
+	// Verify user has admin role (tenant admin)
+	if user.Role != valueobject.RoleAdmin {
+		log.Error("user is not company admin", "userID", user.ID, "role", user.Role)
 		return &CompleteCheckoutResult{
 			RedirectURL: s.frontendURL + "/auth/login?error=invalid_role",
 		}, nil
@@ -291,9 +291,9 @@ func (s *AuthService) Onboard(ctx context.Context, kratosID uuid.UUID, req dto.O
 		return nil, domainerrors.ErrInternal.WithMessage("failed to create company")
 	}
 
-	// Update user with company and owner role
+	// Update user with company and admin role
 	user.CompanyID = &company.ID
-	user.Role = valueobject.RoleOwner
+	user.Role = valueobject.RoleAdmin
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		log.Error("failed to update user", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("failed to update user")

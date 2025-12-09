@@ -816,12 +816,6 @@ func notificationToProto(n *entity.Notification) *v1.Notification {
 		s := n.JobID.String()
 		proto.JobId = &s
 	}
-	if n.TaskID != nil {
-		s := n.TaskID.String()
-		// Note: TaskId field was removed from proto in Phase 1/2
-		// Keeping the domain field for backward compatibility but not mapping to proto
-		_ = s
-	}
 	if n.ExportID != nil {
 		s := n.ExportID.String()
 		proto.ExportId = &s

@@ -313,18 +313,13 @@ func invitationStatusFromProto(s v1.InvitationStatus) valueobject.InvitationStat
 
 func roleFromProto(r v1.Role) valueobject.Role {
 	switch r {
-	case v1.Role_ROLE_OWNER:
-		return valueobject.RoleOwner
-	case v1.Role_ROLE_ADMIN:
+	case v1.Role_ROLE_OWNER, v1.Role_ROLE_ADMIN:
 		return valueobject.RoleAdmin
-	case v1.Role_ROLE_MEMBER:
-		return valueobject.RoleMember
-	case v1.Role_ROLE_INSTRUCTOR:
+	case v1.Role_ROLE_INSTRUCTOR, v1.Role_ROLE_MEMBER:
 		return valueobject.RoleInstructor
 	case v1.Role_ROLE_SME:
-		// SME is an AI entity, not a user role - map to member for safety
-		return valueobject.RoleMember
+		return valueobject.RoleSME
 	default:
-		return valueobject.RoleMember
+		return valueobject.RoleInstructor
 	}
 }

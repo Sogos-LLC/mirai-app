@@ -238,12 +238,12 @@ func planFromProto(p v1.Plan) valueobject.Plan {
 
 func roleToProto(r valueobject.Role) v1.Role {
 	switch r {
-	case valueobject.RoleOwner:
-		return v1.Role_ROLE_OWNER
 	case valueobject.RoleAdmin:
 		return v1.Role_ROLE_ADMIN
-	case valueobject.RoleMember:
-		return v1.Role_ROLE_MEMBER
+	case valueobject.RoleInstructor:
+		return v1.Role_ROLE_INSTRUCTOR
+	case valueobject.RoleSME:
+		return v1.Role_ROLE_SME
 	default:
 		return v1.Role_ROLE_UNSPECIFIED
 	}

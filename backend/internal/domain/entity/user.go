@@ -18,25 +18,19 @@ type User struct {
 	UpdatedAt time.Time
 }
 
-// IsOwner returns true if the user is a company owner/admin.
-// Deprecated: Use IsAdmin instead.
-func (u *User) IsOwner() bool {
-	return u.Role.Normalize() == valueobject.RoleAdmin
-}
-
 // IsAdmin returns true if the user is a company admin.
 func (u *User) IsAdmin() bool {
-	return u.Role.Normalize() == valueobject.RoleAdmin
+	return u.Role == valueobject.RoleAdmin
 }
 
 // IsInstructor returns true if the user is an instructor.
 func (u *User) IsInstructor() bool {
-	return u.Role.Normalize() == valueobject.RoleInstructor
+	return u.Role == valueobject.RoleInstructor
 }
 
 // IsSME returns true if the user is a subject matter expert.
 func (u *User) IsSME() bool {
-	return u.Role.Normalize() == valueobject.RoleSME
+	return u.Role == valueobject.RoleSME
 }
 
 // HasTenant returns true if the user is associated with a tenant.

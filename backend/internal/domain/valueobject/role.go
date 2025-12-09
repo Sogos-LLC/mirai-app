@@ -13,11 +13,6 @@ const (
 	RoleInstructor Role = "instructor"
 	// RoleSME (Subject Matter Expert) can review and contribute to content.
 	RoleSME Role = "sme"
-
-	// Deprecated: Use RoleAdmin instead.
-	RoleOwner Role = "owner"
-	// Deprecated: Use RoleSME instead.
-	RoleMember Role = "member"
 )
 
 // String returns the string representation of the role.
@@ -30,78 +25,58 @@ func (r Role) IsValid() bool {
 	switch r {
 	case RoleAdmin, RoleInstructor, RoleSME:
 		return true
-	// Accept deprecated roles for backward compatibility during migration
-	case RoleOwner, RoleMember:
-		return true
 	}
 	return false
 }
 
-// Normalize converts deprecated roles to their new equivalents.
-func (r Role) Normalize() Role {
-	switch r {
-	case RoleOwner:
-		return RoleAdmin
-	case RoleMember:
-		return RoleSME
-	default:
-		return r
-	}
-}
-
 // CanManageBilling returns true if this role can manage billing.
 func (r Role) CanManageBilling() bool {
-	return r.Normalize() == RoleAdmin
+	return r == RoleAdmin
 }
 
 // CanManageCompany returns true if this role can update company settings.
 func (r Role) CanManageCompany() bool {
-	return r.Normalize() == RoleAdmin
+	return r == RoleAdmin
 }
 
 // CanManageTeams returns true if this role can create/update/delete teams.
 func (r Role) CanManageTeams() bool {
-	return r.Normalize() == RoleAdmin
+	return r == RoleAdmin
 }
 
 // CanInviteUsers returns true if this role can invite users to the company.
 func (r Role) CanInviteUsers() bool {
-	return r.Normalize() == RoleAdmin
+	return r == RoleAdmin
 }
 
 // CanManageSettings returns true if this role can manage tenant settings (AI config, etc.).
 func (r Role) CanManageSettings() bool {
-	return r.Normalize() == RoleAdmin
+	return r == RoleAdmin
 }
 
 // CanManageSME returns true if this role can manage SME entities.
 func (r Role) CanManageSME() bool {
-	normalized := r.Normalize()
-	return normalized == RoleAdmin || normalized == RoleInstructor
+	return r == RoleAdmin || r == RoleInstructor
 }
 
 // CanCreateCourses returns true if this role can create courses.
 func (r Role) CanCreateCourses() bool {
-	normalized := r.Normalize()
-	return normalized == RoleAdmin || normalized == RoleInstructor
+	return r == RoleAdmin || r == RoleInstructor
 }
 
 // CanEditCourses returns true if this role can edit courses.
 func (r Role) CanEditCourses() bool {
-	normalized := r.Normalize()
-	return normalized == RoleAdmin || normalized == RoleInstructor || normalized == RoleSME
+	return r == RoleAdmin || r == RoleInstructor || r == RoleSME
 }
 
 // CanPublishCourses returns true if this role can publish courses.
 func (r Role) CanPublishCourses() bool {
-	normalized := r.Normalize()
-	return normalized == RoleAdmin || normalized == RoleInstructor
+	return r == RoleAdmin || r == RoleInstructor
 }
 
 // CanExportCourses returns true if this role can export courses to SCORM.
 func (r Role) CanExportCourses() bool {
-	normalized := r.Normalize()
-	return normalized == RoleAdmin || normalized == RoleInstructor
+	return r == RoleAdmin || r == RoleInstructor
 }
 
 // ParseRole converts a string to a Role, returning an error if invalid.
@@ -113,7 +88,7 @@ func ParseRole(s string) (Role, error) {
 	return r, nil
 }
 
-// AllRoles returns all valid role values (excluding deprecated).
+// AllRoles returns all valid role values.
 func AllRoles() []Role {
 	return []Role{RoleAdmin, RoleInstructor, RoleSME}
 }

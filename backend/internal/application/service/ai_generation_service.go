@@ -1707,13 +1707,6 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		}
 	}
 
-	// Also update in PostgreSQL for backwards compatibility
-	err = s.componentRepo.Update(tenantCtx, component)
-	if err != nil {
-		s.logger.Warn("failed to update component in database", "error", err)
-		// Don't fail - MinIO is primary storage now
-	}
-
 	s.logger.Info("image generated and stored successfully",
 		"componentID", req.ComponentID,
 		"storagePath", storagePath,

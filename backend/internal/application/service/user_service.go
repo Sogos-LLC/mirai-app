@@ -117,9 +117,9 @@ func (s *UserService) Onboard(ctx context.Context, kratosID uuid.UUID, req dto.O
 		return nil, domainerrors.ErrInternal.WithMessage("failed to create company")
 	}
 
-	// Update user with company and owner role
+	// Update user with company and admin role
 	user.CompanyID = &company.ID
-	user.Role = valueobject.RoleOwner
+	user.Role = valueobject.RoleAdmin
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		log.Error("failed to update user", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("failed to update user")
