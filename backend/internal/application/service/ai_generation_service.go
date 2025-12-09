@@ -1594,13 +1594,29 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 	// Read course content from MinIO - this is the source of truth for lessons/components
 	content, err := s.readCourseContent(ctx, tenantID, req.CourseID)
 	if err != nil {
-		log.Error("failed to read course content from MinIO", "error", err)
+		log.Error("failed to read course content from MinIO", "error", err, "courseID", req.CourseID)
 		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
 	}
+
+	// Log available lessons for debugging
+	var lessonIDs []string
+	for _, lesson := range content.GeneratedLessons {
+		lessonIDs = append(lessonIDs, lesson.ID)
+	}
+	log.Info("course content loaded from MinIO",
+		"courseID", req.CourseID,
+		"requestedLessonID", req.LessonID,
+		"availableLessonIDs", lessonIDs,
+		"lessonCount", len(content.GeneratedLessons),
+	)
 
 	// Find the lesson in content.json
 	s3Lesson := findS3Lesson(content, req.LessonID.String())
 	if s3Lesson == nil {
+		log.Error("lesson not found in content.json",
+			"requestedLessonID", req.LessonID,
+			"availableLessonIDs", lessonIDs,
+		)
 		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found in content")
 	}
 
