@@ -381,14 +381,16 @@ export default function ContentLibrary() {
 
   // Folder list content (used in both desktop sidebar and mobile sheet)
   const folderListContent = (
-    <div className="space-y-2">
-      <div className="text-xs text-gray-500 dark:text-gray-400 px-3 mb-2">
+    <div className="space-y-1">
+      <div className="text-xs text-gray-500 dark:text-gray-400 px-3 pb-3">
         Hover over folders to add subfolders (max {MAX_FOLDER_DEPTH} levels)
       </div>
       {foldersLoading ? (
-        <div className="text-center text-gray-600 dark:text-gray-400 py-4">Loading folders...</div>
+        <div className="text-center text-gray-600 dark:text-gray-400 py-8">Loading folders...</div>
       ) : (
-        folders.map((folder) => renderFolder(folder))
+        <div className="space-y-1">
+          {folders.map((folder) => renderFolder(folder))}
+        </div>
       )}
     </div>
   );
@@ -396,16 +398,16 @@ export default function ContentLibrary() {
   return (
     <>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 lg:mb-12">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 lg:mb-2">Content Library</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">Content Library</h1>
           <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">Browse and organize all your content</p>
         </div>
       </div>
 
       {/* Mobile: Folder filter button */}
       {isMobile && (
-        <div className="mb-4">
+        <div className="mb-6">
           <button
             onClick={() => setIsFolderSheetOpen(true)}
             className="flex items-center gap-2 px-4 py-3 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-lg border border-primary-200 dark:border-primary-800 w-full justify-between min-h-[44px]"
@@ -430,15 +432,15 @@ export default function ContentLibrary() {
       </BottomSheet>
 
       {/* Two-column layout - stacked on mobile */}
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         {/* Left: Folder Sidebar (hidden on mobile - use sheet instead) */}
-        <div className="hidden lg:block w-80 bg-primary-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-4 max-h-[calc(100vh-220px)] overflow-y-auto">
+        <div className="hidden lg:block w-80 flex-shrink-0 bg-primary-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-5 max-h-[calc(100vh-280px)] overflow-y-auto">
           {folderListContent}
         </div>
 
         {/* Right: Main Content */}
-        <div className="flex-1 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-4 lg:p-6 max-h-[calc(100vh-220px)] overflow-y-auto">
-          <div className="mb-4 lg:mb-6">
+        <div className="flex-1 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-5 lg:p-8 max-h-[calc(100vh-280px)] overflow-y-auto">
+          <div className="mb-6 lg:mb-8">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
               <input
@@ -446,7 +448,7 @@ export default function ContentLibrary() {
                 placeholder="Search courses..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full lg:max-w-md pl-10 pr-4 py-3 lg:py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px]
+                className="w-full lg:max-w-md pl-10 pr-4 py-3 lg:py-2.5 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none min-h-[44px]
                   bg-white dark:bg-dark-400
                   border-gray-300 dark:border-dark-border
                   text-gray-900 dark:text-white
@@ -524,12 +526,12 @@ export default function ContentLibrary() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Folder className="w-16 h-16 text-gray-300 dark:text-dark-text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <div className="text-center py-16 lg:py-24">
+              <Folder className="w-16 h-16 text-gray-300 dark:text-dark-text-muted mx-auto mb-6" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
                 {selectedFolderId ? 'No courses in this folder' : 'Select a folder'}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
                 {selectedFolderId
                   ? 'Create your first course in this folder to get started.'
                   : 'Choose a folder from the sidebar to view its contents.'}
