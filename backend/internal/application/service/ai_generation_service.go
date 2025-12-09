@@ -1591,18 +1591,8 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 
 	tenantID := *user.TenantID
 
-	// Set tenant context for RLS-protected queries
-	tenantCtx := tenant.WithTenantID(ctx, tenantID)
-
-	// Verify the lesson exists
-	lesson, err := s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
-	if err != nil || lesson == nil {
-		log.Error("lesson not found in database", "error", err)
-		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
-	}
-
-	// Read course content from MinIO to find the component
-	content, err := s.readCourseContent(tenantCtx, tenantID, req.CourseID)
+	// Read course content from MinIO - this is the source of truth for lessons/components
+	content, err := s.readCourseContent(ctx, tenantID, req.CourseID)
 	if err != nil {
 		log.Error("failed to read course content from MinIO", "error", err)
 		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
@@ -1643,7 +1633,7 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 	}
 
 	// Get AI provider for this tenant
-	aiProvider, err := s.aiProviderFactory.GetProvider(tenantCtx, tenantID)
+	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, tenantID)
 	if err != nil {
 		log.Error("failed to get AI provider", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
@@ -1652,7 +1642,7 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 	// Generate the image
 	log.Info("generating image for component", "prompt", req.Prompt)
 
-	imageResult, err := aiProvider.GenerateImage(tenantCtx, service.GenerateImageRequest{
+	imageResult, err := aiProvider.GenerateImage(ctx, service.GenerateImageRequest{
 		Prompt:      req.Prompt,
 		AspectRatio: req.AspectRatio,
 	})
@@ -1684,14 +1674,14 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		ext,
 	)
 
-	err = s.imageStorage.PutContent(tenantCtx, storagePath, imageResult.ImageData, imageResult.MimeType)
+	err = s.imageStorage.PutContent(ctx, storagePath, imageResult.ImageData, imageResult.MimeType)
 	if err != nil {
 		log.Error("failed to store image in MinIO", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
 	// Generate a download URL (valid for 24 hours for viewing in the course editor)
-	imageURL, err := s.imageStorage.GenerateDownloadURL(tenantCtx, storagePath, 24*time.Hour)
+	imageURL, err := s.imageStorage.GenerateDownloadURL(ctx, storagePath, 24*time.Hour)
 	if err != nil {
 		log.Error("failed to generate download URL", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
@@ -1724,7 +1714,7 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		s3Lesson.Components[componentIndex].UpdatedAt = time.Now()
 
 		// Write back to MinIO
-		if err := s.writeCourseContent(tenantCtx, tenantID, req.CourseID, content); err != nil {
+		if err := s.writeCourseContent(ctx, tenantID, req.CourseID, content); err != nil {
 			log.Error("failed to write course content for image update", "error", err)
 			return nil, domainerrors.ErrInternal.WithCause(err)
 		}
