@@ -154,11 +154,6 @@ func toAiProvider(s string) gen.AiProvider {
 	return gen.AiProvider(s)
 }
 
-// toOutlineApprovalStatus converts a string to gen.OutlineApprovalStatus.
-func toOutlineApprovalStatus(s string) gen.OutlineApprovalStatus {
-	return gen.OutlineApprovalStatus(s)
-}
-
 // toNotificationType converts a string to gen.NotificationType.
 func toNotificationType(s string) gen.NotificationType {
 	return gen.NotificationType(s)
@@ -167,11 +162,6 @@ func toNotificationType(s string) gen.NotificationType {
 // toNotificationPriority converts a string to gen.NotificationPriority.
 func toNotificationPriority(s string) gen.NotificationPriority {
 	return gen.NotificationPriority(s)
-}
-
-// toLessonComponentType converts a string to gen.LessonComponentType.
-func toLessonComponentType(s string) gen.LessonComponentType {
-	return gen.LessonComponentType(s)
 }
 
 // toGenerationJobType converts a string to gen.GenerationJobType.

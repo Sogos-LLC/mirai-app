@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 type AiProvider string
@@ -279,98 +278,6 @@ func (ns NullGenerationJobType) Value() (driver.Value, error) {
 	return string(ns.GenerationJobType), nil
 }
 
-type HeadingLevel string
-
-const (
-	HeadingLevelH1 HeadingLevel = "h1"
-	HeadingLevelH2 HeadingLevel = "h2"
-	HeadingLevelH3 HeadingLevel = "h3"
-	HeadingLevelH4 HeadingLevel = "h4"
-	HeadingLevelH5 HeadingLevel = "h5"
-	HeadingLevelH6 HeadingLevel = "h6"
-)
-
-func (e *HeadingLevel) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = HeadingLevel(s)
-	case string:
-		*e = HeadingLevel(s)
-	default:
-		return fmt.Errorf("unsupported scan type for HeadingLevel: %T", src)
-	}
-	return nil
-}
-
-type NullHeadingLevel struct {
-	HeadingLevel HeadingLevel `json:"heading_level"`
-	Valid        bool         `json:"valid"` // Valid is true if HeadingLevel is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullHeadingLevel) Scan(value interface{}) error {
-	if value == nil {
-		ns.HeadingLevel, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.HeadingLevel.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullHeadingLevel) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.HeadingLevel), nil
-}
-
-type LessonComponentType string
-
-const (
-	LessonComponentTypeText    LessonComponentType = "text"
-	LessonComponentTypeHeading LessonComponentType = "heading"
-	LessonComponentTypeImage   LessonComponentType = "image"
-	LessonComponentTypeQuiz    LessonComponentType = "quiz"
-	LessonComponentTypeCode    LessonComponentType = "code"
-	LessonComponentTypeCallout LessonComponentType = "callout"
-)
-
-func (e *LessonComponentType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = LessonComponentType(s)
-	case string:
-		*e = LessonComponentType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for LessonComponentType: %T", src)
-	}
-	return nil
-}
-
-type NullLessonComponentType struct {
-	LessonComponentType LessonComponentType `json:"lesson_component_type"`
-	Valid               bool                `json:"valid"` // Valid is true if LessonComponentType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullLessonComponentType) Scan(value interface{}) error {
-	if value == nil {
-		ns.LessonComponentType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.LessonComponentType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullLessonComponentType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.LessonComponentType), nil
-}
-
 type NotificationPriority string
 
 const (
@@ -456,50 +363,6 @@ func (ns NullNotificationType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.NotificationType), nil
-}
-
-type OutlineApprovalStatus string
-
-const (
-	OutlineApprovalStatusPendingReview     OutlineApprovalStatus = "pending_review"
-	OutlineApprovalStatusApproved          OutlineApprovalStatus = "approved"
-	OutlineApprovalStatusRejected          OutlineApprovalStatus = "rejected"
-	OutlineApprovalStatusRevisionRequested OutlineApprovalStatus = "revision_requested"
-)
-
-func (e *OutlineApprovalStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = OutlineApprovalStatus(s)
-	case string:
-		*e = OutlineApprovalStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for OutlineApprovalStatus: %T", src)
-	}
-	return nil
-}
-
-type NullOutlineApprovalStatus struct {
-	OutlineApprovalStatus OutlineApprovalStatus `json:"outline_approval_status"`
-	Valid                 bool                  `json:"valid"` // Valid is true if OutlineApprovalStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOutlineApprovalStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.OutlineApprovalStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.OutlineApprovalStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOutlineApprovalStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.OutlineApprovalStatus), nil
 }
 
 type ToneDetailLevel string
@@ -600,25 +463,6 @@ type CourseExport struct {
 	CompletedAt     **time.Time    `db:"completed_at" json:"completed_at"`
 }
 
-type CourseGenerationInput struct {
-	ID                uuid.UUID      `db:"id" json:"id"`
-	TenantID          uuid.UUID      `db:"tenant_id" json:"tenant_id"`
-	CourseID          uuid.UUID      `db:"course_id" json:"course_id"`
-	SmeIds            []uuid.UUID    `db:"sme_ids" json:"sme_ids"`
-	TargetAudienceIds []uuid.UUID    `db:"target_audience_ids" json:"target_audience_ids"`
-	DesiredOutcome    string         `db:"desired_outcome" json:"desired_outcome"`
-	AdditionalContext sql.NullString `db:"additional_context" json:"additional_context"`
-	CreatedAt         time.Time      `db:"created_at" json:"created_at"`
-	UpdatedAt         time.Time      `db:"updated_at" json:"updated_at"`
-	// Selected SME personas from wizard as JSONB array
-	SmePersonas pqtype.NullRawMessage `db:"sme_personas" json:"sme_personas"`
-	// Selected audience personas from wizard as JSONB array
-	AudiencePersonas pqtype.NullRawMessage `db:"audience_personas" json:"audience_personas"`
-	// Selected tone option from wizard as JSONB object
-	ToneOption        pqtype.NullRawMessage `db:"tone_option" json:"tone_option"`
-	CourseDescription sql.NullString        `db:"course_description" json:"course_description"`
-}
-
 type CourseModule struct {
 	ID          uuid.UUID      `db:"id" json:"id"`
 	TenantID    uuid.UUID      `db:"tenant_id" json:"tenant_id"`
@@ -628,18 +472,6 @@ type CourseModule struct {
 	Position    int32          `db:"position" json:"position"`
 	CreatedAt   time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time      `db:"updated_at" json:"updated_at"`
-}
-
-type CourseOutline struct {
-	ID               uuid.UUID             `db:"id" json:"id"`
-	TenantID         uuid.UUID             `db:"tenant_id" json:"tenant_id"`
-	CourseID         uuid.UUID             `db:"course_id" json:"course_id"`
-	Version          int32                 `db:"version" json:"version"`
-	ApprovalStatus   OutlineApprovalStatus `db:"approval_status" json:"approval_status"`
-	RejectionReason  sql.NullString        `db:"rejection_reason" json:"rejection_reason"`
-	GeneratedAt      time.Time             `db:"generated_at" json:"generated_at"`
-	ApprovedAt       **time.Time           `db:"approved_at" json:"approved_at"`
-	ApprovedByUserID uuid.NullUUID         `db:"approved_by_user_id" json:"approved_by_user_id"`
 }
 
 type Folder struct {
@@ -654,24 +486,12 @@ type Folder struct {
 	UserID    uuid.NullUUID `db:"user_id" json:"user_id"`
 }
 
-type GeneratedLesson struct {
-	ID              uuid.UUID      `db:"id" json:"id"`
-	TenantID        uuid.UUID      `db:"tenant_id" json:"tenant_id"`
-	CourseID        uuid.UUID      `db:"course_id" json:"course_id"`
-	SectionID       uuid.UUID      `db:"section_id" json:"section_id"`
-	OutlineLessonID uuid.UUID      `db:"outline_lesson_id" json:"outline_lesson_id"`
-	Title           string         `db:"title" json:"title"`
-	SegueText       sql.NullString `db:"segue_text" json:"segue_text"`
-	GeneratedAt     time.Time      `db:"generated_at" json:"generated_at"`
-}
-
 type GenerationJob struct {
 	ID              uuid.UUID           `db:"id" json:"id"`
 	TenantID        uuid.UUID           `db:"tenant_id" json:"tenant_id"`
 	Type            GenerationJobType   `db:"type" json:"type"`
 	Status          GenerationJobStatus `db:"status" json:"status"`
 	CourseID        uuid.NullUUID       `db:"course_id" json:"course_id"`
-	LessonID        uuid.NullUUID       `db:"lesson_id" json:"lesson_id"`
 	SmeTaskID       uuid.NullUUID       `db:"sme_task_id" json:"sme_task_id"`
 	SubmissionID    uuid.NullUUID       `db:"submission_id" json:"submission_id"`
 	ProgressPercent int32               `db:"progress_percent" json:"progress_percent"`
@@ -686,7 +506,6 @@ type GenerationJob struct {
 	StartedAt       **time.Time         `db:"started_at" json:"started_at"`
 	CompletedAt     **time.Time         `db:"completed_at" json:"completed_at"`
 	ParentJobID     uuid.NullUUID       `db:"parent_job_id" json:"parent_job_id"`
-	OutlineLessonID uuid.NullUUID       `db:"outline_lesson_id" json:"outline_lesson_id"`
 }
 
 type Invitation struct {
@@ -716,19 +535,6 @@ type Lesson struct {
 	UpdatedAt                time.Time      `db:"updated_at" json:"updated_at"`
 }
 
-type LessonComponent struct {
-	ID                   uuid.UUID           `db:"id" json:"id"`
-	TenantID             uuid.UUID           `db:"tenant_id" json:"tenant_id"`
-	LessonID             uuid.UUID           `db:"lesson_id" json:"lesson_id"`
-	Type                 LessonComponentType `db:"type" json:"type"`
-	Position             int32               `db:"position" json:"position"`
-	ContentJson          json.RawMessage     `db:"content_json" json:"content_json"`
-	SmeChunkIds          []uuid.UUID         `db:"sme_chunk_ids" json:"sme_chunk_ids"`
-	LearningObjectiveIds []string            `db:"learning_objective_ids" json:"learning_objective_ids"`
-	CreatedAt            time.Time           `db:"created_at" json:"created_at"`
-	UpdatedAt            time.Time           `db:"updated_at" json:"updated_at"`
-}
-
 type Notification struct {
 	ID        uuid.UUID            `db:"id" json:"id"`
 	TenantID  uuid.UUID            `db:"tenant_id" json:"tenant_id"`
@@ -744,34 +550,6 @@ type Notification struct {
 	EmailSent bool                 `db:"email_sent" json:"email_sent"`
 	CreatedAt time.Time            `db:"created_at" json:"created_at"`
 	ReadAt    **time.Time          `db:"read_at" json:"read_at"`
-}
-
-type OutlineLesson struct {
-	ID                       uuid.UUID      `db:"id" json:"id"`
-	TenantID                 uuid.UUID      `db:"tenant_id" json:"tenant_id"`
-	SectionID                uuid.UUID      `db:"section_id" json:"section_id"`
-	Title                    string         `db:"title" json:"title"`
-	Description              sql.NullString `db:"description" json:"description"`
-	Position                 int32          `db:"position" json:"position"`
-	EstimatedDurationMinutes sql.NullInt32  `db:"estimated_duration_minutes" json:"estimated_duration_minutes"`
-	LearningObjectives       []string       `db:"learning_objectives" json:"learning_objectives"`
-	IsLastInSection          bool           `db:"is_last_in_section" json:"is_last_in_section"`
-	IsLastInCourse           bool           `db:"is_last_in_course" json:"is_last_in_course"`
-	CreatedAt                time.Time      `db:"created_at" json:"created_at"`
-	IsFirstInSection         bool           `db:"is_first_in_section" json:"is_first_in_section"`
-	IsFirstInCourse          bool           `db:"is_first_in_course" json:"is_first_in_course"`
-}
-
-type OutlineSection struct {
-	ID             uuid.UUID      `db:"id" json:"id"`
-	TenantID       uuid.UUID      `db:"tenant_id" json:"tenant_id"`
-	OutlineID      uuid.UUID      `db:"outline_id" json:"outline_id"`
-	Title          string         `db:"title" json:"title"`
-	Description    sql.NullString `db:"description" json:"description"`
-	Position       int32          `db:"position" json:"position"`
-	CreatedAt      time.Time      `db:"created_at" json:"created_at"`
-	IsFirstSection bool           `db:"is_first_section" json:"is_first_section"`
-	IsLastSection  bool           `db:"is_last_section" json:"is_last_section"`
 }
 
 type PendingRegistration struct {

@@ -76,12 +76,6 @@ func main() {
 	// AI & Generation repositories
 	aiSettingsRepo := sqlc.NewTenantAISettingsRepository(db.DB)
 	notificationRepo := sqlc.NewNotificationRepository(db.DB)
-	outlineRepo := sqlc.NewCourseOutlineRepository(db.DB)
-	sectionRepo := sqlc.NewOutlineSectionRepository(db.DB)
-	lessonRepo := sqlc.NewOutlineLessonRepository(db.DB)
-	genLessonRepo := sqlc.NewGeneratedLessonRepository(db.DB)
-	componentRepo := sqlc.NewLessonComponentRepository(db.DB)
-	genInputRepo := sqlc.NewCourseGenerationInputRepository(db.DB)
 	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
 	wizardStateRepo := sqlc.NewWizardStateRepository(db.DB)
 
@@ -226,13 +220,9 @@ func main() {
 		userRepo,
 		courseRepo,
 		exportRepo,
-		outlineRepo,
-		sectionRepo,
-		lessonRepo,
-		genLessonRepo,
-		componentRepo,
 		scormPackager,
-		baseStorage,          // Use base storage, export paths are tenant-prefixed internally
+		baseStorage,          // Use base storage for export files
+		tenantStorage,        // For reading course content.json
 		workerClient,         // Implements ExportTaskEnqueuer
 		notificationService,  // Implements ExportNotifier
 		logger,
@@ -249,16 +239,10 @@ func main() {
 		// Create Gemini provider factory for per-tenant API key management
 		geminiProviderFactory := gemini.NewProviderFactory(tenantSettingsService, logger)
 
-		// AI Generation service
+		// AI Generation service (simplified - all content in MinIO)
 		aiGenerationService = service.NewAIGenerationService(
 			userRepo,
 			generationJobRepo,
-			outlineRepo,
-			sectionRepo,
-			lessonRepo,
-			genLessonRepo,
-			componentRepo,
-			genInputRepo,
 			aiSettingsRepo,
 			geminiProviderFactory,
 			notificationService, // For tenant-isolated job notifications

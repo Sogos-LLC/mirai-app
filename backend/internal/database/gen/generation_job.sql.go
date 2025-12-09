@@ -31,7 +31,7 @@ const claimJobByID = `-- name: ClaimJobByID :one
 UPDATE generation_jobs
 SET status = 'processing', started_at = NOW()
 WHERE id = $1 AND status = 'queued'
-RETURNING id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, outline_lesson_id
+RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id
 `
 
 // Claim a specific job by ID, only if queued
@@ -44,7 +44,6 @@ func (q *Queries) ClaimJobByID(ctx context.Context, id uuid.UUID) (GenerationJob
 		&i.Type,
 		&i.Status,
 		&i.CourseID,
-		&i.LessonID,
 		&i.SmeTaskID,
 		&i.SubmissionID,
 		&i.ProgressPercent,
@@ -59,7 +58,6 @@ func (q *Queries) ClaimJobByID(ctx context.Context, id uuid.UUID) (GenerationJob
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ParentJobID,
-		&i.OutlineLessonID,
 	)
 	return i, err
 }
@@ -77,7 +75,7 @@ WHERE id = (
     LIMIT 1
     FOR UPDATE SKIP LOCKED
 )
-RETURNING id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, outline_lesson_id
+RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id
 `
 
 // Atomic claim: UPDATE with subquery SELECT FOR UPDATE SKIP LOCKED
@@ -91,7 +89,6 @@ func (q *Queries) ClaimQueuedJob(ctx context.Context) (GenerationJob, error) {
 		&i.Type,
 		&i.Status,
 		&i.CourseID,
-		&i.LessonID,
 		&i.SmeTaskID,
 		&i.SubmissionID,
 		&i.ProgressPercent,
@@ -106,16 +103,15 @@ func (q *Queries) ClaimQueuedJob(ctx context.Context) (GenerationJob, error) {
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ParentJobID,
-		&i.OutlineLessonID,
 	)
 	return i, err
 }
 
 const createGenerationJob = `-- name: CreateGenerationJob :one
 
-INSERT INTO generation_jobs (tenant_id, type, status, course_id, lesson_id, outline_lesson_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-RETURNING id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, outline_lesson_id
+INSERT INTO generation_jobs (tenant_id, type, status, course_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id
 `
 
 type CreateGenerationJobParams struct {
@@ -123,8 +119,6 @@ type CreateGenerationJobParams struct {
 	Type            GenerationJobType   `db:"type" json:"type"`
 	Status          GenerationJobStatus `db:"status" json:"status"`
 	CourseID        uuid.NullUUID       `db:"course_id" json:"course_id"`
-	LessonID        uuid.NullUUID       `db:"lesson_id" json:"lesson_id"`
-	OutlineLessonID uuid.NullUUID       `db:"outline_lesson_id" json:"outline_lesson_id"`
 	ParentJobID     uuid.NullUUID       `db:"parent_job_id" json:"parent_job_id"`
 	ProgressPercent int32               `db:"progress_percent" json:"progress_percent"`
 	ProgressMessage sql.NullString      `db:"progress_message" json:"progress_message"`
@@ -144,8 +138,6 @@ func (q *Queries) CreateGenerationJob(ctx context.Context, arg CreateGenerationJ
 		arg.Type,
 		arg.Status,
 		arg.CourseID,
-		arg.LessonID,
-		arg.OutlineLessonID,
 		arg.ParentJobID,
 		arg.ProgressPercent,
 		arg.ProgressMessage,
@@ -163,7 +155,6 @@ func (q *Queries) CreateGenerationJob(ctx context.Context, arg CreateGenerationJ
 		&i.Type,
 		&i.Status,
 		&i.CourseID,
-		&i.LessonID,
 		&i.SmeTaskID,
 		&i.SubmissionID,
 		&i.ProgressPercent,
@@ -178,14 +169,13 @@ func (q *Queries) CreateGenerationJob(ctx context.Context, arg CreateGenerationJ
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ParentJobID,
-		&i.OutlineLessonID,
 	)
 	return i, err
 }
 
 const createGenerationJobWithID = `-- name: CreateGenerationJobWithID :exec
-INSERT INTO generation_jobs (id, tenant_id, type, status, course_id, lesson_id, outline_lesson_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
+INSERT INTO generation_jobs (id, tenant_id, type, status, course_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
 `
 
 type CreateGenerationJobWithIDParams struct {
@@ -194,8 +184,6 @@ type CreateGenerationJobWithIDParams struct {
 	Type            GenerationJobType   `db:"type" json:"type"`
 	Status          GenerationJobStatus `db:"status" json:"status"`
 	CourseID        uuid.NullUUID       `db:"course_id" json:"course_id"`
-	LessonID        uuid.NullUUID       `db:"lesson_id" json:"lesson_id"`
-	OutlineLessonID uuid.NullUUID       `db:"outline_lesson_id" json:"outline_lesson_id"`
 	ParentJobID     uuid.NullUUID       `db:"parent_job_id" json:"parent_job_id"`
 	ProgressPercent int32               `db:"progress_percent" json:"progress_percent"`
 	ProgressMessage sql.NullString      `db:"progress_message" json:"progress_message"`
@@ -214,8 +202,6 @@ func (q *Queries) CreateGenerationJobWithID(ctx context.Context, arg CreateGener
 		arg.Type,
 		arg.Status,
 		arg.CourseID,
-		arg.LessonID,
-		arg.OutlineLessonID,
 		arg.ParentJobID,
 		arg.ProgressPercent,
 		arg.ProgressMessage,
@@ -288,7 +274,7 @@ func (q *Queries) GetChildJobStats(ctx context.Context, parentJobID uuid.NullUUI
 }
 
 const getGenerationJobByID = `-- name: GetGenerationJobByID :one
-SELECT id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, outline_lesson_id FROM generation_jobs WHERE id = $1
+SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id FROM generation_jobs WHERE id = $1
 `
 
 func (q *Queries) GetGenerationJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error) {
@@ -300,7 +286,6 @@ func (q *Queries) GetGenerationJobByID(ctx context.Context, id uuid.UUID) (Gener
 		&i.Type,
 		&i.Status,
 		&i.CourseID,
-		&i.LessonID,
 		&i.SmeTaskID,
 		&i.SubmissionID,
 		&i.ProgressPercent,
@@ -315,7 +300,6 @@ func (q *Queries) GetGenerationJobByID(ctx context.Context, id uuid.UUID) (Gener
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ParentJobID,
-		&i.OutlineLessonID,
 	)
 	return i, err
 }
@@ -337,7 +321,7 @@ func (q *Queries) GetParentJobStatus(ctx context.Context, id uuid.UUID) (GetPare
 }
 
 const listGenerationJobs = `-- name: ListGenerationJobs :many
-SELECT id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, outline_lesson_id FROM generation_jobs
+SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id FROM generation_jobs
 WHERE ($1::text IS NULL OR type::text = $1)
   AND ($2::text IS NULL OR status::text = $2)
   AND ($3::uuid IS NULL OR course_id = $3)
@@ -365,7 +349,6 @@ func (q *Queries) ListGenerationJobs(ctx context.Context, arg ListGenerationJobs
 			&i.Type,
 			&i.Status,
 			&i.CourseID,
-			&i.LessonID,
 			&i.SmeTaskID,
 			&i.SubmissionID,
 			&i.ProgressPercent,
@@ -380,7 +363,6 @@ func (q *Queries) ListGenerationJobs(ctx context.Context, arg ListGenerationJobs
 			&i.StartedAt,
 			&i.CompletedAt,
 			&i.ParentJobID,
-			&i.OutlineLessonID,
 		); err != nil {
 			return nil, err
 		}
@@ -396,7 +378,7 @@ func (q *Queries) ListGenerationJobs(ctx context.Context, arg ListGenerationJobs
 }
 
 const listGenerationJobsByParentID = `-- name: ListGenerationJobsByParentID :many
-SELECT id, tenant_id, type, status, course_id, lesson_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, outline_lesson_id FROM generation_jobs
+SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id FROM generation_jobs
 WHERE parent_job_id = $1
 ORDER BY created_at ASC
 `
@@ -416,7 +398,6 @@ func (q *Queries) ListGenerationJobsByParentID(ctx context.Context, parentJobID 
 			&i.Type,
 			&i.Status,
 			&i.CourseID,
-			&i.LessonID,
 			&i.SmeTaskID,
 			&i.SubmissionID,
 			&i.ProgressPercent,
@@ -431,7 +412,6 @@ func (q *Queries) ListGenerationJobsByParentID(ctx context.Context, parentJobID 
 			&i.StartedAt,
 			&i.CompletedAt,
 			&i.ParentJobID,
-			&i.OutlineLessonID,
 		); err != nil {
 			return nil, err
 		}

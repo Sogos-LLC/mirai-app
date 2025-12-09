@@ -18,8 +18,6 @@ import (
 )
 
 // AIProviderFactory creates AIProvider instances per-tenant.
-// Since Gemini clients require API keys at construction time and keys are per-tenant,
-// this factory creates a fresh client for each request using the tenant's decrypted API key.
 type AIProviderFactory interface {
 	GetProvider(ctx context.Context, tenantID uuid.UUID) (service.AIProvider, error)
 }
@@ -31,32 +29,24 @@ type JobNotifier interface {
 
 // CourseCompletionNotifier sends notifications when full course generation completes.
 type CourseCompletionNotifier interface {
-	// NotifyCourseComplete sends notification when all lessons are generated.
 	NotifyCourseComplete(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string) error
-	// NotifyCourseFailed sends notification when course generation fails.
 	NotifyCourseFailed(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string, errorMsg string) error
 }
 
 // OutlineCompletionNotifier sends notifications when outline generation completes.
 type OutlineCompletionNotifier interface {
-	// NotifyOutlineReady sends notification when course outline is generated and ready for review.
 	NotifyOutlineReady(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string, sectionCount, lessonCount int) error
-	// NotifyOutlineFailed sends notification when outline generation fails.
 	NotifyOutlineFailed(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string, errorMsg string) error
 }
 
 // TaskEnqueuer enqueues background tasks for processing.
-// This enables event-driven job processing (push) in addition to polling (sweep).
 type TaskEnqueuer interface {
-	// EnqueueAIGeneration enqueues an AI generation job for immediate processing.
 	EnqueueAIGeneration(jobID, jobType string) error
 }
 
 // ImageStorage abstracts image storage operations.
 type ImageStorage interface {
-	// PutContent stores raw content to storage.
 	PutContent(ctx context.Context, path string, content []byte, contentType string) error
-	// GenerateDownloadURL generates a presigned URL for downloads.
 	GenerateDownloadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
 }
 
@@ -66,24 +56,19 @@ type JobEventPublisher interface {
 }
 
 // AIGenerationService handles AI-powered content generation.
+// All course content is stored in MinIO - no PostgreSQL tables for outlines/lessons.
 type AIGenerationService struct {
 	userRepo           repository.UserRepository
 	jobRepo            repository.GenerationJobRepository
-	outlineRepo        repository.CourseOutlineRepository
-	sectionRepo        repository.OutlineSectionRepository
-	lessonRepo         repository.OutlineLessonRepository
-	genLessonRepo      repository.GeneratedLessonRepository
-	componentRepo      repository.LessonComponentRepository // Deprecated: components now stored in MinIO
-	genInputRepo       repository.CourseGenerationInputRepository
 	aiSettingsRepo     repository.TenantAISettingsRepository
 	aiProviderFactory  AIProviderFactory
 	notifier           JobNotifier
 	completionNotifier CourseCompletionNotifier
 	outlineNotifier    OutlineCompletionNotifier
-	taskEnqueuer       TaskEnqueuer                  // For event-driven job processing (optional, falls back to polling)
-	imageStorage       ImageStorage                  // For storing generated images
-	contentStorage     *storage.TenantAwareStorage   // For storing course content (lessons, components) in MinIO
-	jobEventPublisher  JobEventPublisher             // For real-time job event streaming (optional)
+	taskEnqueuer       TaskEnqueuer
+	imageStorage       ImageStorage
+	contentStorage     *storage.TenantAwareStorage
+	jobEventPublisher  JobEventPublisher
 	logger             service.Logger
 }
 
@@ -91,31 +76,19 @@ type AIGenerationService struct {
 func NewAIGenerationService(
 	userRepo repository.UserRepository,
 	jobRepo repository.GenerationJobRepository,
-	outlineRepo repository.CourseOutlineRepository,
-	sectionRepo repository.OutlineSectionRepository,
-	lessonRepo repository.OutlineLessonRepository,
-	genLessonRepo repository.GeneratedLessonRepository,
-	componentRepo repository.LessonComponentRepository,
-	genInputRepo repository.CourseGenerationInputRepository,
 	aiSettingsRepo repository.TenantAISettingsRepository,
 	aiProviderFactory AIProviderFactory,
 	notifier JobNotifier,
 	completionNotifier CourseCompletionNotifier,
 	outlineNotifier OutlineCompletionNotifier,
-	taskEnqueuer TaskEnqueuer, // Can be nil - falls back to polling
-	imageStorage ImageStorage, // For storing generated images (can be nil if not needed)
-	contentStorage *storage.TenantAwareStorage, // For storing course content in MinIO
+	taskEnqueuer TaskEnqueuer,
+	imageStorage ImageStorage,
+	contentStorage *storage.TenantAwareStorage,
 	logger service.Logger,
 ) *AIGenerationService {
 	return &AIGenerationService{
 		userRepo:           userRepo,
 		jobRepo:            jobRepo,
-		outlineRepo:        outlineRepo,
-		sectionRepo:        sectionRepo,
-		lessonRepo:         lessonRepo,
-		genLessonRepo:      genLessonRepo,
-		componentRepo:      componentRepo,
-		genInputRepo:       genInputRepo,
 		aiSettingsRepo:     aiSettingsRepo,
 		aiProviderFactory:  aiProviderFactory,
 		notifier:           notifier,
@@ -150,10 +123,6 @@ type GenerateCourseOutlineResult struct {
 func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosID uuid.UUID, req GenerateCourseOutlineRequest) (*GenerateCourseOutlineResult, error) {
 	log := s.logger.With("kratosID", kratosID, "courseID", req.CourseID)
 
-	// DEBUG: Track courseID through the system
-	log.Info("[DEBUG-COURSEID] GenerateCourseOutline received courseID from frontend",
-		"courseID", req.CourseID.String())
-
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
 		return nil, domainerrors.ErrUserNotFound
@@ -161,26 +130,6 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 
 	if user.TenantID == nil {
 		return nil, domainerrors.ErrUserHasNoCompany
-	}
-
-	// Store generation input
-	genInput := &entity.CourseGenerationInput{
-		ID:                uuid.New(),
-		TenantID:          *user.TenantID,
-		CourseID:          req.CourseID,
-		SMEIDs:            []uuid.UUID{}, // Initialize as empty slice (DB requires NOT NULL)
-		TargetAudienceIDs: []uuid.UUID{}, // Initialize as empty slice (DB requires NOT NULL)
-		DesiredOutcome:    req.DesiredOutcome,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
-	}
-	if req.AdditionalContext != "" {
-		genInput.AdditionalContext = &req.AdditionalContext
-	}
-
-	if err := s.genInputRepo.Create(ctx, genInput); err != nil {
-		log.Error("failed to store generation input", "error", err)
-		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
 	// Create the job
@@ -201,16 +150,13 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Publish job created event for real-time streaming
 	s.publishJobEvent(ctx, "created", job)
-
 	log.Info("course outline generation job created", "jobID", job.ID)
 
-	// Push: Enqueue for immediate processing (if task enqueuer available)
-	// Sweep: Poll task will pick it up if enqueue fails or enqueuer is nil
+	// Enqueue for immediate processing
 	if s.taskEnqueuer != nil {
 		if err := s.taskEnqueuer.EnqueueAIGeneration(job.ID.String(), string(job.Type)); err != nil {
-			log.Warn("failed to enqueue job for immediate processing, will be picked up by poll", "error", err)
+			log.Warn("failed to enqueue job, will be picked up by poll", "error", err)
 		}
 	}
 
@@ -218,49 +164,25 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 }
 
 // ProcessOutlineGenerationJob processes an outline generation job.
-// This is called by the background worker.
-// Note: Job is already claimed as 'processing' with started_at set by GetNextQueued.
 func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, job *entity.GenerationJob) error {
 	log := s.logger.With("jobID", job.ID, "courseID", job.CourseID)
 
-	// Check for cancellation at start
 	if s.checkJobCancelled(ctx, job.ID) {
 		log.Info("job already cancelled, skipping processing")
 		return nil
 	}
 
-	// Job is already marked as 'processing' by GetNextQueued (atomic claim)
-	// Just update the progress message
-	progressMsg := "Preparing course generation..."
-	job.ProgressMessage = &progressMsg
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to update job progress message", "error", err)
-	}
-
-	// Get generation input
-	genInput, err := s.genInputRepo.GetByCourseID(ctx, *job.CourseID)
-	if err != nil || genInput == nil {
-		return s.failJob(ctx, job, "failed to get generation input")
-	}
-
 	// Update progress
-	job.ProgressPercent = 40
-	progressMsg = "Generating course outline with AI..."
+	progressMsg := "Generating course outline with AI..."
 	job.ProgressMessage = &progressMsg
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to update job progress", "progress", 40, "error", err)
-	}
+	job.ProgressPercent = 40
+	_ = s.jobRepo.Update(ctx, job)
 
-	// Check for cancellation before expensive AI call
-	if s.checkJobCancelled(ctx, job.ID) {
-		log.Info("job cancelled before AI generation")
-		return s.markJobCancelled(ctx, job)
-	}
-
-	// Generate outline with AI
-	additionalContext := ""
-	if genInput.AdditionalContext != nil {
-		additionalContext = *genInput.AdditionalContext
+	// Read course content from MinIO to get settings
+	content, err := s.readCourseContent(ctx, job.TenantID, *job.CourseID)
+	if err != nil {
+		log.Error("failed to read course content", "error", err)
+		return s.failJob(ctx, job, "failed to read course content")
 	}
 
 	// Get tenant-specific AI provider
@@ -270,12 +192,13 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 		return s.failJob(ctx, job, fmt.Sprintf("failed to get AI provider: %v", err))
 	}
 
+	// Generate outline with AI
 	outlineResult, err := aiProvider.GenerateCourseOutline(ctx, service.GenerateOutlineRequest{
-		CourseTitle:       "", // Will be fetched or passed
-		DesiredOutcome:    genInput.DesiredOutcome,
-		SMEKnowledge:      []service.SMEKnowledgeInput{}, // Empty since SME removed
-		TargetAudience:    service.TargetAudienceInput{}, // Empty since target audience removed
-		AdditionalContext: additionalContext,
+		CourseTitle:       content.Settings.Title,
+		DesiredOutcome:    content.Settings.DesiredOutcome,
+		SMEKnowledge:      []service.SMEKnowledgeInput{},
+		TargetAudience:    service.TargetAudienceInput{},
+		AdditionalContext: "",
 	})
 	if err != nil {
 		log.Error("AI outline generation failed", "error", err)
@@ -287,83 +210,49 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	progressMsg = "Storing outline..."
 	job.ProgressMessage = &progressMsg
 	job.TokensUsed = outlineResult.TokensUsed
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to update job progress", "progress", 70, "error", err)
-	}
+	_ = s.jobRepo.Update(ctx, job)
 
-	// Get next version number for this course (handles regeneration after rejection)
-	nextVersion, err := s.outlineRepo.GetNextVersion(ctx, *job.CourseID)
-	if err != nil {
-		log.Error("failed to get next version", "error", err)
-		return s.failJob(ctx, job, "failed to determine outline version")
-	}
-
-	// Build all entities first with pre-generated UUIDs for atomic creation
-	outline := &entity.CourseOutline{
-		ID:             uuid.New(),
-		TenantID:       job.TenantID,
-		CourseID:       *job.CourseID,
-		Version:        nextVersion,
-		ApprovalStatus: valueobject.OutlineApprovalStatusPendingReview,
-		GeneratedAt:    time.Now(),
-	}
-
-	// DEBUG: Track courseID through the system
-	log.Info("[DEBUG-COURSEID] ProcessOutlineGenerationJob creating outline with courseID from job",
-		"outlineID", outline.ID.String(),
-		"courseID", outline.CourseID.String(),
-		"jobCourseID", job.CourseID.String())
-
-	var sections []entity.OutlineSection
-	var lessons []entity.OutlineLesson
-
-	for _, sectionResult := range outlineResult.Sections {
-		section := entity.OutlineSection{
-			ID:          uuid.New(),
-			TenantID:    job.TenantID,
-			OutlineID:   outline.ID,
-			Title:       sectionResult.Title,
-			Description: sectionResult.Description,
-			Position:    int32(sectionResult.Order),
-			CreatedAt:   time.Now(),
-		}
-		sections = append(sections, section)
-
-		for _, lessonResult := range sectionResult.Lessons {
-			duration := int32(lessonResult.EstimatedDurationMinutes)
-			lesson := entity.OutlineLesson{
-				ID:                       uuid.New(),
-				TenantID:                 job.TenantID,
-				SectionID:                section.ID,
-				Title:                    lessonResult.Title,
-				Description:              lessonResult.Description,
-				Position:                 int32(lessonResult.Order),
-				EstimatedDurationMinutes: &duration,
-				LearningObjectives:       lessonResult.LearningObjectives,
-				IsLastInSection:          lessonResult.IsLastInSection,
-				IsLastInCourse:           lessonResult.IsLastInCourse,
-				CreatedAt:                time.Now(),
+	// Convert AI result to content sections format
+	sections := make([]map[string]any, 0, len(outlineResult.Sections))
+	totalLessons := 0
+	for sIdx, sectionResult := range outlineResult.Sections {
+		lessons := make([]map[string]any, 0, len(sectionResult.Lessons))
+		for lIdx, lessonResult := range sectionResult.Lessons {
+			lesson := map[string]any{
+				"id":                       uuid.New().String(),
+				"title":                    lessonResult.Title,
+				"description":              lessonResult.Description,
+				"order":                    lIdx + 1,
+				"estimatedDurationMinutes": lessonResult.EstimatedDurationMinutes,
+				"learningObjectives":       lessonResult.LearningObjectives,
+				"isLastInSection":          lessonResult.IsLastInSection,
+				"isLastInCourse":           lessonResult.IsLastInCourse,
 			}
 			lessons = append(lessons, lesson)
+			totalLessons++
 		}
+
+		section := map[string]any{
+			"id":          uuid.New().String(),
+			"title":       sectionResult.Title,
+			"description": sectionResult.Description,
+			"order":       sIdx + 1,
+			"lessons":     lessons,
+		}
+		sections = append(sections, section)
 	}
 
-	// Atomically create outline with all sections and lessons
-	// If any part fails, the entire operation is rolled back
-	if err := s.outlineRepo.CreateCompleteOutline(ctx, outline, sections, lessons); err != nil {
-		log.Error("failed to create outline atomically", "error", err)
+	// Update content with generated outline
+	content.Content.Sections = sections
+
+	// Write updated content back to MinIO
+	if err := s.writeCourseContent(ctx, job.TenantID, *job.CourseID, content); err != nil {
+		log.Error("failed to write outline to MinIO", "error", err)
 		return s.failJob(ctx, job, "failed to store outline")
 	}
 
 	// Update token usage
 	_ = s.aiSettingsRepo.IncrementTokenUsage(ctx, job.TenantID, outlineResult.TokensUsed)
-
-	// Count sections and lessons for notification
-	sectionCount := len(outlineResult.Sections)
-	lessonCount := 0
-	for _, section := range outlineResult.Sections {
-		lessonCount += len(section.Lessons)
-	}
 
 	// Complete the job
 	job.Status = valueobject.GenerationJobStatusCompleted
@@ -372,609 +261,16 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	job.CompletedAt = &completedAt
 	progressMsg = "Outline generation complete"
 	job.ProgressMessage = &progressMsg
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to mark job as completed", "error", err)
-	}
+	_ = s.jobRepo.Update(ctx, job)
 
-	// Publish job completed event for real-time streaming
 	s.publishJobEvent(ctx, "completed", job)
 
-	// Send outline ready notification with email (tenant-isolated via user lookup)
+	// Send notification
 	if s.outlineNotifier != nil {
-		courseTitle := genInput.DesiredOutcome // Use desired outcome as course context
-		if len(courseTitle) > 50 {
-			courseTitle = courseTitle[:47] + "..."
-		}
-		if err := s.outlineNotifier.NotifyOutlineReady(ctx, job.CreatedByUserID, *job.CourseID, courseTitle, sectionCount, lessonCount); err != nil {
-			log.Error("failed to send outline ready notification", "error", err)
-		}
+		_ = s.outlineNotifier.NotifyOutlineReady(ctx, job.CreatedByUserID, *job.CourseID, content.Settings.Title, len(sections), totalLessons)
 	}
 
-	log.Info("outline generation completed", "tokensUsed", outlineResult.TokensUsed, "sections", sectionCount, "lessons", lessonCount)
-	return nil
-}
-
-// GetCourseOutline retrieves the outline for a course.
-func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*entity.CourseOutline, error) {
-	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	if err != nil || user == nil {
-		return nil, domainerrors.ErrUserNotFound
-	}
-
-	outline, err := s.outlineRepo.GetByCourseID(ctx, courseID)
-	if err != nil || outline == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
-	}
-
-	// Load sections and lessons
-	sections, err := s.sectionRepo.ListByOutlineID(ctx, outline.ID)
-	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-
-	for _, section := range sections {
-		lessons, err := s.lessonRepo.ListBySectionID(ctx, section.ID)
-		if err != nil {
-			continue
-		}
-		section.Lessons = make([]entity.OutlineLesson, len(lessons))
-		for i, l := range lessons {
-			section.Lessons[i] = *l
-		}
-	}
-
-	outline.Sections = make([]entity.OutlineSection, len(sections))
-	for i, s := range sections {
-		outline.Sections[i] = *s
-	}
-
-	return outline, nil
-}
-
-// ApproveCourseOutline approves an outline for content generation.
-func (s *AIGenerationService) ApproveCourseOutline(ctx context.Context, kratosID uuid.UUID, outlineID uuid.UUID) (*entity.CourseOutline, error) {
-	log := s.logger.With("kratosID", kratosID, "outlineID", outlineID)
-
-	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	if err != nil || user == nil {
-		return nil, domainerrors.ErrUserNotFound
-	}
-
-	outline, err := s.outlineRepo.GetByID(ctx, outlineID)
-	if err != nil || outline == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
-	}
-
-	now := time.Now()
-	outline.ApprovalStatus = valueobject.OutlineApprovalStatusApproved
-	outline.ApprovedAt = &now
-	outline.ApprovedByUserID = &user.ID
-
-	if err := s.outlineRepo.Update(ctx, outline); err != nil {
-		log.Error("failed to approve outline", "error", err)
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-
-	// Load sections and lessons to return complete outline
-	sections, err := s.sectionRepo.ListByOutlineID(ctx, outline.ID)
-	if err != nil {
-		log.Error("failed to load sections", "error", err)
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-
-	for _, section := range sections {
-		lessons, err := s.lessonRepo.ListBySectionID(ctx, section.ID)
-		if err != nil {
-			continue
-		}
-		section.Lessons = make([]entity.OutlineLesson, len(lessons))
-		for i, l := range lessons {
-			section.Lessons[i] = *l
-		}
-	}
-
-	outline.Sections = make([]entity.OutlineSection, len(sections))
-	for i, sec := range sections {
-		outline.Sections[i] = *sec
-	}
-
-	log.Info("outline approved", "sectionCount", len(outline.Sections))
-	return outline, nil
-}
-
-// RejectCourseOutline rejects an outline with feedback.
-func (s *AIGenerationService) RejectCourseOutline(ctx context.Context, kratosID uuid.UUID, outlineID uuid.UUID, reason string) (*entity.CourseOutline, error) {
-	log := s.logger.With("kratosID", kratosID, "outlineID", outlineID)
-
-	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	if err != nil || user == nil {
-		return nil, domainerrors.ErrUserNotFound
-	}
-
-	outline, err := s.outlineRepo.GetByID(ctx, outlineID)
-	if err != nil || outline == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
-	}
-
-	outline.ApprovalStatus = valueobject.OutlineApprovalStatusRejected
-	outline.RejectionReason = &reason
-
-	if err := s.outlineRepo.Update(ctx, outline); err != nil {
-		log.Error("failed to reject outline", "error", err)
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-
-	log.Info("outline rejected", "reason", reason)
-	return outline, nil
-}
-
-// UpdateCourseOutlineSection represents a section in the update request.
-type UpdateCourseOutlineSection struct {
-	ID          uuid.UUID
-	Title       string
-	Description string
-	Order       int32
-	Lessons     []UpdateCourseOutlineLesson
-}
-
-// UpdateCourseOutlineLesson represents a lesson in the update request.
-type UpdateCourseOutlineLesson struct {
-	ID                       uuid.UUID
-	Title                    string
-	Description              string
-	Order                    int32
-	EstimatedDurationMinutes *int32
-	LearningObjectives       []string
-}
-
-// UpdateCourseOutline updates an existing outline before approval.
-func (s *AIGenerationService) UpdateCourseOutline(ctx context.Context, kratosID uuid.UUID, courseID, outlineID uuid.UUID, sections []UpdateCourseOutlineSection) (*entity.CourseOutline, error) {
-	log := s.logger.With("kratosID", kratosID, "outlineID", outlineID)
-
-	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	if err != nil || user == nil {
-		return nil, domainerrors.ErrUserNotFound
-	}
-
-	outline, err := s.outlineRepo.GetByID(ctx, outlineID)
-	if err != nil || outline == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
-	}
-
-	// Only allow editing pending/revision-requested outlines
-	if outline.ApprovalStatus != valueobject.OutlineApprovalStatusPendingReview &&
-		outline.ApprovalStatus != valueobject.OutlineApprovalStatusRevisionRequested {
-		return nil, domainerrors.ErrForbidden.WithMessage("can only edit pending or revision-requested outlines")
-	}
-
-	// Update sections and lessons
-	for _, sectionReq := range sections {
-		section, err := s.sectionRepo.GetByID(ctx, sectionReq.ID)
-		if err != nil {
-			continue // Skip if not found
-		}
-
-		section.Title = sectionReq.Title
-		section.Description = sectionReq.Description
-		section.Position = sectionReq.Order
-
-		if err := s.sectionRepo.Update(ctx, section); err != nil {
-			log.Error("failed to update section", "sectionID", section.ID, "error", err)
-			return nil, domainerrors.ErrInternal.WithCause(err)
-		}
-
-		// Update lessons within the section
-		for _, lessonReq := range sectionReq.Lessons {
-			lesson, err := s.lessonRepo.GetByID(ctx, lessonReq.ID)
-			if err != nil {
-				continue // Skip if not found
-			}
-
-			lesson.Title = lessonReq.Title
-			lesson.Description = lessonReq.Description
-			lesson.Position = lessonReq.Order
-			lesson.EstimatedDurationMinutes = lessonReq.EstimatedDurationMinutes
-			lesson.LearningObjectives = lessonReq.LearningObjectives
-
-			if err := s.lessonRepo.Update(ctx, lesson); err != nil {
-				log.Error("failed to update lesson", "lessonID", lesson.ID, "error", err)
-				return nil, domainerrors.ErrInternal.WithCause(err)
-			}
-		}
-	}
-
-	// Reload the outline
-	outline, err = s.outlineRepo.GetByID(ctx, outlineID)
-	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-
-	// Load sections for the outline
-	loadedSections, err := s.sectionRepo.ListByOutlineID(ctx, outlineID)
-	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-
-	outline.Sections = make([]entity.OutlineSection, len(loadedSections))
-	for i, section := range loadedSections {
-		// Load lessons for each section
-		lessons, _ := s.lessonRepo.ListBySectionID(ctx, section.ID)
-		section.Lessons = make([]entity.OutlineLesson, len(lessons))
-		for j, lesson := range lessons {
-			section.Lessons[j] = *lesson
-		}
-		outline.Sections[i] = *section
-	}
-
-	log.Info("outline updated", "sectionsCount", len(sections))
-	return outline, nil
-}
-
-// GenerateLessonContentRequest contains inputs for lesson content generation.
-type GenerateLessonContentRequest struct {
-	CourseID        uuid.UUID
-	OutlineLessonID uuid.UUID
-}
-
-// GenerateLessonContentResult contains the created job.
-type GenerateLessonContentResult struct {
-	Job *entity.GenerationJob
-}
-
-// GenerateLessonContent starts a lesson content generation job.
-func (s *AIGenerationService) GenerateLessonContent(ctx context.Context, kratosID uuid.UUID, req GenerateLessonContentRequest) (*GenerateLessonContentResult, error) {
-	log := s.logger.With("kratosID", kratosID, "courseID", req.CourseID, "lessonID", req.OutlineLessonID)
-
-	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	if err != nil || user == nil {
-		return nil, domainerrors.ErrUserNotFound
-	}
-
-	if user.TenantID == nil {
-		return nil, domainerrors.ErrUserHasNoCompany
-	}
-
-	// Verify outline is approved
-	outline, err := s.outlineRepo.GetByCourseID(ctx, req.CourseID)
-	if err != nil || outline == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
-	}
-
-	if outline.ApprovalStatus != valueobject.OutlineApprovalStatusApproved {
-		return nil, domainerrors.ErrInvalidInput.WithMessage("outline must be approved before generating content")
-	}
-
-	// Create the job
-	job := &entity.GenerationJob{
-		ID:              uuid.New(),
-		TenantID:        *user.TenantID,
-		Type:            valueobject.GenerationJobTypeLessonContent,
-		Status:          valueobject.GenerationJobStatusQueued,
-		CourseID:        &req.CourseID,
-		OutlineLessonID: &req.OutlineLessonID, // References outline_lessons table
-		ProgressPercent: 0,
-		MaxRetries:      3,
-		CreatedByUserID: user.ID,
-		CreatedAt:       time.Now(),
-	}
-
-	if err := s.jobRepo.Create(ctx, job); err != nil {
-		log.Error("failed to create lesson generation job", "error", err)
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-
-	// Publish job created event for real-time streaming
-	s.publishJobEvent(ctx, "created", job)
-
-	log.Info("lesson content generation job created", "jobID", job.ID)
-
-	// Push: Enqueue for immediate processing (if task enqueuer available)
-	if s.taskEnqueuer != nil {
-		if err := s.taskEnqueuer.EnqueueAIGeneration(job.ID.String(), string(job.Type)); err != nil {
-			log.Warn("failed to enqueue job for immediate processing, will be picked up by poll", "error", err)
-		}
-	}
-
-	return &GenerateLessonContentResult{Job: job}, nil
-}
-
-// ProcessLessonGenerationJob processes a lesson content generation job.
-// This is called by the background worker.
-// Note: Job is already claimed as 'processing' with started_at set by GetNextQueued.
-func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, job *entity.GenerationJob) error {
-	log := s.logger.With("jobID", job.ID, "outlineLessonID", job.OutlineLessonID)
-
-	// Check for cancellation at start (e.g., parent job was cancelled)
-	if s.checkJobCancelled(ctx, job.ID) {
-		log.Info("job already cancelled, skipping processing")
-		return nil
-	}
-
-	// Job is already marked as 'processing' by GetNextQueued (atomic claim)
-	// Just update the progress message
-	progressMsg := "Loading lesson context..."
-	job.ProgressMessage = &progressMsg
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to update job progress message", "error", err)
-	}
-
-	// Get outline lesson using OutlineLessonID (references outline_lessons table)
-	if job.OutlineLessonID == nil {
-		return s.failJob(ctx, job, "outline lesson ID not set")
-	}
-	outlineLesson, err := s.lessonRepo.GetByID(ctx, *job.OutlineLessonID)
-	if err != nil || outlineLesson == nil {
-		return s.failJob(ctx, job, "outline lesson not found")
-	}
-
-	// Get section for context
-	section, err := s.sectionRepo.GetByID(ctx, outlineLesson.SectionID)
-	if err != nil || section == nil {
-		return s.failJob(ctx, job, "section not found")
-	}
-
-	// Get generation input (may contain additional context)
-	genInput, err := s.genInputRepo.GetByCourseID(ctx, *job.CourseID)
-	if err != nil || genInput == nil {
-		return s.failJob(ctx, job, "generation input not found")
-	}
-
-	// Update progress
-	job.ProgressPercent = 30
-	progressMsg = "Generating lesson content with AI..."
-	job.ProgressMessage = &progressMsg
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to update job progress", "progress", 30, "error", err)
-	}
-
-	// Check for cancellation before expensive AI call
-	if s.checkJobCancelled(ctx, job.ID) {
-		log.Info("job cancelled before AI generation")
-		return s.markJobCancelled(ctx, job)
-	}
-
-	// Get tenant-specific AI provider
-	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, job.TenantID)
-	if err != nil {
-		log.Error("failed to get AI provider", "error", err)
-		return s.failJob(ctx, job, fmt.Sprintf("failed to get AI provider: %v", err))
-	}
-
-	// Generate lesson content
-	lessonResult, err := aiProvider.GenerateLessonContent(ctx, service.GenerateLessonRequest{
-		CourseTitle:        "", // Could be fetched
-		SectionTitle:       section.Title,
-		LessonTitle:        outlineLesson.Title,
-		LessonDescription:  outlineLesson.Description,
-		LearningObjectives: outlineLesson.LearningObjectives,
-		SMEKnowledge:       []service.SMEKnowledgeInput{}, // Empty since SME removed
-		TargetAudience:     service.TargetAudienceInput{}, // Empty since target audience removed
-		IsLastInSection:    outlineLesson.IsLastInSection,
-		IsLastInCourse:     outlineLesson.IsLastInCourse,
-	})
-	if err != nil {
-		log.Error("AI lesson generation failed", "error", err)
-		return s.failJob(ctx, job, fmt.Sprintf("AI generation failed: %v", err))
-	}
-
-	// Update progress
-	job.ProgressPercent = 70
-	progressMsg = "Storing lesson content..."
-	job.ProgressMessage = &progressMsg
-	job.TokensUsed = lessonResult.TokensUsed
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to update job progress", "progress", 70, "error", err)
-	}
-
-	// Create generated lesson
-	genLesson := &entity.GeneratedLesson{
-		ID:              uuid.New(),
-		TenantID:        job.TenantID,
-		CourseID:        *job.CourseID,
-		SectionID:       section.ID,
-		OutlineLessonID: outlineLesson.ID,
-		Title:           outlineLesson.Title,
-		GeneratedAt:     time.Now(),
-	}
-	if lessonResult.SegueText != "" {
-		genLesson.SegueText = &lessonResult.SegueText
-	}
-
-	if err := s.genLessonRepo.Create(ctx, genLesson); err != nil {
-		log.Error("failed to create generated lesson", "error", err)
-		return s.failJob(ctx, job, "failed to store lesson")
-	}
-
-	// Build S3 components from AI result
-	now := time.Now()
-	s3Components := make([]S3LessonComponent, len(lessonResult.Components))
-	for i, compResult := range lessonResult.Components {
-		compType, _ := valueobject.ParseLessonComponentType(compResult.Type)
-		s3Components[i] = S3LessonComponent{
-			ID:                   uuid.New().String(),
-			Type:                 string(compType),
-			Order:                int32(compResult.Order),
-			ContentJSON:          json.RawMessage(compResult.ContentJSON),
-			LearningObjectiveIDs: []string{},
-			CreatedAt:            now,
-			UpdatedAt:            now,
-		}
-	}
-
-	// Create S3 lesson with components
-	s3Lesson := S3GeneratedLesson{
-		ID:              genLesson.ID.String(),
-		SectionID:       genLesson.SectionID.String(),
-		OutlineLessonID: genLesson.OutlineLessonID.String(),
-		Title:           genLesson.Title,
-		SegueText:       genLesson.SegueText,
-		Components:      s3Components,
-		GeneratedAt:     genLesson.GeneratedAt,
-	}
-
-	// DEBUG: Track courseID through the system
-	log.Info("[DEBUG-COURSEID] ProcessLessonGenerationJob about to read/write MinIO",
-		"jobID", job.ID.String(),
-		"jobCourseID", job.CourseID.String(),
-		"tenantID", job.TenantID.String(),
-		"lessonTitle", genLesson.Title)
-
-	// Read existing content.json and add the new lesson
-	content, err := s.readCourseContent(ctx, job.TenantID, *job.CourseID)
-	if err != nil {
-		// content.json doesn't exist yet, create a new one
-		log.Info("[DEBUG-COURSEID] ProcessLessonGenerationJob content.json NOT FOUND - creating new one",
-			"courseID", job.CourseID.String(),
-			"error", err.Error())
-		content = &S3CourseContent{
-			GeneratedLessons: []S3GeneratedLesson{},
-		}
-	} else {
-		log.Info("[DEBUG-COURSEID] ProcessLessonGenerationJob found existing content.json",
-			"courseID", job.CourseID.String(),
-			"existingLessonCount", len(content.GeneratedLessons))
-	}
-
-	// Add or update the lesson in content
-	upsertS3Lesson(content, s3Lesson)
-
-	// Write updated content back to MinIO
-	if err := s.writeCourseContent(ctx, job.TenantID, *job.CourseID, content); err != nil {
-		log.Error("failed to write components to MinIO", "error", err)
-		return s.failJob(ctx, job, "failed to store lesson components")
-	}
-
-	log.Info("lesson components stored in MinIO", "componentCount", len(s3Components))
-
-	// Update token usage
-	_ = s.aiSettingsRepo.IncrementTokenUsage(ctx, job.TenantID, lessonResult.TokensUsed)
-
-	// Complete the job
-	job.Status = valueobject.GenerationJobStatusCompleted
-	job.ProgressPercent = 100
-	completedAt := time.Now()
-	job.CompletedAt = &completedAt
-	progressMsg = "Lesson generation complete"
-	job.ProgressMessage = &progressMsg
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		log.Error("failed to mark job as completed", "error", err)
-	}
-
-	// Publish job completed event for real-time streaming
-	s.publishJobEvent(ctx, "completed", job)
-
-	// Only notify for standalone lesson generation (not part of full course generation)
-	// Full course generation sends ONE notification when all lessons are done
-	if s.notifier != nil && job.ParentJobID == nil {
-		if err := s.notifier.NotifyJobProgress(ctx, job.CreatedByUserID, job.ID, "Lesson Content", "completed", 100); err != nil {
-			log.Error("failed to send completion notification", "error", err)
-		}
-	}
-
-	log.Info("lesson generation completed", "tokensUsed", lessonResult.TokensUsed)
-
-	// Check if this job has a parent and if all siblings are complete
-	if job.ParentJobID != nil {
-		if err := s.checkAndCompleteParentJob(ctx, *job.ParentJobID); err != nil {
-			log.Error("failed to check parent job completion", "parentJobID", job.ParentJobID, "error", err)
-		}
-	}
-
-	return nil
-}
-
-// checkAndCompleteParentJob checks child job progress and updates the parent job.
-// Uses atomic locking to prevent race conditions when multiple children complete simultaneously.
-// The parent status update now happens INSIDE the atomic transaction via FinalizeParentJob.
-func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, parentJobID uuid.UUID) error {
-	log := s.logger.With("parentJobID", parentJobID)
-
-	// Use the new atomic FinalizeParentJob which updates status inside the lock
-	// This prevents the race where we win the lock but crash before updating status
-	result, err := s.jobRepo.FinalizeParentJob(
-		ctx,
-		parentJobID,
-		valueobject.GenerationJobStatusCompleted.String(), // status if all succeed
-		valueobject.GenerationJobStatusFailed.String(),    // status if any fail
-		"All lessons generated successfully",              // progress message
-	)
-	if err != nil {
-		return fmt.Errorf("failed to finalize parent job: %w", err)
-	}
-
-	if result == nil {
-		return nil // Parent job not found
-	}
-
-	// If another worker already finalized, nothing to do
-	if !result.WasFinalized && result.AllComplete {
-		log.Info("parent job already finalized by another worker")
-		return nil
-	}
-
-	// If not all complete, just update progress (non-atomic is fine for progress)
-	if !result.AllComplete {
-		// Get parent job for progress update
-		parentJob, err := s.jobRepo.GetByID(ctx, parentJobID)
-		if err != nil || parentJob == nil {
-			log.Error("failed to get parent job for progress update", "error", err)
-			return nil
-		}
-
-		// Calculate progress percentage (10% reserved for initial queuing, 90% for lesson generation)
-		doneCount := result.CompletedCount + result.FailedCount
-		progressPercent := int32(10)
-		if result.TotalCount > 0 {
-			progressPercent = int32(10 + (90 * doneCount / result.TotalCount))
-		}
-
-		progressMsg := fmt.Sprintf("Generated %d of %d lessons...", result.CompletedCount, result.TotalCount)
-		parentJob.ProgressPercent = progressPercent
-		parentJob.ProgressMessage = &progressMsg
-		parentJob.TokensUsed = result.TotalTokens
-
-		if err := s.jobRepo.Update(ctx, parentJob); err != nil {
-			log.Error("failed to update parent job progress", "progress", progressPercent, "error", err)
-		} else {
-			log.Info("parent job progress updated", "progress", progressPercent, "completed", result.CompletedCount, "total", result.TotalCount)
-		}
-		return nil
-	}
-
-	// We won the race and status was updated atomically - now send notifications
-	log.Info("parent job finalized atomically", "completed", result.CompletedCount, "failed", result.FailedCount, "totalTokens", result.TotalTokens)
-
-	// Get parent job to fetch course info for notification
-	parentJob, err := s.jobRepo.GetByID(ctx, parentJobID)
-	if err != nil || parentJob == nil {
-		log.Error("failed to get parent job for notification", "error", err)
-		return nil // Status already updated, notification failure is non-fatal
-	}
-
-	// Get course title for notification
-	courseTitle := "Course"
-	if parentJob.CourseID != nil {
-		courseTitle = "Your Course"
-	}
-
-	// Send appropriate notification based on result
-	if result.FailedCount > 0 {
-		errMsg := fmt.Sprintf("%d lesson(s) failed to generate", result.FailedCount)
-		if s.completionNotifier != nil && parentJob.CourseID != nil {
-			if err := s.completionNotifier.NotifyCourseFailed(ctx, parentJob.CreatedByUserID, *parentJob.CourseID, courseTitle, errMsg); err != nil {
-				log.Error("failed to send course failure notification", "error", err)
-			}
-		}
-		log.Info("parent job marked as failed", "failedCount", result.FailedCount)
-	} else {
-		if s.completionNotifier != nil && parentJob.CourseID != nil {
-			if err := s.completionNotifier.NotifyCourseComplete(ctx, parentJob.CreatedByUserID, *parentJob.CourseID, courseTitle); err != nil {
-				log.Error("failed to send course completion notification", "error", err)
-			}
-		}
-		log.Info("parent job marked as completed", "totalTokens", result.TotalTokens, "lessonsGenerated", result.TotalCount)
-	}
-
+	log.Info("outline generation completed", "tokensUsed", outlineResult.TokensUsed, "sections", len(sections), "lessons", totalLessons)
 	return nil
 }
 
@@ -984,13 +280,8 @@ type GenerateAllLessonsResult struct {
 }
 
 // GenerateAllLessons starts lesson content generation jobs for all lessons in the course.
-// Creates a FULL_COURSE parent job to track overall completion.
 func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*GenerateAllLessonsResult, error) {
 	log := s.logger.With("kratosID", kratosID, "courseID", courseID)
-
-	// DEBUG: Track courseID through the system
-	log.Info("[DEBUG-COURSEID] GenerateAllLessons received courseID from frontend",
-		"courseID", courseID.String())
 
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
@@ -1001,58 +292,35 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
-	// Get the approved outline for the course
-	outline, err := s.outlineRepo.GetByCourseID(ctx, courseID)
-	if err != nil || outline == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
-	}
-
-	// DEBUG: Compare frontend courseID with outline's stored courseID
-	log.Info("[DEBUG-COURSEID] GenerateAllLessons comparing courseIDs",
-		"frontendCourseID", courseID.String(),
-		"outlineCourseID", outline.CourseID.String(),
-		"outlineID", outline.ID.String(),
-		"match", courseID.String() == outline.CourseID.String())
-
-	if outline.ApprovalStatus != valueobject.OutlineApprovalStatusApproved {
-		return nil, domainerrors.ErrForbidden.WithMessage("outline must be approved before generating lessons")
-	}
-
-	// Load sections with lessons
-	loadedSections, err := s.sectionRepo.ListByOutlineID(ctx, outline.ID)
+	// Read course content from MinIO
+	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
 	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
+		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
 	}
 
-	outline.Sections = make([]entity.OutlineSection, len(loadedSections))
-	for i, section := range loadedSections {
-		lessons, _ := s.lessonRepo.ListBySectionID(ctx, section.ID)
-		section.Lessons = make([]entity.OutlineLesson, len(lessons))
-		for j, lesson := range lessons {
-			section.Lessons[j] = *lesson
-		}
-		outline.Sections[i] = *section
-	}
-
-	// Count total lessons
+	// Count lessons from outline
 	totalLessons := 0
-	for _, section := range outline.Sections {
-		totalLessons += len(section.Lessons)
+	for _, section := range content.Content.Sections {
+		if lessons, ok := section["lessons"].([]interface{}); ok {
+			totalLessons += len(lessons)
+		} else if lessons, ok := section["lessons"].([]map[string]any); ok {
+			totalLessons += len(lessons)
+		}
 	}
 
 	if totalLessons == 0 {
 		return nil, domainerrors.ErrInvalidInput.WithMessage("no lessons in outline")
 	}
 
-	// Create a FULL_COURSE parent job to track overall completion
+	// Create parent job
 	parentJob := &entity.GenerationJob{
 		ID:              uuid.New(),
 		TenantID:        *user.TenantID,
 		Type:            valueobject.GenerationJobTypeFullCourse,
-		Status:          valueobject.GenerationJobStatusProcessing, // Parent is processing while children are queued
+		Status:          valueobject.GenerationJobStatusProcessing,
 		CourseID:        &courseID,
 		ProgressPercent: 0,
-		MaxRetries:      0, // Parent job doesn't retry
+		MaxRetries:      0,
 		CreatedByUserID: user.ID,
 		CreatedAt:       time.Now(),
 	}
@@ -1067,33 +335,51 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Build all child jobs first with pre-generated UUIDs
+	// Create child jobs for each lesson
 	var childJobs []*entity.GenerationJob
-	for _, section := range outline.Sections {
-		for _, lesson := range section.Lessons {
-			outlineLessonID := lesson.ID
-			job := &entity.GenerationJob{
+	for sIdx, section := range content.Content.Sections {
+		sectionID := ""
+		if id, ok := section["id"].(string); ok {
+			sectionID = id
+		}
+
+		var lessons []interface{}
+		if l, ok := section["lessons"].([]interface{}); ok {
+			lessons = l
+		} else if l, ok := section["lessons"].([]map[string]any); ok {
+			for _, item := range l {
+				lessons = append(lessons, item)
+			}
+		}
+
+		for lIdx := range lessons {
+			// Store lesson index info in result path for worker
+			lessonInfo, _ := json.Marshal(map[string]any{
+				"sectionIndex": sIdx,
+				"lessonIndex":  lIdx,
+				"sectionId":    sectionID,
+			})
+			resultPath := string(lessonInfo)
+
+			childJob := &entity.GenerationJob{
 				ID:              uuid.New(),
 				TenantID:        *user.TenantID,
 				Type:            valueobject.GenerationJobTypeLessonContent,
 				Status:          valueobject.GenerationJobStatusQueued,
 				CourseID:        &courseID,
-				OutlineLessonID: &outlineLessonID, // References outline_lessons table
-				ParentJobID:     &parentJob.ID,    // Link to parent job
+				ParentJobID:     &parentJob.ID,
+				ResultPath:      &resultPath,
 				ProgressPercent: 0,
 				MaxRetries:      3,
 				CreatedByUserID: user.ID,
 				CreatedAt:       time.Now(),
 			}
-			childJobs = append(childJobs, job)
+			childJobs = append(childJobs, childJob)
 		}
 	}
 
-	// Atomically create all child jobs in a single transaction
-	// If any fails, all are rolled back and we fail the parent job
 	if err := s.jobRepo.CreateBatch(ctx, childJobs); err != nil {
-		log.Error("failed to create lesson jobs atomically", "error", err)
-		// Fail the parent job since no children were created
+		log.Error("failed to create lesson jobs", "error", err)
 		_ = s.failJob(ctx, parentJob, fmt.Sprintf("failed to queue lesson jobs: %v", err))
 		return nil, domainerrors.ErrInternal.WithMessage("failed to queue lesson generation jobs")
 	}
@@ -1102,85 +388,232 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 	return &GenerateAllLessonsResult{Job: parentJob}, nil
 }
 
-// RegenerateComponentRequest contains inputs for component regeneration.
-type RegenerateComponentRequest struct {
-	CourseID           uuid.UUID
-	LessonID           uuid.UUID
-	ComponentID        uuid.UUID
-	ModificationPrompt string
-}
+// ProcessLessonGenerationJob processes a lesson content generation job.
+func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, job *entity.GenerationJob) error {
+	log := s.logger.With("jobID", job.ID, "courseID", job.CourseID)
 
-// RegenerateComponentResult contains the created job.
-type RegenerateComponentResult struct {
-	Job *entity.GenerationJob
-}
-
-// RegenerateComponent starts a job to regenerate a single lesson component.
-func (s *AIGenerationService) RegenerateComponent(ctx context.Context, kratosID uuid.UUID, req RegenerateComponentRequest) (*RegenerateComponentResult, error) {
-	log := s.logger.With("kratosID", kratosID, "componentID", req.ComponentID)
-
-	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	if err != nil || user == nil {
-		return nil, domainerrors.ErrUserNotFound
+	if s.checkJobCancelled(ctx, job.ID) {
+		log.Info("job already cancelled, skipping processing")
+		return nil
 	}
 
-	if user.TenantID == nil {
-		return nil, domainerrors.ErrUserHasNoCompany
+	// Parse lesson info from result path
+	var lessonInfo struct {
+		SectionIndex int    `json:"sectionIndex"`
+		LessonIndex  int    `json:"lessonIndex"`
+		SectionID    string `json:"sectionId"`
+	}
+	if job.ResultPath != nil {
+		_ = json.Unmarshal([]byte(*job.ResultPath), &lessonInfo)
 	}
 
-	// Verify the component exists
-	component, err := s.componentRepo.GetByID(ctx, req.ComponentID)
-	if err != nil || component == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("component not found")
-	}
-
-	// Verify the lesson exists
-	lesson, err := s.genLessonRepo.GetByID(ctx, req.LessonID)
-	if err != nil || lesson == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
-	}
-
-	// Create the regeneration job
-	job := &entity.GenerationJob{
-		ID:              uuid.New(),
-		TenantID:        *user.TenantID,
-		Type:            valueobject.GenerationJobTypeComponentRegen,
-		Status:          valueobject.GenerationJobStatusQueued,
-		CourseID:        &req.CourseID,
-		LessonID:        &req.LessonID,
-		ProgressPercent: 0,
-		MaxRetries:      3,
-		CreatedByUserID: user.ID,
-		CreatedAt:       time.Now(),
-	}
-
-	// Store modification prompt as JSON in result path temporarily
-	// The worker will read this and use it for regeneration
-	inputData, _ := json.Marshal(map[string]string{
-		"component_id":        req.ComponentID.String(),
-		"modification_prompt": req.ModificationPrompt,
-	})
-	inputPath := string(inputData)
-	job.ResultPath = &inputPath
-
-	progressMsg := "Queued for component regeneration"
+	// Update progress
+	progressMsg := "Generating lesson content with AI..."
 	job.ProgressMessage = &progressMsg
+	job.ProgressPercent = 30
+	_ = s.jobRepo.Update(ctx, job)
 
-	if err := s.jobRepo.Create(ctx, job); err != nil {
-		log.Error("failed to create regeneration job", "error", err)
-		return nil, domainerrors.ErrInternal.WithCause(err)
+	// Read course content from MinIO
+	content, err := s.readCourseContent(ctx, job.TenantID, *job.CourseID)
+	if err != nil {
+		return s.failJob(ctx, job, "failed to read course content")
 	}
 
-	log.Info("component regeneration job created", "jobID", job.ID, "componentID", req.ComponentID)
+	// Get lesson info from outline
+	if lessonInfo.SectionIndex >= len(content.Content.Sections) {
+		return s.failJob(ctx, job, "section index out of range")
+	}
 
-	// Push: Enqueue for immediate processing (if task enqueuer available)
-	if s.taskEnqueuer != nil {
-		if err := s.taskEnqueuer.EnqueueAIGeneration(job.ID.String(), string(job.Type)); err != nil {
-			log.Warn("failed to enqueue job for immediate processing, will be picked up by poll", "error", err)
+	section := content.Content.Sections[lessonInfo.SectionIndex]
+	sectionTitle, _ := section["title"].(string)
+
+	var lessons []interface{}
+	if l, ok := section["lessons"].([]interface{}); ok {
+		lessons = l
+	}
+	if lessonInfo.LessonIndex >= len(lessons) {
+		return s.failJob(ctx, job, "lesson index out of range")
+	}
+
+	lessonData, ok := lessons[lessonInfo.LessonIndex].(map[string]interface{})
+	if !ok {
+		return s.failJob(ctx, job, "invalid lesson data")
+	}
+
+	lessonTitle, _ := lessonData["title"].(string)
+	lessonDesc, _ := lessonData["description"].(string)
+	lessonID, _ := lessonData["id"].(string)
+
+	var learningObjectives []string
+	if los, ok := lessonData["learningObjectives"].([]interface{}); ok {
+		for _, lo := range los {
+			if str, ok := lo.(string); ok {
+				learningObjectives = append(learningObjectives, str)
+			}
 		}
 	}
 
-	return &RegenerateComponentResult{Job: job}, nil
+	isLastInSection, _ := lessonData["isLastInSection"].(bool)
+	isLastInCourse, _ := lessonData["isLastInCourse"].(bool)
+
+	// Get AI provider
+	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, job.TenantID)
+	if err != nil {
+		return s.failJob(ctx, job, fmt.Sprintf("failed to get AI provider: %v", err))
+	}
+
+	// Generate lesson content
+	lessonResult, err := aiProvider.GenerateLessonContent(ctx, service.GenerateLessonRequest{
+		CourseTitle:        content.Settings.Title,
+		SectionTitle:       sectionTitle,
+		LessonTitle:        lessonTitle,
+		LessonDescription:  lessonDesc,
+		LearningObjectives: learningObjectives,
+		SMEKnowledge:       []service.SMEKnowledgeInput{},
+		TargetAudience:     service.TargetAudienceInput{},
+		IsLastInSection:    isLastInSection,
+		IsLastInCourse:     isLastInCourse,
+	})
+	if err != nil {
+		log.Error("AI lesson generation failed", "error", err)
+		return s.failJob(ctx, job, fmt.Sprintf("AI generation failed: %v", err))
+	}
+
+	// Update progress
+	job.ProgressPercent = 70
+	progressMsg = "Storing lesson content..."
+	job.ProgressMessage = &progressMsg
+	job.TokensUsed = lessonResult.TokensUsed
+	_ = s.jobRepo.Update(ctx, job)
+
+	// Build S3 lesson with components
+	now := time.Now()
+	s3Components := make([]S3LessonComponent, len(lessonResult.Components))
+	for i, compResult := range lessonResult.Components {
+		s3Components[i] = S3LessonComponent{
+			ID:                   uuid.New().String(),
+			Type:                 compResult.Type,
+			Order:                int32(compResult.Order),
+			ContentJSON:          json.RawMessage(compResult.ContentJSON),
+			LearningObjectiveIDs: []string{},
+			CreatedAt:            now,
+			UpdatedAt:            now,
+		}
+	}
+
+	s3Lesson := S3GeneratedLesson{
+		ID:              lessonID,
+		SectionID:       lessonInfo.SectionID,
+		OutlineLessonID: lessonID,
+		Title:           lessonTitle,
+		Components:      s3Components,
+		GeneratedAt:     now,
+	}
+	if lessonResult.SegueText != "" {
+		s3Lesson.SegueText = &lessonResult.SegueText
+	}
+
+	// Add lesson to content
+	upsertS3Lesson(content, s3Lesson)
+
+	// Write updated content to MinIO
+	if err := s.writeCourseContent(ctx, job.TenantID, *job.CourseID, content); err != nil {
+		return s.failJob(ctx, job, "failed to store lesson content")
+	}
+
+	// Update token usage
+	_ = s.aiSettingsRepo.IncrementTokenUsage(ctx, job.TenantID, lessonResult.TokensUsed)
+
+	// Complete the job
+	job.Status = valueobject.GenerationJobStatusCompleted
+	job.ProgressPercent = 100
+	completedAt := time.Now()
+	job.CompletedAt = &completedAt
+	job.ResultPath = nil // Clear the temp data
+	progressMsg = "Lesson generation complete"
+	job.ProgressMessage = &progressMsg
+	_ = s.jobRepo.Update(ctx, job)
+
+	s.publishJobEvent(ctx, "completed", job)
+
+	log.Info("lesson generation completed", "tokensUsed", lessonResult.TokensUsed)
+
+	// Check parent job completion
+	if job.ParentJobID != nil {
+		if err := s.checkAndCompleteParentJob(ctx, *job.ParentJobID); err != nil {
+			log.Error("failed to check parent job completion", "error", err)
+		}
+	}
+
+	return nil
+}
+
+// checkAndCompleteParentJob checks child job progress and updates the parent job.
+func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, parentJobID uuid.UUID) error {
+	log := s.logger.With("parentJobID", parentJobID)
+
+	result, err := s.jobRepo.FinalizeParentJob(
+		ctx,
+		parentJobID,
+		valueobject.GenerationJobStatusCompleted.String(),
+		valueobject.GenerationJobStatusFailed.String(),
+		"All lessons generated successfully",
+	)
+	if err != nil {
+		return fmt.Errorf("failed to finalize parent job: %w", err)
+	}
+
+	if result == nil {
+		return nil
+	}
+
+	if !result.WasFinalized && result.AllComplete {
+		log.Info("parent job already finalized by another worker")
+		return nil
+	}
+
+	if !result.AllComplete {
+		// Update progress only
+		parentJob, err := s.jobRepo.GetByID(ctx, parentJobID)
+		if err != nil || parentJob == nil {
+			return nil
+		}
+
+		doneCount := result.CompletedCount + result.FailedCount
+		progressPercent := int32(10)
+		if result.TotalCount > 0 {
+			progressPercent = int32(10 + (90 * doneCount / result.TotalCount))
+		}
+
+		progressMsg := fmt.Sprintf("Generated %d of %d lessons...", result.CompletedCount, result.TotalCount)
+		parentJob.ProgressPercent = progressPercent
+		parentJob.ProgressMessage = &progressMsg
+		parentJob.TokensUsed = result.TotalTokens
+		_ = s.jobRepo.Update(ctx, parentJob)
+		return nil
+	}
+
+	// Finalized - send notification
+	log.Info("parent job finalized", "completed", result.CompletedCount, "failed", result.FailedCount)
+
+	parentJob, err := s.jobRepo.GetByID(ctx, parentJobID)
+	if err != nil || parentJob == nil || parentJob.CourseID == nil {
+		return nil
+	}
+
+	courseTitle := "Your Course"
+	if result.FailedCount > 0 {
+		errMsg := fmt.Sprintf("%d lesson(s) failed to generate", result.FailedCount)
+		if s.completionNotifier != nil {
+			_ = s.completionNotifier.NotifyCourseFailed(ctx, parentJob.CreatedByUserID, *parentJob.CourseID, courseTitle, errMsg)
+		}
+	} else {
+		if s.completionNotifier != nil {
+			_ = s.completionNotifier.NotifyCourseComplete(ctx, parentJob.CreatedByUserID, *parentJob.CourseID, courseTitle)
+		}
+	}
+
+	return nil
 }
 
 // GetJob retrieves a generation job by ID.
@@ -1214,7 +647,6 @@ func (s *AIGenerationService) ListJobs(ctx context.Context, kratosID uuid.UUID, 
 }
 
 // CancelJob cancels a queued or processing job.
-// If the job is a parent job (e.g., full_course), it also cascades cancellation to all child jobs.
 func (s *AIGenerationService) CancelJob(ctx context.Context, kratosID uuid.UUID, jobID uuid.UUID) (*entity.GenerationJob, error) {
 	log := s.logger.With("kratosID", kratosID, "jobID", jobID)
 
@@ -1235,31 +667,22 @@ func (s *AIGenerationService) CancelJob(ctx context.Context, kratosID uuid.UUID,
 	now := time.Now()
 	cancelMsg := "Cancelled by user"
 
-	// If this is a parent job (full_course), cancel all child jobs first
+	// Cancel children if parent job
 	if job.Type == valueobject.GenerationJobTypeFullCourse {
 		children, err := s.jobRepo.ListByParentID(ctx, jobID)
 		if err == nil {
-			cancelledChildren := 0
 			for _, child := range children {
-				// Only cancel queued or processing children
-				if child.Status == valueobject.GenerationJobStatusQueued ||
-					child.Status == valueobject.GenerationJobStatusProcessing {
+				if child.Status == valueobject.GenerationJobStatusQueued || child.Status == valueobject.GenerationJobStatusProcessing {
 					child.Status = valueobject.GenerationJobStatusCancelled
 					child.CompletedAt = &now
 					childMsg := "Cancelled: parent job cancelled"
 					child.ProgressMessage = &childMsg
-					if err := s.jobRepo.Update(ctx, child); err != nil {
-						log.Warn("failed to cancel child job", "childJobID", child.ID, "error", err)
-					} else {
-						cancelledChildren++
-					}
+					_ = s.jobRepo.Update(ctx, child)
 				}
 			}
-			log.Info("cancelled child jobs", "count", cancelledChildren, "total", len(children))
 		}
 	}
 
-	// Cancel the main job
 	job.Status = valueobject.GenerationJobStatusCancelled
 	job.CompletedAt = &now
 	job.ProgressMessage = &cancelMsg
@@ -1273,347 +696,153 @@ func (s *AIGenerationService) CancelJob(ctx context.Context, kratosID uuid.UUID,
 	return job, nil
 }
 
-// GetGeneratedLesson retrieves a generated lesson by ID.
-// Components are loaded from MinIO content.json for cost efficiency.
-func (s *AIGenerationService) GetGeneratedLesson(ctx context.Context, kratosID uuid.UUID, lessonID uuid.UUID) (*entity.GeneratedLesson, error) {
+// GetUserIDByKratosID returns the user's internal ID from their Kratos ID.
+func (s *AIGenerationService) GetUserIDByKratosID(ctx context.Context, kratosID uuid.UUID) (uuid.UUID, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
-		return nil, domainerrors.ErrUserNotFound
+		return uuid.Nil, domainerrors.ErrUserNotFound
 	}
-
-	if user.TenantID == nil {
-		return nil, domainerrors.ErrUserHasNoCompany
-	}
-
-	tenantID := *user.TenantID
-
-	// Get lesson metadata from PostgreSQL
-	lesson, err := s.genLessonRepo.GetByID(ctx, lessonID)
-	if err != nil || lesson == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("generated lesson not found")
-	}
-
-	// Read course content from MinIO to get components
-	content, err := s.readCourseContent(ctx, tenantID, lesson.CourseID)
-	if err != nil {
-		// If content.json doesn't exist yet, return lesson without components
-		s.logger.Warn("course content not found in MinIO, returning empty components", "courseID", lesson.CourseID)
-		lesson.Components = []entity.LessonComponent{}
-		return lesson, nil
-	}
-
-	// Find the lesson in content.json
-	s3Lesson := findS3Lesson(content, lessonID.String())
-	if s3Lesson != nil {
-		// Convert S3 components to entity components
-		lesson.Components = make([]entity.LessonComponent, len(s3Lesson.Components))
-		for i, s3Comp := range s3Lesson.Components {
-			compID, _ := uuid.Parse(s3Comp.ID)
-			lesson.Components[i] = entity.LessonComponent{
-				ID:                   compID,
-				TenantID:             tenantID,
-				LessonID:             lessonID,
-				Type:                 valueobject.LessonComponentType(s3Comp.Type),
-				Position:             s3Comp.Order,
-				ContentJSON:          s3Comp.ContentJSON,
-				LearningObjectiveIDs: s3Comp.LearningObjectiveIDs,
-				CreatedAt:            s3Comp.CreatedAt,
-				UpdatedAt:            s3Comp.UpdatedAt,
-			}
-		}
-	} else {
-		lesson.Components = []entity.LessonComponent{}
-	}
-
-	// Refresh image URLs to ensure they work across devices
-	s.refreshImageURLs(ctx, lesson.Components)
-
-	return lesson, nil
+	return user.ID, nil
 }
 
-// ListGeneratedLessons retrieves all generated lessons for a course.
-// Components are loaded from MinIO content.json for cost efficiency.
-func (s *AIGenerationService) ListGeneratedLessons(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) ([]*entity.GeneratedLesson, error) {
-	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	if err != nil || user == nil {
-		return nil, domainerrors.ErrUserNotFound
-	}
-
-	if user.TenantID == nil {
-		return nil, domainerrors.ErrUserHasNoCompany
-	}
-
-	tenantID := *user.TenantID
-
-	// Get lesson metadata from PostgreSQL
-	lessons, err := s.genLessonRepo.ListByCourseID(ctx, courseID)
-	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-
-	// Read course content from MinIO to get components
-	content, err := s.readCourseContent(ctx, tenantID, courseID)
-	if err != nil {
-		// If content.json doesn't exist yet, return lessons without components
-		s.logger.Warn("course content not found in MinIO, returning empty components", "courseID", courseID)
-		for _, lesson := range lessons {
-			lesson.Components = []entity.LessonComponent{}
-		}
-		return lessons, nil
-	}
-
-	// Build a map of lesson ID -> S3 lesson for quick lookup
-	s3LessonMap := make(map[string]*S3GeneratedLesson)
-	for i := range content.GeneratedLessons {
-		s3LessonMap[content.GeneratedLessons[i].ID] = &content.GeneratedLessons[i]
-	}
-
-	// Load components for each lesson from content.json
-	for _, lesson := range lessons {
-		s3Lesson, ok := s3LessonMap[lesson.ID.String()]
-		if ok && s3Lesson != nil {
-			// Convert S3 components to entity components
-			lesson.Components = make([]entity.LessonComponent, len(s3Lesson.Components))
-			for i, s3Comp := range s3Lesson.Components {
-				compID, _ := uuid.Parse(s3Comp.ID)
-				lesson.Components[i] = entity.LessonComponent{
-					ID:                   compID,
-					TenantID:             tenantID,
-					LessonID:             lesson.ID,
-					Type:                 valueobject.LessonComponentType(s3Comp.Type),
-					Position:             s3Comp.Order,
-					ContentJSON:          s3Comp.ContentJSON,
-					LearningObjectiveIDs: s3Comp.LearningObjectiveIDs,
-					CreatedAt:            s3Comp.CreatedAt,
-					UpdatedAt:            s3Comp.UpdatedAt,
-				}
-			}
-		} else {
-			lesson.Components = []entity.LessonComponent{}
-		}
-
-		// Refresh image URLs to ensure they work across devices
-		s.refreshImageURLs(ctx, lesson.Components)
-	}
-
-	return lessons, nil
+// ProcessNextQueuedJob processes the next queued generation job.
+func (s *AIGenerationService) ProcessNextQueuedJob(ctx context.Context) error {
+	return s.processNextJob(ctx)
 }
 
-// Helper to fail a job with an error message.
+// ProcessJobByID processes a specific generation job by its ID.
+func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) error {
+	log := s.logger.With("jobID", jobID)
+
+	id, err := uuid.Parse(jobID)
+	if err != nil {
+		return fmt.Errorf("invalid job ID: %w", err)
+	}
+
+	adminCtx := tenant.WithSuperAdmin(ctx, true)
+	job, err := s.jobRepo.ClaimJobByID(adminCtx, id)
+	if err != nil {
+		log.Error("failed to claim job", "error", err)
+		return err
+	}
+
+	if job == nil {
+		log.Info("job not available for claim")
+		return nil
+	}
+
+	tenantCtx := tenant.WithTenantID(adminCtx, job.TenantID)
+
+	switch job.Type {
+	case valueobject.GenerationJobTypeCourseOutline:
+		return s.ProcessOutlineGenerationJob(tenantCtx, job)
+	case valueobject.GenerationJobTypeLessonContent:
+		return s.ProcessLessonGenerationJob(tenantCtx, job)
+	default:
+		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
+	}
+}
+
+func (s *AIGenerationService) processNextJob(ctx context.Context) error {
+	adminCtx := tenant.WithSuperAdmin(ctx, true)
+	job, err := s.jobRepo.GetNextQueued(adminCtx)
+	if err != nil {
+		return err
+	}
+
+	if job == nil {
+		return nil
+	}
+
+	tenantCtx := tenant.WithTenantID(adminCtx, job.TenantID)
+
+	switch job.Type {
+	case valueobject.GenerationJobTypeCourseOutline:
+		return s.ProcessOutlineGenerationJob(tenantCtx, job)
+	case valueobject.GenerationJobTypeLessonContent:
+		return s.ProcessLessonGenerationJob(tenantCtx, job)
+	default:
+		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
+	}
+}
+
 func (s *AIGenerationService) failJob(ctx context.Context, job *entity.GenerationJob, errMsg string) error {
 	job.Status = valueobject.GenerationJobStatusFailed
 	job.ErrorMessage = &errMsg
 	now := time.Now()
 	job.CompletedAt = &now
-
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		s.logger.Error("failed to mark job as failed", "jobID", job.ID, "error", err)
-	}
-
-	// Publish job failed event for real-time streaming
+	_ = s.jobRepo.Update(ctx, job)
 	s.publishJobEvent(ctx, "failed", job)
-
-	// Notify user of failure (tenant-isolated via user lookup)
-	if s.notifier != nil {
-		jobType := "Generation"
-		switch job.Type {
-		case valueobject.GenerationJobTypeCourseOutline:
-			jobType = "Course Outline"
-		case valueobject.GenerationJobTypeLessonContent:
-			jobType = "Lesson Content"
-		case valueobject.GenerationJobTypeComponentRegen:
-			jobType = "Component Regeneration"
-		}
-		if err := s.notifier.NotifyJobProgress(ctx, job.CreatedByUserID, job.ID, jobType, "failed", 0); err != nil {
-			s.logger.Error("failed to send failure notification", "jobID", job.ID, "error", err)
-		}
-	}
-
 	return fmt.Errorf("%s", errMsg)
 }
 
-// checkJobCancelled checks if a job has been cancelled by re-fetching its status from the database.
-// Returns true if the job was cancelled, false otherwise.
-// This should be called at key points during long-running operations to allow early termination.
 func (s *AIGenerationService) checkJobCancelled(ctx context.Context, jobID uuid.UUID) bool {
-	// Check context cancellation first
 	select {
 	case <-ctx.Done():
 		return true
 	default:
 	}
 
-	// Check job status in database
 	currentJob, err := s.jobRepo.GetByID(ctx, jobID)
 	if err != nil {
-		return false // Can't determine, assume not cancelled
+		return false
 	}
 	return currentJob.Status == valueobject.GenerationJobStatusCancelled
 }
 
-// markJobCancelled marks a job as cancelled if it was cancelled during processing.
-func (s *AIGenerationService) markJobCancelled(ctx context.Context, job *entity.GenerationJob) error {
-	job.Status = valueobject.GenerationJobStatusCancelled
-	now := time.Now()
-	job.CompletedAt = &now
-	msg := "Cancelled during processing"
-	job.ProgressMessage = &msg
+func (s *AIGenerationService) publishJobEvent(ctx context.Context, eventType string, job *entity.GenerationJob) {
+	if s.jobEventPublisher == nil {
+		return
+	}
+	_ = s.jobEventPublisher.PublishJobEvent(ctx, job.CreatedByUserID, eventType, job)
+}
 
-	if err := s.jobRepo.Update(ctx, job); err != nil {
-		s.logger.Error("failed to mark job as cancelled", "jobID", job.ID, "error", err)
-		return err
+func (s *AIGenerationService) readCourseContent(ctx context.Context, tenantID, courseID uuid.UUID) (*S3CourseContent, error) {
+	if s.contentStorage == nil {
+		return nil, domainerrors.ErrInternal.WithMessage("content storage not configured")
 	}
 
-	// Publish job cancelled event for real-time streaming
-	s.publishJobEvent(ctx, "cancelled", job)
+	var content S3CourseContent
+	if err := s.contentStorage.ReadCourseContent(ctx, tenantID, courseID, &content); err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	return &content, nil
+}
 
+func (s *AIGenerationService) writeCourseContent(ctx context.Context, tenantID, courseID uuid.UUID, content *S3CourseContent) error {
+	if s.contentStorage == nil {
+		return domainerrors.ErrInternal.WithMessage("content storage not configured")
+	}
+
+	if err := s.contentStorage.WriteCourseContent(ctx, tenantID, courseID, content); err != nil {
+		return domainerrors.ErrInternal.WithCause(err)
+	}
 	return nil
 }
 
-// RunBackground starts the background job processing loop.
-// This polls for queued generation jobs and processes them.
-func (s *AIGenerationService) RunBackground(ctx context.Context, interval time.Duration) {
-	log := s.logger.With("job", "ai-generation-worker")
-	log.Info("starting AI generation background job", "interval", interval)
-
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("AI generation background job stopped")
-			return
-		case <-ticker.C:
-			if err := s.processNextJob(ctx); err != nil {
-				log.Error("error processing generation job", "error", err)
-			}
+func findS3Lesson(content *S3CourseContent, lessonID string) *S3GeneratedLesson {
+	for i := range content.GeneratedLessons {
+		if content.GeneratedLessons[i].ID == lessonID {
+			return &content.GeneratedLessons[i]
 		}
 	}
+	return nil
 }
 
-// ProcessNextQueuedJob processes the next queued generation job.
-// This is called by the Asynq worker scheduler.
-func (s *AIGenerationService) ProcessNextQueuedJob(ctx context.Context) error {
-	return s.processNextJob(ctx)
-}
-
-// processNextJob processes the next queued generation job.
-// Sets up tenant context from the job for proper RLS isolation.
-func (s *AIGenerationService) processNextJob(ctx context.Context) error {
-	s.logger.Debug("checking for queued generation jobs")
-
-	// GetNextQueued uses FOR UPDATE SKIP LOCKED and runs with superadmin context
-	// to allow picking up jobs from any tenant
-	adminCtx := tenant.WithSuperAdmin(ctx, true)
-	job, err := s.jobRepo.GetNextQueued(adminCtx)
-	if err != nil {
-		s.logger.Error("failed to get next queued job", "error", err)
-		return err
+func upsertS3Lesson(content *S3CourseContent, lesson S3GeneratedLesson) {
+	for i := range content.GeneratedLessons {
+		if content.GeneratedLessons[i].ID == lesson.ID {
+			content.GeneratedLessons[i] = lesson
+			return
+		}
 	}
-
-	if job == nil {
-		s.logger.Debug("no queued generation jobs found")
-		return nil // No jobs to process
-	}
-
-	// Set up tenant context from the job for RLS isolation
-	// All subsequent operations will be scoped to this tenant
-	// IMPORTANT: Build from adminCtx to preserve superadmin flag for worker operations
-	tenantCtx := tenant.WithTenantID(adminCtx, job.TenantID)
-
-	s.logger.Info("processing AI generation job", "jobID", job.ID, "type", job.Type, "tenantID", job.TenantID)
-
-	// Process based on job type
-	switch job.Type {
-	case valueobject.GenerationJobTypeCourseOutline:
-		return s.ProcessOutlineGenerationJob(tenantCtx, job)
-	case valueobject.GenerationJobTypeLessonContent:
-		return s.ProcessLessonGenerationJob(tenantCtx, job)
-	default:
-		// Unknown/unsupported job type - fail it so it doesn't stay stuck in 'processing'
-		// This handles bad data in DB or enum parse failures from repository
-		s.logger.Error("unknown or invalid job type, marking as failed", "type", job.Type, "jobID", job.ID)
-		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
-	}
-}
-
-// ProcessJobByID processes a specific generation job by its ID.
-// This is used by the Asynq worker to process a specific job.
-// Uses atomic claim to ensure idempotency - safe if called multiple times.
-func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) error {
-	log := s.logger.With("jobID", jobID)
-
-	id, err := uuid.Parse(jobID)
-	if err != nil {
-		log.Error("invalid job ID", "error", err)
-		return fmt.Errorf("invalid job ID: %w", err)
-	}
-
-	// Use superadmin context for atomic claim (before we know its tenant)
-	adminCtx := tenant.WithSuperAdmin(ctx, true)
-
-	// Atomically claim the job - this ensures idempotency
-	// If job is already claimed/processed, this returns nil (no error)
-	job, err := s.jobRepo.ClaimJobByID(adminCtx, id)
-	if err != nil {
-		log.Error("failed to claim generation job", "error", err)
-		return err
-	}
-
-	if job == nil {
-		// Job doesn't exist or already claimed/processed - this is expected
-		// with Asynq retries or duplicate deliveries
-		log.Info("job not available for claim, may already be processed")
-		return nil
-	}
-
-	log.Info("job claimed successfully", "type", job.Type, "tenantID", job.TenantID)
-
-	// Set up tenant context from the job for RLS isolation
-	// All subsequent operations will be scoped to this tenant
-	// IMPORTANT: Build from adminCtx to preserve superadmin flag for worker operations
-	tenantCtx := tenant.WithTenantID(adminCtx, job.TenantID)
-
-	// Process based on job type
-	switch job.Type {
-	case valueobject.GenerationJobTypeCourseOutline:
-		return s.ProcessOutlineGenerationJob(tenantCtx, job)
-	case valueobject.GenerationJobTypeLessonContent:
-		return s.ProcessLessonGenerationJob(tenantCtx, job)
-	default:
-		// Unknown/unsupported job type - fail it so it doesn't stay stuck in 'processing'
-		// This handles bad data in DB or enum parse failures from repository
-		log.Error("unknown or invalid job type, marking as failed", "type", job.Type)
-		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
-	}
-}
-
-// =============================================================================
-// Image Generation
-// =============================================================================
-
-// GenerateComponentImageRequest contains the inputs for component image generation.
-type GenerateComponentImageRequest struct {
-	CourseID    uuid.UUID
-	LessonID    uuid.UUID
-	ComponentID uuid.UUID
-	Prompt      string
-	AspectRatio string // e.g., "16:9", "1:1", "4:3"
-}
-
-// GenerateComponentImageResult contains the result of image generation.
-type GenerateComponentImageResult struct {
-	ImageURL  string
-	Component *entity.LessonComponent
+	content.GeneratedLessons = append(content.GeneratedLessons, lesson)
 }
 
 // GenerateComponentImage generates an image for an image placeholder component.
-// It uses Gemini to generate the image, stores it in MinIO, and updates the component.
 func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratosID uuid.UUID, req GenerateComponentImageRequest) (*GenerateComponentImageResult, error) {
-	log := s.logger.With("kratosID", kratosID, "componentID", req.ComponentID, "lessonID", req.LessonID)
+	log := s.logger.With("kratosID", kratosID, "componentID", req.ComponentID)
 
-	// Get user and tenant
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil {
 		return nil, domainerrors.ErrUserNotFound
@@ -1625,97 +854,56 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 
 	tenantID := *user.TenantID
 
-	// Read course content from MinIO - this is the source of truth for lessons/components
+	// Read course content from MinIO
 	content, err := s.readCourseContent(ctx, tenantID, req.CourseID)
 	if err != nil {
-		log.Error("failed to read course content from MinIO", "error", err, "courseID", req.CourseID)
+		log.Error("failed to read course content", "error", err)
 		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
 	}
 
-	// Log available lessons for debugging
-	var lessonIDs []string
-	for _, lesson := range content.GeneratedLessons {
-		lessonIDs = append(lessonIDs, lesson.ID)
-	}
-	log.Info("course content loaded from MinIO",
-		"courseID", req.CourseID,
-		"requestedLessonID", req.LessonID,
-		"availableLessonIDs", lessonIDs,
-		"lessonCount", len(content.GeneratedLessons),
-	)
-
-	// Find the lesson in content.json
+	// Find lesson and component
 	s3Lesson := findS3Lesson(content, req.LessonID.String())
 	if s3Lesson == nil {
-		log.Error("lesson not found in content.json",
-			"requestedLessonID", req.LessonID,
-			"availableLessonIDs", lessonIDs,
-		)
-		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found in content")
+		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
 	}
 
-	// Find the component in the lesson
-	var component *entity.LessonComponent
 	var componentIndex int = -1
-	for i, s3Comp := range s3Lesson.Components {
-		if s3Comp.ID == req.ComponentID.String() {
-			compID, _ := uuid.Parse(s3Comp.ID)
-			component = &entity.LessonComponent{
-				ID:          compID,
-				TenantID:    tenantID,
-				LessonID:    req.LessonID,
-				Type:        valueobject.LessonComponentType(s3Comp.Type),
-				Position:    s3Comp.Order,
-				ContentJSON: s3Comp.ContentJSON,
-			}
+	for i, comp := range s3Lesson.Components {
+		if comp.ID == req.ComponentID.String() {
 			componentIndex = i
 			break
 		}
 	}
 
-	if component == nil {
+	if componentIndex < 0 {
 		return nil, domainerrors.ErrNotFound.WithMessage("component not found")
 	}
 
-	// Verify it's an image component
-	if component.Type != valueobject.LessonComponentTypeImage {
-		return nil, domainerrors.ErrBadRequest.WithMessage("component is not an image type")
-	}
-
-	// Get AI provider for this tenant
+	// Get AI provider
 	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, tenantID)
 	if err != nil {
-		log.Error("failed to get AI provider", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Generate the image
-	log.Info("generating image for component", "prompt", req.Prompt)
-
+	// Generate image
 	imageResult, err := aiProvider.GenerateImage(ctx, service.GenerateImageRequest{
 		Prompt:      req.Prompt,
 		AspectRatio: req.AspectRatio,
 	})
 	if err != nil {
-		log.Error("image generation failed", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Check if storage is configured
 	if s.imageStorage == nil {
 		return nil, domainerrors.ErrInternal.WithMessage("image storage not configured")
 	}
 
-	// Determine file extension from MIME type
+	// Store image
 	ext := ".png"
 	if imageResult.MimeType == "image/jpeg" {
 		ext = ".jpg"
-	} else if imageResult.MimeType == "image/webp" {
-		ext = ".webp"
 	}
 
-	// Store the image in MinIO with tenant-scoped path
-	// Path: tenants/{tenant_id}/generated-images/{course_id}/{lesson_id}/{component_id}{ext}
 	storagePath := fmt.Sprintf("tenants/%s/generated-images/%s/%s/%s%s",
 		tenantID.String(),
 		req.CourseID.String(),
@@ -1724,61 +912,64 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		ext,
 	)
 
-	err = s.imageStorage.PutContent(ctx, storagePath, imageResult.ImageData, imageResult.MimeType)
-	if err != nil {
-		log.Error("failed to store image in MinIO", "error", err)
+	if err := s.imageStorage.PutContent(ctx, storagePath, imageResult.ImageData, imageResult.MimeType); err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Generate a download URL (valid for 24 hours for viewing in the course editor)
 	imageURL, err := s.imageStorage.GenerateDownloadURL(ctx, storagePath, 24*time.Hour)
 	if err != nil {
-		log.Error("failed to generate download URL", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Update the component's content JSON with the new image URL
-	// Parse existing content, update URL, save back
+	// Update component
 	var imageContent map[string]interface{}
-	if err := json.Unmarshal(component.ContentJSON, &imageContent); err != nil {
-		// If we can't parse, create new content
+	_ = json.Unmarshal(s3Lesson.Components[componentIndex].ContentJSON, &imageContent)
+	if imageContent == nil {
 		imageContent = make(map[string]interface{})
 	}
 
-	imageContent["storagePath"] = storagePath // Store path for fresh URL generation on load
-	imageContent["url"] = imageURL            // Include URL for immediate display
-	// Keep the original image_description as a reference
+	imageContent["storagePath"] = storagePath
+	imageContent["url"] = imageURL
 	if _, exists := imageContent["image_description"]; !exists {
 		imageContent["image_description"] = req.Prompt
 	}
 
-	updatedContentJSON, err := json.Marshal(imageContent)
-	if err != nil {
+	updatedJSON, _ := json.Marshal(imageContent)
+	s3Lesson.Components[componentIndex].ContentJSON = updatedJSON
+	s3Lesson.Components[componentIndex].UpdatedAt = time.Now()
+
+	// Write back
+	if err := s.writeCourseContent(ctx, tenantID, req.CourseID, content); err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Update the component in MinIO content.json using the index we found earlier
-	component.ContentJSON = updatedContentJSON
-	if componentIndex >= 0 {
-		s3Lesson.Components[componentIndex].ContentJSON = updatedContentJSON
-		s3Lesson.Components[componentIndex].UpdatedAt = time.Now()
-
-		// Write back to MinIO
-		if err := s.writeCourseContent(ctx, tenantID, req.CourseID, content); err != nil {
-			log.Error("failed to write course content for image update", "error", err)
-			return nil, domainerrors.ErrInternal.WithCause(err)
-		}
+	compID, _ := uuid.Parse(s3Lesson.Components[componentIndex].ID)
+	component := &entity.LessonComponent{
+		ID:          compID,
+		TenantID:    tenantID,
+		LessonID:    req.LessonID,
+		ContentJSON: updatedJSON,
 	}
-
-	log.Info("image generated and stored successfully",
-		"storagePath", storagePath,
-		"tokensUsed", imageResult.TokensUsed,
-	)
 
 	return &GenerateComponentImageResult{
 		ImageURL:  imageURL,
 		Component: component,
 	}, nil
+}
+
+// GenerateComponentImageRequest contains the inputs for component image generation.
+type GenerateComponentImageRequest struct {
+	CourseID    uuid.UUID
+	LessonID    uuid.UUID
+	ComponentID uuid.UUID
+	Prompt      string
+	AspectRatio string
+}
+
+// GenerateComponentImageResult contains the result of image generation.
+type GenerateComponentImageResult struct {
+	ImageURL  string
+	Component *entity.LessonComponent
 }
 
 // UpdateLessonComponentsRequest contains the inputs for updating lesson components.
@@ -1790,7 +981,7 @@ type UpdateLessonComponentsRequest struct {
 
 // UpdateComponentInput represents a single component update.
 type UpdateComponentInput struct {
-	ID                   string // Can be existing UUID or temp-* for new components
+	ID                   string
 	Type                 valueobject.LessonComponentType
 	Order                int32
 	ContentJSON          json.RawMessage
@@ -1803,9 +994,7 @@ type UpdateLessonComponentsResult struct {
 }
 
 // UpdateLessonComponents saves manual edits to lesson components.
-// Components are stored in MinIO content.json for cost efficiency.
 func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratosID uuid.UUID, req UpdateLessonComponentsRequest) (*UpdateLessonComponentsResult, error) {
-	// Get user and tenant
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil {
 		return nil, domainerrors.ErrUserNotFound
@@ -1817,46 +1006,31 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 
 	tenantID := *user.TenantID
 
-	// Verify the lesson exists in PostgreSQL (metadata only)
-	lesson, err := s.genLessonRepo.GetByID(ctx, req.LessonID)
-	if err != nil || lesson == nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
-	}
-
-	// Read course content from MinIO
+	// Read course content
 	content, err := s.readCourseContent(ctx, tenantID, req.CourseID)
 	if err != nil {
-		s.logger.Error("failed to read course content from MinIO", "error", err, "courseID", req.CourseID)
 		return nil, err
 	}
 
-	// Find or create the lesson in the content
+	// Find or create lesson
 	s3Lesson := findS3Lesson(content, req.LessonID.String())
 	if s3Lesson == nil {
-		// Lesson doesn't exist in content.json yet, create it
 		s3Lesson = &S3GeneratedLesson{
-			ID:              lesson.ID.String(),
-			SectionID:       lesson.SectionID.String(),
-			OutlineLessonID: lesson.OutlineLessonID.String(),
-			Title:           lesson.Title,
-			SegueText:       lesson.SegueText,
-			GeneratedAt:     lesson.GeneratedAt,
-			Components:      []S3LessonComponent{},
+			ID:          req.LessonID.String(),
+			Components:  []S3LessonComponent{},
+			GeneratedAt: time.Now(),
 		}
 	}
 
-	// Build updated components from request
+	// Build updated components
 	now := time.Now()
 	updatedComponents := make([]S3LessonComponent, len(req.Components))
 	for i, input := range req.Components {
-		// Check if this is a new component (temp-* prefix) or existing
 		compID := input.ID
 		createdAt := now
 		if len(input.ID) > 5 && input.ID[:5] == "temp-" {
-			// New component - generate UUID
 			compID = uuid.New().String()
 		} else {
-			// Try to preserve createdAt from existing component
 			for _, existing := range s3Lesson.Components {
 				if existing.ID == input.ID {
 					createdAt = existing.CreatedAt
@@ -1876,232 +1050,291 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 		}
 	}
 
-	// Update the lesson's components
 	s3Lesson.Components = updatedComponents
-
-	// Upsert the lesson in the content
 	upsertS3Lesson(content, *s3Lesson)
 
-	// Write updated content back to MinIO
 	if err := s.writeCourseContent(ctx, tenantID, req.CourseID, content); err != nil {
-		s.logger.Error("failed to write course content to MinIO", "error", err, "courseID", req.CourseID)
 		return nil, err
 	}
 
-	// Convert to entity for response
-	updatedLesson, err := s3LessonToEntity(s3Lesson, tenantID, req.CourseID)
-	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
+	lessonID, _ := uuid.Parse(s3Lesson.ID)
+	lesson := &entity.GeneratedLesson{
+		ID:          lessonID,
+		TenantID:    tenantID,
+		CourseID:    req.CourseID,
+		Title:       s3Lesson.Title,
+		GeneratedAt: s3Lesson.GeneratedAt,
+		Components:  make([]entity.LessonComponent, len(updatedComponents)),
 	}
 
-	// Refresh image URLs to ensure they work across devices
-	s.refreshImageURLs(ctx, updatedLesson.Components)
+	for i, comp := range updatedComponents {
+		compID, _ := uuid.Parse(comp.ID)
+		lesson.Components[i] = entity.LessonComponent{
+			ID:          compID,
+			TenantID:    tenantID,
+			LessonID:    lessonID,
+			Type:        valueobject.LessonComponentType(comp.Type),
+			Position:    comp.Order,
+			ContentJSON: comp.ContentJSON,
+		}
+	}
 
-	s.logger.Info("lesson components updated in MinIO",
-		"lessonID", req.LessonID,
-		"courseID", req.CourseID,
-		"componentCount", len(req.Components),
-	)
-
-	return &UpdateLessonComponentsResult{
-		Lesson: updatedLesson,
-	}, nil
+	return &UpdateLessonComponentsResult{Lesson: lesson}, nil
 }
 
-// GetUserIDByKratosID returns the user's internal ID from their Kratos ID.
-// Used for subscribing to real-time job events.
-func (s *AIGenerationService) GetUserIDByKratosID(ctx context.Context, kratosID uuid.UUID) (uuid.UUID, error) {
+// GetGeneratedLesson retrieves a generated lesson by ID from MinIO.
+func (s *AIGenerationService) GetGeneratedLesson(ctx context.Context, kratosID uuid.UUID, lessonID uuid.UUID) (*entity.GeneratedLesson, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
-		return uuid.Nil, domainerrors.ErrUserNotFound
+		return nil, domainerrors.ErrUserNotFound
 	}
-	return user.ID, nil
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	// This method requires knowing the courseID to read from MinIO
+	// For now, return not found since we'd need courseID
+	return nil, domainerrors.ErrNotFound.WithMessage("lesson not found - courseID required")
 }
 
-// publishJobEvent publishes a job event for real-time streaming.
-// This is fire-and-forget - errors are logged but don't fail the operation.
-func (s *AIGenerationService) publishJobEvent(ctx context.Context, eventType string, job *entity.GenerationJob) {
-	if s.jobEventPublisher == nil {
-		return
+// ListGeneratedLessons retrieves all generated lessons for a course from MinIO.
+func (s *AIGenerationService) ListGeneratedLessons(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) ([]*entity.GeneratedLesson, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
 	}
 
-	if err := s.jobEventPublisher.PublishJobEvent(ctx, job.CreatedByUserID, eventType, job); err != nil {
-		s.logger.Warn("failed to publish job event",
-			"error", err,
-			"eventType", eventType,
-			"jobID", job.ID,
-		)
-	}
-}
-
-// refreshImageURLs generates fresh presigned URLs for image components.
-// This ensures images load correctly on any device by regenerating URLs from stored paths.
-func (s *AIGenerationService) refreshImageURLs(ctx context.Context, components []entity.LessonComponent) {
-	if s.imageStorage == nil {
-		return
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
-	for i := range components {
-		comp := &components[i]
-		if comp.Type != valueobject.LessonComponentTypeImage {
-			continue
-		}
+	tenantID := *user.TenantID
 
-		var content map[string]interface{}
-		if err := json.Unmarshal(comp.ContentJSON, &content); err != nil {
-			continue
-		}
-
-		storagePath, ok := content["storagePath"].(string)
-		if !ok || storagePath == "" {
-			continue
-		}
-
-		// Generate fresh presigned URL (1 hour expiry for viewing)
-		url, err := s.imageStorage.GenerateDownloadURL(ctx, storagePath, 1*time.Hour)
-		if err != nil {
-			s.logger.Warn("failed to generate image URL",
-				"componentID", comp.ID,
-				"storagePath", storagePath,
-				"error", err,
-			)
-			continue
-		}
-
-		content["url"] = url
-		updatedJSON, err := json.Marshal(content)
-		if err != nil {
-			continue
-		}
-		comp.ContentJSON = updatedJSON
-	}
-}
-
-// ============================================================================
-// MinIO Content Storage Helpers
-// ============================================================================
-
-// readCourseContent reads the course content.json from MinIO.
-func (s *AIGenerationService) readCourseContent(ctx context.Context, tenantID, courseID uuid.UUID) (*S3CourseContent, error) {
-	if s.contentStorage == nil {
-		return nil, domainerrors.ErrInternal.WithMessage("content storage not configured")
-	}
-
-	var content S3CourseContent
-	if err := s.contentStorage.ReadCourseContent(ctx, tenantID, courseID, &content); err != nil {
+	content, err := s.readCourseContent(ctx, tenantID, courseID)
+	if err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
-	return &content, nil
-}
 
-// writeCourseContent writes the course content.json to MinIO.
-func (s *AIGenerationService) writeCourseContent(ctx context.Context, tenantID, courseID uuid.UUID, content *S3CourseContent) error {
-	if s.contentStorage == nil {
-		return domainerrors.ErrInternal.WithMessage("content storage not configured")
-	}
+	lessons := make([]*entity.GeneratedLesson, 0, len(content.GeneratedLessons))
+	for _, s3Lesson := range content.GeneratedLessons {
+		lessonID, _ := uuid.Parse(s3Lesson.ID)
+		sectionID, _ := uuid.Parse(s3Lesson.SectionID)
+		outlineLessonID, _ := uuid.Parse(s3Lesson.OutlineLessonID)
 
-	if err := s.contentStorage.WriteCourseContent(ctx, tenantID, courseID, content); err != nil {
-		return domainerrors.ErrInternal.WithCause(err)
-	}
-	return nil
-}
-
-// findS3Lesson finds a lesson by ID in the S3CourseContent.
-func findS3Lesson(content *S3CourseContent, lessonID string) *S3GeneratedLesson {
-	for i := range content.GeneratedLessons {
-		if content.GeneratedLessons[i].ID == lessonID {
-			return &content.GeneratedLessons[i]
+		lesson := &entity.GeneratedLesson{
+			ID:              lessonID,
+			TenantID:        tenantID,
+			CourseID:        courseID,
+			SectionID:       sectionID,
+			OutlineLessonID: outlineLessonID,
+			Title:           s3Lesson.Title,
+			SegueText:       s3Lesson.SegueText,
+			GeneratedAt:     s3Lesson.GeneratedAt,
+			Components:      make([]entity.LessonComponent, len(s3Lesson.Components)),
 		}
+
+		for i, comp := range s3Lesson.Components {
+			compID, _ := uuid.Parse(comp.ID)
+			lesson.Components[i] = entity.LessonComponent{
+				ID:          compID,
+				TenantID:    tenantID,
+				LessonID:    lessonID,
+				Type:        valueobject.LessonComponentType(comp.Type),
+				Position:    comp.Order,
+				ContentJSON: comp.ContentJSON,
+			}
+		}
+
+		lessons = append(lessons, lesson)
 	}
-	return nil
+
+	return lessons, nil
 }
 
-// upsertS3Lesson adds or updates a lesson in the S3CourseContent.
-func upsertS3Lesson(content *S3CourseContent, lesson S3GeneratedLesson) {
-	for i := range content.GeneratedLessons {
-		if content.GeneratedLessons[i].ID == lesson.ID {
-			content.GeneratedLessons[i] = lesson
+// GetCourseOutline retrieves the outline for a course from MinIO.
+func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*entity.CourseOutline, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
+	if err != nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
+	}
+
+	if len(content.Content.Sections) == 0 {
+		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
+	}
+
+	// Convert to entity
+	outline := &entity.CourseOutline{
+		ID:             uuid.New(), // Generated
+		TenantID:       *user.TenantID,
+		CourseID:       courseID,
+		Version:        1,
+		ApprovalStatus: valueobject.OutlineApprovalStatusApproved, // Auto-approved in new flow
+		GeneratedAt:    time.Now(),
+		Sections:       make([]entity.OutlineSection, 0, len(content.Content.Sections)),
+	}
+
+	for sIdx, section := range content.Content.Sections {
+		sectionID, _ := section["id"].(string)
+		sectionTitle, _ := section["title"].(string)
+		sectionDesc, _ := section["description"].(string)
+
+		sec := entity.OutlineSection{
+			ID:          uuid.MustParse(sectionID),
+			TenantID:    *user.TenantID,
+			OutlineID:   outline.ID,
+			Title:       sectionTitle,
+			Description: sectionDesc,
+			Position:    int32(sIdx + 1),
+			Lessons:     []entity.OutlineLesson{},
+		}
+
+		var lessons []interface{}
+		if l, ok := section["lessons"].([]interface{}); ok {
+			lessons = l
+		}
+
+		for lIdx, lessonData := range lessons {
+			lessonMap, _ := lessonData.(map[string]interface{})
+			lessonID, _ := lessonMap["id"].(string)
+			lessonTitle, _ := lessonMap["title"].(string)
+			lessonDesc, _ := lessonMap["description"].(string)
+
+			lesson := entity.OutlineLesson{
+				ID:          uuid.MustParse(lessonID),
+				TenantID:    *user.TenantID,
+				SectionID:   sec.ID,
+				Title:       lessonTitle,
+				Description: lessonDesc,
+				Position:    int32(lIdx + 1),
+			}
+
+			if duration, ok := lessonMap["estimatedDurationMinutes"].(float64); ok {
+				d := int32(duration)
+				lesson.EstimatedDurationMinutes = &d
+			}
+
+			if los, ok := lessonMap["learningObjectives"].([]interface{}); ok {
+				for _, lo := range los {
+					if str, ok := lo.(string); ok {
+						lesson.LearningObjectives = append(lesson.LearningObjectives, str)
+					}
+				}
+			}
+
+			if isLast, ok := lessonMap["isLastInSection"].(bool); ok {
+				lesson.IsLastInSection = isLast
+			}
+			if isLast, ok := lessonMap["isLastInCourse"].(bool); ok {
+				lesson.IsLastInCourse = isLast
+			}
+
+			sec.Lessons = append(sec.Lessons, lesson)
+		}
+
+		outline.Sections = append(outline.Sections, sec)
+	}
+
+	return outline, nil
+}
+
+// ApproveCourseOutline is a no-op in the new flow (outlines auto-approved).
+func (s *AIGenerationService) ApproveCourseOutline(ctx context.Context, kratosID uuid.UUID, outlineID uuid.UUID) (*entity.CourseOutline, error) {
+	// In the simplified flow, outlines are auto-approved
+	// This is kept for API compatibility
+	return nil, domainerrors.ErrNotFound.WithMessage("approve not needed - outlines auto-approved in new flow")
+}
+
+// RejectCourseOutline is a no-op in the new flow.
+func (s *AIGenerationService) RejectCourseOutline(ctx context.Context, kratosID uuid.UUID, outlineID uuid.UUID, reason string) (*entity.CourseOutline, error) {
+	return nil, domainerrors.ErrNotFound.WithMessage("reject not available in new flow")
+}
+
+// UpdateCourseOutline updates an existing outline in MinIO.
+func (s *AIGenerationService) UpdateCourseOutline(ctx context.Context, kratosID uuid.UUID, courseID, outlineID uuid.UUID, sections []UpdateCourseOutlineSection) (*entity.CourseOutline, error) {
+	// For now, return not implemented
+	return nil, domainerrors.ErrNotFound.WithMessage("update outline not yet implemented for MinIO-only storage")
+}
+
+// UpdateCourseOutlineSection represents a section in the update request.
+type UpdateCourseOutlineSection struct {
+	ID          uuid.UUID
+	Title       string
+	Description string
+	Order       int32
+	Lessons     []UpdateCourseOutlineLesson
+}
+
+// UpdateCourseOutlineLesson represents a lesson in the update request.
+type UpdateCourseOutlineLesson struct {
+	ID                       uuid.UUID
+	Title                    string
+	Description              string
+	Order                    int32
+	EstimatedDurationMinutes *int32
+	LearningObjectives       []string
+}
+
+// GenerateLessonContent starts a single lesson content generation job (not used in batch flow).
+func (s *AIGenerationService) GenerateLessonContent(ctx context.Context, kratosID uuid.UUID, req GenerateLessonContentRequest) (*GenerateLessonContentResult, error) {
+	return nil, domainerrors.ErrNotFound.WithMessage("single lesson generation not available - use GenerateAllLessons")
+}
+
+// GenerateLessonContentRequest contains inputs for lesson content generation.
+type GenerateLessonContentRequest struct {
+	CourseID        uuid.UUID
+	OutlineLessonID uuid.UUID
+}
+
+// GenerateLessonContentResult contains the created job.
+type GenerateLessonContentResult struct {
+	Job *entity.GenerationJob
+}
+
+// RegenerateComponent starts a job to regenerate a single lesson component.
+func (s *AIGenerationService) RegenerateComponent(ctx context.Context, kratosID uuid.UUID, req RegenerateComponentRequest) (*RegenerateComponentResult, error) {
+	return nil, domainerrors.ErrNotFound.WithMessage("component regeneration not yet implemented")
+}
+
+// RegenerateComponentRequest contains inputs for component regeneration.
+type RegenerateComponentRequest struct {
+	CourseID           uuid.UUID
+	LessonID           uuid.UUID
+	ComponentID        uuid.UUID
+	ModificationPrompt string
+}
+
+// RegenerateComponentResult contains the created job.
+type RegenerateComponentResult struct {
+	Job *entity.GenerationJob
+}
+
+// RunBackground starts the background job processing loop.
+func (s *AIGenerationService) RunBackground(ctx context.Context, interval time.Duration) {
+	log := s.logger.With("job", "ai-generation-worker")
+	log.Info("starting AI generation background job", "interval", interval)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("AI generation background job stopped")
 			return
+		case <-ticker.C:
+			if err := s.processNextJob(ctx); err != nil {
+				log.Error("error processing job", "error", err)
+			}
 		}
 	}
-	// Not found, append
-	content.GeneratedLessons = append(content.GeneratedLessons, lesson)
-}
-
-// s3LessonToEntity converts an S3GeneratedLesson to domain entity.
-func s3LessonToEntity(s3Lesson *S3GeneratedLesson, tenantID, courseID uuid.UUID) (*entity.GeneratedLesson, error) {
-	lessonID, err := uuid.Parse(s3Lesson.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	sectionID, err := uuid.Parse(s3Lesson.SectionID)
-	if err != nil {
-		return nil, err
-	}
-
-	outlineLessonID, err := uuid.Parse(s3Lesson.OutlineLessonID)
-	if err != nil {
-		return nil, err
-	}
-
-	lesson := &entity.GeneratedLesson{
-		ID:              lessonID,
-		TenantID:        tenantID,
-		CourseID:        courseID,
-		SectionID:       sectionID,
-		OutlineLessonID: outlineLessonID,
-		Title:           s3Lesson.Title,
-		SegueText:       s3Lesson.SegueText,
-		GeneratedAt:     s3Lesson.GeneratedAt,
-		Components:      make([]entity.LessonComponent, len(s3Lesson.Components)),
-	}
-
-	for i, s3Comp := range s3Lesson.Components {
-		compID, err := uuid.Parse(s3Comp.ID)
-		if err != nil {
-			compID = uuid.New() // Generate new ID if parsing fails
-		}
-
-		lesson.Components[i] = entity.LessonComponent{
-			ID:                   compID,
-			TenantID:             tenantID,
-			LessonID:             lessonID,
-			Type:                 valueobject.LessonComponentType(s3Comp.Type),
-			Position:             s3Comp.Order,
-			ContentJSON:          s3Comp.ContentJSON,
-			LearningObjectiveIDs: s3Comp.LearningObjectiveIDs,
-			CreatedAt:            s3Comp.CreatedAt,
-			UpdatedAt:            s3Comp.UpdatedAt,
-		}
-	}
-
-	return lesson, nil
-}
-
-// entityToS3Lesson converts a domain entity to S3GeneratedLesson.
-func entityToS3Lesson(lesson *entity.GeneratedLesson) S3GeneratedLesson {
-	s3Lesson := S3GeneratedLesson{
-		ID:              lesson.ID.String(),
-		SectionID:       lesson.SectionID.String(),
-		OutlineLessonID: lesson.OutlineLessonID.String(),
-		Title:           lesson.Title,
-		SegueText:       lesson.SegueText,
-		GeneratedAt:     lesson.GeneratedAt,
-		Components:      make([]S3LessonComponent, len(lesson.Components)),
-	}
-
-	for i, comp := range lesson.Components {
-		s3Lesson.Components[i] = S3LessonComponent{
-			ID:                   comp.ID.String(),
-			Type:                 string(comp.Type),
-			Order:                comp.Position,
-			ContentJSON:          comp.ContentJSON,
-			LearningObjectiveIDs: comp.LearningObjectiveIDs,
-			CreatedAt:            comp.CreatedAt,
-			UpdatedAt:            comp.UpdatedAt,
-		}
-	}
-
-	return s3Lesson
 }

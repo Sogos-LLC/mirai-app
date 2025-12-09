@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
 
 // ExportTaskEnqueuer enqueues export background tasks.
@@ -30,26 +30,20 @@ type ExportNotifier interface {
 
 // ExportStorage abstracts storage operations for exports.
 type ExportStorage interface {
-	// PutContent stores raw content to storage.
 	PutContent(ctx context.Context, path string, content []byte, contentType string) error
-	// GenerateDownloadURL generates a presigned URL for downloads.
 	GenerateDownloadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
-	// Delete removes a file from storage.
 	Delete(ctx context.Context, path string) error
 }
 
 // CourseExportService handles course export operations.
+// Reads course content from MinIO (no PostgreSQL dependencies for content).
 type CourseExportService struct {
 	userRepo       repository.UserRepository
 	courseRepo     repository.CourseRepository
 	exportRepo     repository.CourseExportRepository
-	outlineRepo    repository.CourseOutlineRepository
-	sectionRepo    repository.OutlineSectionRepository
-	lessonRepo     repository.OutlineLessonRepository
-	genLessonRepo  repository.GeneratedLessonRepository
-	componentRepo  repository.LessonComponentRepository
 	scormPackager  *scorm.Packager
 	storage        ExportStorage
+	contentStorage *storage.TenantAwareStorage
 	taskEnqueuer   ExportTaskEnqueuer
 	notifier       ExportNotifier
 	logger         service.Logger
@@ -60,31 +54,23 @@ func NewCourseExportService(
 	userRepo repository.UserRepository,
 	courseRepo repository.CourseRepository,
 	exportRepo repository.CourseExportRepository,
-	outlineRepo repository.CourseOutlineRepository,
-	sectionRepo repository.OutlineSectionRepository,
-	lessonRepo repository.OutlineLessonRepository,
-	genLessonRepo repository.GeneratedLessonRepository,
-	componentRepo repository.LessonComponentRepository,
 	scormPackager *scorm.Packager,
 	storage ExportStorage,
+	contentStorage *storage.TenantAwareStorage,
 	taskEnqueuer ExportTaskEnqueuer,
 	notifier ExportNotifier,
 	logger service.Logger,
 ) *CourseExportService {
 	return &CourseExportService{
-		userRepo:      userRepo,
-		courseRepo:    courseRepo,
-		exportRepo:    exportRepo,
-		outlineRepo:   outlineRepo,
-		sectionRepo:   sectionRepo,
-		lessonRepo:    lessonRepo,
-		genLessonRepo: genLessonRepo,
-		componentRepo: componentRepo,
-		scormPackager: scormPackager,
-		storage:       storage,
-		taskEnqueuer:  taskEnqueuer,
-		notifier:      notifier,
-		logger:        logger,
+		userRepo:       userRepo,
+		courseRepo:     courseRepo,
+		exportRepo:     exportRepo,
+		scormPackager:  scormPackager,
+		storage:        storage,
+		contentStorage: contentStorage,
+		taskEnqueuer:   taskEnqueuer,
+		notifier:       notifier,
+		logger:         logger,
 	}
 }
 
@@ -119,14 +105,14 @@ func (s *CourseExportService) ExportCourse(ctx context.Context, kratosID uuid.UU
 		return nil, domainerrors.ErrNotFound.WithMessage("course not found")
 	}
 
-	// Verify course has generated content
-	lessons, err := s.genLessonRepo.ListByCourseID(ctx, req.CourseID)
+	// Verify course has generated content by reading from MinIO
+	content, err := s.readCourseContent(ctx, *user.TenantID, req.CourseID)
 	if err != nil {
-		log.Error("failed to list generated lessons", "error", err)
+		log.Error("failed to read course content", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	if len(lessons) == 0 {
+	if len(content.GeneratedLessons) == 0 {
 		return nil, domainerrors.ErrInvalidInput.WithMessage("course must have generated content before exporting")
 	}
 
@@ -285,96 +271,103 @@ func (s *CourseExportService) ProcessExport(ctx context.Context, exportID uuid.U
 }
 
 // processSCORM2004Export handles SCORM 2004 export processing.
+// Reads all content from MinIO instead of PostgreSQL.
 func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export *entity.CourseExport) error {
 	log := s.logger.With("exportID", export.ID, "courseID", export.CourseID)
 
-	// Load course data
+	// Load course metadata
 	course, err := s.courseRepo.GetByID(ctx, export.CourseID)
 	if err != nil || course == nil {
 		return s.failExport(ctx, export.ID, "failed to load course")
 	}
 
 	// Update progress: 10%
-	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 10, "Loading course outline..."); err != nil {
+	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 10, "Loading course content..."); err != nil {
 		log.Error("failed to update progress", "error", err)
 	}
 
-	// Load outline
-	outline, err := s.outlineRepo.GetByCourseID(ctx, export.CourseID)
-	if err != nil || outline == nil {
-		return s.failExport(ctx, export.ID, "failed to load course outline")
+	// Read course content from MinIO
+	content, err := s.readCourseContent(ctx, export.TenantID, export.CourseID)
+	if err != nil {
+		return s.failExport(ctx, export.ID, "failed to load course content from storage")
 	}
 
-	// Load sections
-	sections, err := s.sectionRepo.ListByOutlineID(ctx, outline.ID)
-	if err != nil {
-		return s.failExport(ctx, export.ID, "failed to load sections")
+	if len(content.Content.Sections) == 0 {
+		return s.failExport(ctx, export.ID, "course has no outline")
 	}
 
 	// Update progress: 20%
-	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 20, "Loading lessons..."); err != nil {
+	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 20, "Building export structure..."); err != nil {
 		log.Error("failed to update progress", "error", err)
 	}
 
-	// Build SCORM course data
+	// Build SCORM course data from MinIO content
 	courseData := scorm.CourseData{
 		ID:             export.CourseID.String(),
 		Title:          course.Title,
-		DesiredOutcome: "", // Could load from generation input if needed
-		Sections:       make([]scorm.SectionData, 0, len(sections)),
+		DesiredOutcome: content.Settings.DesiredOutcome,
+		Sections:       make([]scorm.SectionData, 0, len(content.Content.Sections)),
 	}
 
-	// Load lessons and components for each section
-	for _, section := range sections {
-		sectionData := scorm.SectionData{
-			ID:    section.ID.String(),
-			Title: section.Title,
+	// Build a map of generated lessons by ID for quick lookup
+	lessonMap := make(map[string]S3GeneratedLesson)
+	for _, lesson := range content.GeneratedLessons {
+		lessonMap[lesson.ID] = lesson
+	}
+
+	// Build sections from outline
+	for _, sectionData := range content.Content.Sections {
+		sectionID, _ := sectionData["id"].(string)
+		sectionTitle, _ := sectionData["title"].(string)
+
+		sectionSCORM := scorm.SectionData{
+			ID:    sectionID,
+			Title: sectionTitle,
 		}
 
-		// Load outline lessons for this section
-		outlineLessons, err := s.lessonRepo.ListBySectionID(ctx, section.ID)
-		if err != nil {
-			log.Warn("failed to load outline lessons for section", "sectionID", section.ID, "error", err)
-			continue
+		var lessons []interface{}
+		if l, ok := sectionData["lessons"].([]interface{}); ok {
+			lessons = l
 		}
 
-		for _, outlineLesson := range outlineLessons {
-			// Get generated lesson by outline lesson ID
-			genLesson, err := s.genLessonRepo.GetByOutlineLessonID(ctx, outlineLesson.ID)
-			if err != nil || genLesson == nil {
-				log.Warn("generated lesson not found for outline lesson", "outlineLessonID", outlineLesson.ID)
+		for _, lessonDataRaw := range lessons {
+			lessonData, ok := lessonDataRaw.(map[string]interface{})
+			if !ok {
 				continue
 			}
 
-			// Load components
-			components, err := s.componentRepo.ListByLessonID(ctx, genLesson.ID)
-			if err != nil {
-				log.Warn("failed to load components for lesson", "lessonID", genLesson.ID, "error", err)
+			lessonID, _ := lessonData["id"].(string)
+			lessonTitle, _ := lessonData["title"].(string)
+
+			// Find generated lesson content
+			genLesson, found := lessonMap[lessonID]
+			if !found {
+				log.Warn("generated content not found for lesson", "lessonID", lessonID)
 				continue
 			}
 
-			lessonData := scorm.LessonData{
-				ID:    genLesson.ID.String(),
-				Title: genLesson.Title,
+			lessonSCORM := scorm.LessonData{
+				ID:    lessonID,
+				Title: lessonTitle,
 			}
 
 			if genLesson.SegueText != nil {
-				lessonData.SegueText = *genLesson.SegueText
+				lessonSCORM.SegueText = *genLesson.SegueText
 			}
 
-			// Convert components to SCORM format
-			for _, comp := range components {
-				compData := scorm.ComponentData{
-					Type:        s.mapComponentType(comp.Type),
+			// Convert components
+			for _, comp := range genLesson.Components {
+				compSCORM := scorm.ComponentData{
+					Type:        s.mapComponentType(valueobject.LessonComponentType(comp.Type)),
 					ContentJSON: string(comp.ContentJSON),
 				}
-				lessonData.Components = append(lessonData.Components, compData)
+				lessonSCORM.Components = append(lessonSCORM.Components, compSCORM)
 			}
 
-			sectionData.Lessons = append(sectionData.Lessons, lessonData)
+			sectionSCORM.Lessons = append(sectionSCORM.Lessons, lessonSCORM)
 		}
 
-		courseData.Sections = append(courseData.Sections, sectionData)
+		courseData.Sections = append(courseData.Sections, sectionSCORM)
 	}
 
 	// Update progress: 50%
@@ -502,32 +495,15 @@ func (s *CourseExportService) mapComponentType(t valueobject.LessonComponentType
 	}
 }
 
-// loadImageData loads image data for embedding in SCORM package.
-// This is a placeholder - actual implementation would download from MinIO.
-func (s *CourseExportService) loadImageData(ctx context.Context, components []scorm.ComponentData) ([]scorm.ImageData, error) {
-	var images []scorm.ImageData
-
-	for _, comp := range components {
-		if comp.Type != scorm.ComponentTypeImage {
-			continue
-		}
-
-		var content struct {
-			URL     string `json:"url"`
-			AltText string `json:"alt_text"`
-		}
-
-		if err := json.Unmarshal([]byte(comp.ContentJSON), &content); err != nil {
-			continue
-		}
-
-		// For now, skip image embedding - images will be referenced by URL
-		// In a full implementation, we would:
-		// 1. Download the image from the URL
-		// 2. Resize/compress if needed
-		// 3. Add to images slice with local path
-		_ = content
+// readCourseContent reads course content from MinIO.
+func (s *CourseExportService) readCourseContent(ctx context.Context, tenantID, courseID uuid.UUID) (*S3CourseContent, error) {
+	if s.contentStorage == nil {
+		return nil, domainerrors.ErrInternal.WithMessage("content storage not configured")
 	}
 
-	return images, nil
+	var content S3CourseContent
+	if err := s.contentStorage.ReadCourseContent(ctx, tenantID, courseID, &content); err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	return &content, nil
 }

@@ -44,26 +44,9 @@ type Querier interface {
 	// Course Export CRUD operations
 	// Schema: course_exports table with RLS isolation by tenant_id
 	CreateCourseExport(ctx context.Context, arg CreateCourseExportParams) (CourseExport, error)
-	// ============================================================================
-	// Course Generation Inputs
-	// ============================================================================
-	CreateCourseGenerationInput(ctx context.Context, arg CreateCourseGenerationInputParams) (CourseGenerationInput, error)
-	// Course Outline, Section, and Lesson CRUD operations
-	// Schema: course_outlines, outline_sections, outline_lessons tables with RLS
-	// ============================================================================
-	// Course Outlines
-	// ============================================================================
-	CreateCourseOutline(ctx context.Context, arg CreateCourseOutlineParams) (CourseOutline, error)
-	CreateCourseOutlineWithID(ctx context.Context, arg CreateCourseOutlineWithIDParams) error
 	// Folder CRUD operations
 	// Schema: folders table with RLS isolation by tenant_id
 	CreateFolder(ctx context.Context, arg CreateFolderParams) (Folder, error)
-	// Generated Lesson, Lesson Component, and Course Generation Input CRUD operations
-	// Schema: generated_lessons, lesson_components, course_generation_inputs tables
-	// ============================================================================
-	// Generated Lessons
-	// ============================================================================
-	CreateGeneratedLesson(ctx context.Context, arg CreateGeneratedLessonParams) (GeneratedLesson, error)
 	// Generation Job CRUD operations
 	// Schema: generation_jobs table with RLS isolation by tenant_id
 	CreateGenerationJob(ctx context.Context, arg CreateGenerationJobParams) (GenerationJob, error)
@@ -71,23 +54,9 @@ type Querier interface {
 	// Invitation CRUD operations
 	// Schema: invitations table with RLS isolation by tenant_id
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error)
-	// ============================================================================
-	// Lesson Components
-	// ============================================================================
-	CreateLessonComponent(ctx context.Context, arg CreateLessonComponentParams) (LessonComponent, error)
 	// Notification CRUD operations
 	// Schema: notifications table with RLS isolation by tenant_id
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
-	// ============================================================================
-	// Outline Lessons
-	// ============================================================================
-	CreateOutlineLesson(ctx context.Context, arg CreateOutlineLessonParams) (OutlineLesson, error)
-	CreateOutlineLessonWithID(ctx context.Context, arg CreateOutlineLessonWithIDParams) error
-	// ============================================================================
-	// Outline Sections
-	// ============================================================================
-	CreateOutlineSection(ctx context.Context, arg CreateOutlineSectionParams) (OutlineSection, error)
-	CreateOutlineSectionWithID(ctx context.Context, arg CreateOutlineSectionWithIDParams) error
 	// Pending Registration CRUD operations
 	// Schema: pending_registrations table (accessible only to superadmins)
 	CreatePendingRegistration(ctx context.Context, arg CreatePendingRegistrationParams) (PendingRegistration, error)
@@ -105,10 +74,7 @@ type Querier interface {
 	DeleteCourse(ctx context.Context, id uuid.UUID) error
 	DeleteExpiredPendingRegistrations(ctx context.Context) (int64, error)
 	DeleteFolder(ctx context.Context, id uuid.UUID) error
-	DeleteLessonComponent(ctx context.Context, id uuid.UUID) error
 	DeleteNotification(ctx context.Context, id uuid.UUID) error
-	DeleteOutlineLesson(ctx context.Context, id uuid.UUID) error
-	DeleteOutlineSection(ctx context.Context, id uuid.UUID) error
 	DeletePendingRegistration(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
 	DeleteTenant(ctx context.Context, id uuid.UUID) error
@@ -125,9 +91,6 @@ type Querier interface {
 	GetCompanyByStripeCustomerID(ctx context.Context, stripeCustomerID sql.NullString) (Company, error)
 	GetCourseByID(ctx context.Context, id uuid.UUID) (Course, error)
 	GetCourseExportByID(ctx context.Context, id uuid.UUID) (CourseExport, error)
-	GetCourseGenerationInputByCourseID(ctx context.Context, courseID uuid.UUID) (CourseGenerationInput, error)
-	GetCourseOutlineByCourseIDAndVersion(ctx context.Context, arg GetCourseOutlineByCourseIDAndVersionParams) (CourseOutline, error)
-	GetCourseOutlineByID(ctx context.Context, id uuid.UUID) (CourseOutline, error)
 	GetFolderByID(ctx context.Context, id uuid.UUID) (Folder, error)
 	GetFolderByTeamID(ctx context.Context, teamID uuid.NullUUID) (Folder, error)
 	GetFolderByUserID(ctx context.Context, userID uuid.NullUUID) (Folder, error)
@@ -135,17 +98,10 @@ type Querier interface {
 	// Filters PERSONAL folders to only show the user's own private folder.
 	// Defense-in-depth: explicit tenant_id filter in addition to RLS
 	GetFolderHierarchy(ctx context.Context, arg GetFolderHierarchyParams) ([]Folder, error)
-	GetGeneratedLessonByID(ctx context.Context, id uuid.UUID) (GeneratedLesson, error)
-	GetGeneratedLessonByOutlineLessonID(ctx context.Context, outlineLessonID uuid.UUID) (GeneratedLesson, error)
 	GetGenerationJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error)
 	GetInvitationByID(ctx context.Context, id uuid.UUID) (Invitation, error)
 	GetInvitationByToken(ctx context.Context, token string) (Invitation, error)
-	GetLatestCourseOutlineByCourseID(ctx context.Context, courseID uuid.UUID) (CourseOutline, error)
-	GetLessonComponentByID(ctx context.Context, id uuid.UUID) (LessonComponent, error)
-	GetNextOutlineVersion(ctx context.Context, courseID uuid.UUID) (int32, error)
 	GetNotificationByID(ctx context.Context, id uuid.UUID) (Notification, error)
-	GetOutlineLessonByID(ctx context.Context, id uuid.UUID) (OutlineLesson, error)
-	GetOutlineSectionByID(ctx context.Context, id uuid.UUID) (OutlineSection, error)
 	// Note: This looks for 'admin' role instead of deprecated 'owner'
 	GetOwnerByCompanyID(ctx context.Context, companyID uuid.NullUUID) (User, error)
 	GetParentJobStatus(ctx context.Context, id uuid.UUID) (GetParentJobStatusRow, error)
@@ -177,14 +133,10 @@ type Querier interface {
 	ListCoursesByTeamID(ctx context.Context, teamID uuid.NullUUID) ([]Course, error)
 	// Defense-in-depth: explicit tenant_id filter in addition to RLS
 	ListFoldersByParentID(ctx context.Context, arg ListFoldersByParentIDParams) ([]Folder, error)
-	ListGeneratedLessonsByCourseID(ctx context.Context, courseID uuid.UUID) ([]GeneratedLesson, error)
 	ListGenerationJobs(ctx context.Context, arg ListGenerationJobsParams) ([]GenerationJob, error)
 	ListGenerationJobsByParentID(ctx context.Context, parentJobID uuid.NullUUID) ([]GenerationJob, error)
 	ListInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
-	ListLessonComponentsByLessonID(ctx context.Context, lessonID uuid.UUID) ([]LessonComponent, error)
 	ListNotificationsByUserID(ctx context.Context, arg ListNotificationsByUserIDParams) ([]Notification, error)
-	ListOutlineLessonsBySectionID(ctx context.Context, sectionID uuid.UUID) ([]OutlineLesson, error)
-	ListOutlineSectionsByOutlineID(ctx context.Context, outlineID uuid.UUID) ([]OutlineSection, error)
 	ListPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
 	ListPendingRegistrationsByStatus(ctx context.Context, status string) ([]PendingRegistration, error)
 	// Defense-in-depth: explicit tenant_id filter in addition to RLS
@@ -205,15 +157,9 @@ type Querier interface {
 	UpdateCourseExportFailed(ctx context.Context, arg UpdateCourseExportFailedParams) error
 	UpdateCourseExportProcessing(ctx context.Context, arg UpdateCourseExportProcessingParams) error
 	UpdateCourseExportProgress(ctx context.Context, arg UpdateCourseExportProgressParams) error
-	UpdateCourseGenerationInput(ctx context.Context, arg UpdateCourseGenerationInputParams) (CourseGenerationInput, error)
-	UpdateCourseOutline(ctx context.Context, arg UpdateCourseOutlineParams) error
 	UpdateFolder(ctx context.Context, arg UpdateFolderParams) (Folder, error)
-	UpdateGeneratedLesson(ctx context.Context, arg UpdateGeneratedLessonParams) error
 	UpdateGenerationJob(ctx context.Context, arg UpdateGenerationJobParams) error
 	UpdateInvitation(ctx context.Context, arg UpdateInvitationParams) (Invitation, error)
-	UpdateLessonComponent(ctx context.Context, arg UpdateLessonComponentParams) (LessonComponent, error)
-	UpdateOutlineLesson(ctx context.Context, arg UpdateOutlineLessonParams) error
-	UpdateOutlineSection(ctx context.Context, arg UpdateOutlineSectionParams) error
 	UpdatePendingRegistration(ctx context.Context, arg UpdatePendingRegistrationParams) (PendingRegistration, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)

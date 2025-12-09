@@ -31,8 +31,6 @@ func (r *GenerationJobRepository) Create(ctx context.Context, job *entity.Genera
 			Type:            toGenerationJobType(job.Type.String()),
 			Status:          toGenerationJobStatus(job.Status.String()),
 			CourseID:        toNullUUID(job.CourseID),
-			LessonID:        toNullUUID(job.LessonID),
-			OutlineLessonID: toNullUUID(job.OutlineLessonID),
 			ParentJobID:     toNullUUID(job.ParentJobID),
 			ProgressPercent: int32(job.ProgressPercent),
 			ProgressMessage: toNullString(job.ProgressMessage),
@@ -67,8 +65,6 @@ func (r *GenerationJobRepository) CreateBatch(ctx context.Context, jobs []*entit
 				Type:            toGenerationJobType(job.Type.String()),
 				Status:          toGenerationJobStatus(job.Status.String()),
 				CourseID:        toNullUUID(job.CourseID),
-				LessonID:        toNullUUID(job.LessonID),
-				OutlineLessonID: toNullUUID(job.OutlineLessonID),
 				ParentJobID:     toNullUUID(job.ParentJobID),
 				ProgressPercent: int32(job.ProgressPercent),
 				ProgressMessage: toNullString(job.ProgressMessage),
@@ -80,7 +76,7 @@ func (r *GenerationJobRepository) CreateBatch(ctx context.Context, jobs []*entit
 				CreatedByUserID: job.CreatedByUserID,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to create job for lesson %v: %w", job.OutlineLessonID, err)
+				return fmt.Errorf("failed to create job: %w", err)
 			}
 		}
 		return nil
@@ -374,10 +370,6 @@ func toGenerationJobEntity(j *gen.GenerationJob) (*entity.GenerationJob, error) 
 		Type:            jobType,
 		Status:          jobStatus,
 		CourseID:        fromNullUUIDPtr(j.CourseID),
-		LessonID:        fromNullUUIDPtr(j.LessonID),
-		OutlineLessonID: fromNullUUIDPtr(j.OutlineLessonID),
-		SMETaskID:       fromNullUUIDPtr(j.SmeTaskID),
-		SubmissionID:    fromNullUUIDPtr(j.SubmissionID),
 		ParentJobID:     fromNullUUIDPtr(j.ParentJobID),
 		ProgressPercent: int32(j.ProgressPercent),
 		ProgressMessage: fromNullStringPtr(j.ProgressMessage),
@@ -405,10 +397,6 @@ func toGenerationJobEntityNoError(j *gen.GenerationJob) *entity.GenerationJob {
 		Type:            jobType,
 		Status:          jobStatus,
 		CourseID:        fromNullUUIDPtr(j.CourseID),
-		LessonID:        fromNullUUIDPtr(j.LessonID),
-		OutlineLessonID: fromNullUUIDPtr(j.OutlineLessonID),
-		SMETaskID:       fromNullUUIDPtr(j.SmeTaskID),
-		SubmissionID:    fromNullUUIDPtr(j.SubmissionID),
 		ParentJobID:     fromNullUUIDPtr(j.ParentJobID),
 		ProgressPercent: int32(j.ProgressPercent),
 		ProgressMessage: fromNullStringPtr(j.ProgressMessage),
