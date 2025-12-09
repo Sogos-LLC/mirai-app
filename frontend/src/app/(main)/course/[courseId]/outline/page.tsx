@@ -52,6 +52,9 @@ export default function OutlineReviewPage() {
   const courseId = params.courseId as string;
   const isTouch = useIsTouchDevice();
 
+  // DEBUG: Track courseID through the system
+  console.log('[DEBUG-COURSEID] OutlinePage: courseId from URL params:', courseId);
+
   // Inline editing state
   const [editState, setEditState] = useState<EditState | null>(null);
 
@@ -65,10 +68,19 @@ export default function OutlineReviewPage() {
     return outlineReviewMachine.provide({
       actors: {
         loadOutlineActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
+          // DEBUG: Track courseID through the system
+          console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: loading outline for courseId:', input.courseId);
           try {
             // Try to get the outline
             const outline = await getCourseOutlineClient(input.courseId);
             if (outline) {
+              // DEBUG: Track courseID through the system
+              console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: outline loaded', {
+                outlineId: outline.id,
+                outlineCourseId: outline.courseId,
+                inputCourseId: input.courseId,
+                match: outline.courseId === input.courseId,
+              });
               return { outline, job: null };
             }
           } catch {
@@ -107,7 +119,13 @@ export default function OutlineReviewPage() {
         ),
         generateLessonsActor: fromPromise(
           async ({ input }: { input: { courseId: string } }) => {
+            // DEBUG: Track courseID through the system
+            console.log('[DEBUG-COURSEID] OutlinePage generateLessonsActor: calling generateAllLessons with courseId:', input.courseId);
             const result = await generateAllLessons.mutate(input.courseId);
+            console.log('[DEBUG-COURSEID] OutlinePage generateLessonsActor: job created', {
+              jobId: result.job?.id,
+              courseId: input.courseId,
+            });
             return { job: result.job! };
           }
         ),

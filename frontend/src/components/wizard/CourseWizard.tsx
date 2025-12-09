@@ -121,11 +121,20 @@ export default function CourseWizard() {
               },
             });
 
+            // DEBUG: Track courseID through the system
+            console.log('[DEBUG-COURSEID] Wizard: createCourse returned', {
+              courseId: courseResult.course?.id,
+              title: courseResult.course?.settings?.title,
+            });
+
             if (!courseResult.course?.id) {
               throw new Error('Failed to create course');
             }
 
             const courseId = courseResult.course.id;
+
+            // DEBUG: Track courseID through the system
+            console.log('[DEBUG-COURSEID] Wizard: calling generateCourseOutline with courseId:', courseId);
 
             // Step 2: Generate the course outline (starts background job)
             const outlineResult = await generateCourseOutline.mutate({

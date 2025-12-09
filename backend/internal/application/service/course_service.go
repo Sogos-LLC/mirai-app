@@ -356,6 +356,12 @@ func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, in
 	now := time.Now()
 	courseID := uuid.New()
 
+	// DEBUG: Track courseID through the system
+	log.Info("[DEBUG-COURSEID] CreateCourse generated new courseID",
+		"courseID", courseID.String(),
+		"title", input.Settings.Title,
+		"tenantID", user.TenantID.String())
+
 	// Parse folder ID if provided
 	var folderID *uuid.UUID
 	if input.Settings.DestinationFolder != "" {

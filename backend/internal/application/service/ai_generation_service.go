@@ -150,6 +150,10 @@ type GenerateCourseOutlineResult struct {
 func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosID uuid.UUID, req GenerateCourseOutlineRequest) (*GenerateCourseOutlineResult, error) {
 	log := s.logger.With("kratosID", kratosID, "courseID", req.CourseID)
 
+	// DEBUG: Track courseID through the system
+	log.Info("[DEBUG-COURSEID] GenerateCourseOutline received courseID from frontend",
+		"courseID", req.CourseID.String())
+
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
 		return nil, domainerrors.ErrUserNotFound
@@ -303,6 +307,12 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 		ApprovalStatus: valueobject.OutlineApprovalStatusPendingReview,
 		GeneratedAt:    time.Now(),
 	}
+
+	// DEBUG: Track courseID through the system
+	log.Info("[DEBUG-COURSEID] ProcessOutlineGenerationJob creating outline with courseID from job",
+		"outlineID", outline.ID.String(),
+		"courseID", outline.CourseID.String(),
+		"jobCourseID", job.CourseID.String())
 
 	var sections []entity.OutlineSection
 	var lessons []entity.OutlineLesson
@@ -802,14 +812,27 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		GeneratedAt:     genLesson.GeneratedAt,
 	}
 
+	// DEBUG: Track courseID through the system
+	log.Info("[DEBUG-COURSEID] ProcessLessonGenerationJob about to read/write MinIO",
+		"jobID", job.ID.String(),
+		"jobCourseID", job.CourseID.String(),
+		"tenantID", job.TenantID.String(),
+		"lessonTitle", genLesson.Title)
+
 	// Read existing content.json and add the new lesson
 	content, err := s.readCourseContent(ctx, job.TenantID, *job.CourseID)
 	if err != nil {
 		// content.json doesn't exist yet, create a new one
-		log.Info("creating new content.json for course", "courseID", job.CourseID)
+		log.Info("[DEBUG-COURSEID] ProcessLessonGenerationJob content.json NOT FOUND - creating new one",
+			"courseID", job.CourseID.String(),
+			"error", err.Error())
 		content = &S3CourseContent{
 			GeneratedLessons: []S3GeneratedLesson{},
 		}
+	} else {
+		log.Info("[DEBUG-COURSEID] ProcessLessonGenerationJob found existing content.json",
+			"courseID", job.CourseID.String(),
+			"existingLessonCount", len(content.GeneratedLessons))
 	}
 
 	// Add or update the lesson in content
@@ -965,6 +988,10 @@ type GenerateAllLessonsResult struct {
 func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*GenerateAllLessonsResult, error) {
 	log := s.logger.With("kratosID", kratosID, "courseID", courseID)
 
+	// DEBUG: Track courseID through the system
+	log.Info("[DEBUG-COURSEID] GenerateAllLessons received courseID from frontend",
+		"courseID", courseID.String())
+
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
 		return nil, domainerrors.ErrUserNotFound
@@ -979,6 +1006,13 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 	if err != nil || outline == nil {
 		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
 	}
+
+	// DEBUG: Compare frontend courseID with outline's stored courseID
+	log.Info("[DEBUG-COURSEID] GenerateAllLessons comparing courseIDs",
+		"frontendCourseID", courseID.String(),
+		"outlineCourseID", outline.CourseID.String(),
+		"outlineID", outline.ID.String(),
+		"match", courseID.String() == outline.CourseID.String())
 
 	if outline.ApprovalStatus != valueobject.OutlineApprovalStatusApproved {
 		return nil, domainerrors.ErrForbidden.WithMessage("outline must be approved before generating lessons")
