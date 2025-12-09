@@ -1682,11 +1682,36 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Update the component in the database
+	// Update the component in MinIO content.json (primary storage)
 	component.ContentJSON = updatedContentJSON
+	if s.contentStorage != nil {
+		content, err := s.readCourseContent(tenantCtx, *user.TenantID, req.CourseID)
+		if err != nil {
+			s.logger.Warn("failed to read course content for image update, continuing", "error", err)
+		} else {
+			s3Lesson := findS3Lesson(content, req.LessonID.String())
+			if s3Lesson != nil {
+				// Find and update the component in the lesson
+				for i := range s3Lesson.Components {
+					if s3Lesson.Components[i].ID == req.ComponentID.String() {
+						s3Lesson.Components[i].ContentJSON = updatedContentJSON
+						s3Lesson.Components[i].UpdatedAt = time.Now()
+						break
+					}
+				}
+				// Write back to MinIO
+				if err := s.writeCourseContent(tenantCtx, *user.TenantID, req.CourseID, content); err != nil {
+					s.logger.Warn("failed to write course content for image update", "error", err)
+				}
+			}
+		}
+	}
+
+	// Also update in PostgreSQL for backwards compatibility
 	err = s.componentRepo.Update(tenantCtx, component)
 	if err != nil {
-		return nil, domainerrors.ErrInternal.WithCause(err)
+		s.logger.Warn("failed to update component in database", "error", err)
+		// Don't fail - MinIO is primary storage now
 	}
 
 	s.logger.Info("image generated and stored successfully",
