@@ -5,9 +5,4 @@ dist
 build
 *.log
 .DS_Store
-
-# Playwright
-/e2e/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
+tsconfig.tsbuildinfo
