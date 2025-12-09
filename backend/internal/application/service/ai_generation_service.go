@@ -1577,6 +1577,8 @@ type GenerateComponentImageResult struct {
 // GenerateComponentImage generates an image for an image placeholder component.
 // It uses Gemini to generate the image, stores it in MinIO, and updates the component.
 func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratosID uuid.UUID, req GenerateComponentImageRequest) (*GenerateComponentImageResult, error) {
+	log := s.logger.With("kratosID", kratosID, "componentID", req.ComponentID, "lessonID", req.LessonID)
+
 	// Get user and tenant
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil {
@@ -1587,12 +1589,47 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
-	// Set tenant context
-	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+	tenantID := *user.TenantID
 
-	// Verify the component exists and belongs to this lesson
-	component, err := s.componentRepo.GetByID(tenantCtx, req.ComponentID)
+	// Verify the lesson exists
+	lesson, err := s.genLessonRepo.GetByID(ctx, req.LessonID)
+	if err != nil || lesson == nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
+	}
+
+	// Read course content from MinIO to find the component
+	content, err := s.readCourseContent(ctx, tenantID, req.CourseID)
 	if err != nil {
+		log.Error("failed to read course content from MinIO", "error", err)
+		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
+	}
+
+	// Find the lesson in content.json
+	s3Lesson := findS3Lesson(content, req.LessonID.String())
+	if s3Lesson == nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found in content")
+	}
+
+	// Find the component in the lesson
+	var component *entity.LessonComponent
+	var componentIndex int = -1
+	for i, s3Comp := range s3Lesson.Components {
+		if s3Comp.ID == req.ComponentID.String() {
+			compID, _ := uuid.Parse(s3Comp.ID)
+			component = &entity.LessonComponent{
+				ID:          compID,
+				TenantID:    tenantID,
+				LessonID:    req.LessonID,
+				Type:        valueobject.LessonComponentType(s3Comp.Type),
+				Position:    s3Comp.Order,
+				ContentJSON: s3Comp.ContentJSON,
+			}
+			componentIndex = i
+			break
+		}
+	}
+
+	if component == nil {
 		return nil, domainerrors.ErrNotFound.WithMessage("component not found")
 	}
 
@@ -1601,30 +1638,22 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		return nil, domainerrors.ErrBadRequest.WithMessage("component is not an image type")
 	}
 
-	// Verify the lesson exists
-	_, err = s.genLessonRepo.GetByID(tenantCtx, req.LessonID)
-	if err != nil {
-		return nil, domainerrors.ErrNotFound.WithMessage("lesson not found")
-	}
-
 	// Get AI provider for this tenant
-	aiProvider, err := s.aiProviderFactory.GetProvider(tenantCtx, *user.TenantID)
+	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, tenantID)
 	if err != nil {
+		log.Error("failed to get AI provider", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
 	// Generate the image
-	s.logger.Info("generating image for component",
-		"componentID", req.ComponentID,
-		"lessonID", req.LessonID,
-		"prompt", req.Prompt,
-	)
+	log.Info("generating image for component", "prompt", req.Prompt)
 
-	imageResult, err := aiProvider.GenerateImage(tenantCtx, service.GenerateImageRequest{
+	imageResult, err := aiProvider.GenerateImage(ctx, service.GenerateImageRequest{
 		Prompt:      req.Prompt,
 		AspectRatio: req.AspectRatio,
 	})
 	if err != nil {
+		log.Error("image generation failed", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
@@ -1644,21 +1673,23 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 	// Store the image in MinIO with tenant-scoped path
 	// Path: tenants/{tenant_id}/generated-images/{course_id}/{lesson_id}/{component_id}{ext}
 	storagePath := fmt.Sprintf("tenants/%s/generated-images/%s/%s/%s%s",
-		user.TenantID.String(),
+		tenantID.String(),
 		req.CourseID.String(),
 		req.LessonID.String(),
 		req.ComponentID.String(),
 		ext,
 	)
 
-	err = s.imageStorage.PutContent(tenantCtx, storagePath, imageResult.ImageData, imageResult.MimeType)
+	err = s.imageStorage.PutContent(ctx, storagePath, imageResult.ImageData, imageResult.MimeType)
 	if err != nil {
+		log.Error("failed to store image in MinIO", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
 	// Generate a download URL (valid for 24 hours for viewing in the course editor)
-	imageURL, err := s.imageStorage.GenerateDownloadURL(tenantCtx, storagePath, 24*time.Hour)
+	imageURL, err := s.imageStorage.GenerateDownloadURL(ctx, storagePath, 24*time.Hour)
 	if err != nil {
+		log.Error("failed to generate download URL", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
@@ -1671,7 +1702,7 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 	}
 
 	imageContent["storagePath"] = storagePath // Store path for fresh URL generation on load
-	imageContent["url"] = imageURL             // Include URL for immediate display
+	imageContent["url"] = imageURL            // Include URL for immediate display
 	// Keep the original image_description as a reference
 	if _, exists := imageContent["image_description"]; !exists {
 		imageContent["image_description"] = req.Prompt
@@ -1682,33 +1713,20 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Update the component in MinIO content.json (primary storage)
+	// Update the component in MinIO content.json using the index we found earlier
 	component.ContentJSON = updatedContentJSON
-	if s.contentStorage != nil {
-		content, err := s.readCourseContent(tenantCtx, *user.TenantID, req.CourseID)
-		if err != nil {
-			s.logger.Warn("failed to read course content for image update, continuing", "error", err)
-		} else {
-			s3Lesson := findS3Lesson(content, req.LessonID.String())
-			if s3Lesson != nil {
-				// Find and update the component in the lesson
-				for i := range s3Lesson.Components {
-					if s3Lesson.Components[i].ID == req.ComponentID.String() {
-						s3Lesson.Components[i].ContentJSON = updatedContentJSON
-						s3Lesson.Components[i].UpdatedAt = time.Now()
-						break
-					}
-				}
-				// Write back to MinIO
-				if err := s.writeCourseContent(tenantCtx, *user.TenantID, req.CourseID, content); err != nil {
-					s.logger.Warn("failed to write course content for image update", "error", err)
-				}
-			}
+	if componentIndex >= 0 {
+		s3Lesson.Components[componentIndex].ContentJSON = updatedContentJSON
+		s3Lesson.Components[componentIndex].UpdatedAt = time.Now()
+
+		// Write back to MinIO
+		if err := s.writeCourseContent(ctx, tenantID, req.CourseID, content); err != nil {
+			log.Error("failed to write course content for image update", "error", err)
+			return nil, domainerrors.ErrInternal.WithCause(err)
 		}
 	}
 
-	s.logger.Info("image generated and stored successfully",
-		"componentID", req.ComponentID,
+	log.Info("image generated and stored successfully",
 		"storagePath", storagePath,
 		"tokensUsed", imageResult.TokensUsed,
 	)
