@@ -94,6 +94,54 @@ func (s *CourseWizardService) GenerateTitle(ctx context.Context, kratosID uuid.U
 	}, nil
 }
 
+// GenerateOutcomesResult contains AI-generated course outcomes.
+type GenerateOutcomesResult struct {
+	Outcomes   string
+	TokensUsed int64
+}
+
+// GenerateOutcomes generates desired course outcomes from a course name.
+// Used by the "magic wand" button in wizard step 1.
+func (s *CourseWizardService) GenerateOutcomes(ctx context.Context, kratosID uuid.UUID, courseName string) (*GenerateOutcomesResult, error) {
+	log := s.logger.With("kratosID", kratosID, "courseName", courseName)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	// Set tenant context for RLS
+	tenantCtx := tenant.WithTenantID(ctx, *user.TenantID)
+
+	// Get tenant-specific AI provider
+	aiProvider, err := s.aiProviderFactory.GetProvider(tenantCtx, *user.TenantID)
+	if err != nil {
+		log.Error("failed to get AI provider", "error", err)
+		return nil, err
+	}
+
+	// Generate course outcomes
+	result, err := aiProvider.GenerateCourseOutcomes(tenantCtx, courseName)
+	if err != nil {
+		log.Error("failed to generate course outcomes", "error", err)
+		return nil, domainerrors.ErrInternal.WithMessage("AI generation failed")
+	}
+
+	// Update token usage
+	_ = s.aiSettingsRepo.IncrementTokenUsage(tenantCtx, *user.TenantID, result.TokensUsed)
+
+	log.Info("generated course outcomes", "tokensUsed", result.TokensUsed)
+
+	return &GenerateOutcomesResult{
+		Outcomes:   result.Outcomes,
+		TokensUsed: result.TokensUsed,
+	}, nil
+}
+
 // GenerateSMEPersonasResult contains generated SME personas.
 type GenerateSMEPersonasResult struct {
 	Personas   []entity.WizardSMEPersona

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateCourseFromOutlineRequest, CreateCourseFromOutlineResponse, DeleteWizardStateRequest, DeleteWizardStateResponse, GenerateAudiencePersonasRequest, GenerateAudiencePersonasResponse, GenerateSMEPersonasRequest, GenerateSMEPersonasResponse, GenerateTitleRequest, GenerateTitleResponse, GenerateToneOptionsRequest, GenerateToneOptionsResponse, GetWizardStateRequest, GetWizardStateResponse, SaveWizardStateRequest, SaveWizardStateResponse } from "./course_wizard_pb.js";
+import { CreateCourseFromOutlineRequest, CreateCourseFromOutlineResponse, DeleteWizardStateRequest, DeleteWizardStateResponse, GenerateAudiencePersonasRequest, GenerateAudiencePersonasResponse, GenerateOutcomesRequest, GenerateOutcomesResponse, GenerateSMEPersonasRequest, GenerateSMEPersonasResponse, GenerateTitleRequest, GenerateTitleResponse, GenerateToneOptionsRequest, GenerateToneOptionsResponse, GetWizardStateRequest, GetWizardStateResponse, SaveWizardStateRequest, SaveWizardStateResponse } from "./course_wizard_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -24,6 +24,18 @@ export const CourseWizardService = {
       name: "GenerateTitle",
       I: GenerateTitleRequest,
       O: GenerateTitleResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GenerateOutcomes generates course outcomes from the course name.
+     * Used by the "magic wand" button in Step 1 to auto-generate desired outcomes.
+     *
+     * @generated from rpc mirai.v1.CourseWizardService.GenerateOutcomes
+     */
+    generateOutcomes: {
+      name: "GenerateOutcomes",
+      I: GenerateOutcomesRequest,
+      O: GenerateOutcomesResponse,
       kind: MethodKind.Unary,
     },
     /**

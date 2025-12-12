@@ -1,18 +1,24 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Target, Check, RefreshCw, Edit2, X } from 'lucide-react';
+import { Target, Check, RefreshCw, Edit2, X, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import type { AudiencePersona } from '@/gen/mirai/v1/course_wizard_pb';
 import WizardNavigation from '../WizardNavigation';
+import {
+  personaTemplateCategories,
+  templateToPersona,
+  type PersonaTemplate,
+} from '../constants/personaTemplates';
 
 interface AudiencePersonasStepProps {
   personas: AudiencePersona[];
   selectedIds: string[];
   onTogglePersona: (id: string) => void;
   onEditPersona: (persona: AudiencePersona) => void;
+  onAddTemplatePersona: (persona: AudiencePersona) => void;
   onNext: () => void;
   onBack: () => void;
   onRegenerate: () => void;
@@ -25,6 +31,7 @@ export default function AudiencePersonasStep({
   selectedIds,
   onTogglePersona,
   onEditPersona,
+  onAddTemplatePersona,
   onNext,
   onBack,
   onRegenerate,
@@ -37,6 +44,7 @@ export default function AudiencePersonasStep({
     role: string;
     description: string;
   }>({ name: '', role: '', description: '' });
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const canProceed = selectedIds.length > 0;
 
@@ -61,6 +69,27 @@ export default function AudiencePersonasStep({
 
   const handleCancelEdit = () => {
     setEditingId(null);
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  };
+
+  const handleAddTemplate = (template: PersonaTemplate) => {
+    const persona = templateToPersona(template);
+    onAddTemplatePersona(persona as AudiencePersona);
+  };
+
+  const isTemplateAdded = (templateId: string) => {
+    return personas.some((p) => p.id === templateId);
   };
 
   return (
@@ -93,6 +122,80 @@ export default function AudiencePersonasStep({
             </Button>
           </div>
 
+          {/* Quick Start Templates Section */}
+          <div className="mb-6 p-4 bg-surface-elevated border rounded-lg">
+            <h3 className="text-sm font-semibold text-primary mb-3">
+              Quick Add from Templates
+            </h3>
+            <div className="space-y-2">
+              {personaTemplateCategories.map((category) => {
+                const isExpanded = expandedCategories.has(category.id);
+                const addedCount = category.templates.filter((t) => isTemplateAdded(t.id)).length;
+
+                return (
+                  <div key={category.id}>
+                    <button
+                      onClick={() => toggleCategory(category.id)}
+                      className="w-full flex items-center justify-between p-2 rounded hover:bg-hover transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-muted" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted" />
+                        )}
+                        <span className="text-sm font-medium text-primary">{category.name}</span>
+                        {addedCount > 0 && (
+                          <span className="text-xs text-muted">
+                            ({addedCount} added)
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted">
+                        {category.templates.length} templates
+                      </span>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="flex flex-wrap gap-2 pl-6 pt-2 pb-1">
+                        {category.templates.map((template) => {
+                          const added = isTemplateAdded(template.id);
+                          return (
+                            <button
+                              key={template.id}
+                              onClick={() => !added && handleAddTemplate(template)}
+                              disabled={added}
+                              className={`
+                                flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full
+                                transition-colors
+                                ${added
+                                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 cursor-default'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-dark-300 dark:text-dark-text dark:hover:bg-dark-400'
+                                }
+                              `}
+                              title={template.description}
+                            >
+                              {added ? (
+                                <Check className="w-3 h-3" />
+                              ) : (
+                                <Plus className="w-3 h-3" />
+                              )}
+                              {template.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* AI Generated Personas */}
+          <h3 className="text-sm font-semibold text-primary mb-3">
+            AI Generated Personas
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {personas.map((persona) => {
               const isSelected = selectedIds.includes(persona.id);

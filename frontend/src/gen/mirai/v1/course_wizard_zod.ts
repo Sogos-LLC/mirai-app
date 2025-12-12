@@ -64,6 +64,16 @@ export const GenerateTitleRequestSchema = z.object({
 export type GenerateTitleRequest = z.infer<typeof GenerateTitleRequestSchema>;
 
 /**
+ * Zod schema for GenerateOutcomesRequest
+ * @generated from message mirai.v1.GenerateOutcomesRequest
+ */
+export const GenerateOutcomesRequestSchema = z.object({
+  courseName: z.string().min(1),
+});
+
+export type GenerateOutcomesRequest = z.infer<typeof GenerateOutcomesRequestSchema>;
+
+/**
  * Zod schema for GenerateSMEPersonasRequest
  * @generated from message mirai.v1.GenerateSMEPersonasRequest
  */
@@ -131,6 +141,7 @@ export const WizardStepDataSchema = z.object({
   toneOptions: z.array(ToneOptionSchema),
   selectedToneId: z.string(),
   additionalContext: z.string(),
+  desiredOutcomes: z.string(),
 });
 
 export type WizardStepData = z.infer<typeof WizardStepDataSchema>;

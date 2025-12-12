@@ -111,6 +111,17 @@ export const ComponentAlignmentSchema = z.object({
 export type ComponentAlignment = z.infer<typeof ComponentAlignmentSchema>;
 
 /**
+ * Zod schema for ComponentAlignmentTargets
+ * @generated from message mirai.v1.ComponentAlignmentTargets
+ */
+export const ComponentAlignmentTargetsSchema = z.object({
+  personaIds: z.array(z.string()),
+  learningObjectiveIds: z.array(z.string()),
+});
+
+export type ComponentAlignmentTargets = z.infer<typeof ComponentAlignmentTargetsSchema>;
+
+/**
  * Zod schema for TextContent
  * @generated from message mirai.v1.TextContent
  */
@@ -247,19 +258,6 @@ export const GenerateAllLessonsRequestSchema = z.object({
 export type GenerateAllLessonsRequest = z.infer<typeof GenerateAllLessonsRequestSchema>;
 
 /**
- * Zod schema for RegenerateComponentRequest
- * @generated from message mirai.v1.RegenerateComponentRequest
- */
-export const RegenerateComponentRequestSchema = z.object({
-  courseId: z.string(),
-  generatedLessonId: z.string(),
-  componentId: z.string(),
-  modificationPrompt: z.string(),
-});
-
-export type RegenerateComponentRequest = z.infer<typeof RegenerateComponentRequestSchema>;
-
-/**
  * Zod schema for GetJobRequest
  * @generated from message mirai.v1.GetJobRequest
  */
@@ -363,6 +361,20 @@ export const LessonComponentSchema = z.object({
 });
 
 export type LessonComponent = z.infer<typeof LessonComponentSchema>;
+
+/**
+ * Zod schema for RegenerateComponentRequest
+ * @generated from message mirai.v1.RegenerateComponentRequest
+ */
+export const RegenerateComponentRequestSchema = z.object({
+  courseId: z.string(),
+  generatedLessonId: z.string(),
+  componentId: z.string(),
+  modificationPrompt: z.string(),
+  alignmentTargets: ComponentAlignmentTargetsSchema.optional(),
+});
+
+export type RegenerateComponentRequest = z.infer<typeof RegenerateComponentRequestSchema>;
 
 /**
  * Zod schema for QuizContent

@@ -1169,6 +1169,60 @@ func (x *ComponentAlignment) GetLearningObjectiveIds() []string {
 	return nil
 }
 
+// ComponentAlignmentTargets specifies alignment targets for content regeneration.
+// Used to regenerate content aligned to specific personas and learning objectives.
+type ComponentAlignmentTargets struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	PersonaIds           []string               `protobuf:"bytes,1,rep,name=persona_ids,json=personaIds,proto3" json:"persona_ids,omitempty"`                                 // Selected persona IDs (SME or audience)
+	LearningObjectiveIds []string               `protobuf:"bytes,2,rep,name=learning_objective_ids,json=learningObjectiveIds,proto3" json:"learning_objective_ids,omitempty"` // Selected learning objective IDs
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ComponentAlignmentTargets) Reset() {
+	*x = ComponentAlignmentTargets{}
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ComponentAlignmentTargets) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ComponentAlignmentTargets) ProtoMessage() {}
+
+func (x *ComponentAlignmentTargets) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ComponentAlignmentTargets.ProtoReflect.Descriptor instead.
+func (*ComponentAlignmentTargets) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ComponentAlignmentTargets) GetPersonaIds() []string {
+	if x != nil {
+		return x.PersonaIds
+	}
+	return nil
+}
+
+func (x *ComponentAlignmentTargets) GetLearningObjectiveIds() []string {
+	if x != nil {
+		return x.LearningObjectiveIds
+	}
+	return nil
+}
+
 // TextContent for text components.
 type TextContent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1180,7 +1234,7 @@ type TextContent struct {
 
 func (x *TextContent) Reset() {
 	*x = TextContent{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[7]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1192,7 +1246,7 @@ func (x *TextContent) String() string {
 func (*TextContent) ProtoMessage() {}
 
 func (x *TextContent) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[7]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1205,7 +1259,7 @@ func (x *TextContent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TextContent.ProtoReflect.Descriptor instead.
 func (*TextContent) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{7}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *TextContent) GetHtml() string {
@@ -1233,7 +1287,7 @@ type HeadingContent struct {
 
 func (x *HeadingContent) Reset() {
 	*x = HeadingContent{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[8]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1245,7 +1299,7 @@ func (x *HeadingContent) String() string {
 func (*HeadingContent) ProtoMessage() {}
 
 func (x *HeadingContent) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[8]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1258,7 +1312,7 @@ func (x *HeadingContent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeadingContent.ProtoReflect.Descriptor instead.
 func (*HeadingContent) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{8}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *HeadingContent) GetLevel() HeadingLevel {
@@ -1289,7 +1343,7 @@ type ImageContent struct {
 
 func (x *ImageContent) Reset() {
 	*x = ImageContent{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[9]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1301,7 +1355,7 @@ func (x *ImageContent) String() string {
 func (*ImageContent) ProtoMessage() {}
 
 func (x *ImageContent) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[9]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1314,7 +1368,7 @@ func (x *ImageContent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageContent.ProtoReflect.Descriptor instead.
 func (*ImageContent) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{9}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ImageContent) GetImageDescription() string {
@@ -1361,7 +1415,7 @@ type QuizContent struct {
 
 func (x *QuizContent) Reset() {
 	*x = QuizContent{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[10]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1373,7 +1427,7 @@ func (x *QuizContent) String() string {
 func (*QuizContent) ProtoMessage() {}
 
 func (x *QuizContent) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[10]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1386,7 +1440,7 @@ func (x *QuizContent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuizContent.ProtoReflect.Descriptor instead.
 func (*QuizContent) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{10}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *QuizContent) GetQuestion() string {
@@ -1449,7 +1503,7 @@ type QuizOption struct {
 
 func (x *QuizOption) Reset() {
 	*x = QuizOption{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[11]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1461,7 +1515,7 @@ func (x *QuizOption) String() string {
 func (*QuizOption) ProtoMessage() {}
 
 func (x *QuizOption) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[11]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1474,7 +1528,7 @@ func (x *QuizOption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuizOption.ProtoReflect.Descriptor instead.
 func (*QuizOption) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{11}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *QuizOption) GetId() string {
@@ -1502,7 +1556,7 @@ type CodeContent struct {
 
 func (x *CodeContent) Reset() {
 	*x = CodeContent{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[12]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1514,7 +1568,7 @@ func (x *CodeContent) String() string {
 func (*CodeContent) ProtoMessage() {}
 
 func (x *CodeContent) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[12]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1527,7 +1581,7 @@ func (x *CodeContent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CodeContent.ProtoReflect.Descriptor instead.
 func (*CodeContent) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{12}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CodeContent) GetCode() string {
@@ -1556,7 +1610,7 @@ type CalloutContent struct {
 
 func (x *CalloutContent) Reset() {
 	*x = CalloutContent{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[13]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1568,7 +1622,7 @@ func (x *CalloutContent) String() string {
 func (*CalloutContent) ProtoMessage() {}
 
 func (x *CalloutContent) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[13]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1581,7 +1635,7 @@ func (x *CalloutContent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CalloutContent.ProtoReflect.Descriptor instead.
 func (*CalloutContent) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{13}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CalloutContent) GetStyle() CalloutStyle {
@@ -1617,7 +1671,7 @@ type CourseGenerationInput struct {
 
 func (x *CourseGenerationInput) Reset() {
 	*x = CourseGenerationInput{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[14]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1629,7 +1683,7 @@ func (x *CourseGenerationInput) String() string {
 func (*CourseGenerationInput) ProtoMessage() {}
 
 func (x *CourseGenerationInput) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[14]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1642,7 +1696,7 @@ func (x *CourseGenerationInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CourseGenerationInput.ProtoReflect.Descriptor instead.
 func (*CourseGenerationInput) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{14}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CourseGenerationInput) GetCourseId() string {
@@ -1676,7 +1730,7 @@ type GenerateCourseOutlineRequest struct {
 
 func (x *GenerateCourseOutlineRequest) Reset() {
 	*x = GenerateCourseOutlineRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[15]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1688,7 +1742,7 @@ func (x *GenerateCourseOutlineRequest) String() string {
 func (*GenerateCourseOutlineRequest) ProtoMessage() {}
 
 func (x *GenerateCourseOutlineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[15]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1701,7 +1755,7 @@ func (x *GenerateCourseOutlineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateCourseOutlineRequest.ProtoReflect.Descriptor instead.
 func (*GenerateCourseOutlineRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{15}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GenerateCourseOutlineRequest) GetInput() *CourseGenerationInput {
@@ -1721,7 +1775,7 @@ type GenerateCourseOutlineResponse struct {
 
 func (x *GenerateCourseOutlineResponse) Reset() {
 	*x = GenerateCourseOutlineResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[16]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1733,7 +1787,7 @@ func (x *GenerateCourseOutlineResponse) String() string {
 func (*GenerateCourseOutlineResponse) ProtoMessage() {}
 
 func (x *GenerateCourseOutlineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[16]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1746,7 +1800,7 @@ func (x *GenerateCourseOutlineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateCourseOutlineResponse.ProtoReflect.Descriptor instead.
 func (*GenerateCourseOutlineResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{16}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GenerateCourseOutlineResponse) GetJob() *GenerationJob {
@@ -1767,7 +1821,7 @@ type GetCourseOutlineRequest struct {
 
 func (x *GetCourseOutlineRequest) Reset() {
 	*x = GetCourseOutlineRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[17]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1779,7 +1833,7 @@ func (x *GetCourseOutlineRequest) String() string {
 func (*GetCourseOutlineRequest) ProtoMessage() {}
 
 func (x *GetCourseOutlineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[17]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1792,7 +1846,7 @@ func (x *GetCourseOutlineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCourseOutlineRequest.ProtoReflect.Descriptor instead.
 func (*GetCourseOutlineRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{17}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetCourseOutlineRequest) GetCourseId() string {
@@ -1819,7 +1873,7 @@ type GetCourseOutlineResponse struct {
 
 func (x *GetCourseOutlineResponse) Reset() {
 	*x = GetCourseOutlineResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[18]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1831,7 +1885,7 @@ func (x *GetCourseOutlineResponse) String() string {
 func (*GetCourseOutlineResponse) ProtoMessage() {}
 
 func (x *GetCourseOutlineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[18]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1844,7 +1898,7 @@ func (x *GetCourseOutlineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCourseOutlineResponse.ProtoReflect.Descriptor instead.
 func (*GetCourseOutlineResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{18}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetCourseOutlineResponse) GetOutline() *CourseOutline {
@@ -1865,7 +1919,7 @@ type ApproveCourseOutlineRequest struct {
 
 func (x *ApproveCourseOutlineRequest) Reset() {
 	*x = ApproveCourseOutlineRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[19]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1877,7 +1931,7 @@ func (x *ApproveCourseOutlineRequest) String() string {
 func (*ApproveCourseOutlineRequest) ProtoMessage() {}
 
 func (x *ApproveCourseOutlineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[19]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1890,7 +1944,7 @@ func (x *ApproveCourseOutlineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveCourseOutlineRequest.ProtoReflect.Descriptor instead.
 func (*ApproveCourseOutlineRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{19}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ApproveCourseOutlineRequest) GetCourseId() string {
@@ -1917,7 +1971,7 @@ type ApproveCourseOutlineResponse struct {
 
 func (x *ApproveCourseOutlineResponse) Reset() {
 	*x = ApproveCourseOutlineResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[20]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1929,7 +1983,7 @@ func (x *ApproveCourseOutlineResponse) String() string {
 func (*ApproveCourseOutlineResponse) ProtoMessage() {}
 
 func (x *ApproveCourseOutlineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[20]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1942,7 +1996,7 @@ func (x *ApproveCourseOutlineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveCourseOutlineResponse.ProtoReflect.Descriptor instead.
 func (*ApproveCourseOutlineResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{20}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ApproveCourseOutlineResponse) GetOutline() *CourseOutline {
@@ -1964,7 +2018,7 @@ type RejectCourseOutlineRequest struct {
 
 func (x *RejectCourseOutlineRequest) Reset() {
 	*x = RejectCourseOutlineRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[21]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1976,7 +2030,7 @@ func (x *RejectCourseOutlineRequest) String() string {
 func (*RejectCourseOutlineRequest) ProtoMessage() {}
 
 func (x *RejectCourseOutlineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[21]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1989,7 +2043,7 @@ func (x *RejectCourseOutlineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectCourseOutlineRequest.ProtoReflect.Descriptor instead.
 func (*RejectCourseOutlineRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{21}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RejectCourseOutlineRequest) GetCourseId() string {
@@ -2023,7 +2077,7 @@ type RejectCourseOutlineResponse struct {
 
 func (x *RejectCourseOutlineResponse) Reset() {
 	*x = RejectCourseOutlineResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[22]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2035,7 +2089,7 @@ func (x *RejectCourseOutlineResponse) String() string {
 func (*RejectCourseOutlineResponse) ProtoMessage() {}
 
 func (x *RejectCourseOutlineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[22]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2048,7 +2102,7 @@ func (x *RejectCourseOutlineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectCourseOutlineResponse.ProtoReflect.Descriptor instead.
 func (*RejectCourseOutlineResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{22}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *RejectCourseOutlineResponse) GetOutline() *CourseOutline {
@@ -2070,7 +2124,7 @@ type UpdateCourseOutlineRequest struct {
 
 func (x *UpdateCourseOutlineRequest) Reset() {
 	*x = UpdateCourseOutlineRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[23]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2082,7 +2136,7 @@ func (x *UpdateCourseOutlineRequest) String() string {
 func (*UpdateCourseOutlineRequest) ProtoMessage() {}
 
 func (x *UpdateCourseOutlineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[23]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2095,7 +2149,7 @@ func (x *UpdateCourseOutlineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCourseOutlineRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCourseOutlineRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{23}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *UpdateCourseOutlineRequest) GetCourseId() string {
@@ -2129,7 +2183,7 @@ type UpdateCourseOutlineResponse struct {
 
 func (x *UpdateCourseOutlineResponse) Reset() {
 	*x = UpdateCourseOutlineResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[24]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2141,7 +2195,7 @@ func (x *UpdateCourseOutlineResponse) String() string {
 func (*UpdateCourseOutlineResponse) ProtoMessage() {}
 
 func (x *UpdateCourseOutlineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[24]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2154,7 +2208,7 @@ func (x *UpdateCourseOutlineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCourseOutlineResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCourseOutlineResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{24}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *UpdateCourseOutlineResponse) GetOutline() *CourseOutline {
@@ -2175,7 +2229,7 @@ type GenerateLessonContentRequest struct {
 
 func (x *GenerateLessonContentRequest) Reset() {
 	*x = GenerateLessonContentRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[25]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2187,7 +2241,7 @@ func (x *GenerateLessonContentRequest) String() string {
 func (*GenerateLessonContentRequest) ProtoMessage() {}
 
 func (x *GenerateLessonContentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[25]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2200,7 +2254,7 @@ func (x *GenerateLessonContentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateLessonContentRequest.ProtoReflect.Descriptor instead.
 func (*GenerateLessonContentRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{25}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GenerateLessonContentRequest) GetCourseId() string {
@@ -2227,7 +2281,7 @@ type GenerateLessonContentResponse struct {
 
 func (x *GenerateLessonContentResponse) Reset() {
 	*x = GenerateLessonContentResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[26]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2239,7 +2293,7 @@ func (x *GenerateLessonContentResponse) String() string {
 func (*GenerateLessonContentResponse) ProtoMessage() {}
 
 func (x *GenerateLessonContentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[26]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2252,7 +2306,7 @@ func (x *GenerateLessonContentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateLessonContentResponse.ProtoReflect.Descriptor instead.
 func (*GenerateLessonContentResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{26}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GenerateLessonContentResponse) GetJob() *GenerationJob {
@@ -2272,7 +2326,7 @@ type GenerateAllLessonsRequest struct {
 
 func (x *GenerateAllLessonsRequest) Reset() {
 	*x = GenerateAllLessonsRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[27]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2284,7 +2338,7 @@ func (x *GenerateAllLessonsRequest) String() string {
 func (*GenerateAllLessonsRequest) ProtoMessage() {}
 
 func (x *GenerateAllLessonsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[27]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2297,7 +2351,7 @@ func (x *GenerateAllLessonsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateAllLessonsRequest.ProtoReflect.Descriptor instead.
 func (*GenerateAllLessonsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{27}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GenerateAllLessonsRequest) GetCourseId() string {
@@ -2317,7 +2371,7 @@ type GenerateAllLessonsResponse struct {
 
 func (x *GenerateAllLessonsResponse) Reset() {
 	*x = GenerateAllLessonsResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[28]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2329,7 +2383,7 @@ func (x *GenerateAllLessonsResponse) String() string {
 func (*GenerateAllLessonsResponse) ProtoMessage() {}
 
 func (x *GenerateAllLessonsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[28]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2342,7 +2396,7 @@ func (x *GenerateAllLessonsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateAllLessonsResponse.ProtoReflect.Descriptor instead.
 func (*GenerateAllLessonsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{28}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GenerateAllLessonsResponse) GetJob() *GenerationJob {
@@ -2354,18 +2408,19 @@ func (x *GenerateAllLessonsResponse) GetJob() *GenerationJob {
 
 // RegenerateComponentRequest regenerates a single component.
 type RegenerateComponentRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	CourseId           string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
-	GeneratedLessonId  string                 `protobuf:"bytes,2,opt,name=generated_lesson_id,json=generatedLessonId,proto3" json:"generated_lesson_id,omitempty"` // Generated lesson ID (NOT outline_lesson_id)
-	ComponentId        string                 `protobuf:"bytes,3,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`
-	ModificationPrompt string                 `protobuf:"bytes,4,opt,name=modification_prompt,json=modificationPrompt,proto3" json:"modification_prompt,omitempty"` // Instructions for regeneration
+	state              protoimpl.MessageState     `protogen:"open.v1"`
+	CourseId           string                     `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
+	GeneratedLessonId  string                     `protobuf:"bytes,2,opt,name=generated_lesson_id,json=generatedLessonId,proto3" json:"generated_lesson_id,omitempty"` // Generated lesson ID (NOT outline_lesson_id)
+	ComponentId        string                     `protobuf:"bytes,3,opt,name=component_id,json=componentId,proto3" json:"component_id,omitempty"`
+	ModificationPrompt string                     `protobuf:"bytes,4,opt,name=modification_prompt,json=modificationPrompt,proto3" json:"modification_prompt,omitempty"` // Instructions for regeneration
+	AlignmentTargets   *ComponentAlignmentTargets `protobuf:"bytes,5,opt,name=alignment_targets,json=alignmentTargets,proto3,oneof" json:"alignment_targets,omitempty"` // Optional alignment targets for realignment
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
 
 func (x *RegenerateComponentRequest) Reset() {
 	*x = RegenerateComponentRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[29]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2377,7 +2432,7 @@ func (x *RegenerateComponentRequest) String() string {
 func (*RegenerateComponentRequest) ProtoMessage() {}
 
 func (x *RegenerateComponentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[29]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2390,7 +2445,7 @@ func (x *RegenerateComponentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegenerateComponentRequest.ProtoReflect.Descriptor instead.
 func (*RegenerateComponentRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{29}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RegenerateComponentRequest) GetCourseId() string {
@@ -2421,6 +2476,13 @@ func (x *RegenerateComponentRequest) GetModificationPrompt() string {
 	return ""
 }
 
+func (x *RegenerateComponentRequest) GetAlignmentTargets() *ComponentAlignmentTargets {
+	if x != nil {
+		return x.AlignmentTargets
+	}
+	return nil
+}
+
 // RegenerateComponentResponse returns the job ID.
 type RegenerateComponentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2431,7 +2493,7 @@ type RegenerateComponentResponse struct {
 
 func (x *RegenerateComponentResponse) Reset() {
 	*x = RegenerateComponentResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[30]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2443,7 +2505,7 @@ func (x *RegenerateComponentResponse) String() string {
 func (*RegenerateComponentResponse) ProtoMessage() {}
 
 func (x *RegenerateComponentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[30]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2456,7 +2518,7 @@ func (x *RegenerateComponentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegenerateComponentResponse.ProtoReflect.Descriptor instead.
 func (*RegenerateComponentResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{30}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *RegenerateComponentResponse) GetJob() *GenerationJob {
@@ -2476,7 +2538,7 @@ type GetJobRequest struct {
 
 func (x *GetJobRequest) Reset() {
 	*x = GetJobRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[31]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2488,7 +2550,7 @@ func (x *GetJobRequest) String() string {
 func (*GetJobRequest) ProtoMessage() {}
 
 func (x *GetJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[31]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2501,7 +2563,7 @@ func (x *GetJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJobRequest.ProtoReflect.Descriptor instead.
 func (*GetJobRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{31}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GetJobRequest) GetJobId() string {
@@ -2521,7 +2583,7 @@ type GetJobResponse struct {
 
 func (x *GetJobResponse) Reset() {
 	*x = GetJobResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[32]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2533,7 +2595,7 @@ func (x *GetJobResponse) String() string {
 func (*GetJobResponse) ProtoMessage() {}
 
 func (x *GetJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[32]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2546,7 +2608,7 @@ func (x *GetJobResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJobResponse.ProtoReflect.Descriptor instead.
 func (*GetJobResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{32}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetJobResponse) GetJob() *GenerationJob {
@@ -2568,7 +2630,7 @@ type ListJobsRequest struct {
 
 func (x *ListJobsRequest) Reset() {
 	*x = ListJobsRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[33]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2580,7 +2642,7 @@ func (x *ListJobsRequest) String() string {
 func (*ListJobsRequest) ProtoMessage() {}
 
 func (x *ListJobsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[33]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2593,7 +2655,7 @@ func (x *ListJobsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJobsRequest.ProtoReflect.Descriptor instead.
 func (*ListJobsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{33}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListJobsRequest) GetType() GenerationJobType {
@@ -2627,7 +2689,7 @@ type ListJobsResponse struct {
 
 func (x *ListJobsResponse) Reset() {
 	*x = ListJobsResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[34]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2639,7 +2701,7 @@ func (x *ListJobsResponse) String() string {
 func (*ListJobsResponse) ProtoMessage() {}
 
 func (x *ListJobsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[34]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2652,7 +2714,7 @@ func (x *ListJobsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJobsResponse.ProtoReflect.Descriptor instead.
 func (*ListJobsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{34}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListJobsResponse) GetJobs() []*GenerationJob {
@@ -2672,7 +2734,7 @@ type CancelJobRequest struct {
 
 func (x *CancelJobRequest) Reset() {
 	*x = CancelJobRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[35]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2684,7 +2746,7 @@ func (x *CancelJobRequest) String() string {
 func (*CancelJobRequest) ProtoMessage() {}
 
 func (x *CancelJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[35]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2697,7 +2759,7 @@ func (x *CancelJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelJobRequest.ProtoReflect.Descriptor instead.
 func (*CancelJobRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{35}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *CancelJobRequest) GetJobId() string {
@@ -2717,7 +2779,7 @@ type CancelJobResponse struct {
 
 func (x *CancelJobResponse) Reset() {
 	*x = CancelJobResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[36]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2729,7 +2791,7 @@ func (x *CancelJobResponse) String() string {
 func (*CancelJobResponse) ProtoMessage() {}
 
 func (x *CancelJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[36]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2742,7 +2804,7 @@ func (x *CancelJobResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelJobResponse.ProtoReflect.Descriptor instead.
 func (*CancelJobResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{36}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *CancelJobResponse) GetJob() *GenerationJob {
@@ -2762,7 +2824,7 @@ type GetGeneratedLessonRequest struct {
 
 func (x *GetGeneratedLessonRequest) Reset() {
 	*x = GetGeneratedLessonRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[37]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2774,7 +2836,7 @@ func (x *GetGeneratedLessonRequest) String() string {
 func (*GetGeneratedLessonRequest) ProtoMessage() {}
 
 func (x *GetGeneratedLessonRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[37]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2787,7 +2849,7 @@ func (x *GetGeneratedLessonRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGeneratedLessonRequest.ProtoReflect.Descriptor instead.
 func (*GetGeneratedLessonRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{37}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GetGeneratedLessonRequest) GetLessonId() string {
@@ -2807,7 +2869,7 @@ type GetGeneratedLessonResponse struct {
 
 func (x *GetGeneratedLessonResponse) Reset() {
 	*x = GetGeneratedLessonResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[38]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2819,7 +2881,7 @@ func (x *GetGeneratedLessonResponse) String() string {
 func (*GetGeneratedLessonResponse) ProtoMessage() {}
 
 func (x *GetGeneratedLessonResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[38]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2832,7 +2894,7 @@ func (x *GetGeneratedLessonResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGeneratedLessonResponse.ProtoReflect.Descriptor instead.
 func (*GetGeneratedLessonResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{38}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *GetGeneratedLessonResponse) GetLesson() *GeneratedLesson {
@@ -2852,7 +2914,7 @@ type ListGeneratedLessonsRequest struct {
 
 func (x *ListGeneratedLessonsRequest) Reset() {
 	*x = ListGeneratedLessonsRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[39]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2864,7 +2926,7 @@ func (x *ListGeneratedLessonsRequest) String() string {
 func (*ListGeneratedLessonsRequest) ProtoMessage() {}
 
 func (x *ListGeneratedLessonsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[39]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2877,7 +2939,7 @@ func (x *ListGeneratedLessonsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGeneratedLessonsRequest.ProtoReflect.Descriptor instead.
 func (*ListGeneratedLessonsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{39}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListGeneratedLessonsRequest) GetCourseId() string {
@@ -2897,7 +2959,7 @@ type ListGeneratedLessonsResponse struct {
 
 func (x *ListGeneratedLessonsResponse) Reset() {
 	*x = ListGeneratedLessonsResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[40]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2909,7 +2971,7 @@ func (x *ListGeneratedLessonsResponse) String() string {
 func (*ListGeneratedLessonsResponse) ProtoMessage() {}
 
 func (x *ListGeneratedLessonsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[40]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2922,7 +2984,7 @@ func (x *ListGeneratedLessonsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGeneratedLessonsResponse.ProtoReflect.Descriptor instead.
 func (*ListGeneratedLessonsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{40}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ListGeneratedLessonsResponse) GetLessons() []*GeneratedLesson {
@@ -2946,7 +3008,7 @@ type GenerateComponentImageRequest struct {
 
 func (x *GenerateComponentImageRequest) Reset() {
 	*x = GenerateComponentImageRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[41]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2958,7 +3020,7 @@ func (x *GenerateComponentImageRequest) String() string {
 func (*GenerateComponentImageRequest) ProtoMessage() {}
 
 func (x *GenerateComponentImageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[41]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2971,7 +3033,7 @@ func (x *GenerateComponentImageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateComponentImageRequest.ProtoReflect.Descriptor instead.
 func (*GenerateComponentImageRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{41}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *GenerateComponentImageRequest) GetCourseId() string {
@@ -3020,7 +3082,7 @@ type GenerateComponentImageResponse struct {
 
 func (x *GenerateComponentImageResponse) Reset() {
 	*x = GenerateComponentImageResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[42]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3032,7 +3094,7 @@ func (x *GenerateComponentImageResponse) String() string {
 func (*GenerateComponentImageResponse) ProtoMessage() {}
 
 func (x *GenerateComponentImageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[42]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3045,7 +3107,7 @@ func (x *GenerateComponentImageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateComponentImageResponse.ProtoReflect.Descriptor instead.
 func (*GenerateComponentImageResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{42}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *GenerateComponentImageResponse) GetImageUrl() string {
@@ -3074,7 +3136,7 @@ type UpdateLessonComponentsRequest struct {
 
 func (x *UpdateLessonComponentsRequest) Reset() {
 	*x = UpdateLessonComponentsRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[43]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3086,7 +3148,7 @@ func (x *UpdateLessonComponentsRequest) String() string {
 func (*UpdateLessonComponentsRequest) ProtoMessage() {}
 
 func (x *UpdateLessonComponentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[43]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3099,7 +3161,7 @@ func (x *UpdateLessonComponentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateLessonComponentsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateLessonComponentsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{43}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *UpdateLessonComponentsRequest) GetCourseId() string {
@@ -3133,7 +3195,7 @@ type UpdateLessonComponentsResponse struct {
 
 func (x *UpdateLessonComponentsResponse) Reset() {
 	*x = UpdateLessonComponentsResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[44]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3145,7 +3207,7 @@ func (x *UpdateLessonComponentsResponse) String() string {
 func (*UpdateLessonComponentsResponse) ProtoMessage() {}
 
 func (x *UpdateLessonComponentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[44]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3158,7 +3220,7 @@ func (x *UpdateLessonComponentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateLessonComponentsResponse.ProtoReflect.Descriptor instead.
 func (*UpdateLessonComponentsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{44}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *UpdateLessonComponentsResponse) GetLesson() *GeneratedLesson {
@@ -3178,7 +3240,7 @@ type SubscribeJobsRequest struct {
 
 func (x *SubscribeJobsRequest) Reset() {
 	*x = SubscribeJobsRequest{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[45]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3190,7 +3252,7 @@ func (x *SubscribeJobsRequest) String() string {
 func (*SubscribeJobsRequest) ProtoMessage() {}
 
 func (x *SubscribeJobsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[45]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3203,7 +3265,7 @@ func (x *SubscribeJobsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeJobsRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeJobsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{45}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{46}
 }
 
 // SubscribeJobsResponse represents a real-time job event.
@@ -3218,7 +3280,7 @@ type SubscribeJobsResponse struct {
 
 func (x *SubscribeJobsResponse) Reset() {
 	*x = SubscribeJobsResponse{}
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[46]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3230,7 +3292,7 @@ func (x *SubscribeJobsResponse) String() string {
 func (*SubscribeJobsResponse) ProtoMessage() {}
 
 func (x *SubscribeJobsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_proto_msgTypes[46]
+	mi := &file_mirai_v1_ai_generation_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3243,7 +3305,7 @@ func (x *SubscribeJobsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeJobsResponse.ProtoReflect.Descriptor instead.
 func (*SubscribeJobsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{46}
+	return file_mirai_v1_ai_generation_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *SubscribeJobsResponse) GetEventType() JobEventType {
@@ -3358,6 +3420,10 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\n" +
 	"_alignment\"J\n" +
 	"\x12ComponentAlignment\x124\n" +
+	"\x16learning_objective_ids\x18\x02 \x03(\tR\x14learningObjectiveIds\"r\n" +
+	"\x19ComponentAlignmentTargets\x12\x1f\n" +
+	"\vpersona_ids\x18\x01 \x03(\tR\n" +
+	"personaIds\x124\n" +
 	"\x16learning_objective_ids\x18\x02 \x03(\tR\x14learningObjectiveIds\"?\n" +
 	"\vTextContent\x12\x12\n" +
 	"\x04html\x18\x01 \x01(\tR\x04html\x12\x1c\n" +
@@ -3439,12 +3505,14 @@ const file_mirai_v1_ai_generation_proto_rawDesc = "" +
 	"\x19GenerateAllLessonsRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"G\n" +
 	"\x1aGenerateAllLessonsResponse\x12)\n" +
-	"\x03job\x18\x01 \x01(\v2\x17.mirai.v1.GenerationJobR\x03job\"\xbd\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\x17.mirai.v1.GenerationJobR\x03job\"\xaa\x02\n" +
 	"\x1aRegenerateComponentRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12.\n" +
 	"\x13generated_lesson_id\x18\x02 \x01(\tR\x11generatedLessonId\x12!\n" +
 	"\fcomponent_id\x18\x03 \x01(\tR\vcomponentId\x12/\n" +
-	"\x13modification_prompt\x18\x04 \x01(\tR\x12modificationPrompt\"H\n" +
+	"\x13modification_prompt\x18\x04 \x01(\tR\x12modificationPrompt\x12U\n" +
+	"\x11alignment_targets\x18\x05 \x01(\v2#.mirai.v1.ComponentAlignmentTargetsH\x00R\x10alignmentTargets\x88\x01\x01B\x14\n" +
+	"\x12_alignment_targets\"H\n" +
 	"\x1bRegenerateComponentResponse\x12)\n" +
 	"\x03job\x18\x01 \x01(\v2\x17.mirai.v1.GenerationJobR\x03job\"&\n" +
 	"\rGetJobRequest\x12\x15\n" +
@@ -3578,7 +3646,7 @@ func file_mirai_v1_ai_generation_proto_rawDescGZIP() []byte {
 }
 
 var file_mirai_v1_ai_generation_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_mirai_v1_ai_generation_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
+var file_mirai_v1_ai_generation_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
 var file_mirai_v1_ai_generation_proto_goTypes = []any{
 	(GenerationJobType)(0),                 // 0: mirai.v1.GenerationJobType
 	(GenerationJobStatus)(0),               // 1: mirai.v1.GenerationJobStatus
@@ -3594,67 +3662,68 @@ var file_mirai_v1_ai_generation_proto_goTypes = []any{
 	(*GeneratedLesson)(nil),                // 11: mirai.v1.GeneratedLesson
 	(*LessonComponent)(nil),                // 12: mirai.v1.LessonComponent
 	(*ComponentAlignment)(nil),             // 13: mirai.v1.ComponentAlignment
-	(*TextContent)(nil),                    // 14: mirai.v1.TextContent
-	(*HeadingContent)(nil),                 // 15: mirai.v1.HeadingContent
-	(*ImageContent)(nil),                   // 16: mirai.v1.ImageContent
-	(*QuizContent)(nil),                    // 17: mirai.v1.QuizContent
-	(*QuizOption)(nil),                     // 18: mirai.v1.QuizOption
-	(*CodeContent)(nil),                    // 19: mirai.v1.CodeContent
-	(*CalloutContent)(nil),                 // 20: mirai.v1.CalloutContent
-	(*CourseGenerationInput)(nil),          // 21: mirai.v1.CourseGenerationInput
-	(*GenerateCourseOutlineRequest)(nil),   // 22: mirai.v1.GenerateCourseOutlineRequest
-	(*GenerateCourseOutlineResponse)(nil),  // 23: mirai.v1.GenerateCourseOutlineResponse
-	(*GetCourseOutlineRequest)(nil),        // 24: mirai.v1.GetCourseOutlineRequest
-	(*GetCourseOutlineResponse)(nil),       // 25: mirai.v1.GetCourseOutlineResponse
-	(*ApproveCourseOutlineRequest)(nil),    // 26: mirai.v1.ApproveCourseOutlineRequest
-	(*ApproveCourseOutlineResponse)(nil),   // 27: mirai.v1.ApproveCourseOutlineResponse
-	(*RejectCourseOutlineRequest)(nil),     // 28: mirai.v1.RejectCourseOutlineRequest
-	(*RejectCourseOutlineResponse)(nil),    // 29: mirai.v1.RejectCourseOutlineResponse
-	(*UpdateCourseOutlineRequest)(nil),     // 30: mirai.v1.UpdateCourseOutlineRequest
-	(*UpdateCourseOutlineResponse)(nil),    // 31: mirai.v1.UpdateCourseOutlineResponse
-	(*GenerateLessonContentRequest)(nil),   // 32: mirai.v1.GenerateLessonContentRequest
-	(*GenerateLessonContentResponse)(nil),  // 33: mirai.v1.GenerateLessonContentResponse
-	(*GenerateAllLessonsRequest)(nil),      // 34: mirai.v1.GenerateAllLessonsRequest
-	(*GenerateAllLessonsResponse)(nil),     // 35: mirai.v1.GenerateAllLessonsResponse
-	(*RegenerateComponentRequest)(nil),     // 36: mirai.v1.RegenerateComponentRequest
-	(*RegenerateComponentResponse)(nil),    // 37: mirai.v1.RegenerateComponentResponse
-	(*GetJobRequest)(nil),                  // 38: mirai.v1.GetJobRequest
-	(*GetJobResponse)(nil),                 // 39: mirai.v1.GetJobResponse
-	(*ListJobsRequest)(nil),                // 40: mirai.v1.ListJobsRequest
-	(*ListJobsResponse)(nil),               // 41: mirai.v1.ListJobsResponse
-	(*CancelJobRequest)(nil),               // 42: mirai.v1.CancelJobRequest
-	(*CancelJobResponse)(nil),              // 43: mirai.v1.CancelJobResponse
-	(*GetGeneratedLessonRequest)(nil),      // 44: mirai.v1.GetGeneratedLessonRequest
-	(*GetGeneratedLessonResponse)(nil),     // 45: mirai.v1.GetGeneratedLessonResponse
-	(*ListGeneratedLessonsRequest)(nil),    // 46: mirai.v1.ListGeneratedLessonsRequest
-	(*ListGeneratedLessonsResponse)(nil),   // 47: mirai.v1.ListGeneratedLessonsResponse
-	(*GenerateComponentImageRequest)(nil),  // 48: mirai.v1.GenerateComponentImageRequest
-	(*GenerateComponentImageResponse)(nil), // 49: mirai.v1.GenerateComponentImageResponse
-	(*UpdateLessonComponentsRequest)(nil),  // 50: mirai.v1.UpdateLessonComponentsRequest
-	(*UpdateLessonComponentsResponse)(nil), // 51: mirai.v1.UpdateLessonComponentsResponse
-	(*SubscribeJobsRequest)(nil),           // 52: mirai.v1.SubscribeJobsRequest
-	(*SubscribeJobsResponse)(nil),          // 53: mirai.v1.SubscribeJobsResponse
-	(*timestamppb.Timestamp)(nil),          // 54: google.protobuf.Timestamp
+	(*ComponentAlignmentTargets)(nil),      // 14: mirai.v1.ComponentAlignmentTargets
+	(*TextContent)(nil),                    // 15: mirai.v1.TextContent
+	(*HeadingContent)(nil),                 // 16: mirai.v1.HeadingContent
+	(*ImageContent)(nil),                   // 17: mirai.v1.ImageContent
+	(*QuizContent)(nil),                    // 18: mirai.v1.QuizContent
+	(*QuizOption)(nil),                     // 19: mirai.v1.QuizOption
+	(*CodeContent)(nil),                    // 20: mirai.v1.CodeContent
+	(*CalloutContent)(nil),                 // 21: mirai.v1.CalloutContent
+	(*CourseGenerationInput)(nil),          // 22: mirai.v1.CourseGenerationInput
+	(*GenerateCourseOutlineRequest)(nil),   // 23: mirai.v1.GenerateCourseOutlineRequest
+	(*GenerateCourseOutlineResponse)(nil),  // 24: mirai.v1.GenerateCourseOutlineResponse
+	(*GetCourseOutlineRequest)(nil),        // 25: mirai.v1.GetCourseOutlineRequest
+	(*GetCourseOutlineResponse)(nil),       // 26: mirai.v1.GetCourseOutlineResponse
+	(*ApproveCourseOutlineRequest)(nil),    // 27: mirai.v1.ApproveCourseOutlineRequest
+	(*ApproveCourseOutlineResponse)(nil),   // 28: mirai.v1.ApproveCourseOutlineResponse
+	(*RejectCourseOutlineRequest)(nil),     // 29: mirai.v1.RejectCourseOutlineRequest
+	(*RejectCourseOutlineResponse)(nil),    // 30: mirai.v1.RejectCourseOutlineResponse
+	(*UpdateCourseOutlineRequest)(nil),     // 31: mirai.v1.UpdateCourseOutlineRequest
+	(*UpdateCourseOutlineResponse)(nil),    // 32: mirai.v1.UpdateCourseOutlineResponse
+	(*GenerateLessonContentRequest)(nil),   // 33: mirai.v1.GenerateLessonContentRequest
+	(*GenerateLessonContentResponse)(nil),  // 34: mirai.v1.GenerateLessonContentResponse
+	(*GenerateAllLessonsRequest)(nil),      // 35: mirai.v1.GenerateAllLessonsRequest
+	(*GenerateAllLessonsResponse)(nil),     // 36: mirai.v1.GenerateAllLessonsResponse
+	(*RegenerateComponentRequest)(nil),     // 37: mirai.v1.RegenerateComponentRequest
+	(*RegenerateComponentResponse)(nil),    // 38: mirai.v1.RegenerateComponentResponse
+	(*GetJobRequest)(nil),                  // 39: mirai.v1.GetJobRequest
+	(*GetJobResponse)(nil),                 // 40: mirai.v1.GetJobResponse
+	(*ListJobsRequest)(nil),                // 41: mirai.v1.ListJobsRequest
+	(*ListJobsResponse)(nil),               // 42: mirai.v1.ListJobsResponse
+	(*CancelJobRequest)(nil),               // 43: mirai.v1.CancelJobRequest
+	(*CancelJobResponse)(nil),              // 44: mirai.v1.CancelJobResponse
+	(*GetGeneratedLessonRequest)(nil),      // 45: mirai.v1.GetGeneratedLessonRequest
+	(*GetGeneratedLessonResponse)(nil),     // 46: mirai.v1.GetGeneratedLessonResponse
+	(*ListGeneratedLessonsRequest)(nil),    // 47: mirai.v1.ListGeneratedLessonsRequest
+	(*ListGeneratedLessonsResponse)(nil),   // 48: mirai.v1.ListGeneratedLessonsResponse
+	(*GenerateComponentImageRequest)(nil),  // 49: mirai.v1.GenerateComponentImageRequest
+	(*GenerateComponentImageResponse)(nil), // 50: mirai.v1.GenerateComponentImageResponse
+	(*UpdateLessonComponentsRequest)(nil),  // 51: mirai.v1.UpdateLessonComponentsRequest
+	(*UpdateLessonComponentsResponse)(nil), // 52: mirai.v1.UpdateLessonComponentsResponse
+	(*SubscribeJobsRequest)(nil),           // 53: mirai.v1.SubscribeJobsRequest
+	(*SubscribeJobsResponse)(nil),          // 54: mirai.v1.SubscribeJobsResponse
+	(*timestamppb.Timestamp)(nil),          // 55: google.protobuf.Timestamp
 }
 var file_mirai_v1_ai_generation_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.GenerationJob.type:type_name -> mirai.v1.GenerationJobType
 	1,  // 1: mirai.v1.GenerationJob.status:type_name -> mirai.v1.GenerationJobStatus
-	54, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
-	54, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
-	54, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
+	55, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
+	55, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
+	55, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
 	9,  // 5: mirai.v1.CourseOutline.sections:type_name -> mirai.v1.OutlineSection
 	2,  // 6: mirai.v1.CourseOutline.approval_status:type_name -> mirai.v1.OutlineApprovalStatus
-	54, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
-	54, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
+	55, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
+	55, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
 	10, // 9: mirai.v1.OutlineSection.lessons:type_name -> mirai.v1.OutlineLesson
 	12, // 10: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
-	54, // 11: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
+	55, // 11: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
 	3,  // 12: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
 	13, // 13: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
 	5,  // 14: mirai.v1.HeadingContent.level:type_name -> mirai.v1.HeadingLevel
-	18, // 15: mirai.v1.QuizContent.options:type_name -> mirai.v1.QuizOption
+	19, // 15: mirai.v1.QuizContent.options:type_name -> mirai.v1.QuizOption
 	4,  // 16: mirai.v1.CalloutContent.style:type_name -> mirai.v1.CalloutStyle
-	21, // 17: mirai.v1.GenerateCourseOutlineRequest.input:type_name -> mirai.v1.CourseGenerationInput
+	22, // 17: mirai.v1.GenerateCourseOutlineRequest.input:type_name -> mirai.v1.CourseGenerationInput
 	7,  // 18: mirai.v1.GenerateCourseOutlineResponse.job:type_name -> mirai.v1.GenerationJob
 	8,  // 19: mirai.v1.GetCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
 	8,  // 20: mirai.v1.ApproveCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
@@ -3663,56 +3732,57 @@ var file_mirai_v1_ai_generation_proto_depIdxs = []int32{
 	8,  // 23: mirai.v1.UpdateCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
 	7,  // 24: mirai.v1.GenerateLessonContentResponse.job:type_name -> mirai.v1.GenerationJob
 	7,  // 25: mirai.v1.GenerateAllLessonsResponse.job:type_name -> mirai.v1.GenerationJob
-	7,  // 26: mirai.v1.RegenerateComponentResponse.job:type_name -> mirai.v1.GenerationJob
-	7,  // 27: mirai.v1.GetJobResponse.job:type_name -> mirai.v1.GenerationJob
-	0,  // 28: mirai.v1.ListJobsRequest.type:type_name -> mirai.v1.GenerationJobType
-	1,  // 29: mirai.v1.ListJobsRequest.status:type_name -> mirai.v1.GenerationJobStatus
-	7,  // 30: mirai.v1.ListJobsResponse.jobs:type_name -> mirai.v1.GenerationJob
-	7,  // 31: mirai.v1.CancelJobResponse.job:type_name -> mirai.v1.GenerationJob
-	11, // 32: mirai.v1.GetGeneratedLessonResponse.lesson:type_name -> mirai.v1.GeneratedLesson
-	11, // 33: mirai.v1.ListGeneratedLessonsResponse.lessons:type_name -> mirai.v1.GeneratedLesson
-	12, // 34: mirai.v1.GenerateComponentImageResponse.component:type_name -> mirai.v1.LessonComponent
-	12, // 35: mirai.v1.UpdateLessonComponentsRequest.components:type_name -> mirai.v1.LessonComponent
-	11, // 36: mirai.v1.UpdateLessonComponentsResponse.lesson:type_name -> mirai.v1.GeneratedLesson
-	6,  // 37: mirai.v1.SubscribeJobsResponse.event_type:type_name -> mirai.v1.JobEventType
-	7,  // 38: mirai.v1.SubscribeJobsResponse.job:type_name -> mirai.v1.GenerationJob
-	22, // 39: mirai.v1.AIGenerationService.GenerateCourseOutline:input_type -> mirai.v1.GenerateCourseOutlineRequest
-	24, // 40: mirai.v1.AIGenerationService.GetCourseOutline:input_type -> mirai.v1.GetCourseOutlineRequest
-	26, // 41: mirai.v1.AIGenerationService.ApproveCourseOutline:input_type -> mirai.v1.ApproveCourseOutlineRequest
-	28, // 42: mirai.v1.AIGenerationService.RejectCourseOutline:input_type -> mirai.v1.RejectCourseOutlineRequest
-	30, // 43: mirai.v1.AIGenerationService.UpdateCourseOutline:input_type -> mirai.v1.UpdateCourseOutlineRequest
-	32, // 44: mirai.v1.AIGenerationService.GenerateLessonContent:input_type -> mirai.v1.GenerateLessonContentRequest
-	34, // 45: mirai.v1.AIGenerationService.GenerateAllLessons:input_type -> mirai.v1.GenerateAllLessonsRequest
-	36, // 46: mirai.v1.AIGenerationService.RegenerateComponent:input_type -> mirai.v1.RegenerateComponentRequest
-	38, // 47: mirai.v1.AIGenerationService.GetJob:input_type -> mirai.v1.GetJobRequest
-	40, // 48: mirai.v1.AIGenerationService.ListJobs:input_type -> mirai.v1.ListJobsRequest
-	42, // 49: mirai.v1.AIGenerationService.CancelJob:input_type -> mirai.v1.CancelJobRequest
-	44, // 50: mirai.v1.AIGenerationService.GetGeneratedLesson:input_type -> mirai.v1.GetGeneratedLessonRequest
-	46, // 51: mirai.v1.AIGenerationService.ListGeneratedLessons:input_type -> mirai.v1.ListGeneratedLessonsRequest
-	48, // 52: mirai.v1.AIGenerationService.GenerateComponentImage:input_type -> mirai.v1.GenerateComponentImageRequest
-	50, // 53: mirai.v1.AIGenerationService.UpdateLessonComponents:input_type -> mirai.v1.UpdateLessonComponentsRequest
-	52, // 54: mirai.v1.AIGenerationService.SubscribeJobs:input_type -> mirai.v1.SubscribeJobsRequest
-	23, // 55: mirai.v1.AIGenerationService.GenerateCourseOutline:output_type -> mirai.v1.GenerateCourseOutlineResponse
-	25, // 56: mirai.v1.AIGenerationService.GetCourseOutline:output_type -> mirai.v1.GetCourseOutlineResponse
-	27, // 57: mirai.v1.AIGenerationService.ApproveCourseOutline:output_type -> mirai.v1.ApproveCourseOutlineResponse
-	29, // 58: mirai.v1.AIGenerationService.RejectCourseOutline:output_type -> mirai.v1.RejectCourseOutlineResponse
-	31, // 59: mirai.v1.AIGenerationService.UpdateCourseOutline:output_type -> mirai.v1.UpdateCourseOutlineResponse
-	33, // 60: mirai.v1.AIGenerationService.GenerateLessonContent:output_type -> mirai.v1.GenerateLessonContentResponse
-	35, // 61: mirai.v1.AIGenerationService.GenerateAllLessons:output_type -> mirai.v1.GenerateAllLessonsResponse
-	37, // 62: mirai.v1.AIGenerationService.RegenerateComponent:output_type -> mirai.v1.RegenerateComponentResponse
-	39, // 63: mirai.v1.AIGenerationService.GetJob:output_type -> mirai.v1.GetJobResponse
-	41, // 64: mirai.v1.AIGenerationService.ListJobs:output_type -> mirai.v1.ListJobsResponse
-	43, // 65: mirai.v1.AIGenerationService.CancelJob:output_type -> mirai.v1.CancelJobResponse
-	45, // 66: mirai.v1.AIGenerationService.GetGeneratedLesson:output_type -> mirai.v1.GetGeneratedLessonResponse
-	47, // 67: mirai.v1.AIGenerationService.ListGeneratedLessons:output_type -> mirai.v1.ListGeneratedLessonsResponse
-	49, // 68: mirai.v1.AIGenerationService.GenerateComponentImage:output_type -> mirai.v1.GenerateComponentImageResponse
-	51, // 69: mirai.v1.AIGenerationService.UpdateLessonComponents:output_type -> mirai.v1.UpdateLessonComponentsResponse
-	53, // 70: mirai.v1.AIGenerationService.SubscribeJobs:output_type -> mirai.v1.SubscribeJobsResponse
-	55, // [55:71] is the sub-list for method output_type
-	39, // [39:55] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	14, // 26: mirai.v1.RegenerateComponentRequest.alignment_targets:type_name -> mirai.v1.ComponentAlignmentTargets
+	7,  // 27: mirai.v1.RegenerateComponentResponse.job:type_name -> mirai.v1.GenerationJob
+	7,  // 28: mirai.v1.GetJobResponse.job:type_name -> mirai.v1.GenerationJob
+	0,  // 29: mirai.v1.ListJobsRequest.type:type_name -> mirai.v1.GenerationJobType
+	1,  // 30: mirai.v1.ListJobsRequest.status:type_name -> mirai.v1.GenerationJobStatus
+	7,  // 31: mirai.v1.ListJobsResponse.jobs:type_name -> mirai.v1.GenerationJob
+	7,  // 32: mirai.v1.CancelJobResponse.job:type_name -> mirai.v1.GenerationJob
+	11, // 33: mirai.v1.GetGeneratedLessonResponse.lesson:type_name -> mirai.v1.GeneratedLesson
+	11, // 34: mirai.v1.ListGeneratedLessonsResponse.lessons:type_name -> mirai.v1.GeneratedLesson
+	12, // 35: mirai.v1.GenerateComponentImageResponse.component:type_name -> mirai.v1.LessonComponent
+	12, // 36: mirai.v1.UpdateLessonComponentsRequest.components:type_name -> mirai.v1.LessonComponent
+	11, // 37: mirai.v1.UpdateLessonComponentsResponse.lesson:type_name -> mirai.v1.GeneratedLesson
+	6,  // 38: mirai.v1.SubscribeJobsResponse.event_type:type_name -> mirai.v1.JobEventType
+	7,  // 39: mirai.v1.SubscribeJobsResponse.job:type_name -> mirai.v1.GenerationJob
+	23, // 40: mirai.v1.AIGenerationService.GenerateCourseOutline:input_type -> mirai.v1.GenerateCourseOutlineRequest
+	25, // 41: mirai.v1.AIGenerationService.GetCourseOutline:input_type -> mirai.v1.GetCourseOutlineRequest
+	27, // 42: mirai.v1.AIGenerationService.ApproveCourseOutline:input_type -> mirai.v1.ApproveCourseOutlineRequest
+	29, // 43: mirai.v1.AIGenerationService.RejectCourseOutline:input_type -> mirai.v1.RejectCourseOutlineRequest
+	31, // 44: mirai.v1.AIGenerationService.UpdateCourseOutline:input_type -> mirai.v1.UpdateCourseOutlineRequest
+	33, // 45: mirai.v1.AIGenerationService.GenerateLessonContent:input_type -> mirai.v1.GenerateLessonContentRequest
+	35, // 46: mirai.v1.AIGenerationService.GenerateAllLessons:input_type -> mirai.v1.GenerateAllLessonsRequest
+	37, // 47: mirai.v1.AIGenerationService.RegenerateComponent:input_type -> mirai.v1.RegenerateComponentRequest
+	39, // 48: mirai.v1.AIGenerationService.GetJob:input_type -> mirai.v1.GetJobRequest
+	41, // 49: mirai.v1.AIGenerationService.ListJobs:input_type -> mirai.v1.ListJobsRequest
+	43, // 50: mirai.v1.AIGenerationService.CancelJob:input_type -> mirai.v1.CancelJobRequest
+	45, // 51: mirai.v1.AIGenerationService.GetGeneratedLesson:input_type -> mirai.v1.GetGeneratedLessonRequest
+	47, // 52: mirai.v1.AIGenerationService.ListGeneratedLessons:input_type -> mirai.v1.ListGeneratedLessonsRequest
+	49, // 53: mirai.v1.AIGenerationService.GenerateComponentImage:input_type -> mirai.v1.GenerateComponentImageRequest
+	51, // 54: mirai.v1.AIGenerationService.UpdateLessonComponents:input_type -> mirai.v1.UpdateLessonComponentsRequest
+	53, // 55: mirai.v1.AIGenerationService.SubscribeJobs:input_type -> mirai.v1.SubscribeJobsRequest
+	24, // 56: mirai.v1.AIGenerationService.GenerateCourseOutline:output_type -> mirai.v1.GenerateCourseOutlineResponse
+	26, // 57: mirai.v1.AIGenerationService.GetCourseOutline:output_type -> mirai.v1.GetCourseOutlineResponse
+	28, // 58: mirai.v1.AIGenerationService.ApproveCourseOutline:output_type -> mirai.v1.ApproveCourseOutlineResponse
+	30, // 59: mirai.v1.AIGenerationService.RejectCourseOutline:output_type -> mirai.v1.RejectCourseOutlineResponse
+	32, // 60: mirai.v1.AIGenerationService.UpdateCourseOutline:output_type -> mirai.v1.UpdateCourseOutlineResponse
+	34, // 61: mirai.v1.AIGenerationService.GenerateLessonContent:output_type -> mirai.v1.GenerateLessonContentResponse
+	36, // 62: mirai.v1.AIGenerationService.GenerateAllLessons:output_type -> mirai.v1.GenerateAllLessonsResponse
+	38, // 63: mirai.v1.AIGenerationService.RegenerateComponent:output_type -> mirai.v1.RegenerateComponentResponse
+	40, // 64: mirai.v1.AIGenerationService.GetJob:output_type -> mirai.v1.GetJobResponse
+	42, // 65: mirai.v1.AIGenerationService.ListJobs:output_type -> mirai.v1.ListJobsResponse
+	44, // 66: mirai.v1.AIGenerationService.CancelJob:output_type -> mirai.v1.CancelJobResponse
+	46, // 67: mirai.v1.AIGenerationService.GetGeneratedLesson:output_type -> mirai.v1.GetGeneratedLessonResponse
+	48, // 68: mirai.v1.AIGenerationService.ListGeneratedLessons:output_type -> mirai.v1.ListGeneratedLessonsResponse
+	50, // 69: mirai.v1.AIGenerationService.GenerateComponentImage:output_type -> mirai.v1.GenerateComponentImageResponse
+	52, // 70: mirai.v1.AIGenerationService.UpdateLessonComponents:output_type -> mirai.v1.UpdateLessonComponentsResponse
+	54, // 71: mirai.v1.AIGenerationService.SubscribeJobs:output_type -> mirai.v1.SubscribeJobsResponse
+	56, // [56:72] is the sub-list for method output_type
+	40, // [40:56] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_ai_generation_proto_init() }
@@ -3724,20 +3794,21 @@ func file_mirai_v1_ai_generation_proto_init() {
 	file_mirai_v1_ai_generation_proto_msgTypes[1].OneofWrappers = []any{}
 	file_mirai_v1_ai_generation_proto_msgTypes[4].OneofWrappers = []any{}
 	file_mirai_v1_ai_generation_proto_msgTypes[5].OneofWrappers = []any{}
-	file_mirai_v1_ai_generation_proto_msgTypes[9].OneofWrappers = []any{}
 	file_mirai_v1_ai_generation_proto_msgTypes[10].OneofWrappers = []any{}
-	file_mirai_v1_ai_generation_proto_msgTypes[13].OneofWrappers = []any{}
+	file_mirai_v1_ai_generation_proto_msgTypes[11].OneofWrappers = []any{}
 	file_mirai_v1_ai_generation_proto_msgTypes[14].OneofWrappers = []any{}
-	file_mirai_v1_ai_generation_proto_msgTypes[17].OneofWrappers = []any{}
-	file_mirai_v1_ai_generation_proto_msgTypes[33].OneofWrappers = []any{}
-	file_mirai_v1_ai_generation_proto_msgTypes[41].OneofWrappers = []any{}
+	file_mirai_v1_ai_generation_proto_msgTypes[15].OneofWrappers = []any{}
+	file_mirai_v1_ai_generation_proto_msgTypes[18].OneofWrappers = []any{}
+	file_mirai_v1_ai_generation_proto_msgTypes[30].OneofWrappers = []any{}
+	file_mirai_v1_ai_generation_proto_msgTypes[34].OneofWrappers = []any{}
+	file_mirai_v1_ai_generation_proto_msgTypes[42].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_ai_generation_proto_rawDesc), len(file_mirai_v1_ai_generation_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   47,
+			NumMessages:   48,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

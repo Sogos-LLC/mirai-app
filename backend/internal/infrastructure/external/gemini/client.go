@@ -2056,6 +2056,39 @@ func (c *Client) GenerateImprovedTitle(ctx context.Context, courseName string) (
 	}, nil
 }
 
+// GenerateCourseOutcomes generates desired course outcomes from a course name.
+// Used by the "magic wand" button in wizard step 1.
+func (c *Client) GenerateCourseOutcomes(ctx context.Context, courseName string) (*service.GenerateOutcomesResult, error) {
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("outcomes generation cancelled: %w", ctx.Err())
+	default:
+	}
+
+	prompt := buildCourseOutcomesPrompt(courseName)
+	config := &genai.GenerateContentConfig{
+		ResponseMIMEType:   "application/json",
+		ResponseJsonSchema: courseOutcomesSchema(),
+	}
+
+	result, err := c.generateWithRetry(ctx, "generate course outcomes", func() (*genai.GenerateContentResponse, error) {
+		return c.client.Models.GenerateContent(ctx, c.model, genai.Text(prompt), config)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate course outcomes: %w", err)
+	}
+
+	var resp courseOutcomesResponse
+	if err := json.Unmarshal([]byte(result.Text()), &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse course outcomes response: %w", err)
+	}
+
+	return &service.GenerateOutcomesResult{
+		Outcomes:   resp.Outcomes,
+		TokensUsed: extractTokensUsed(result),
+	}, nil
+}
+
 // GenerateSMEPersonas generates 3 diverse SME personas based on course topic.
 func (c *Client) GenerateSMEPersonas(ctx context.Context, title, description string) (*service.GenerateSMEPersonasResult, error) {
 	select {
@@ -2193,6 +2226,10 @@ type improvedTitleResponse struct {
 	Description   string `json:"description"`
 }
 
+type courseOutcomesResponse struct {
+	Outcomes string `json:"outcomes"`
+}
+
 type smePersonasResponse struct {
 	Personas []smePersonaItem `json:"personas"`
 }
@@ -2246,6 +2283,19 @@ func improvedTitleSchema() map[string]any {
 			},
 		},
 		"required": []string{"improved_title", "description"},
+	}
+}
+
+func courseOutcomesSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"outcomes": map[string]any{
+				"type":        "string",
+				"description": "A formatted list of 3-5 learning outcomes as bullet points, each starting with an action verb.",
+			},
+		},
+		"required": []string{"outcomes"},
 	}
 }
 
@@ -2398,6 +2448,32 @@ Based on the course name provided, create:
    - Uses active, engaging language
 
 Keep the improved title close to the original intent, but make it more professional and marketable.`, courseName)
+}
+
+func buildCourseOutcomesPrompt(courseName string) string {
+	return fmt.Sprintf(`You are an expert instructional designer who creates measurable learning outcomes for professional courses.
+
+## Course Topic
+%s
+
+## Instructions
+Generate 3-5 clear, measurable learning outcomes for this course. Each outcome should:
+
+1. Start with an action verb from Bloom's Taxonomy (e.g., Understand, Apply, Analyze, Create, Evaluate)
+2. Be specific and measurable
+3. Describe what the learner will be able to DO after completing the course
+4. Be achievable within a typical course duration
+
+Format your response as bullet points, with each outcome on a new line starting with "• ".
+
+Example format:
+• Understand the fundamental concepts of [topic] and their applications
+• Apply [skill] techniques to solve real-world problems
+• Analyze [subject] scenarios and identify key patterns
+• Create effective [deliverable] using industry best practices
+• Evaluate [outcomes] and make data-driven decisions
+
+Generate outcomes that are relevant, practical, and aligned with professional development goals.`, courseName)
 }
 
 func buildSMEPersonasPrompt(title, description string) string {

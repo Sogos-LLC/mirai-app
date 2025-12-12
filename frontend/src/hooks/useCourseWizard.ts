@@ -13,6 +13,7 @@ import { create } from '@bufbuild/protobuf';
 
 import {
   generateTitle,
+  generateOutcomes,
   generateSMEPersonas,
   generateAudiencePersonas,
   generateToneOptions,
@@ -24,6 +25,7 @@ import {
 
 import {
   GenerateTitleRequestSchema,
+  GenerateOutcomesRequestSchema,
   GenerateSMEPersonasRequestSchema,
   GenerateAudiencePersonasRequestSchema,
   GenerateToneOptionsRequestSchema,
@@ -57,6 +59,23 @@ export function useGenerateTitle() {
   return {
     mutate: async (courseName: string) => {
       const request = create(GenerateTitleRequestSchema, { courseName });
+      return mutation.mutateAsync(request);
+    },
+    isPending: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Generate desired course outcomes from course name (magic wand feature)
+ */
+export function useGenerateOutcomes() {
+  const mutation = useMutation(generateOutcomes);
+
+  return {
+    mutate: async (courseName: string) => {
+      const request = create(GenerateOutcomesRequestSchema, { courseName });
       return mutation.mutateAsync(request);
     },
     isPending: mutation.isPending,
@@ -168,6 +187,7 @@ export function useSaveWizardState() {
     }) => {
       const wizardData = create(WizardStepDataSchema, {
         courseName: params.data.courseName ?? '',
+        desiredOutcomes: params.data.desiredOutcomes ?? '',
         improvedTitle: params.data.improvedTitle ?? '',
         description: params.data.description ?? '',
         smePersonas: params.data.smePersonas?.map(p => create(SMEPersonaSchema, p)) ?? [],
@@ -248,6 +268,7 @@ export function useCreateCourseFromOutline() {
     }) => {
       const wizardData = create(WizardStepDataSchema, {
         courseName: params.wizardData.courseName ?? '',
+        desiredOutcomes: params.wizardData.desiredOutcomes ?? '',
         improvedTitle: params.wizardData.improvedTitle ?? '',
         description: params.wizardData.description ?? '',
         smePersonas: params.wizardData.smePersonas?.map(p => create(SMEPersonaSchema, p)) ?? [],

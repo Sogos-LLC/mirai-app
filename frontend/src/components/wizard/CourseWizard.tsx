@@ -12,6 +12,7 @@ import {
 } from '@/machines/courseWizardMachine';
 import {
   useGenerateTitle,
+  useGenerateOutcomes,
   useGenerateSMEPersonas,
   useGenerateAudiencePersonas,
   useGenerateToneOptions,
@@ -41,6 +42,7 @@ export default function CourseWizard() {
 
   // API hooks - wizard generation
   const generateTitle = useGenerateTitle();
+  const generateOutcomes = useGenerateOutcomes();
   const generateSMEPersonas = useGenerateSMEPersonas();
   const generateAudiencePersonas = useGenerateAudiencePersonas();
   const generateToneOptions = useGenerateToneOptions();
@@ -61,6 +63,12 @@ export default function CourseWizard() {
           return {
             improvedTitle: result.improvedTitle,
             description: result.description,
+          };
+        }),
+        generateOutcomesActor: fromPromise(async ({ input }: { input: { courseName: string } }) => {
+          const result = await generateOutcomes.mutate(input.courseName);
+          return {
+            outcomes: result.outcomes,
           };
         }),
         generateSMEPersonasActor: fromPromise(
@@ -176,6 +184,7 @@ export default function CourseWizard() {
     });
   }, [
     generateTitle,
+    generateOutcomes,
     generateSMEPersonas,
     generateAudiencePersonas,
     generateToneOptions,
@@ -285,6 +294,19 @@ export default function CourseWizard() {
   };
 
   // Generating states
+  if (state.matches('generatingOutcomes')) {
+    return (
+      <>
+        <WizardProgress currentStep="courseName" isGenerating={true} />
+        <GeneratingStep
+          title="Generating Outcomes"
+          description="Our AI is crafting learning outcomes for your course..."
+          onCancel={handleCancel}
+        />
+      </>
+    );
+  }
+
   if (state.matches('generatingTitle')) {
     return (
       <>
@@ -406,10 +428,14 @@ export default function CourseWizard() {
       {state.matches('courseName') && (
         <CourseNameStep
           courseName={context.courseName}
+          desiredOutcomes={context.desiredOutcomes}
           onCourseNameChange={(name) => send({ type: 'SET_COURSE_NAME', name })}
+          onDesiredOutcomesChange={(outcomes) => send({ type: 'SET_DESIRED_OUTCOMES', outcomes })}
+          onGenerateOutcomes={() => send({ type: 'GENERATE_OUTCOMES' })}
           onNext={() => send({ type: 'SUBMIT_COURSE_NAME' })}
           onCancel={handleCancel}
           isLoading={isLoading}
+          isGeneratingOutcomes={state.matches('generatingOutcomes')}
         />
       )}
 
@@ -448,6 +474,7 @@ export default function CourseWizard() {
           selectedIds={context.selectedAudienceIds}
           onTogglePersona={(audienceId) => send({ type: 'TOGGLE_AUDIENCE', audienceId })}
           onEditPersona={(persona: AudiencePersona) => send({ type: 'EDIT_AUDIENCE', persona })}
+          onAddTemplatePersona={(persona: AudiencePersona) => send({ type: 'ADD_TEMPLATE_AUDIENCE', persona })}
           onNext={() => send({ type: 'APPROVE_AUDIENCES' })}
           onBack={() => send({ type: 'GO_BACK' })}
           onRegenerate={() => send({ type: 'REGENERATE_AUDIENCES' })}

@@ -36,6 +36,9 @@ const (
 	// CourseWizardServiceGenerateTitleProcedure is the fully-qualified name of the
 	// CourseWizardService's GenerateTitle RPC.
 	CourseWizardServiceGenerateTitleProcedure = "/mirai.v1.CourseWizardService/GenerateTitle"
+	// CourseWizardServiceGenerateOutcomesProcedure is the fully-qualified name of the
+	// CourseWizardService's GenerateOutcomes RPC.
+	CourseWizardServiceGenerateOutcomesProcedure = "/mirai.v1.CourseWizardService/GenerateOutcomes"
 	// CourseWizardServiceGenerateSMEPersonasProcedure is the fully-qualified name of the
 	// CourseWizardService's GenerateSMEPersonas RPC.
 	CourseWizardServiceGenerateSMEPersonasProcedure = "/mirai.v1.CourseWizardService/GenerateSMEPersonas"
@@ -64,6 +67,9 @@ type CourseWizardServiceClient interface {
 	// GenerateTitle improves the course name and generates a description.
 	// Step 1 -> 2: User enters course name, AI generates improved title + description.
 	GenerateTitle(context.Context, *connect.Request[v1.GenerateTitleRequest]) (*connect.Response[v1.GenerateTitleResponse], error)
+	// GenerateOutcomes generates course outcomes from the course name.
+	// Used by the "magic wand" button in Step 1 to auto-generate desired outcomes.
+	GenerateOutcomes(context.Context, *connect.Request[v1.GenerateOutcomesRequest]) (*connect.Response[v1.GenerateOutcomesResponse], error)
 	// GenerateSMEPersonas generates 3 diverse SME personas based on course topic.
 	// Step 2 -> 3: AI generates SME options for user to select/edit.
 	GenerateSMEPersonas(context.Context, *connect.Request[v1.GenerateSMEPersonasRequest]) (*connect.Response[v1.GenerateSMEPersonasResponse], error)
@@ -99,6 +105,12 @@ func NewCourseWizardServiceClient(httpClient connect.HTTPClient, baseURL string,
 			httpClient,
 			baseURL+CourseWizardServiceGenerateTitleProcedure,
 			connect.WithSchema(courseWizardServiceMethods.ByName("GenerateTitle")),
+			connect.WithClientOptions(opts...),
+		),
+		generateOutcomes: connect.NewClient[v1.GenerateOutcomesRequest, v1.GenerateOutcomesResponse](
+			httpClient,
+			baseURL+CourseWizardServiceGenerateOutcomesProcedure,
+			connect.WithSchema(courseWizardServiceMethods.ByName("GenerateOutcomes")),
 			connect.WithClientOptions(opts...),
 		),
 		generateSMEPersonas: connect.NewClient[v1.GenerateSMEPersonasRequest, v1.GenerateSMEPersonasResponse](
@@ -149,6 +161,7 @@ func NewCourseWizardServiceClient(httpClient connect.HTTPClient, baseURL string,
 // courseWizardServiceClient implements CourseWizardServiceClient.
 type courseWizardServiceClient struct {
 	generateTitle            *connect.Client[v1.GenerateTitleRequest, v1.GenerateTitleResponse]
+	generateOutcomes         *connect.Client[v1.GenerateOutcomesRequest, v1.GenerateOutcomesResponse]
 	generateSMEPersonas      *connect.Client[v1.GenerateSMEPersonasRequest, v1.GenerateSMEPersonasResponse]
 	generateAudiencePersonas *connect.Client[v1.GenerateAudiencePersonasRequest, v1.GenerateAudiencePersonasResponse]
 	generateToneOptions      *connect.Client[v1.GenerateToneOptionsRequest, v1.GenerateToneOptionsResponse]
@@ -161,6 +174,11 @@ type courseWizardServiceClient struct {
 // GenerateTitle calls mirai.v1.CourseWizardService.GenerateTitle.
 func (c *courseWizardServiceClient) GenerateTitle(ctx context.Context, req *connect.Request[v1.GenerateTitleRequest]) (*connect.Response[v1.GenerateTitleResponse], error) {
 	return c.generateTitle.CallUnary(ctx, req)
+}
+
+// GenerateOutcomes calls mirai.v1.CourseWizardService.GenerateOutcomes.
+func (c *courseWizardServiceClient) GenerateOutcomes(ctx context.Context, req *connect.Request[v1.GenerateOutcomesRequest]) (*connect.Response[v1.GenerateOutcomesResponse], error) {
+	return c.generateOutcomes.CallUnary(ctx, req)
 }
 
 // GenerateSMEPersonas calls mirai.v1.CourseWizardService.GenerateSMEPersonas.
@@ -203,6 +221,9 @@ type CourseWizardServiceHandler interface {
 	// GenerateTitle improves the course name and generates a description.
 	// Step 1 -> 2: User enters course name, AI generates improved title + description.
 	GenerateTitle(context.Context, *connect.Request[v1.GenerateTitleRequest]) (*connect.Response[v1.GenerateTitleResponse], error)
+	// GenerateOutcomes generates course outcomes from the course name.
+	// Used by the "magic wand" button in Step 1 to auto-generate desired outcomes.
+	GenerateOutcomes(context.Context, *connect.Request[v1.GenerateOutcomesRequest]) (*connect.Response[v1.GenerateOutcomesResponse], error)
 	// GenerateSMEPersonas generates 3 diverse SME personas based on course topic.
 	// Step 2 -> 3: AI generates SME options for user to select/edit.
 	GenerateSMEPersonas(context.Context, *connect.Request[v1.GenerateSMEPersonasRequest]) (*connect.Response[v1.GenerateSMEPersonasResponse], error)
@@ -234,6 +255,12 @@ func NewCourseWizardServiceHandler(svc CourseWizardServiceHandler, opts ...conne
 		CourseWizardServiceGenerateTitleProcedure,
 		svc.GenerateTitle,
 		connect.WithSchema(courseWizardServiceMethods.ByName("GenerateTitle")),
+		connect.WithHandlerOptions(opts...),
+	)
+	courseWizardServiceGenerateOutcomesHandler := connect.NewUnaryHandler(
+		CourseWizardServiceGenerateOutcomesProcedure,
+		svc.GenerateOutcomes,
+		connect.WithSchema(courseWizardServiceMethods.ByName("GenerateOutcomes")),
 		connect.WithHandlerOptions(opts...),
 	)
 	courseWizardServiceGenerateSMEPersonasHandler := connect.NewUnaryHandler(
@@ -282,6 +309,8 @@ func NewCourseWizardServiceHandler(svc CourseWizardServiceHandler, opts ...conne
 		switch r.URL.Path {
 		case CourseWizardServiceGenerateTitleProcedure:
 			courseWizardServiceGenerateTitleHandler.ServeHTTP(w, r)
+		case CourseWizardServiceGenerateOutcomesProcedure:
+			courseWizardServiceGenerateOutcomesHandler.ServeHTTP(w, r)
 		case CourseWizardServiceGenerateSMEPersonasProcedure:
 			courseWizardServiceGenerateSMEPersonasHandler.ServeHTTP(w, r)
 		case CourseWizardServiceGenerateAudiencePersonasProcedure:
@@ -307,6 +336,10 @@ type UnimplementedCourseWizardServiceHandler struct{}
 
 func (UnimplementedCourseWizardServiceHandler) GenerateTitle(context.Context, *connect.Request[v1.GenerateTitleRequest]) (*connect.Response[v1.GenerateTitleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseWizardService.GenerateTitle is not implemented"))
+}
+
+func (UnimplementedCourseWizardServiceHandler) GenerateOutcomes(context.Context, *connect.Request[v1.GenerateOutcomesRequest]) (*connect.Response[v1.GenerateOutcomesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.CourseWizardService.GenerateOutcomes is not implemented"))
 }
 
 func (UnimplementedCourseWizardServiceHandler) GenerateSMEPersonas(context.Context, *connect.Request[v1.GenerateSMEPersonasRequest]) (*connect.Response[v1.GenerateSMEPersonasResponse], error) {

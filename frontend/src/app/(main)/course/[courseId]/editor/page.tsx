@@ -44,9 +44,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, LessonComponentType } from '@/hooks/useAIGeneration';
+import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, LessonComponentType } from '@/hooks/useAIGeneration';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 import { EditModal } from '@/components/course/modals/EditModal';
+import { RealignmentModal, type RealignParams, type LearningObjective } from '@/components/course/modals/RealignmentModal';
 import { useCourseEditorStore, setOnSaveCallback, setOnPersistCallback, setOnPersistSuccessCallback } from '@/store/zustand/courseEditorStore';
 import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
 import { useIsMobile } from '@/hooks/useBreakpoint';
@@ -65,9 +66,10 @@ interface SortableComponentProps {
   component: LessonComponent;
   onClick: () => void;
   isDragging: boolean;
+  onOpenRealignment?: (component: LessonComponent) => void;
 }
 
-function SortableComponent({ component, onClick, isDragging }: SortableComponentProps) {
+function SortableComponent({ component, onClick, isDragging, onOpenRealignment }: SortableComponentProps) {
   const {
     attributes,
     listeners,
@@ -100,7 +102,11 @@ function SortableComponent({ component, onClick, isDragging }: SortableComponent
 
       {/* Component content */}
       <div className="hover:ring-2 hover:ring-purple-300 hover:ring-offset-2 rounded-lg transition-all">
-        <ComponentRenderer component={component} isEditing={false} />
+        <ComponentRenderer
+          component={component}
+          isEditing={false}
+          onOpenRealignment={onOpenRealignment}
+        />
       </div>
     </div>
   );
@@ -154,6 +160,10 @@ export default function CourseEditorPage() {
   const [exportId, setExportId] = useState<string | undefined>(undefined);
   const [exportError, setExportError] = useState<string | null>(null);
 
+  // Realignment state
+  const [realignmentComponent, setRealignmentComponent] = useState<LessonComponent | null>(null);
+  const [isRealigning, setIsRealigning] = useState(false);
+
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
 
@@ -168,6 +178,9 @@ export default function CourseEditorPage() {
   const { mutate: startExport, isLoading: isStarting, error: startError, reset: resetStart } = useExportCourse();
   const { data: exportStatus } = useGetExportStatus(exportId, { enabled: !!exportId });
   const { mutate: getDownload, isLoading: isGettingDownload } = useDownloadExport();
+
+  // Realignment hook
+  const { mutate: regenerateComponent, isLoading: isRegenerating } = useRegenerateComponent();
 
   // DnD sensors with 8px activation distance to prevent accidental drags
   const sensors = useSensors(
@@ -236,6 +249,21 @@ export default function CourseEditorPage() {
   const currentLesson = useMemo(() => {
     return lessonsList.find((l) => l.id === selectedLessonId);
   }, [lessonsList, selectedLessonId]);
+
+  // Get learning objectives for current lesson from outline
+  const currentLessonLOs = useMemo((): LearningObjective[] => {
+    if (!outline?.sections || !selectedLessonId) return [];
+    for (const section of outline.sections) {
+      const lesson = section.lessons?.find((l) => l.id === selectedLessonId);
+      if (lesson?.learningObjectives) {
+        return lesson.learningObjectives.map((text, index) => ({
+          id: `lo-${index}`,
+          text,
+        }));
+      }
+    }
+    return [];
+  }, [outline, selectedLessonId]);
 
   // Ref to access latest currentLesson in callbacks
   const currentLessonRef = useRef(currentLesson);
@@ -452,6 +480,41 @@ export default function CourseEditorPage() {
     // Reset state after animation
     setTimeout(resetExportModal, 300);
   }, [resetExportModal]);
+
+  // Realignment handlers
+  const handleOpenRealignment = useCallback((component: LessonComponent) => {
+    setRealignmentComponent(component);
+  }, []);
+
+  const handleCloseRealignment = useCallback(() => {
+    setRealignmentComponent(null);
+  }, []);
+
+  const handleRealign = useCallback(async (params: RealignParams) => {
+    const generatedLessonId = currentLesson?.generated?.id;
+    if (!generatedLessonId) return;
+
+    setIsRealigning(true);
+    try {
+      await regenerateComponent({
+        courseId,
+        generatedLessonId,
+        componentId: params.componentId,
+        modificationPrompt: params.customPrompt || '',
+        alignmentTargets: {
+          personaIds: params.personaIds,
+          learningObjectiveIds: params.learningObjectiveIds,
+        },
+      });
+      // Note: The component will be updated via query invalidation
+      // The modal's onRealign calls onClose after success
+    } catch (error) {
+      console.error('Failed to realign component:', error);
+      throw error; // Re-throw so the modal can show error state
+    } finally {
+      setIsRealigning(false);
+    }
+  }, [courseId, currentLesson?.generated?.id, regenerateComponent]);
 
   // Loading state
   if (outlineLoading || lessonsLoading) {
@@ -745,6 +808,7 @@ export default function CourseEditorPage() {
                               component={component}
                               onClick={() => handleComponentClick(component)}
                               isDragging={activeId === component.id}
+                              onOpenRealignment={handleOpenRealignment}
                             />
                             {/* Delete button - visible on mobile, hover on desktop */}
                             <button
@@ -977,6 +1041,18 @@ export default function CourseEditorPage() {
           </div>
         )}
       </ResponsiveModal>
+
+      {/* Realignment Modal */}
+      <RealignmentModal
+        isOpen={!!realignmentComponent}
+        onClose={handleCloseRealignment}
+        component={realignmentComponent}
+        smePersonas={[]}
+        audiencePersonas={[]}
+        learningObjectives={currentLessonLOs}
+        onRealign={handleRealign}
+        isLoading={isRealigning || isRegenerating}
+      />
     </div>
   );
 }

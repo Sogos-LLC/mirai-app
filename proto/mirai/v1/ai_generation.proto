@@ -185,6 +185,13 @@ message ComponentAlignment {
   repeated string learning_objective_ids = 2;
 }
 
+// ComponentAlignmentTargets specifies alignment targets for content regeneration.
+// Used to regenerate content aligned to specific personas and learning objectives.
+message ComponentAlignmentTargets {
+  repeated string persona_ids = 1;           // Selected persona IDs (SME or audience)
+  repeated string learning_objective_ids = 2; // Selected learning objective IDs
+}
+
 // TextContent for text components.
 message TextContent {
   string html = 1;
@@ -378,6 +385,7 @@ message RegenerateComponentRequest {
   string generated_lesson_id = 2;  // Generated lesson ID (NOT outline_lesson_id)
   string component_id = 3;
   string modification_prompt = 4; // Instructions for regeneration
+  optional ComponentAlignmentTargets alignment_targets = 5; // Optional alignment targets for realignment
 }
 
 // RegenerateComponentResponse returns the job ID.

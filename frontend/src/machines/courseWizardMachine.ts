@@ -29,8 +29,9 @@ export type WizardStep =
  * Context for the course wizard state machine
  */
 export interface CourseWizardContext {
-  // Step 1: Course Name
+  // Step 1: Course Name & Desired Outcomes
   courseName: string;
+  desiredOutcomes: string;
 
   // Step 2: AI-improved Title & Description
   improvedTitle: string;
@@ -69,8 +70,10 @@ export interface CourseWizardContext {
 }
 
 export type CourseWizardEvent =
-  // Step 1: Course Name
+  // Step 1: Course Name & Outcomes
   | { type: 'SET_COURSE_NAME'; name: string }
+  | { type: 'SET_DESIRED_OUTCOMES'; outcomes: string }
+  | { type: 'GENERATE_OUTCOMES' }
   | { type: 'SUBMIT_COURSE_NAME' }
   // Step 2: Title/Description
   | { type: 'SET_TITLE'; title: string }
@@ -85,6 +88,7 @@ export type CourseWizardEvent =
   // Step 4: Audience Selection
   | { type: 'TOGGLE_AUDIENCE'; audienceId: string }
   | { type: 'EDIT_AUDIENCE'; persona: AudiencePersona }
+  | { type: 'ADD_TEMPLATE_AUDIENCE'; persona: AudiencePersona }
   | { type: 'APPROVE_AUDIENCES' }
   | { type: 'REGENERATE_AUDIENCES' }
   // Step 5: Tone Selection
@@ -114,6 +118,10 @@ interface GenerateTitleResponse {
   description: string;
 }
 
+interface GenerateOutcomesResponse {
+  outcomes: string;
+}
+
 interface GenerateSMEPersonasResponse {
   personas: SMEPersona[];
 }
@@ -141,6 +149,7 @@ interface SaveWizardStateResponse {
 
 export const initialContext: CourseWizardContext = {
   courseName: '',
+  desiredOutcomes: '',
   improvedTitle: '',
   description: '',
   smePersonas: [],
@@ -170,6 +179,15 @@ export const initialContext: CourseWizardContext = {
 export const generateTitleActor = fromPromise<GenerateTitleResponse, { courseName: string }>(
   async () => {
     throw new NetworkError('generateTitleActor must be provided by the component');
+  }
+);
+
+/**
+ * Generate desired course outcomes
+ */
+export const generateOutcomesActor = fromPromise<GenerateOutcomesResponse, { courseName: string }>(
+  async () => {
+    throw new NetworkError('generateOutcomesActor must be provided by the component');
   }
 );
 
@@ -301,6 +319,7 @@ export const courseWizardMachine = createMachine({
           guard: ({ context }) => context.savedState?.currentStep === 'titleDescription',
           actions: assign(({ context }) => ({
             courseName: context.savedState?.data?.courseName ?? '',
+            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
             description: context.savedState?.data?.description ?? '',
             currentStep: 'titleDescription' as const,
@@ -312,6 +331,7 @@ export const courseWizardMachine = createMachine({
           guard: ({ context }) => context.savedState?.currentStep === 'smeSelection',
           actions: assign(({ context }) => ({
             courseName: context.savedState?.data?.courseName ?? '',
+            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
             description: context.savedState?.data?.description ?? '',
             smePersonas: context.savedState?.data?.smePersonas ?? [],
@@ -325,6 +345,7 @@ export const courseWizardMachine = createMachine({
           guard: ({ context }) => context.savedState?.currentStep === 'audienceSelection',
           actions: assign(({ context }) => ({
             courseName: context.savedState?.data?.courseName ?? '',
+            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
             description: context.savedState?.data?.description ?? '',
             smePersonas: context.savedState?.data?.smePersonas ?? [],
@@ -340,6 +361,7 @@ export const courseWizardMachine = createMachine({
           guard: ({ context }) => context.savedState?.currentStep === 'toneSelection',
           actions: assign(({ context }) => ({
             courseName: context.savedState?.data?.courseName ?? '',
+            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
             description: context.savedState?.data?.description ?? '',
             smePersonas: context.savedState?.data?.smePersonas ?? [],
@@ -357,6 +379,7 @@ export const courseWizardMachine = createMachine({
           guard: ({ context }) => context.savedState?.currentStep === 'additionalContext',
           actions: assign(({ context }) => ({
             courseName: context.savedState?.data?.courseName ?? '',
+            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
             description: context.savedState?.data?.description ?? '',
             smePersonas: context.savedState?.data?.smePersonas ?? [],
@@ -394,11 +417,49 @@ export const courseWizardMachine = createMachine({
             error: null,
           }),
         },
+        SET_DESIRED_OUTCOMES: {
+          actions: assign({
+            desiredOutcomes: ({ event }) => event.outcomes,
+          }),
+        },
+        GENERATE_OUTCOMES: {
+          target: 'generatingOutcomes',
+          guard: ({ context }) => context.courseName.trim().length > 0,
+        },
         SUBMIT_COURSE_NAME: {
           target: 'generatingTitle',
           guard: ({ context }) => context.courseName.trim().length > 0,
         },
         CANCEL: 'cancelled',
+      },
+    },
+
+    // --------------------------------------------------------
+    // Generating Outcomes (AI) - Magic wand
+    // --------------------------------------------------------
+    generatingOutcomes: {
+      invoke: {
+        id: 'generateOutcomes',
+        src: 'generateOutcomesActor',
+        input: ({ context }) => ({ courseName: context.courseName }),
+        onDone: {
+          target: 'courseName',
+          actions: assign({
+            desiredOutcomes: ({ event }) => event.output.outcomes,
+            error: null,
+          }),
+        },
+        onError: {
+          target: 'courseName',
+          actions: assign({
+            error: ({ event }) =>
+              createAuthError(
+                'NETWORK_ERROR',
+                event.error instanceof Error ? event.error.message : 'Failed to generate outcomes',
+                true
+              ),
+          }),
+        },
       },
     },
 
@@ -584,6 +645,24 @@ export const courseWizardMachine = createMachine({
           actions: assign({
             audiencePersonas: ({ context, event }) =>
               context.audiencePersonas.map((p) => (p.id === event.persona.id ? event.persona : p)),
+          }),
+        },
+        ADD_TEMPLATE_AUDIENCE: {
+          actions: assign({
+            audiencePersonas: ({ context, event }) => {
+              // Don't add if already present
+              if (context.audiencePersonas.some((p) => p.id === event.persona.id)) {
+                return context.audiencePersonas;
+              }
+              return [...context.audiencePersonas, event.persona];
+            },
+            selectedAudienceIds: ({ context, event }) => {
+              // Auto-select the added template
+              if (context.selectedAudienceIds.includes(event.persona.id)) {
+                return context.selectedAudienceIds;
+              }
+              return [...context.selectedAudienceIds, event.persona.id];
+            },
           }),
         },
         APPROVE_AUDIENCES: {
@@ -823,6 +902,7 @@ export function getAllSteps(): WizardStep[] {
 export function isGenerating(stateValue: unknown): boolean {
   if (typeof stateValue === 'string') {
     return [
+      'generatingOutcomes',
       'generatingTitle',
       'generatingSMEs',
       'generatingAudiences',
@@ -851,6 +931,7 @@ export function canGoBack(stateValue: unknown): boolean {
 export function buildWizardStepData(context: CourseWizardContext): Partial<WizardStepData> {
   return {
     courseName: context.courseName,
+    desiredOutcomes: context.desiredOutcomes,
     improvedTitle: context.improvedTitle,
     description: context.description,
     smePersonas: context.smePersonas,

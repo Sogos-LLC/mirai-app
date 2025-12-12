@@ -59,6 +59,32 @@ func (s *CourseWizardServiceServer) GenerateTitle(
 	}), nil
 }
 
+// GenerateOutcomes generates desired course outcomes from a course name.
+// Used by the "magic wand" button in wizard step 1.
+func (s *CourseWizardServiceServer) GenerateOutcomes(
+	ctx context.Context,
+	req *connect.Request[v1.GenerateOutcomesRequest],
+) (*connect.Response[v1.GenerateOutcomesResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	result, err := s.wizardService.GenerateOutcomes(ctx, kratosID, req.Msg.CourseName)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.GenerateOutcomesResponse{
+		Outcomes: result.Outcomes,
+	}), nil
+}
+
 // GenerateSMEPersonas generates 3 diverse SME personas based on course topic.
 func (s *CourseWizardServiceServer) GenerateSMEPersonas(
 	ctx context.Context,
@@ -459,6 +485,7 @@ func wizardStepDataToProto(data *entity.WizardStepData) *v1.WizardStepData {
 		ToneOptions:         toneOptions,
 		SelectedToneId:      data.SelectedToneID,
 		AdditionalContext:   data.AdditionalContext,
+		DesiredOutcomes:     data.DesiredOutcomes,
 	}
 }
 
@@ -496,5 +523,6 @@ func protoToWizardStepData(data *v1.WizardStepData) *entity.WizardStepData {
 		ToneOptions:         toneOptions,
 		SelectedToneID:      data.SelectedToneId,
 		AdditionalContext:   data.AdditionalContext,
+		DesiredOutcomes:     data.DesiredOutcomes,
 	}
 }

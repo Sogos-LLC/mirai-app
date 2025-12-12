@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { MoreVertical, RefreshCw } from 'lucide-react';
 import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
 import { LessonComponentType } from '@/gen/mirai/v1/ai_generation_pb';
 import type {
@@ -42,6 +43,7 @@ interface ComponentRendererProps {
   onSelect?: () => void;
   onUpdate?: (contentJson: string) => void;
   onQuizAnswer?: (componentId: string, optionId: string, isCorrect: boolean) => void;
+  onOpenRealignment?: (component: LessonComponent) => void;
 }
 
 function parseContent<T>(contentJson: string): T | null {
@@ -70,7 +72,11 @@ export function ComponentRenderer({
   onSelect,
   onUpdate,
   onQuizAnswer,
+  onOpenRealignment,
 }: ComponentRendererProps) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const content = useMemo(() => {
     return parseContent<Record<string, unknown>>(component.contentJson);
   }, [component.contentJson]);
@@ -79,19 +85,87 @@ export function ComponentRenderer({
     onUpdate?.(JSON.stringify(newContent));
   };
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(!showMenu);
+  };
+
+  const handleRealignmentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    onOpenRealignment?.(component);
+  };
+
+  // Check if this component type should show the menu (all except IMAGE)
+  const showRealignmentMenu = onOpenRealignment && component.type !== COMPONENT_TYPES.IMAGE;
+
   // Wrapper for selectable/editable state
   const Wrapper = ({ children }: { children: React.ReactNode }) => {
-    if (isEditing || onSelect) {
+    if (isEditing || onSelect || showRealignmentMenu) {
       return (
         <div
           className={`
-            relative
+            relative group
             ${onSelect ? 'cursor-pointer' : ''}
             ${isSelected ? 'ring-2 ring-purple-500 ring-offset-2 rounded-lg' : ''}
           `}
           onClick={() => !isEditing && onSelect?.()}
         >
           {children}
+
+          {/* 3-dot menu for realignment */}
+          {showRealignmentMenu && (
+            <div
+              ref={menuRef}
+              className="absolute top-2 right-2 z-10"
+            >
+              <button
+                onClick={handleMenuClick}
+                className={`
+                  p-2 rounded-lg transition-all
+                  bg-white dark:bg-dark-surface
+                  border border-gray-200 dark:border-dark-border
+                  shadow-sm hover:shadow
+                  text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white
+                  opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100
+                  touch-device:opacity-100
+                  ${showMenu ? 'opacity-100' : ''}
+                `}
+                aria-label="Component options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {/* Dropdown menu */}
+              {showMenu && (
+                <div className="absolute top-full right-0 mt-1 bg-white dark:bg-dark-surface-elevated border border-gray-200 dark:border-dark-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                  <button
+                    onClick={handleRealignmentClick}
+                    className="w-full px-4 py-2 text-sm text-left flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-dark-400 text-gray-700 dark:text-gray-200"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Realignment
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }

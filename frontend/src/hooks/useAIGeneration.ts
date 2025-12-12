@@ -45,6 +45,7 @@ import {
   UpdateLessonComponentsRequestSchema,
   LessonComponentSchema,
   ComponentAlignmentSchema,
+  ComponentAlignmentTargetsSchema,
 } from '@/gen/mirai/v1/ai_generation_pb';
 
 // Re-export types and enums
@@ -222,6 +223,7 @@ export function useGenerateAllLessons() {
 
 /**
  * Hook to regenerate a component.
+ * Supports optional alignment targets for realignment-based regeneration.
  */
 export function useRegenerateComponent() {
   const queryClient = useQueryClient();
@@ -233,18 +235,29 @@ export function useRegenerateComponent() {
       generatedLessonId: string;
       componentId: string;
       modificationPrompt: string;
+      alignmentTargets?: {
+        personaIds: string[];
+        learningObjectiveIds: string[];
+      };
     }) => {
       const request = create(RegenerateComponentRequestSchema, {
         courseId: data.courseId,
         generatedLessonId: data.generatedLessonId,
         componentId: data.componentId,
         modificationPrompt: data.modificationPrompt,
+        alignmentTargets: data.alignmentTargets
+          ? create(ComponentAlignmentTargetsSchema, {
+              personaIds: data.alignmentTargets.personaIds,
+              learningObjectiveIds: data.alignmentTargets.learningObjectiveIds,
+            })
+          : undefined,
       });
 
       const result = await mutation.mutateAsync(request);
       await Promise.all([
         invalidateJobQueries(queryClient),
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getGeneratedLesson, cardinality: undefined }) }),
+        queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listGeneratedLessons, cardinality: undefined }) }),
       ]);
       return result;
     },

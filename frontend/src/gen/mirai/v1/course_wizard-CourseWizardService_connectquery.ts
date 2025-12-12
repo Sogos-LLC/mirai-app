@@ -13,6 +13,14 @@ import { CourseWizardService } from "./course_wizard_pb";
 export const generateTitle = CourseWizardService.method.generateTitle;
 
 /**
+ * GenerateOutcomes generates course outcomes from the course name.
+ * Used by the "magic wand" button in Step 1 to auto-generate desired outcomes.
+ *
+ * @generated from rpc mirai.v1.CourseWizardService.GenerateOutcomes
+ */
+export const generateOutcomes = CourseWizardService.method.generateOutcomes;
+
+/**
  * GenerateSMEPersonas generates 3 diverse SME personas based on course topic.
  * Step 2 -> 3: AI generates SME options for user to select/edit.
  *

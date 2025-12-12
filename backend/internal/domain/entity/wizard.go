@@ -73,6 +73,7 @@ type WizardStepData struct {
 	ToneOptions         []WizardToneOption      `json:"tone_options"`
 	SelectedToneID      string                  `json:"selected_tone_id"`
 	AdditionalContext   string                  `json:"additional_context"`
+	DesiredOutcomes     string                  `json:"desired_outcomes"` // Course outcomes - the "north star" for all content generation
 }
 
 // ToJSON serializes WizardStepData to JSON.
