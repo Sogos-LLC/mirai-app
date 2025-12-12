@@ -9,8 +9,4 @@ resources:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-frontend
-<<<<<<< Updated upstream
-  newTag: 667f9f7
-=======
   newTag: 477212f
->>>>>>> Stashed changes
