@@ -6,3 +6,10 @@ build
 *.log
 .DS_Store
 tsconfig.tsbuildinfo
+
+# Playwright
+e2e/.auth/
+playwright/test-results/
+playwright/screenshots/
+playwright-report/
+test-results/

@@ -23,9 +23,12 @@ func NewCourseRepository(db *sql.DB) repository.CourseRepository {
 }
 
 // Create creates a new course.
+// IMPORTANT: course.ID must be pre-populated by the caller.
+// The ID is used for MinIO storage paths before this call, so it must match.
 func (r *CourseRepository) Create(ctx context.Context, course *entity.Course) error {
 	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.Course, error) {
 		return q.CreateCourse(ctx, gen.CreateCourseParams{
+			ID:              course.ID, // Use pre-generated ID to match MinIO paths
 			TenantID:        course.TenantID,
 			CompanyID:       course.CompanyID,
 			CreatedByUserID: toNullUUID(&course.CreatedByUserID),
@@ -44,8 +47,7 @@ func (r *CourseRepository) Create(ctx context.Context, course *entity.Course) er
 		return fmt.Errorf("failed to create course: %w", err)
 	}
 
-	// Update entity with generated values
-	course.ID = result.ID
+	// Update entity with generated timestamps (ID already set by caller)
 	course.CreatedAt = result.CreatedAt
 	course.UpdatedAt = result.UpdatedAt
 	return nil

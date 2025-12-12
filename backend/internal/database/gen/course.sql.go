@@ -48,6 +48,7 @@ func (q *Queries) CountCoursesByFolderID(ctx context.Context, folderID uuid.Null
 const createCourse = `-- name: CreateCourse :one
 
 INSERT INTO courses (
+    id,
     tenant_id,
     company_id,
     created_by_user_id,
@@ -61,12 +62,13 @@ INSERT INTO courses (
     thumbnail_path,
     content_path
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 )
 RETURNING id, tenant_id, company_id, team_id, created_by_user_id, title, description, status, version, content_path, thumbnail_path, folder_path, category_tags, created_at, updated_at, folder_id
 `
 
 type CreateCourseParams struct {
+	ID              uuid.UUID      `db:"id" json:"id"`
 	TenantID        uuid.UUID      `db:"tenant_id" json:"tenant_id"`
 	CompanyID       uuid.UUID      `db:"company_id" json:"company_id"`
 	CreatedByUserID uuid.NullUUID  `db:"created_by_user_id" json:"created_by_user_id"`
@@ -85,6 +87,7 @@ type CreateCourseParams struct {
 // Schema: courses table with RLS isolation by tenant_id
 func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (Course, error) {
 	row := q.db.QueryRowContext(ctx, createCourse,
+		arg.ID,
 		arg.TenantID,
 		arg.CompanyID,
 		arg.CreatedByUserID,
