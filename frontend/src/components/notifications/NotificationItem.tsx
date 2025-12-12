@@ -20,6 +20,8 @@ const TYPE_CONFIG: Record<number, { icon: string; color: string; bgColor: string
   6: { icon: '🎉', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' }, // GENERATION_COMPLETE
   7: { icon: '⚠️', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' }, // GENERATION_FAILED
   8: { icon: '👀', color: 'text-indigo-600 dark:text-indigo-400', bgColor: 'bg-indigo-100 dark:bg-indigo-900/30' }, // APPROVAL_REQUESTED
+  9: { icon: '📦', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' }, // EXPORT_COMPLETE
+  10: { icon: '⚠️', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' }, // EXPORT_FAILED
 };
 
 const PRIORITY_INDICATOR: Record<number, string> = {
@@ -61,7 +63,12 @@ export function NotificationItem({
       onMarkAsRead();
     }
     if (notification.actionUrl) {
-      router.push(notification.actionUrl);
+      // Check if external URL (e.g., presigned MinIO download)
+      if (notification.actionUrl.startsWith('http://') || notification.actionUrl.startsWith('https://')) {
+        window.open(notification.actionUrl, '_blank');
+      } else {
+        router.push(notification.actionUrl);
+      }
     }
   };
 

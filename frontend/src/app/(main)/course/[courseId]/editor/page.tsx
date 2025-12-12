@@ -54,7 +54,10 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import {
   useExportCourse,
+  useGetExportStatus,
+  useDownloadExport,
   ExportFormat,
+  ExportStatus,
 } from '@/hooks/useExport';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -128,7 +131,7 @@ const COMPONENT_TYPES = [
 ];
 
 // Export modal states
-type ExportModalState = 'idle' | 'starting' | 'queued';
+type ExportModalState = 'idle' | 'starting' | 'processing' | 'completed' | 'failed';
 
 export default function CourseEditorPage() {
   const params = useParams();
@@ -148,6 +151,8 @@ export default function CourseEditorPage() {
   // Export state
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportModalState, setExportModalState] = useState<ExportModalState>('idle');
+  const [exportId, setExportId] = useState<string | undefined>(undefined);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
@@ -160,7 +165,9 @@ export default function CourseEditorPage() {
   const { mutate: saveComponents, isLoading: isSaving } = useUpdateLessonComponents();
 
   // Export hooks
-  const { mutate: startExport, isLoading: isStarting } = useExportCourse();
+  const { mutate: startExport, isLoading: isStarting, error: startError, reset: resetStart } = useExportCourse();
+  const { data: exportStatus } = useGetExportStatus(exportId, { enabled: !!exportId });
+  const { mutate: getDownload, isLoading: isGettingDownload } = useDownloadExport();
 
   // DnD sensors with 8px activation distance to prevent accidental drags
   const sensors = useSensors(
@@ -179,6 +186,33 @@ export default function CourseEditorPage() {
   useEffect(() => {
     localComponentsRef.current = localComponents;
   }, [localComponents]);
+
+  // Update export modal state based on export status
+  useEffect(() => {
+    if (!exportStatus) return;
+
+    switch (exportStatus.status) {
+      case ExportStatus.PENDING:
+      case ExportStatus.PROCESSING:
+        setExportModalState('processing');
+        break;
+      case ExportStatus.COMPLETED:
+        setExportModalState('completed');
+        break;
+      case ExportStatus.FAILED:
+        setExportModalState('failed');
+        setExportError(exportStatus.errorMessage || 'Export failed. Please try again.');
+        break;
+    }
+  }, [exportStatus]);
+
+  // Handle start error
+  useEffect(() => {
+    if (startError) {
+      setExportModalState('failed');
+      setExportError(startError.message || 'Failed to start export. Please try again.');
+    }
+  }, [startError]);
 
   // Build lesson list from outline
   const lessonsList = useMemo(() => {
@@ -381,21 +415,43 @@ export default function CourseEditorPage() {
   // Export handlers
   const handleExport = async () => {
     setExportModalState('starting');
+    setExportError(null);
     try {
-      await startExport(courseId, ExportFormat.SCORM_2004);
-      setExportModalState('queued');
-    } catch (err) {
-      console.error('Failed to start export:', err);
-      // Reset to idle on error so user can try again
-      setExportModalState('idle');
+      const exportRecord = await startExport(courseId, ExportFormat.SCORM_2004);
+      if (exportRecord) {
+        setExportId(exportRecord.id);
+        setExportModalState('processing');
+      }
+    } catch {
+      // Error handled by useEffect above
     }
   };
+
+  const handleDownload = useCallback(async () => {
+    if (!exportId) return;
+    try {
+      const result = await getDownload(exportId);
+      if (result.downloadUrl) {
+        // Open download URL in new tab
+        window.open(result.downloadUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Failed to get download URL:', err);
+    }
+  }, [exportId, getDownload]);
+
+  const resetExportModal = useCallback(() => {
+    setExportId(undefined);
+    setExportModalState('idle');
+    setExportError(null);
+    resetStart();
+  }, [resetStart]);
 
   const handleCloseExportModal = useCallback(() => {
     setShowExportModal(false);
     // Reset state after animation
-    setTimeout(() => setExportModalState('idle'), 300);
-  }, []);
+    setTimeout(resetExportModal, 300);
+  }, [resetExportModal]);
 
   // Loading state
   if (outlineLoading || lessonsLoading) {
@@ -804,7 +860,11 @@ export default function CourseEditorPage() {
       <ResponsiveModal
         isOpen={showExportModal}
         onClose={handleCloseExportModal}
-        title={exportModalState === 'queued' ? "Export Started!" : "Export Course"}
+        title={
+          exportModalState === 'completed' ? "Export Complete!" :
+          exportModalState === 'failed' ? "Export Failed" :
+          "Export Course"
+        }
         size="md"
         mobileHeight="auto"
       >
@@ -841,31 +901,79 @@ export default function CourseEditorPage() {
           </div>
         )}
 
-        {/* Queued state - export is running in background */}
-        {exportModalState === 'queued' && (
+        {/* Processing state - export in progress */}
+        {exportModalState === 'processing' && (
+          <div className="text-center py-6">
+            <Loader2 className="w-12 h-12 text-purple-600 dark:text-purple-400 animate-spin mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-primary mb-2">Exporting Course...</h3>
+            {exportStatus && (
+              <>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2 mx-auto max-w-xs">
+                  <div
+                    className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${exportStatus.progressPercent}%` }}
+                  />
+                </div>
+                <p className="text-secondary text-sm">
+                  {exportStatus.progressMessage || `${exportStatus.progressPercent}% complete`}
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Completed state - export finished */}
+        {exportModalState === 'completed' && (
           <div className="text-center py-6">
             <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="text-xl font-semibold text-primary mb-2">Export Started!</h3>
-            <p className="text-secondary mb-4">
-              Your course is being exported in the background.
-            </p>
-
-            {/* Info box */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>You&apos;ll receive a notification</strong> when your SCORM package is ready to download.
-                You can continue working in the meantime.
-              </p>
+            <h3 className="text-xl font-semibold text-primary mb-2">Export Complete!</h3>
+            <p className="text-secondary mb-6">Your course has been exported successfully.</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleCloseExportModal}
+                className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={isGettingDownload}
+                className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Download size={18} />
+                {isGettingDownload ? 'Getting Download...' : 'Download SCORM'}
+              </button>
             </div>
+          </div>
+        )}
 
-            <button
-              onClick={handleCloseExportModal}
-              className="w-full px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              OK
-            </button>
+        {/* Failed state - export error */}
+        {exportModalState === 'failed' && (
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-primary mb-2">Export Failed</h3>
+            <p className="text-secondary mb-6">{exportError}</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleCloseExportModal}
+                className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  resetExportModal();
+                  handleExport();
+                }}
+                className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         )}
       </ResponsiveModal>
