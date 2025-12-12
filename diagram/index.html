@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirai Course Generation Flow</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Mirai Architecture</div>
+        <div class="nav-links">
+            <a href="index.html" class="active">Flow Diagrams</a>
+            <a href="documentation.html">Documentation</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <h1>Course Generation Flow Diagrams</h1>
+            <p class="subtitle">Visual representation of AI-powered course outline and content generation</p>
+        </header>
+
+        <!-- High-Level Overview -->
+        <section class="diagram-section">
+            <h2>High-Level Generation Overview</h2>
+            <p class="section-desc">The complete flow from user input to generated course content.</p>
+            <div class="mermaid">
+flowchart TB
+    subgraph Inputs["User Inputs"]
+        CT[Course Title]
+        DO[Desired Outcome]
+        SME[SME Knowledge<br/>Chunks, Keywords, Summaries]
+        TA[Target Audience<br/>Role, Experience, Goals, Challenges]
+        AC[Additional Context]
+    end
+
+    subgraph Phase1["Phase 1: Outline Generation"]
+        OG[Generate Course Outline]
+        OR[Outline Review]
+        OA{Outline<br/>Approved?}
+    end
+
+    subgraph Phase2["Phase 2: Content Generation"]
+        GL[Generate All Lessons]
+        PJ[Parent Job<br/>FULL_COURSE]
+        CJ1[Child Job 1<br/>LESSON_CONTENT]
+        CJ2[Child Job 2<br/>LESSON_CONTENT]
+        CJN[Child Job N<br/>LESSON_CONTENT]
+    end
+
+    subgraph Phase3["Phase 3: Refinement"]
+        IG[Generate Images]
+        EC[Edit Components]
+        PB[Publish Course]
+    end
+
+    Inputs --> OG
+    OG --> OR
+    OR --> OA
+    OA -->|No| OR
+    OA -->|Yes| GL
+    GL --> PJ
+    PJ --> CJ1 & CJ2 & CJN
+    CJ1 & CJ2 & CJN --> IG
+    IG --> EC
+    EC --> PB
+
+    style Inputs fill:#e0e7ff,stroke:#6366f1
+    style Phase1 fill:#fef3c7,stroke:#f59e0b
+    style Phase2 fill:#d1fae5,stroke:#10b981
+    style Phase3 fill:#fce7f3,stroke:#ec4899
+            </div>
+        </section>
+
+        <!-- Outline Generation Detail -->
+        <section class="diagram-section">
+            <h2>Outline Generation (Two-Phase Approach)</h2>
+            <p class="section-desc">Outline generation uses a two-call strategy to avoid Gemini's schema depth limits. First generates sections, then expands lessons in parallel.</p>
+            <div class="mermaid">
+flowchart TB
+    subgraph Input["Inputs"]
+        I1[Course Title + Desired Outcome]
+        I2[SME Knowledge<br/>- Name, Domain, Summary<br/>- Chunks limited to 5<br/>- Keywords]
+        I3[Target Audience<br/>- Role, Experience Level<br/>- Learning Goals<br/>- Challenges, Industry Context]
+    end
+
+    subgraph Phase1["LLM Call 1: Sections Only"]
+        P1[buildSectionsOnlyPrompt]
+        G1[Gemini API Call]
+        S1[sectionsOnlySchema<br/>Flat structure to avoid depth limits]
+        R1[Parse Sections + Lesson Titles]
+    end
+
+    subgraph Phase2["LLM Calls 2-N: Parallel Section Expansion"]
+        direction TB
+        P2A[buildSectionLessonsPrompt<br/>Section 1]
+        P2B[buildSectionLessonsPrompt<br/>Section 2]
+        P2C[buildSectionLessonsPrompt<br/>Section N]
+
+        G2A[Gemini Call]
+        G2B[Gemini Call]
+        G2C[Gemini Call]
+
+        R2A[Lessons with:<br/>- Title, Description<br/>- Duration 5-20min<br/>- 2-4 Learning Objectives]
+        R2B[Lessons with:<br/>- Title, Description<br/>- Duration 5-20min<br/>- 2-4 Learning Objectives]
+        R2C[Lessons with:<br/>- Title, Description<br/>- Duration 5-20min<br/>- 2-4 Learning Objectives]
+    end
+
+    subgraph Output["Output Processing"]
+        M[Merge All Sections]
+        PF[Compute Position Flags<br/>IsFirstInCourse, IsLastInCourse<br/>IsFirstInSection, IsLastInSection]
+        ST[Store in MinIO]
+    end
+
+    Input --> P1
+    P1 --> G1
+    G1 --> S1
+    S1 --> R1
+    R1 --> P2A & P2B & P2C
+    P2A --> G2A --> R2A
+    P2B --> G2B --> R2B
+    P2C --> G2C --> R2C
+    R2A & R2B & R2C --> M
+    M --> PF
+    PF --> ST
+
+    style Phase1 fill:#dbeafe,stroke:#3b82f6
+    style Phase2 fill:#dcfce7,stroke:#22c55e
+    style Output fill:#fef9c3,stroke:#eab308
+            </div>
+        </section>
+
+        <!-- Lesson Generation Detail -->
+        <section class="diagram-section">
+            <h2>Lesson Content Generation (Three-Phase Approach)</h2>
+            <p class="section-desc">Each lesson is generated through three phases: component planning, iterative component generation with context accumulation, and segue generation.</p>
+            <div class="mermaid">
+flowchart TB
+    subgraph Context["Lesson Context"]
+        LC1[Course Title + Description]
+        LC2[Full Course Outline<br/>with current position markers]
+        LC3[Section Info<br/>Title, Description, Order]
+        LC4[Lesson Info<br/>Title, Order, Description<br/>Learning Objectives]
+        LC5[Position Flags<br/>IsFirstInSection, IsLastInSection<br/>IsFirstInCourse, IsLastInCourse]
+        LC6[Navigation Context<br/>Previous/Next Lesson<br/>Next Section Title]
+    end
+
+    subgraph Phase1["Phase 1: Component Planning"]
+        CP[buildComponentPlanPrompt]
+        CPG[Gemini API Call]
+        CPR[Parse: 5-8 Components<br/>with types + purposes]
+    end
+
+    subgraph Phase2["Phase 2: Iterative Component Generation"]
+        direction TB
+        LOOP["For each planned component:"]
+
+        SC1[buildSingleComponentPrompt<br/>+ Position Context]
+        SC2[Gemini API Call]
+        SC3[parseAndTransformComponent]
+        SC4[Add to previousComponentsContext]
+
+        LOOP --> SC1 --> SC2 --> SC3 --> SC4
+        SC4 -.->|Next iteration| SC1
+    end
+
+    subgraph ComponentTypes["Component Types Generated"]
+        T1[TEXT<br/>HTML + Plaintext]
+        T2[HEADING<br/>h1-h6 Level]
+        T3[IMAGE<br/>Description + Alt + Caption]
+        T4[QUIZ<br/>Question + Options<br/>Correct Answer + Feedback]
+        T5[CODE<br/>Code + Language]
+        T6[CALLOUT<br/>Style + Title + Content]
+    end
+
+    subgraph Phase3["Phase 3: Segue Generation"]
+        SG[buildSeguePrompt]
+        SGG[Gemini API Call]
+        SGR{Position Type?}
+        SGR1[LESSON_TO_LESSON<br/>1-2 sentence transition]
+        SGR2[SECTION_TO_SECTION<br/>Preview next section]
+        SGR3[COURSE_CONCLUSION<br/>Congratulations + Next Steps]
+    end
+
+    subgraph Output["Final Output"]
+        OUT[GeneratedLesson<br/>- All Components<br/>- Segue Text<br/>- Token Usage]
+        MINIO[Atomic Store to MinIO]
+    end
+
+    Context --> CP
+    CP --> CPG --> CPR
+    CPR --> LOOP
+    SC4 --> Phase3
+    Phase2 --> ComponentTypes
+    SG --> SGG --> SGR
+    SGR -->|Not last in section| SGR1
+    SGR -->|Last in section| SGR2
+    SGR -->|Last in course| SGR3
+    SGR1 & SGR2 & SGR3 --> OUT
+    OUT --> MINIO
+
+    style Phase1 fill:#e0e7ff,stroke:#6366f1
+    style Phase2 fill:#fef3c7,stroke:#f59e0b
+    style Phase3 fill:#d1fae5,stroke:#10b981
+    style ComponentTypes fill:#f3e8ff,stroke:#a855f7
+            </div>
+        </section>
+
+        <!-- Job System Architecture -->
+        <section class="diagram-section">
+            <h2>Background Job System Architecture</h2>
+            <p class="section-desc">Hierarchical job model with parent-child tracking, atomic claims, and crash recovery.</p>
+            <div class="mermaid">
+flowchart TB
+    subgraph Client["Frontend Client"]
+        UI[User Interface]
+        SSE[SSE Stream<br/>SubscribeJobs]
+    end
+
+    subgraph API["Connect-RPC API"]
+        GEN[GenerateAllLessons]
+        SUB[SubscribeJobs Handler]
+    end
+
+    subgraph Jobs["Job System"]
+        PG[(PostgreSQL<br/>generation_jobs)]
+        AQ[Asynq Queue<br/>Redis-backed]
+
+        PARENT[Parent Job<br/>Type: FULL_COURSE<br/>Status: PROCESSING]
+
+        CHILD1[Child Job 1<br/>Type: LESSON_CONTENT]
+        CHILD2[Child Job 2<br/>Type: LESSON_CONTENT]
+        CHILDN[Child Job N<br/>Type: LESSON_CONTENT]
+    end
+
+    subgraph Workers["Background Workers"]
+        W1[Worker 1<br/>Claims Job]
+        W2[Worker 2<br/>Claims Job]
+        WN[Worker N<br/>Claims Job]
+
+        CLAIM["Atomic Claim<br/>SELECT FOR UPDATE<br/>SKIP LOCKED"]
+    end
+
+    subgraph Events["Event System"]
+        REDIS[(Redis Pub/Sub)]
+        EVT1[JOB_CREATED]
+        EVT2[JOB_UPDATED]
+        EVT3[JOB_COMPLETED]
+    end
+
+    subgraph Storage["Content Storage"]
+        MINIO[(MinIO<br/>Generated Lessons)]
+    end
+
+    UI -->|1. Request| GEN
+    GEN -->|2. Create Jobs| PG
+    GEN -->|3. Enqueue| AQ
+    PG --> PARENT
+    PARENT --> CHILD1 & CHILD2 & CHILDN
+
+    AQ --> CLAIM
+    CLAIM --> W1 & W2 & WN
+
+    W1 -->|Process| CHILD1
+    W2 -->|Process| CHILD2
+    WN -->|Process| CHILDN
+
+    W1 & W2 & WN -->|Store| MINIO
+    W1 & W2 & WN -->|Publish| REDIS
+
+    REDIS --> EVT1 & EVT2 & EVT3
+    EVT1 & EVT2 & EVT3 --> SUB
+    SUB -->|Stream| SSE
+    SSE --> UI
+
+    style Jobs fill:#dbeafe,stroke:#3b82f6
+    style Workers fill:#dcfce7,stroke:#22c55e
+    style Events fill:#fef3c7,stroke:#f59e0b
+            </div>
+        </section>
+
+        <!-- Parallel Lesson Generation -->
+        <section class="diagram-section">
+            <h2>Parallel Lesson Generation with Parent Finalization</h2>
+            <p class="section-desc">Child jobs run in parallel. Last completing job atomically finalizes the parent using optimistic concurrency.</p>
+            <div class="mermaid">
+sequenceDiagram
+    participant UI as Frontend
+    participant API as API Handler
+    participant DB as PostgreSQL
+    participant Q as Asynq Queue
+    participant W1 as Worker 1
+    participant W2 as Worker 2
+    participant W3 as Worker 3
+    participant MINIO as MinIO
+    participant REDIS as Redis Pub/Sub
+
+    UI->>API: GenerateAllLessons(courseID)
+    API->>DB: Create Parent Job (FULL_COURSE, PROCESSING)
+    API->>DB: Create Child Jobs (LESSON_CONTENT x3, QUEUED)
+    API->>Q: Enqueue all child jobs
+    API->>REDIS: Publish JOB_CREATED events
+    API-->>UI: Return parent job ID
+
+    par Worker 1 processes Lesson 1
+        Q->>W1: Claim job (SELECT FOR UPDATE SKIP LOCKED)
+        W1->>DB: Update status to PROCESSING
+        W1->>MINIO: Read course outline
+        W1->>W1: Call Gemini API (3 phases)
+        W1->>MINIO: Store generated lesson
+        W1->>DB: Update job COMPLETED
+        W1->>DB: CheckAndCompleteParent (2/3 done)
+        W1->>REDIS: Publish JOB_COMPLETED
+    and Worker 2 processes Lesson 2
+        Q->>W2: Claim job
+        W2->>DB: Update status to PROCESSING
+        W2->>MINIO: Read course outline
+        W2->>W2: Call Gemini API (3 phases)
+        W2->>MINIO: Store generated lesson
+        W2->>DB: Update job COMPLETED
+        W2->>DB: CheckAndCompleteParent (2/3 done)
+        W2->>REDIS: Publish JOB_COMPLETED
+    and Worker 3 processes Lesson 3
+        Q->>W3: Claim job
+        W3->>DB: Update status to PROCESSING
+        W3->>MINIO: Read course outline
+        W3->>W3: Call Gemini API (3 phases)
+        W3->>MINIO: Store generated lesson
+        W3->>DB: Update job COMPLETED
+        W3->>DB: CheckAndCompleteParent (3/3 done - FINALIZE)
+        W3->>DB: FinalizeParentJob (atomic with FOR UPDATE)
+        W3->>REDIS: Publish PARENT JOB_COMPLETED
+    end
+
+    REDIS-->>UI: Stream all events via SSE
+    UI->>UI: Update progress UI in real-time
+            </div>
+        </section>
+
+        <!-- Rate Limiting -->
+        <section class="diagram-section">
+            <h2>Gemini API Rate Limiting Strategy</h2>
+            <p class="section-desc">Handles 2000 RPM limit with exponential backoff for 429 errors.</p>
+            <div class="mermaid">
+flowchart TB
+    subgraph Config["Rate Limit Configuration"]
+        C1[Max RPM: 2000]
+        C2[Burst: 100 requests]
+        C3[Base Delay: 30ms]
+        C4[Max Retries: 3]
+    end
+
+    subgraph Flow["API Call Flow"]
+        REQ[API Request]
+        RL{Rate Limiter<br/>Check}
+        WAIT[Wait for token]
+        CALL[Gemini API Call]
+        RESP{Response?}
+
+        ERR429{429 Rate<br/>Limited?}
+        RETRY{Retries<br/>< 3?}
+
+        BACK1[Backoff: 6s]
+        BACK2[Backoff: 12s]
+        BACK3[Backoff: 24s]
+
+        SUCCESS[Return Result]
+        FAIL[Return Error]
+    end
+
+    REQ --> RL
+    RL -->|Token available| CALL
+    RL -->|No token| WAIT --> CALL
+    CALL --> RESP
+    RESP -->|Success| SUCCESS
+    RESP -->|Error| ERR429
+    ERR429 -->|Yes| RETRY
+    ERR429 -->|No| FAIL
+    RETRY -->|Retry 1| BACK1 --> CALL
+    RETRY -->|Retry 2| BACK2 --> CALL
+    RETRY -->|Retry 3| BACK3 --> CALL
+    RETRY -->|Exceeded| FAIL
+
+    style Config fill:#e0e7ff,stroke:#6366f1
+    style Flow fill:#f3f4f6,stroke:#6b7280
+            </div>
+        </section>
+
+        <!-- Component Requirements -->
+        <section class="diagram-section">
+            <h2>Component Requirements by Position</h2>
+            <p class="section-desc">Position-aware component generation ensures appropriate content structure based on where the lesson appears in the course.</p>
+            <div class="mermaid">
+flowchart LR
+    subgraph Base["Base Requirements<br/>(All Lessons)"]
+        B1[At least 1 HEADING]
+        B2[At least 2 TEXT components]
+        B3[At least 1 IMAGE]
+        B4[At least 1 QUIZ]
+    end
+
+    subgraph First["First Lesson in Course"]
+        F1[Welcome introduction]
+        F2[Course overview]
+        F3[What learners will achieve]
+        F4[Prerequisites reminder]
+    end
+
+    subgraph Section["First Lesson in Section"]
+        S1[Section introduction]
+        S2[Learning objectives overview]
+        S3[Section context]
+    end
+
+    subgraph Last["Last Lesson in Section"]
+        L1[Section summary]
+        L2[Key takeaways]
+        L3[Transition to next section]
+    end
+
+    subgraph Final["Last Lesson in Course"]
+        FN1[Course conclusion]
+        FN2[Congratulations message]
+        FN3[Skills summary]
+        FN4[Next steps suggestions]
+    end
+
+    Base --> First & Section & Last & Final
+
+    style Base fill:#dbeafe,stroke:#3b82f6
+    style First fill:#dcfce7,stroke:#22c55e
+    style Section fill:#fef3c7,stroke:#f59e0b
+    style Last fill:#fce7f3,stroke:#ec4899
+    style Final fill:#f3e8ff,stroke:#a855f7
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Mirai Course Generation Architecture - Auto-generated documentation</p>
+    </footer>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#6366f1',
+                primaryTextColor: '#1f2937',
+                primaryBorderColor: '#4f46e5',
+                lineColor: '#6b7280',
+                secondaryColor: '#f3f4f6',
+                tertiaryColor: '#e5e7eb',
+                fontFamily: 'Inter, system-ui, sans-serif'
+            },
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: true,
+                showSequenceNumbers: true
+            }
+        });
+    </script>
+</body>
+</html>
