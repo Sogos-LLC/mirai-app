@@ -76,7 +76,7 @@ export const TEST_DATA = {
   imageGeneration: {
     prompt: 'A professional diagram showing the software development lifecycle',
     /** Course ID with completed lesson content (for image generation tests) */
-    courseWithLessons: '017e4b49-562b-46df-bd34-138ff7e00ba0',
+    courseWithLessons: 'b68895fc-a069-4c41-812e-a6a7438bb60f',
   },
 } as const;
 

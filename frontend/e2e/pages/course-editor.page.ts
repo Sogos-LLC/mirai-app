@@ -30,9 +30,10 @@ export class CourseEditorPage {
       // Spinner wasn't visible, content may already be loaded
     }
 
-    // Wait for "Course Outline" text to appear (indicates editor loaded)
+    // Wait for "Course Outline" heading to appear (indicates editor loaded)
+    // Use getByRole to get the h3 heading specifically, not the mobile instruction text
     await expect(
-      this.page.getByText('Course Outline')
+      this.page.getByRole('heading', { name: 'Course Outline' })
     ).toBeVisible({ timeout: TIMEOUTS.pageLoad });
 
     await this.page.waitForTimeout(TIMEOUTS.uiTransition);
@@ -54,50 +55,104 @@ export class CourseEditorPage {
 
   /** Expand first section if collapsed (only if no lessons are visible) */
   async expandFirstSection(): Promise<void> {
-    // Check if any lessons are already visible (look for FileText icons in nav buttons)
-    // Lessons have text like "End-to-End Testing", "The Importance of", etc.
-    const visibleLessons = this.sidebar.getByRole('button', { name: /End-to-End Testing|Importance|Navigating|Setting Up/i });
-    const lessonCount = await visibleLessons.count();
+    // Check if any lessons are already visible - lessons are child buttons under sections
+    // Sections have chevron icons, lessons have file icons
+    // Lessons don't contain section keywords like "Introduction", "Management", "Lifecycle", etc.
 
-    if (lessonCount > 0) {
-      console.log(`Found ${lessonCount} lessons already visible, section is expanded`);
-      return; // Section already expanded
+    // First, find all buttons in sidebar that are likely section headers (have chevrons/arrows)
+    const allButtons = await this.sidebar.locator('button').all();
+
+    // Try to find a collapsed section and expand it
+    for (const btn of allButtons) {
+      const text = await btn.textContent().catch(() => '');
+      // Section headers tend to have broader topics
+      if (
+        text?.match(
+          /Introduction|Management|Lifecycle|Quote-to-Cash|Post-Sale|Getting Started|Overview|Foundation|Advanced/i
+        )
+      ) {
+        // Check if this section has a collapse/expand chevron (sections are expandable)
+        const hasChevron = await btn.locator('svg').count();
+        if (hasChevron > 0) {
+          console.log(`Found section: "${text?.substring(0, 40)}..." - clicking to expand`);
+          await btn.click();
+          await this.page.waitForTimeout(TIMEOUTS.uiTransition);
+          return;
+        }
+      }
     }
 
-    // No lessons visible, need to expand a section
-    const sectionHeaders = this.sidebar.locator('button').filter({
-      hasText: /Introduction|Defining|Building|Implementing|Advanced/,
-    });
-
-    const count = await sectionHeaders.count();
-    console.log(`Found ${count} section headers, no lessons visible - expanding first`);
-
-    if (count > 0) {
-      await sectionHeaders.first().click();
-      await this.page.waitForTimeout(TIMEOUTS.uiTransition);
-      console.log('Clicked first section to expand');
-    }
+    console.log('No expandable sections found or already expanded');
   }
 
   /** Click on a lesson by index (0-based) */
   async selectLessonByIndex(index: number): Promise<void> {
-    // Ensure sections are expanded
-    await this.expandFirstSection();
+    // First, click on a section to expand it
+    // Find all top-level buttons in the sidebar (sections have chevron icons)
+    const sectionButtons = await this.sidebar.locator('button').all();
+    let sectionExpanded = false;
 
-    // Find lessons by looking for buttons that match lesson patterns (not section headers)
-    const lessonButtons = this.sidebar.getByRole('button', {
-      name: /End-to-End Testing|Importance|Navigating|Setting Up/i,
-    });
+    for (const btn of sectionButtons) {
+      const text = await btn.textContent().catch(() => '');
+      // Look for section headers (not Course Outline title)
+      if (text && !text.includes('Course Outline') && text.trim().length > 5) {
+        console.log(`Clicking section to expand: "${text.substring(0, 40)}..."`);
+        await btn.click();
+        await this.page.waitForTimeout(1000); // Wait for expansion animation
+        sectionExpanded = true;
+        break;
+      }
+    }
 
-    const lessonCount = await lessonButtons.count();
-    console.log(`Found ${lessonCount} lesson buttons`);
+    if (!sectionExpanded) {
+      console.log('No sections found to expand');
+    }
 
-    if (lessonCount > 0) {
-      const targetIndex = Math.min(index, lessonCount - 1);
-      const lessonText = await lessonButtons.nth(targetIndex).textContent();
+    // Take screenshot after expansion attempt
+    await this.screenshot('after-expansion', 'After clicking section to expand');
+
+    // Wait a moment then re-query all buttons
+    await this.page.waitForTimeout(500);
+
+    // Now find all buttons again - lessons should be visible after expansion
+    // Lessons appear as buttons AFTER section expansion, they are usually the
+    // more deeply nested ones or the ones that appear after clicking a section
+    const allButtons = await this.sidebar.locator('button').all();
+    const lessonButtons: typeof allButtons = [];
+
+    console.log(`Total buttons after expansion: ${allButtons.length}`);
+
+    for (const btn of allButtons) {
+      const text = await btn.textContent().catch(() => '');
+      const classList = await btn.getAttribute('class').catch(() => '');
+
+      // Skip section headers and UI elements
+      if (
+        !text ||
+        text.includes('Course Outline') ||
+        text.trim().length < 5
+      ) {
+        continue;
+      }
+
+      // Check if this is a section (sections have chevron rotation or specific keywords)
+      const isSectionHeader =
+        text.match(/^(Introduction to|Lead Management|Opportunity|Contract Lifecycle|Quote-to-Cash|Renewal|Analytics|Post-Sale|Getting Started|Overview|Foundation|Advanced)/i) !== null;
+
+      if (!isSectionHeader) {
+        lessonButtons.push(btn);
+        console.log(`  Lesson candidate: "${text.substring(0, 40)}..."`);
+      }
+    }
+
+    console.log(`Found ${lessonButtons.length} potential lesson buttons`);
+
+    if (lessonButtons.length > 0) {
+      const targetIndex = Math.min(index, lessonButtons.length - 1);
+      const lessonText = await lessonButtons[targetIndex].textContent();
       console.log(`Clicking lesson ${targetIndex}: "${lessonText?.substring(0, 40)}..."`);
 
-      await lessonButtons.nth(targetIndex).click();
+      await lessonButtons[targetIndex].click();
       await this.page.waitForTimeout(TIMEOUTS.uiTransition);
 
       // Wait for lesson content to load - "Select a Lesson" should disappear

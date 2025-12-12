@@ -100,9 +100,14 @@ test.describe('Conga Revenue Lifecycle - Full E2E', () => {
     expect(found).toBe(true);
     await takeScreenshot(page, 'conga-03-course-found', 'Course found in library');
 
-    // Open the course (should go to outline page for new courses)
-    const courseUrl = await contentLibrary.openFirstCourse();
-    console.log(`Opened course: ${courseUrl}`);
+    // Open the Conga course specifically (not just any first course)
+    // The wizard improved the title to "Mastering the Conga Revenue Lifecycle"
+    const courseFound = await contentLibrary.openCourseByTitle('Conga');
+    if (!courseFound) {
+      // Fallback: try opening first course if title search fails
+      await contentLibrary.openFirstCourse();
+    }
+    console.log(`Opened course: ${page.url()}`);
 
     // Extract course ID from URL
     const match = page.url().match(/\/course\/([^/]+)/);
@@ -141,8 +146,11 @@ test.describe('Conga Revenue Lifecycle - Full E2E', () => {
       await contentLibrary.goto();
       await contentLibrary.selectFolder('Private');
 
-      // Open first course to get ID
-      await contentLibrary.openFirstCourse();
+      // Open the Conga course specifically
+      const found = await contentLibrary.openCourseByTitle('Conga');
+      if (!found) {
+        await contentLibrary.openFirstCourse();
+      }
       const match = page.url().match(/\/course\/([^/]+)/);
       if (match) courseId = match[1];
     }
@@ -206,7 +214,8 @@ test.describe('Conga Revenue Lifecycle - Full E2E', () => {
       const contentLibrary = new ContentLibraryPage(page);
       await contentLibrary.goto();
       await contentLibrary.selectFolder('Private');
-      await contentLibrary.openFirstCourse();
+      const found = await contentLibrary.openCourseByTitle('Conga');
+      if (!found) await contentLibrary.openFirstCourse();
       const match = page.url().match(/\/course\/([^/]+)/);
       if (match) courseId = match[1];
     }
@@ -292,7 +301,8 @@ test.describe('Conga Revenue Lifecycle - Full E2E', () => {
       const contentLibrary = new ContentLibraryPage(page);
       await contentLibrary.goto();
       await contentLibrary.selectFolder('Private');
-      await contentLibrary.openFirstCourse();
+      const found = await contentLibrary.openCourseByTitle('Conga');
+      if (!found) await contentLibrary.openFirstCourse();
       const match = page.url().match(/\/course\/([^/]+)/);
       if (match) courseId = match[1];
     }
@@ -360,8 +370,8 @@ test.describe('Conga Revenue Lifecycle - Full E2E', () => {
 // 4. Modal closes and course shows the image
 test.describe('Image Generation with Existing Course', () => {
   test('should generate image, keep modal open for review, then save and show in editor', async ({ page }) => {
-    // Use the existing course with 21 lessons
-    const existingCourseId = '017e4b49-562b-46df-bd34-138ff7e00ba0';
+    // Use the Snowboarding GoPro course (created by playwright test, has lessons generated)
+    const existingCourseId = '58bb9ecc-3da8-46fc-8dcb-3b618a4c0876';
 
     console.log('\n========== IMAGE GENERATION TEST (EXISTING COURSE) ==========\n');
     console.log('This test verifies the CORRECT behavior:');

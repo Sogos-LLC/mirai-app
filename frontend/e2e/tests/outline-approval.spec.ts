@@ -22,8 +22,8 @@ import { takeScreenshot } from '../helpers';
 
 test.describe('Course Outline Approval', () => {
   // The courseId from the last wizard test run
-  // We'll get this from the database or use the known test course
-  const COURSE_ID = '017e4b49-562b-46df-bd34-138ff7e00ba0';
+  // This course has outline completed but no lessons yet
+  const COURSE_ID = 'b68895fc-a069-4c41-812e-a6a7438bb60f';
 
   test('should display outline and allow approval', async ({ page }) => {
     console.log('\n========== OUTLINE APPROVAL TEST START ==========\n');
