@@ -22,31 +22,51 @@ export class ContentLibraryPage {
     await this.page.waitForTimeout(1000);
   }
 
+  /** Get all course cards on the current page */
+  async getCourseCards() {
+    // Course cards have "Edit" buttons - look for those
+    return this.page.locator('button, a').filter({ hasText: 'Edit' });
+  }
+
   /** Get all course links on the current page */
   async getCourseLinks() {
-    return this.page.locator('a[href*="/course/"]');
+    // Try multiple selectors for course links/cards
+    const links = this.page.locator('a[href*="/course/"]');
+    const count = await links.count();
+    if (count > 0) return links;
+
+    // Fallback: look for Edit buttons (course cards)
+    return this.getCourseCards();
   }
 
   /** Get count of courses in current view */
   async getCourseCount(): Promise<number> {
-    const links = await this.getCourseLinks();
-    return links.count();
+    const cards = await this.getCourseCards();
+    return cards.count();
   }
 
   /** Click on the first course and navigate to it */
   async openFirstCourse(): Promise<string | null> {
-    const links = await this.getCourseLinks();
-    const count = await links.count();
+    // Try direct links first
+    const links = this.page.locator('a[href*="/course/"]');
+    if ((await links.count()) > 0) {
+      const href = await links.first().getAttribute('href');
+      await links.first().click();
+      await this.page.waitForURL(/\/course\//, { timeout: 15000 });
+      return href;
+    }
+
+    // Fallback: click Edit button on first course card
+    const editButtons = await this.getCourseCards();
+    const count = await editButtons.count();
 
     if (count === 0) {
       return null;
     }
 
-    const href = await links.first().getAttribute('href');
-    await links.first().click();
+    await editButtons.first().click();
     await this.page.waitForURL(/\/course\//, { timeout: 15000 });
-
-    return href;
+    return this.page.url();
   }
 
   /** Click on a specific course by partial title match */

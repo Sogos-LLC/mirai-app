@@ -56,6 +56,7 @@ import {
   useExportCourse,
   ExportFormat,
 } from '@/hooks/useExport';
+import { v4 as uuidv4 } from 'uuid';
 
 interface SortableComponentProps {
   component: LessonComponent;
@@ -323,7 +324,7 @@ export default function CourseEditorPage() {
 
   const handleAddComponent = (type: number) => {
     const newComponent: LessonComponent = {
-      id: `temp-${Date.now()}`,
+      id: uuidv4(),
       type,
       contentJson: getDefaultContentForType(type),
       order: localComponents.length,

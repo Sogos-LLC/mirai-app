@@ -4,13 +4,17 @@
  * Tests the image generation feature within the course editor.
  * Prerequisites: A course with lessons must exist.
  *
- * This test is designed to capture the actual error from the backend
- * when image generation fails.
+ * Flow:
+ * 1. Navigate to /course/{id}/editor
+ * 2. Select a lesson from sidebar
+ * 3. Add an Image component
+ * 4. Fill in description and click "Generate Image"
+ * 5. Wait for result
  */
 import { test, expect } from '@playwright/test';
-import { ContentLibraryPage, CourseEditorPage } from '../pages';
+import { CourseEditorPage } from '../pages';
 import { takeScreenshot } from '../helpers';
-import { TEST_DATA } from '../config';
+import { TEST_DATA, TIMEOUTS } from '../config';
 
 test.describe('Image Generation', () => {
   test.beforeEach(async ({ page }) => {
@@ -46,91 +50,49 @@ test.describe('Image Generation', () => {
     });
   });
 
-  test('should test image generation in course editor', async ({ page }) => {
-    // Setup page objects
-    const contentLibrary = new ContentLibraryPage(page);
+  test('should generate image via Add Component flow', async ({ page }) => {
     const courseEditor = new CourseEditorPage(page);
 
     console.log('\n========== IMAGE GENERATION TEST START ==========\n');
 
-    // Step 1: Navigate to content library
-    console.log('\n--- Step 1: Navigate to Content Library ---');
-    await contentLibrary.goto();
-    await contentLibrary.selectFolder('Private');
-    await contentLibrary.screenshot('img-01-content-library', 'Content library');
+    // Go directly to the course with completed lessons
+    const courseId = TEST_DATA.imageGeneration.courseWithLessons;
+    console.log(`\n--- Navigating to course editor: ${courseId} ---`);
 
-    // Step 2: Check for existing courses
-    console.log('\n--- Step 2: Looking for courses ---');
-    const courseCount = await contentLibrary.getCourseCount();
-    console.log(`Found ${courseCount} course(s)`);
+    await courseEditor.goto(courseId);
+    await courseEditor.screenshot('01-editor-loaded', 'Course editor loaded');
 
-    if (courseCount === 0) {
-      await contentLibrary.screenshot('img-02-no-courses', 'No courses found');
-      console.log('No courses found. Please run the wizard test first to create a course.');
-      test.skip();
-      return;
-    }
+    // Step 1: Select first lesson
+    console.log('\n--- Step 1: Select Lesson ---');
+    await courseEditor.selectFirstLesson();
+    await courseEditor.screenshot('02-lesson-selected', 'Lesson selected');
 
-    // Step 3: Open the first course
-    console.log('\n--- Step 3: Opening course ---');
-    const courseHref = await contentLibrary.openFirstCourse();
-    console.log(`Opened course: ${courseHref}`);
-    await takeScreenshot(page, 'img-03-course-page', 'Course page');
+    // Step 2: Click "Add Component" button
+    console.log('\n--- Step 2: Add Image Component ---');
+    await courseEditor.clickAddComponent();
+    await courseEditor.screenshot('03-add-menu-open', 'Add Component menu open');
 
-    // Step 4: Navigate to editor
-    console.log('\n--- Step 4: Navigate to Editor ---');
-    const courseId = courseEditor.getCurrentCourseId();
+    // Step 3: Select "Image" from the menu
+    await courseEditor.selectImageFromMenu();
+    await courseEditor.screenshot('04-image-added', 'Image component added');
 
-    if (courseId) {
-      await courseEditor.goto(courseId);
-    } else {
-      // Try clicking an "Edit" button
-      const editBtn = page.getByRole('button', { name: /edit|editor/i });
-      if ((await editBtn.count()) > 0) {
-        await editBtn.click();
-        await page.waitForURL(/\/editor/, { timeout: 15000 });
-      }
-    }
+    // Step 4: Wait for Edit Modal to open
+    console.log('\n--- Step 3: Wait for Edit Modal ---');
+    await courseEditor.waitForEditModal();
+    await courseEditor.screenshot('05-edit-modal', 'Edit Image modal open');
 
-    await courseEditor.screenshot('img-04-editor', 'Course editor');
+    // Step 5: Fill in image description
+    console.log('\n--- Step 4: Fill Description ---');
+    await courseEditor.fillImageDescription(TEST_DATA.imageGeneration.prompt);
+    await courseEditor.screenshot('06-description-filled', 'Description filled');
 
-    // Step 5: Select first lesson
-    console.log('\n--- Step 5: Select Lesson ---');
-    try {
-      await courseEditor.selectFirstLesson();
-    } catch (error) {
-      console.log('Could not select lesson, may already be selected');
-    }
-    await courseEditor.screenshot('img-05-lesson', 'Lesson selected');
-
-    // Step 6: Find and click image component
-    console.log('\n--- Step 6: Open Image Component ---');
-    const imageOpened = await courseEditor.openFirstImageComponent();
-
-    if (!imageOpened) {
-      console.log('No image component found in this lesson');
-      await courseEditor.screenshot('img-06-no-image-component', 'No image component');
-
-      // List what components are visible
-      const components = await page.locator('[data-component-type], [class*="component"]').all();
-      console.log(`Found ${components.length} general components`);
-
-      test.skip();
-      return;
-    }
-
-    await courseEditor.screenshot('img-06-image-modal', 'Image editor modal');
-
-    // Step 7: Fill prompt and generate
-    console.log('\n--- Step 7: Generate Image ---');
-    await courseEditor.fillImagePrompt(TEST_DATA.imageGeneration.prompt);
-    await courseEditor.screenshot('img-07-prompt-filled', 'Prompt filled');
-
-    // Step 8: Click generate and wait for result
-    console.log('\n--- Step 8: Waiting for Result ---');
+    // Step 6: Click Generate Image
+    console.log('\n--- Step 5: Generate Image ---');
     await courseEditor.clickGenerateImage();
-    await courseEditor.screenshot('img-08-generating', 'Generating...');
+    await courseEditor.screenshot('07-generating', 'Generating image...');
 
+    // Step 7: Wait for result
+    console.log('\n--- Step 6: Wait for Result ---');
     const result = await courseEditor.waitForImageGenerationResult();
 
     // Log the result
@@ -144,26 +106,38 @@ test.describe('Image Generation', () => {
     }
     console.log('==============================================\n');
 
-    await courseEditor.screenshot('img-09-result', 'Final result');
-
-    // Take final screenshot of browser console
-    await takeScreenshot(page, 'img-10-final', 'Test complete');
+    await courseEditor.screenshot('08-result', 'Final result');
+    await takeScreenshot(page, 'img-gen-final', 'Test complete');
 
     console.log('\n========== IMAGE GENERATION TEST END ==========\n');
 
-    // For now, we're capturing the error - don't assert success
-    // This test is for debugging the image generation issue
+    // For debugging: don't fail the test, just log the result
     if (!result.success) {
-      console.log('Image generation failed (expected - debugging issue)');
-      console.log('Error captured:', result.error);
+      console.log('Image generation failed - check screenshots and logs');
+      console.log('Error:', result.error);
     }
   });
 
-  test('should capture API error details on image generation failure', async ({ page }) => {
-    // This test specifically focuses on capturing detailed error information
-    const contentLibrary = new ContentLibraryPage(page);
+  test('should use full generateImage flow', async ({ page }) => {
     const courseEditor = new CourseEditorPage(page);
 
+    console.log('\n========== FULL FLOW TEST START ==========\n');
+
+    // Go to course editor
+    const courseId = TEST_DATA.imageGeneration.courseWithLessons;
+    await courseEditor.goto(courseId);
+
+    // Use the combined flow method
+    const result = await courseEditor.generateImage(TEST_DATA.imageGeneration.prompt);
+
+    console.log('\n========== RESULT ==========');
+    console.log(JSON.stringify(result, null, 2));
+    console.log('============================\n');
+
+    await takeScreenshot(page, 'full-flow-result', 'Full flow test result');
+  });
+
+  test('should capture API error details on failure', async ({ page }) => {
     // Track all API errors
     const apiErrors: { url: string; status: number; body: string }[] = [];
 
@@ -182,38 +156,29 @@ test.describe('Image Generation', () => {
       }
     });
 
-    // Navigate to existing course
-    await contentLibrary.goto();
-    await contentLibrary.selectFolder('Private');
+    const courseEditor = new CourseEditorPage(page);
 
-    const courseCount = await contentLibrary.getCourseCount();
-    if (courseCount === 0) {
-      test.skip();
-      return;
-    }
+    // Navigate to course
+    const courseId = TEST_DATA.imageGeneration.courseWithLessons;
+    await courseEditor.goto(courseId);
+    await courseEditor.selectFirstLesson();
 
-    await contentLibrary.openFirstCourse();
+    // Add image component
+    await courseEditor.addImageComponent();
+    await courseEditor.waitForEditModal();
 
-    const courseId = courseEditor.getCurrentCourseId();
-    if (courseId) {
-      await courseEditor.goto(courseId);
-    }
-
-    // Try to find and use image component
-    const imageOpened = await courseEditor.openFirstImageComponent();
-    if (!imageOpened) {
-      test.skip();
-      return;
-    }
-
-    await courseEditor.fillImagePrompt('A simple test image');
+    // Generate with simple prompt
+    await courseEditor.fillImageDescription('A simple test image');
     await courseEditor.clickGenerateImage();
 
-    // Wait a bit for the API call
-    await page.waitForTimeout(10000);
+    // Wait for API call to complete
+    await page.waitForTimeout(TIMEOUTS.aiGeneration);
 
     // Log all captured errors
     console.log('\n========== CAPTURED API ERRORS ==========');
+    if (apiErrors.length === 0) {
+      console.log('No API errors captured');
+    }
     for (const error of apiErrors) {
       console.log(`\nURL: ${error.url}`);
       console.log(`Status: ${error.status}`);

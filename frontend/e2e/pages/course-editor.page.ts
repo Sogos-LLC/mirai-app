@@ -3,8 +3,9 @@ import { takeScreenshot } from '../helpers';
 import { TIMEOUTS, PATHS } from '../config';
 
 /**
- * Page Object for the Course Editor.
- * Handles lesson navigation, component interactions, and image generation.
+ * Page Object for the Course Editor (/course/{id}/editor).
+ * This is the component-based editor that uses LessonComponent types
+ * including IMAGE components with AI generation capability.
  */
 export class CourseEditorPage {
   private screenshotCount = 0;
@@ -19,10 +20,21 @@ export class CourseEditorPage {
 
   /** Wait for the editor to fully load */
   async waitForEditorLoad(): Promise<void> {
-    // Wait for the lesson sidebar or editor content to appear
+    // Wait for loading spinner to disappear (if visible)
+    const loadingSpinner = this.page.getByText('Loading course...');
+    try {
+      await loadingSpinner.waitFor({ state: 'visible', timeout: 2000 });
+      // Spinner is visible, wait for it to disappear
+      await loadingSpinner.waitFor({ state: 'hidden', timeout: TIMEOUTS.backgroundJob });
+    } catch {
+      // Spinner wasn't visible, content may already be loaded
+    }
+
+    // Wait for "Course Outline" text to appear (indicates editor loaded)
     await expect(
-      this.page.locator('[class*="sidebar"], [class*="lesson-list"], [class*="editor"]').first()
+      this.page.getByText('Course Outline')
     ).toBeVisible({ timeout: TIMEOUTS.pageLoad });
+
     await this.page.waitForTimeout(TIMEOUTS.uiTransition);
   }
 
@@ -35,23 +47,72 @@ export class CourseEditorPage {
 
   // ===== Lesson Navigation =====
 
-  /** Get all lesson items in the sidebar */
-  async getLessonItems() {
-    return this.page.locator('[class*="lesson-item"], [data-lesson-id], .lesson-nav-item');
+  /** Get the sidebar element */
+  private get sidebar() {
+    return this.page.locator('aside');
+  }
+
+  /** Expand first section if collapsed (only if no lessons are visible) */
+  async expandFirstSection(): Promise<void> {
+    // Check if any lessons are already visible (look for FileText icons in nav buttons)
+    // Lessons have text like "End-to-End Testing", "The Importance of", etc.
+    const visibleLessons = this.sidebar.getByRole('button', { name: /End-to-End Testing|Importance|Navigating|Setting Up/i });
+    const lessonCount = await visibleLessons.count();
+
+    if (lessonCount > 0) {
+      console.log(`Found ${lessonCount} lessons already visible, section is expanded`);
+      return; // Section already expanded
+    }
+
+    // No lessons visible, need to expand a section
+    const sectionHeaders = this.sidebar.locator('button').filter({
+      hasText: /Introduction|Defining|Building|Implementing|Advanced/,
+    });
+
+    const count = await sectionHeaders.count();
+    console.log(`Found ${count} section headers, no lessons visible - expanding first`);
+
+    if (count > 0) {
+      await sectionHeaders.first().click();
+      await this.page.waitForTimeout(TIMEOUTS.uiTransition);
+      console.log('Clicked first section to expand');
+    }
   }
 
   /** Click on a lesson by index (0-based) */
   async selectLessonByIndex(index: number): Promise<void> {
-    const lessons = await this.getLessonItems();
-    const count = await lessons.count();
+    // Ensure sections are expanded
+    await this.expandFirstSection();
 
-    if (index >= count) {
-      throw new Error(`Lesson index ${index} out of range (${count} lessons)`);
+    // Find lessons by looking for buttons that match lesson patterns (not section headers)
+    const lessonButtons = this.sidebar.getByRole('button', {
+      name: /End-to-End Testing|Importance|Navigating|Setting Up/i,
+    });
+
+    const lessonCount = await lessonButtons.count();
+    console.log(`Found ${lessonCount} lesson buttons`);
+
+    if (lessonCount > 0) {
+      const targetIndex = Math.min(index, lessonCount - 1);
+      const lessonText = await lessonButtons.nth(targetIndex).textContent();
+      console.log(`Clicking lesson ${targetIndex}: "${lessonText?.substring(0, 40)}..."`);
+
+      await lessonButtons.nth(targetIndex).click();
+      await this.page.waitForTimeout(TIMEOUTS.uiTransition);
+
+      // Wait for lesson content to load - "Select a Lesson" should disappear
+      try {
+        await this.page.getByText('Select a Lesson').waitFor({ state: 'hidden', timeout: 15000 });
+        console.log('Lesson content loaded');
+      } catch {
+        console.log('Warning: "Select a Lesson" still visible after clicking');
+      }
+
+      await this.screenshot(`lesson-${targetIndex}-selected`, `Selected lesson ${targetIndex}`);
+      return;
     }
 
-    await lessons.nth(index).click();
-    await this.page.waitForTimeout(TIMEOUTS.uiTransition);
-    await this.screenshot(`lesson-${index}-selected`, `Selected lesson ${index}`);
+    throw new Error('No lessons found in sidebar');
   }
 
   /** Click on the first lesson */
@@ -61,41 +122,65 @@ export class CourseEditorPage {
 
   // ===== Component Interaction =====
 
-  /** Find all image components/placeholders in the current lesson */
-  async getImageComponents() {
-    return this.page.locator(
-      '[data-component-type="image"], [class*="image-placeholder"], [class*="ImageComponent"]'
+  /** Click "Add Component" button */
+  async clickAddComponent(): Promise<void> {
+    const addButton = this.page.getByRole('button', { name: /Add Component/i });
+    await expect(addButton).toBeVisible({ timeout: TIMEOUTS.elementVisible });
+    await addButton.click();
+    await this.page.waitForTimeout(500); // Wait for menu to appear
+    console.log('Clicked Add Component button');
+  }
+
+  /** Select Image from the component type menu */
+  async selectImageFromMenu(): Promise<void> {
+    // Look for "Image" option in the dropdown/bottom sheet
+    const imageOption = this.page.getByRole('button', { name: /^Image$/i }).or(
+      this.page.locator('button').filter({ hasText: /^Image$/ })
     );
+    await expect(imageOption).toBeVisible({ timeout: TIMEOUTS.elementVisible });
+    await imageOption.click();
+    console.log('Selected Image from component menu');
+    await this.page.waitForTimeout(TIMEOUTS.uiTransition);
   }
 
-  /** Find image components by looking for image-related text or icons */
+  /** Add a new Image component */
+  async addImageComponent(): Promise<void> {
+    await this.clickAddComponent();
+    await this.selectImageFromMenu();
+    await this.screenshot('image-component-added', 'Added new image component');
+  }
+
+  /** Find image placeholder components in the lesson content */
   async findImagePlaceholders() {
-    // Image placeholders might have specific text or icons
-    return this.page.locator('button, div').filter({
-      has: this.page.locator('[class*="image"], svg[class*="image"]'),
-    });
+    // Image placeholders show "Image Placeholder" text with purple styling
+    return this.page.locator('p').filter({ hasText: 'Image Placeholder' });
   }
 
-  /** Click on the first image component to open the editor modal */
+  /** Click on the first image component/placeholder to open edit modal */
   async openFirstImageComponent(): Promise<boolean> {
-    const imageComponents = await this.getImageComponents();
-    let count = await imageComponents.count();
+    // First check for Image Placeholder text (from ComponentRenderer)
+    const placeholders = await this.findImagePlaceholders();
+    const count = await placeholders.count();
+    console.log(`Found ${count} image placeholders`);
 
-    // Fallback to placeholder search
-    if (count === 0) {
-      const placeholders = await this.findImagePlaceholders();
-      count = await placeholders.count();
-
-      if (count > 0) {
-        await placeholders.first().click();
-        await this.page.waitForTimeout(TIMEOUTS.uiTransition);
-        await this.screenshot('image-modal-opened', 'Image editor modal opened');
-        return true;
-      }
-    } else {
-      await imageComponents.first().click();
+    if (count > 0) {
+      // Click on the parent container of the placeholder
+      await placeholders.first().click();
       await this.page.waitForTimeout(TIMEOUTS.uiTransition);
       await this.screenshot('image-modal-opened', 'Image editor modal opened');
+      return true;
+    }
+
+    // Fallback - look for any clickable area with image-related content
+    const imageComponents = this.page.locator('[class*="image"]').filter({
+      has: this.page.locator('svg'),
+    });
+    const imageCount = await imageComponents.count();
+
+    if (imageCount > 0) {
+      await imageComponents.first().click();
+      await this.page.waitForTimeout(TIMEOUTS.uiTransition);
+      await this.screenshot('image-modal-opened', 'Image editor modal opened via fallback');
       return true;
     }
 
@@ -103,26 +188,37 @@ export class CourseEditorPage {
     return false;
   }
 
-  // ===== Image Generation =====
+  // ===== Image Generation (in Edit Modal) =====
 
-  /** Check if the image editor modal is open */
-  async isImageModalOpen(): Promise<boolean> {
-    const modal = this.page.locator('[role="dialog"], [class*="modal"], [class*="Modal"]');
-    return modal.isVisible();
+  /** Check if the edit modal is open */
+  async isEditModalOpen(): Promise<boolean> {
+    const modalTitle = this.page.getByRole('heading', { name: /Edit Image/i });
+    return modalTitle.isVisible();
   }
 
-  /** Fill in the image generation prompt */
-  async fillImagePrompt(prompt: string): Promise<void> {
+  /** Wait for the edit modal to open */
+  async waitForEditModal(): Promise<void> {
+    await expect(
+      this.page.getByRole('heading', { name: /Edit Image/i })
+    ).toBeVisible({ timeout: TIMEOUTS.elementVisible });
+    console.log('Edit Image modal is open');
+  }
+
+  /** Fill in the image description for AI generation */
+  async fillImageDescription(description: string): Promise<void> {
+    // The textarea is in the AI Image Generation section
     const textarea = this.page.locator('textarea').first();
     await expect(textarea).toBeVisible({ timeout: TIMEOUTS.elementVisible });
-    await textarea.fill(prompt);
-    await this.screenshot('prompt-filled', 'Image prompt entered');
+    await textarea.fill(description);
+    console.log(`Filled image description: "${description.substring(0, 50)}..."`);
+    await this.screenshot('description-filled', 'Image description entered');
   }
 
-  /** Click the generate image button */
+  /** Click the "Generate Image" button */
   async clickGenerateImage(): Promise<void> {
-    const generateBtn = this.page.getByRole('button', { name: /generate.*image|create.*image/i });
+    const generateBtn = this.page.getByRole('button', { name: /Generate Image/i });
     await expect(generateBtn).toBeVisible({ timeout: TIMEOUTS.elementVisible });
+    await expect(generateBtn).toBeEnabled({ timeout: TIMEOUTS.buttonEnabled });
     console.log('Clicking Generate Image button...');
     await generateBtn.click();
   }
@@ -137,15 +233,18 @@ export class CourseEditorPage {
     await this.screenshot('generating', 'Image generation in progress');
 
     try {
-      // Wait for either success (image appears) or error message
+      // Wait for either:
+      // 1. Success: Generated image appears in preview (img with real src)
+      // 2. Error: Error message appears
+      // 3. Spinner to stop and new content appears
       await Promise.race([
-        // Success: an image appears
-        this.page.locator('img[src*="generated"], img[src*="minio"], img[src*="blob"]').waitFor({
+        // Success: an image appears in the preview section
+        this.page.locator('figure img[src*="minio"], figure img[src*="blob"], figure img[src*="http"]').waitFor({
           state: 'visible',
           timeout: TIMEOUTS.backgroundJob,
         }),
         // Error: error message appears
-        this.page.locator('[class*="error"], [class*="Error"], [role="alert"]').waitFor({
+        this.page.locator('text=Failed to generate image').waitFor({
           state: 'visible',
           timeout: TIMEOUTS.backgroundJob,
         }),
@@ -158,15 +257,14 @@ export class CourseEditorPage {
     await this.screenshot('result', 'Image generation result');
 
     // Check for error
-    const errorElement = this.page.locator('[class*="error"], [class*="Error"], [role="alert"]');
+    const errorElement = this.page.locator('text=Failed to generate image');
     if (await errorElement.isVisible()) {
-      const errorText = await errorElement.textContent();
-      console.error('Image generation error:', errorText);
-      return { success: false, error: errorText || 'Unknown error' };
+      console.error('Image generation error');
+      return { success: false, error: 'Failed to generate image' };
     }
 
-    // Check for success
-    const image = this.page.locator('img[src*="generated"], img[src*="minio"], img[src*="blob"]');
+    // Check for success - look for img in figure
+    const image = this.page.locator('figure img');
     if (await image.isVisible()) {
       const imageUrl = await image.getAttribute('src');
       console.log('Image generated successfully:', imageUrl);
@@ -178,24 +276,58 @@ export class CourseEditorPage {
 
   /**
    * Complete image generation flow:
-   * 1. Open image component
-   * 2. Fill prompt
-   * 3. Generate
-   * 4. Wait for result
+   * 1. Select a lesson
+   * 2. Add an image component
+   * 3. Fill in description
+   * 4. Generate
+   * 5. Wait for result
    */
   async generateImage(prompt: string): Promise<{
     success: boolean;
     error?: string;
     imageUrl?: string;
   }> {
-    const opened = await this.openFirstImageComponent();
-    if (!opened) {
-      return { success: false, error: 'No image component found' };
+    // Select first lesson if not already selected
+    const selectLessonVisible = await this.page.getByText('Select a Lesson').isVisible();
+    if (selectLessonVisible) {
+      await this.selectFirstLesson();
     }
 
-    await this.fillImagePrompt(prompt);
+    // Add an image component
+    await this.addImageComponent();
+
+    // Modal should auto-open after adding component
+    await this.waitForEditModal();
+
+    // Fill in the description
+    await this.fillImageDescription(prompt);
+
+    // Click generate
     await this.clickGenerateImage();
+
+    // Wait for result
     return this.waitForImageGenerationResult();
+  }
+
+  /** Close the edit modal */
+  async closeEditModal(): Promise<void> {
+    // Look for close button or press Escape
+    const closeButton = this.page.locator('button[aria-label*="Close"], button[aria-label*="close"]');
+    if (await closeButton.isVisible()) {
+      await closeButton.click();
+    } else {
+      await this.page.keyboard.press('Escape');
+    }
+    await this.page.waitForTimeout(500);
+  }
+
+  /** Save the current component changes */
+  async saveChanges(): Promise<void> {
+    const saveButton = this.page.getByRole('button', { name: /Save Changes/i });
+    await expect(saveButton).toBeVisible({ timeout: TIMEOUTS.elementVisible });
+    await saveButton.click();
+    console.log('Clicked Save Changes');
+    await this.page.waitForTimeout(TIMEOUTS.uiTransition);
   }
 
   // ===== Utilities =====
