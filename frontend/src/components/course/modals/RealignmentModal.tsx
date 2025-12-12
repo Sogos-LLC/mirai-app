@@ -143,19 +143,20 @@ export function RealignmentModal({
         customPrompt: customPrompt.trim(),
       });
 
-      // Debug: Log the result to understand structure
-      console.warn('[RealignmentModal] onRealign result:', JSON.stringify(result, null, 2));
-
       // Track job ID for SSE monitoring - don't close yet
       // Check for truthy job.id (empty string is falsy in JS but valid in proto)
       const jobId = result?.job?.id;
+
+      // Debug: Log job info (avoid JSON.stringify on proto objects with BigInt)
+      console.warn('[RealignmentModal] onRealign result - jobId:', jobId, 'status:', result?.job?.status);
+
       if (jobId && jobId.length > 0) {
         console.warn('[RealignmentModal] Setting activeJobId:', jobId);
         setActiveJobId(jobId);
         // Modal stays open showing "Regenerating..." until SSE COMPLETED event
       } else {
         // Fallback: no job returned (shouldn't happen, but handle gracefully)
-        console.warn('[RealignmentModal] No job ID returned from regenerate component:', result);
+        console.warn('[RealignmentModal] No job ID returned from regenerate component');
         setSelectedPersonaIds(new Set());
         setSelectedLOIds(new Set());
         setCustomPrompt('');
