@@ -384,6 +384,19 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 		return nil, domainerrors.ErrInternal.WithMessage("failed to queue lesson generation jobs")
 	}
 
+	// Enqueue all child jobs to Asynq for immediate processing
+	if s.taskEnqueuer != nil {
+		enqueuedCount := 0
+		for _, childJob := range childJobs {
+			if err := s.taskEnqueuer.EnqueueAIGeneration(childJob.ID.String(), string(childJob.Type)); err != nil {
+				log.Warn("failed to enqueue lesson job, will be picked up by poll", "jobID", childJob.ID, "error", err)
+			} else {
+				enqueuedCount++
+			}
+		}
+		log.Info("enqueued lesson jobs to Asynq", "enqueued", enqueuedCount, "total", len(childJobs))
+	}
+
 	log.Info("queued all lesson generation jobs", "totalLessons", totalLessons, "parentJobID", parentJob.ID)
 	return &GenerateAllLessonsResult{Job: parentJob}, nil
 }
