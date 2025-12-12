@@ -526,11 +526,20 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		s3Lesson.SegueText = &lessonResult.SegueText
 	}
 
-	// Add lesson to content
-	upsertS3Lesson(content, s3Lesson)
-
-	// Write updated content to MinIO
-	if err := s.writeCourseContent(ctx, job.TenantID, *job.CourseID, content); err != nil {
+	// Atomically add lesson to content using optimistic concurrency.
+	// This prevents race conditions when multiple lesson jobs run in parallel.
+	var atomicContent S3CourseContent
+	if err := s.contentStorage.UpdateCourseContentAtomic(
+		ctx,
+		job.TenantID,
+		*job.CourseID,
+		&atomicContent,
+		func() error {
+			upsertS3Lesson(&atomicContent, s3Lesson)
+			return nil
+		},
+	); err != nil {
+		log.Error("failed to atomically store lesson content", "error", err)
 		return s.failJob(ctx, job, "failed to store lesson content")
 	}
 
@@ -934,25 +943,53 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// Update component
-	var imageContent map[string]interface{}
-	_ = json.Unmarshal(s3Lesson.Components[componentIndex].ContentJSON, &imageContent)
-	if imageContent == nil {
-		imageContent = make(map[string]interface{})
-	}
+	// Atomically update the component with the generated image.
+	// This uses optimistic concurrency to prevent race conditions.
+	var atomicContent S3CourseContent
+	var updatedJSON json.RawMessage
+	if err := s.contentStorage.UpdateCourseContentAtomic(
+		ctx,
+		tenantID,
+		req.CourseID,
+		&atomicContent,
+		func() error {
+			// Re-find lesson in the freshly read content
+			atomicLesson := findS3Lesson(&atomicContent, req.LessonID.String())
+			if atomicLesson == nil {
+				return domainerrors.ErrNotFound.WithMessage("lesson not found")
+			}
 
-	imageContent["storagePath"] = storagePath
-	imageContent["url"] = imageURL
-	if _, exists := imageContent["image_description"]; !exists {
-		imageContent["image_description"] = req.Prompt
-	}
+			// Find component index in the fresh content
+			var atomicCompIndex int = -1
+			for i, comp := range atomicLesson.Components {
+				if comp.ID == req.ComponentID.String() {
+					atomicCompIndex = i
+					break
+				}
+			}
+			if atomicCompIndex < 0 {
+				return domainerrors.ErrNotFound.WithMessage("component not found")
+			}
 
-	updatedJSON, _ := json.Marshal(imageContent)
-	s3Lesson.Components[componentIndex].ContentJSON = updatedJSON
-	s3Lesson.Components[componentIndex].UpdatedAt = time.Now()
+			// Update component
+			var imageContent map[string]interface{}
+			_ = json.Unmarshal(atomicLesson.Components[atomicCompIndex].ContentJSON, &imageContent)
+			if imageContent == nil {
+				imageContent = make(map[string]interface{})
+			}
 
-	// Write back
-	if err := s.writeCourseContent(ctx, tenantID, req.CourseID, content); err != nil {
+			imageContent["storagePath"] = storagePath
+			imageContent["url"] = imageURL
+			if _, exists := imageContent["image_description"]; !exists {
+				imageContent["image_description"] = req.Prompt
+			}
+
+			updatedJSON, _ = json.Marshal(imageContent)
+			atomicLesson.Components[atomicCompIndex].ContentJSON = updatedJSON
+			atomicLesson.Components[atomicCompIndex].UpdatedAt = time.Now()
+			return nil
+		},
+	); err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
@@ -1019,54 +1056,61 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 
 	tenantID := *user.TenantID
 
-	// Read course content
-	content, err := s.readCourseContent(ctx, tenantID, req.CourseID)
-	if err != nil {
-		return nil, err
-	}
+	// Atomically update lesson components using optimistic concurrency.
+	// This prevents race conditions with concurrent lesson generation or image generation.
+	var atomicContent S3CourseContent
+	var updatedComponents []S3LessonComponent
+	var s3Lesson *S3GeneratedLesson
 
-	// Find or create lesson
-	s3Lesson := findS3Lesson(content, req.LessonID.String())
-	if s3Lesson == nil {
-		s3Lesson = &S3GeneratedLesson{
-			ID:          req.LessonID.String(),
-			Components:  []S3LessonComponent{},
-			GeneratedAt: time.Now(),
-		}
-	}
-
-	// Build updated components
-	now := time.Now()
-	updatedComponents := make([]S3LessonComponent, len(req.Components))
-	for i, input := range req.Components {
-		compID := input.ID
-		createdAt := now
-		if len(input.ID) > 5 && input.ID[:5] == "temp-" {
-			compID = uuid.New().String()
-		} else {
-			for _, existing := range s3Lesson.Components {
-				if existing.ID == input.ID {
-					createdAt = existing.CreatedAt
-					break
+	if err := s.contentStorage.UpdateCourseContentAtomic(
+		ctx,
+		tenantID,
+		req.CourseID,
+		&atomicContent,
+		func() error {
+			// Find or create lesson in the freshly read content
+			s3Lesson = findS3Lesson(&atomicContent, req.LessonID.String())
+			if s3Lesson == nil {
+				s3Lesson = &S3GeneratedLesson{
+					ID:          req.LessonID.String(),
+					Components:  []S3LessonComponent{},
+					GeneratedAt: time.Now(),
 				}
 			}
-		}
 
-		updatedComponents[i] = S3LessonComponent{
-			ID:                   compID,
-			Type:                 string(input.Type),
-			Order:                input.Order,
-			ContentJSON:          input.ContentJSON,
-			LearningObjectiveIDs: input.LearningObjectiveIDs,
-			CreatedAt:            createdAt,
-			UpdatedAt:            now,
-		}
-	}
+			// Build updated components
+			now := time.Now()
+			updatedComponents = make([]S3LessonComponent, len(req.Components))
+			for i, input := range req.Components {
+				compID := input.ID
+				createdAt := now
+				if len(input.ID) > 5 && input.ID[:5] == "temp-" {
+					compID = uuid.New().String()
+				} else {
+					for _, existing := range s3Lesson.Components {
+						if existing.ID == input.ID {
+							createdAt = existing.CreatedAt
+							break
+						}
+					}
+				}
 
-	s3Lesson.Components = updatedComponents
-	upsertS3Lesson(content, *s3Lesson)
+				updatedComponents[i] = S3LessonComponent{
+					ID:                   compID,
+					Type:                 string(input.Type),
+					Order:                input.Order,
+					ContentJSON:          input.ContentJSON,
+					LearningObjectiveIDs: input.LearningObjectiveIDs,
+					CreatedAt:            createdAt,
+					UpdatedAt:            now,
+				}
+			}
 
-	if err := s.writeCourseContent(ctx, tenantID, req.CourseID, content); err != nil {
+			s3Lesson.Components = updatedComponents
+			upsertS3Lesson(&atomicContent, *s3Lesson)
+			return nil
+		},
+	); err != nil {
 		return nil, err
 	}
 

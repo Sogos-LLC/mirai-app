@@ -281,3 +281,70 @@ func (s *S3Storage) PutContent(ctx context.Context, p string, content []byte, co
 	})
 	return err
 }
+
+// ReadJSONWithETag reads and unmarshals a JSON file from S3, returning the ETag for conditional writes.
+func (s *S3Storage) ReadJSONWithETag(ctx context.Context, p string, v interface{}) (*ReadJSONResult, error) {
+	result, err := s.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(s.fullKey(p)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer result.Body.Close()
+
+	data, err := io.ReadAll(result.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(data, v); err != nil {
+		return nil, err
+	}
+
+	etag := ""
+	if result.ETag != nil {
+		etag = *result.ETag
+	}
+
+	return &ReadJSONResult{ETag: etag}, nil
+}
+
+// WriteJSONWithETag marshals and writes data as JSON to S3 only if the ETag matches.
+// Returns ErrPreconditionFailed if the object was modified since it was read.
+func (s *S3Storage) WriteJSONWithETag(ctx context.Context, p string, v interface{}, etag string) error {
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	input := &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(s.fullKey(p)),
+		Body:        bytes.NewReader(data),
+		ContentType: aws.String("application/json"),
+	}
+
+	// If we have an ETag, use conditional write (If-Match header)
+	if etag != "" {
+		input.IfMatch = aws.String(etag)
+	}
+
+	_, err = s.client.PutObject(ctx, input)
+	if err != nil {
+		// Check for precondition failure
+		var apiErr *types.NoSuchKey
+		if errors.As(err, &apiErr) {
+			return ErrPreconditionFailed
+		}
+		// Check for S3 precondition failed error
+		if strings.Contains(err.Error(), "PreconditionFailed") ||
+			strings.Contains(err.Error(), "412") ||
+			strings.Contains(err.Error(), "At least one of the pre-conditions") {
+			return ErrPreconditionFailed
+		}
+		return err
+	}
+
+	return nil
+}

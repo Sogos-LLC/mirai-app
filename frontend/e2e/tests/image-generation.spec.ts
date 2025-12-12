@@ -81,6 +81,21 @@ test.describe('Image Generation', () => {
     await courseEditor.waitForEditModal();
     await courseEditor.screenshot('05-edit-modal', 'Edit Image modal open');
 
+    // Step 4b: Save changes in modal to persist the component to backend
+    // (UpdateLessonComponents API will be called, no need for top-level Save)
+    console.log('\n--- Step 3b: Save Component to Backend ---');
+    await courseEditor.saveChanges();
+    await courseEditor.screenshot('05b-modal-saved', 'Modal saved - component persisted');
+
+    // Modal closes after save, wait for it
+    await page.waitForTimeout(500);
+
+    // Step 4c: Re-open the image component (now persisted) to generate image
+    console.log('\n--- Step 3c: Re-open Image Component ---');
+    await courseEditor.openFirstImageComponent();
+    await courseEditor.waitForEditModal();
+    await courseEditor.screenshot('05c-modal-reopened', 'Modal reopened');
+
     // Step 5: Fill in image description
     console.log('\n--- Step 4: Fill Description ---');
     await courseEditor.fillImageDescription(TEST_DATA.imageGeneration.prompt);
@@ -106,16 +121,27 @@ test.describe('Image Generation', () => {
     }
     console.log('==============================================\n');
 
-    await courseEditor.screenshot('08-result', 'Final result');
+    await courseEditor.screenshot('08-result-in-modal', 'Generated image in Edit Image modal');
+
+    // Step 8: Close modal (image already auto-saved by ImageEditor)
+    console.log('\n--- Step 7: Close Modal ---');
+    // The ImageEditor auto-saves after generation, so just close the modal
+    await courseEditor.closeEditModal();
+    await page.waitForTimeout(1000); // Wait for modal to close
+    await courseEditor.screenshot('09-modal-closed', 'Modal closed');
+
+    // Step 9: Take final screenshot of course editor showing the image component
+    console.log('\n--- Step 8: Final Course Editor View ---');
+    await page.waitForTimeout(500);
+    await courseEditor.screenshot('10-course-editor-with-image', 'Course editor showing generated image');
     await takeScreenshot(page, 'img-gen-final', 'Test complete');
 
     console.log('\n========== IMAGE GENERATION TEST END ==========\n');
 
-    // For debugging: don't fail the test, just log the result
-    if (!result.success) {
-      console.log('Image generation failed - check screenshots and logs');
-      console.log('Error:', result.error);
-    }
+    // Assertions for proof
+    expect(result.success).toBe(true);
+    expect(result.imageUrl).toContain('minio.sogos.io');
+    console.log('PROOF: Image generated and stored in MinIO at:', result.imageUrl);
   });
 
   test('should use full generateImage flow', async ({ page }) => {

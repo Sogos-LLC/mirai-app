@@ -321,13 +321,35 @@ export class CourseEditorPage {
     await this.page.waitForTimeout(500);
   }
 
-  /** Save the current component changes */
+  /** Save the current component changes (in modal) */
   async saveChanges(): Promise<void> {
     const saveButton = this.page.getByRole('button', { name: /Save Changes/i });
     await expect(saveButton).toBeVisible({ timeout: TIMEOUTS.elementVisible });
     await saveButton.click();
-    console.log('Clicked Save Changes');
+    console.log('Clicked Save Changes in modal');
     await this.page.waitForTimeout(TIMEOUTS.uiTransition);
+  }
+
+  /** Save the lesson using the top-level Save button */
+  async saveLesson(): Promise<void> {
+    // The Save button is in the header, distinct from modal's "Save Changes"
+    // It only appears when there are unsaved changes
+    const saveButton = this.page.locator('header button, div button').filter({ hasText: /^Save$/ }).first();
+
+    // Check if the button is visible and enabled
+    if (await saveButton.isVisible()) {
+      const isDisabled = await saveButton.isDisabled();
+      if (isDisabled) {
+        console.log('Save button is disabled - component already saved via UpdateLessonComponents');
+        return;
+      }
+      await saveButton.click();
+      console.log('Clicked Save button to persist lesson');
+      // Wait for save API call to complete
+      await this.page.waitForTimeout(3000);
+    } else {
+      console.log('Save button not visible - no changes to save');
+    }
   }
 
   // ===== Utilities =====

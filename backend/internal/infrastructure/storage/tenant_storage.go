@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"path"
 	"time"
 
@@ -101,4 +103,91 @@ func (s *TenantAwareStorage) GetContent(ctx context.Context, path string) ([]byt
 // Implements ContentStorage interface for SMEIngestionService.
 func (s *TenantAwareStorage) PutContent(ctx context.Context, path string, content []byte, contentType string) error {
 	return s.inner.PutContent(ctx, path, content, contentType)
+}
+
+// Default configuration for atomic updates.
+const (
+	defaultMaxRetries = 5
+	defaultBaseDelay  = 50 * time.Millisecond
+)
+
+// UpdateCourseContentAtomic atomically updates course content using optimistic concurrency.
+// The updateFn receives the current content and should modify it in place.
+// If concurrent modification is detected, the operation is retried up to maxRetries times.
+//
+// This prevents race conditions when multiple jobs update the same course content.json.
+func (s *TenantAwareStorage) UpdateCourseContentAtomic(
+	ctx context.Context,
+	tenantID, courseID uuid.UUID,
+	content interface{},
+	updateFn func() error,
+) error {
+	return s.UpdateCourseContentAtomicWithRetries(ctx, tenantID, courseID, content, updateFn, defaultMaxRetries)
+}
+
+// UpdateCourseContentAtomicWithRetries is like UpdateCourseContentAtomic but allows custom retry count.
+func (s *TenantAwareStorage) UpdateCourseContentAtomicWithRetries(
+	ctx context.Context,
+	tenantID, courseID uuid.UUID,
+	content interface{},
+	updateFn func() error,
+	maxRetries int,
+) error {
+	// Verify we have an atomic storage adapter
+	atomicStorage, ok := s.inner.(AtomicStorageAdapter)
+	if !ok {
+		// Fall back to non-atomic write (for tests or simple implementations)
+		if err := s.ReadCourseContent(ctx, tenantID, courseID, content); err != nil {
+			return err
+		}
+		if err := updateFn(); err != nil {
+			return err
+		}
+		return s.WriteCourseContent(ctx, tenantID, courseID, content)
+	}
+
+	coursePath := s.CoursePath(tenantID, courseID)
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// 1. Read current content with ETag
+		result, err := atomicStorage.ReadJSONWithETag(ctx, coursePath, content)
+		if err != nil {
+			return err
+		}
+
+		// 2. Apply the update function
+		if err := updateFn(); err != nil {
+			return err
+		}
+
+		// 3. Write back with ETag condition
+		err = atomicStorage.WriteJSONWithETag(ctx, coursePath, content, result.ETag)
+		if err == nil {
+			// Success
+			return nil
+		}
+
+		if errors.Is(err, ErrPreconditionFailed) {
+			// Concurrent modification detected, retry
+			slog.Warn("concurrent modification detected, retrying",
+				"attempt", attempt+1,
+				"maxRetries", maxRetries,
+				"courseID", courseID,
+				"tenantID", tenantID)
+
+			// Add jitter to reduce contention
+			jitter := time.Duration(attempt+1) * defaultBaseDelay
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(jitter):
+				continue
+			}
+		}
+
+		// Other error, return immediately
+		return err
+	}
+
+	return ErrMaxRetriesExceeded
 }
