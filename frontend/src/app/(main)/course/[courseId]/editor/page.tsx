@@ -476,10 +476,11 @@ export default function CourseEditorPage() {
         </div>
       </div>
 
-      {/* Mobile navigation button */}
+      {/* Mobile navigation button - positioned above bottom nav */}
       <button
         onClick={() => setShowMobileNav(true)}
-        className="lg:hidden fixed bottom-6 left-6 z-20 p-4 bg-primary-600 text-white rounded-full shadow-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
+        className="lg:hidden fixed z-40 p-4 bg-primary-600 text-white rounded-full shadow-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
+        style={{ bottom: 'calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 1rem)', left: '1rem' }}
         aria-label="Open course outline"
       >
         <Menu className="w-5 h-5" />
@@ -734,9 +735,20 @@ export default function CourseEditorPage() {
                 <div className="text-center">
                   <BookOpen className="w-16 h-16 text-muted mx-auto mb-4" />
                   <h2 className="text-xl font-semibold text-primary mb-2">Select a Lesson</h2>
-                  <p className="text-secondary max-w-md mx-auto">
+                  <p className="text-secondary max-w-md mx-auto hidden lg:block">
                     Choose a lesson from the outline on the left to start editing its components.
                   </p>
+                  <p className="text-secondary max-w-md mx-auto lg:hidden mb-6">
+                    Tap the menu button below to open the course outline and select a lesson.
+                  </p>
+                  {/* Mobile: Show a prominent button to open the outline */}
+                  <button
+                    onClick={() => setShowMobileNav(true)}
+                    className="lg:hidden inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors min-h-[44px]"
+                  >
+                    <Menu className="w-5 h-5" />
+                    Open Course Outline
+                  </button>
                 </div>
               </CardContent>
             </Card>

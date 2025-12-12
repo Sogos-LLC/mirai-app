@@ -926,7 +926,7 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 		ext = ".jpg"
 	}
 
-	storagePath := fmt.Sprintf("tenants/%s/generated-images/%s/%s/%s%s",
+	storagePath := fmt.Sprintf("tenants/%s/courses/%s/images/%s-%s%s",
 		tenantID.String(),
 		req.CourseID.String(),
 		req.LessonID.String(),
