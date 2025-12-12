@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
 - frontend
 - backend
-- diagram
 - minio
 - redis/redis-deployment.yaml
 - redis/asynqmon-deployment.yaml

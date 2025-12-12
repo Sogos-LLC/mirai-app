@@ -53,6 +53,9 @@ backend/.env.local
 backend/data/
 backend/main
 
+# Generated diagrams
+diagram/
+
 # Other temp docs
 findings.md
 system-improvements.md
