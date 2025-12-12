@@ -287,9 +287,10 @@ func (s *CourseWizardServiceServer) DeleteWizardState(
 // CreateCourseFromOutline creates a course record after outline approval.
 // This method:
 // 1. Approves the outline
-// 2. Starts background jobs to generate lesson content via GenerateAllLessons
-// 3. Cleans up wizard state
-// 4. Returns the course ID and title
+// 2. Persists wizard data (personas, audience, tone) to course content
+// 3. Starts background jobs to generate lesson content via GenerateAllLessons
+// 4. Cleans up wizard state
+// 5. Returns the course ID and title
 func (s *CourseWizardServiceServer) CreateCourseFromOutline(
 	ctx context.Context,
 	req *connect.Request[v1.CreateCourseFromOutlineRequest],
@@ -315,7 +316,10 @@ func (s *CourseWizardServiceServer) CreateCourseFromOutline(
 		return nil, toConnectError(err)
 	}
 
-	// Step 2: Get the course to retrieve its title
+	// Step 2: Get wizard state to persist personas/audience/tone with course
+	wizardState, _ := s.wizardService.GetWizardState(ctx, kratosID)
+
+	// Step 3: Get the course and update it with wizard data
 	course, err := s.courseService.GetCourse(ctx, kratosID, outline.CourseID.String())
 	if err != nil {
 		return nil, toConnectError(err)
@@ -324,16 +328,29 @@ func (s *CourseWizardServiceServer) CreateCourseFromOutline(
 	courseTitle := ""
 	if course != nil {
 		courseTitle = course.Settings.Title
+
+		// Persist wizard data to course content for AI generation and realignment
+		if wizardState != nil && wizardState.Data != nil {
+			wizardData := wizardStepDataToS3WizardData(wizardState.Data)
+			course.WizardData = wizardData
+
+			// Update the course with wizard data
+			_, err = s.courseService.UpdateCourse(ctx, kratosID, outline.CourseID.String(), course)
+			if err != nil {
+				// Log but don't fail - wizard data is supplementary
+				// The course will still work, just without persona context
+			}
+		}
 	}
 
-	// Step 3: Start background jobs to generate lesson content
+	// Step 4: Start background jobs to generate lesson content
 	// GenerateAllLessons creates a parent FULL_COURSE job and child LESSON_CONTENT jobs
 	_, err = s.aiService.GenerateAllLessons(ctx, kratosID, outline.CourseID)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
-	// Step 4: Clean up wizard state (ignore errors - not critical)
+	// Step 5: Clean up wizard state (ignore errors - not critical)
 	_ = s.wizardService.DeleteWizardState(ctx, kratosID)
 
 	// Return the course ID and title
@@ -523,6 +540,62 @@ func protoToWizardStepData(data *v1.WizardStepData) *entity.WizardStepData {
 		ToneOptions:         toneOptions,
 		SelectedToneID:      data.SelectedToneId,
 		AdditionalContext:   data.AdditionalContext,
+		DesiredOutcomes:     data.DesiredOutcomes,
+	}
+}
+
+// wizardStepDataToS3WizardData converts entity wizard data to S3 storage format.
+// This is used to persist wizard selections (personas, tone) with the course
+// so they're available for AI generation and realignment features.
+func wizardStepDataToS3WizardData(data *entity.WizardStepData) *service.S3WizardData {
+	if data == nil {
+		return nil
+	}
+
+	// Convert SME personas
+	smePersonas := make([]service.S3SMEPersona, len(data.SMEPersonas))
+	for i, p := range data.SMEPersonas {
+		smePersonas[i] = service.S3SMEPersona{
+			ID:          p.ID,
+			JobTitle:    p.JobTitle,
+			Description: p.Description,
+			Skills:      p.Skills,
+			Voice:       p.Voice,
+		}
+	}
+
+	// Convert audience personas
+	audiencePersonas := make([]service.S3AudiencePersona, len(data.AudiencePersonas))
+	for i, p := range data.AudiencePersonas {
+		audiencePersonas[i] = service.S3AudiencePersona{
+			ID:          p.ID,
+			Name:        p.Name,
+			Role:        p.Role,
+			Description: p.Description,
+			Goals:       p.Goals,
+		}
+	}
+
+	// Find selected tone option
+	var selectedTone *service.S3ToneOption
+	for _, t := range data.ToneOptions {
+		if t.ID == data.SelectedToneID {
+			selectedTone = &service.S3ToneOption{
+				ID:            t.ID,
+				Name:          t.Name,
+				Description:   t.Description,
+				LevelOfDetail: string(t.LevelOfDetail),
+			}
+			break
+		}
+	}
+
+	return &service.S3WizardData{
+		SMEPersonas:         smePersonas,
+		SelectedSMEIDs:      data.SelectedSMEIDs,
+		AudiencePersonas:    audiencePersonas,
+		SelectedAudienceIDs: data.SelectedAudienceIDs,
+		SelectedTone:        selectedTone,
 		DesiredOutcomes:     data.DesiredOutcomes,
 	}
 }

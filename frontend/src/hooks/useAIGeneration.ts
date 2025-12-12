@@ -111,6 +111,7 @@ export function useGenerateCourseOutline() {
 
 /**
  * Hook to get a course outline.
+ * Also returns wizard data (SME personas, audience personas, tone) for realignment features.
  */
 export function useGetCourseOutline(courseId: string | undefined, version?: number) {
   const query = useQuery(
@@ -121,6 +122,7 @@ export function useGetCourseOutline(courseId: string | undefined, version?: numb
 
   return {
     data: query.data?.outline,
+    wizardData: query.data?.wizardData,
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,

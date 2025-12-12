@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { CalloutStyle, GenerationJobStatus, GenerationJobType, HeadingLevel, JobEventType, LessonComponentType, OutlineApprovalStatus } from "./ai_generation_pb";
+import { AudiencePersonaSchema, SMEPersonaSchema, ToneOptionSchema } from "./course_wizard_zod";
 
 /**
  * Zod schema for GenerationJobType enum
@@ -212,6 +213,21 @@ export const GetCourseOutlineRequestSchema = z.object({
 });
 
 export type GetCourseOutlineRequest = z.infer<typeof GetCourseOutlineRequestSchema>;
+
+/**
+ * Zod schema for StoredWizardData
+ * @generated from message mirai.v1.StoredWizardData
+ */
+export const StoredWizardDataSchema = z.object({
+  smePersonas: z.array(SMEPersonaSchema),
+  selectedSmeIds: z.array(z.string()),
+  audiencePersonas: z.array(AudiencePersonaSchema),
+  selectedAudienceIds: z.array(z.string()),
+  selectedTone: ToneOptionSchema.optional(),
+  desiredOutcomes: z.string(),
+});
+
+export type StoredWizardData = z.infer<typeof StoredWizardDataSchema>;
 
 /**
  * Zod schema for ApproveCourseOutlineRequest

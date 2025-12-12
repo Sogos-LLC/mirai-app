@@ -168,7 +168,7 @@ export default function CourseEditorPage() {
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
 
   // Fetch outline and lessons
-  const { data: outline, isLoading: outlineLoading } = useGetCourseOutline(courseId);
+  const { data: outline, wizardData, isLoading: outlineLoading } = useGetCourseOutline(courseId);
   const { data: generatedLessons, isLoading: lessonsLoading } = useListGeneratedLessons(courseId);
 
   // Mutation for saving components
@@ -810,17 +810,17 @@ export default function CourseEditorPage() {
                               isDragging={activeId === component.id}
                               onOpenRealignment={handleOpenRealignment}
                             />
-                            {/* Delete button - visible on mobile, hover on desktop */}
+                            {/* Delete button - bottom right, visible on mobile, hover on desktop */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setDeletingComponentId(component.id);
                               }}
-                              className="absolute -right-2 -top-2 p-2 bg-red-500 text-white rounded-full lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity hover:bg-red-600 z-20 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              className="absolute -right-2 -bottom-2 p-1.5 bg-red-500 text-white rounded-full lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity hover:bg-red-600 z-20 min-h-[36px] min-w-[36px] flex items-center justify-center"
                               title="Delete component"
                               aria-label="Delete component"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         ))}
@@ -1047,8 +1047,8 @@ export default function CourseEditorPage() {
         isOpen={!!realignmentComponent}
         onClose={handleCloseRealignment}
         component={realignmentComponent}
-        smePersonas={[]}
-        audiencePersonas={[]}
+        smePersonas={wizardData?.smePersonas ?? []}
+        audiencePersonas={wizardData?.audiencePersonas ?? []}
         learningObjectives={currentLessonLOs}
         onRealign={handleRealign}
         isLoading={isRealigning || isRegenerating}

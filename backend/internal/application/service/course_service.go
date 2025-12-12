@@ -57,16 +57,17 @@ const (
 // StoredCourse represents the full course data returned to clients.
 // Combines metadata from PostgreSQL and content from S3.
 type StoredCourse struct {
-	ID                 string                 `json:"id"`
-	Version            int                    `json:"version"`
-	Status             CourseStatus           `json:"status"`
-	Metadata           CourseMetadata         `json:"metadata"`
-	Settings           CourseSettings         `json:"settings"`
-	Personas           []map[string]any       `json:"personas"`
-	LearningObjectives []map[string]any       `json:"learningObjectives"`
-	AssessmentSettings map[string]any         `json:"assessmentSettings"`
-	Content            CourseContent          `json:"content"`
-	Exports            []map[string]any       `json:"exports,omitempty"`
+	ID                 string           `json:"id"`
+	Version            int              `json:"version"`
+	Status             CourseStatus     `json:"status"`
+	Metadata           CourseMetadata   `json:"metadata"`
+	Settings           CourseSettings   `json:"settings"`
+	WizardData         *S3WizardData    `json:"wizardData,omitempty"`
+	Personas           []map[string]any `json:"personas"`
+	LearningObjectives []map[string]any `json:"learningObjectives"`
+	AssessmentSettings map[string]any   `json:"assessmentSettings"`
+	Content            CourseContent    `json:"content"`
+	Exports            []map[string]any `json:"exports,omitempty"`
 }
 
 // CourseMetadata contains metadata about the course.
@@ -96,13 +97,14 @@ type CourseContent struct {
 
 // S3CourseContent is stored in S3 - the heavy content payload.
 type S3CourseContent struct {
-	Settings           CourseSettings       `json:"settings"`
-	Personas           []map[string]any     `json:"personas"`
-	LearningObjectives []map[string]any     `json:"learningObjectives"`
-	AssessmentSettings map[string]any       `json:"assessmentSettings"`
-	Content            CourseContent        `json:"content"`
-	Exports            []map[string]any     `json:"exports,omitempty"`
-	GeneratedLessons   []S3GeneratedLesson  `json:"generatedLessons,omitempty"`
+	Settings           CourseSettings      `json:"settings"`
+	WizardData         *S3WizardData       `json:"wizardData,omitempty"`
+	Personas           []map[string]any    `json:"personas"`
+	LearningObjectives []map[string]any    `json:"learningObjectives"`
+	AssessmentSettings map[string]any      `json:"assessmentSettings"`
+	Content            CourseContent       `json:"content"`
+	Exports            []map[string]any    `json:"exports,omitempty"`
+	GeneratedLessons   []S3GeneratedLesson `json:"generatedLessons,omitempty"`
 }
 
 // S3GeneratedLesson represents a generated lesson stored in content.json.
@@ -125,6 +127,43 @@ type S3LessonComponent struct {
 	LearningObjectiveIDs []string        `json:"learningObjectiveIds,omitempty"`
 	CreatedAt            time.Time       `json:"createdAt"`
 	UpdatedAt            time.Time       `json:"updatedAt"`
+}
+
+// S3WizardData stores wizard selections for AI context and realignment.
+// This is persisted with the course so AI generation and realignment have access to personas.
+type S3WizardData struct {
+	SMEPersonas         []S3SMEPersona      `json:"smePersonas"`
+	SelectedSMEIDs      []string            `json:"selectedSmeIds"`
+	AudiencePersonas    []S3AudiencePersona `json:"audiencePersonas"`
+	SelectedAudienceIDs []string            `json:"selectedAudienceIds"`
+	SelectedTone        *S3ToneOption       `json:"selectedTone,omitempty"`
+	DesiredOutcomes     string              `json:"desiredOutcomes"`
+}
+
+// S3SMEPersona represents an SME (Subject Matter Expert) persona stored in wizard data.
+type S3SMEPersona struct {
+	ID          string   `json:"id"`
+	JobTitle    string   `json:"jobTitle"`
+	Description string   `json:"description"`
+	Skills      []string `json:"skills"`
+	Voice       string   `json:"voice"`
+}
+
+// S3AudiencePersona represents an audience persona stored in wizard data.
+type S3AudiencePersona struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Role        string   `json:"role"`
+	Description string   `json:"description"`
+	Goals       []string `json:"goals"`
+}
+
+// S3ToneOption represents the selected tone/style for the course.
+type S3ToneOption struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	LevelOfDetail string `json:"levelOfDetail"`
 }
 
 // LibraryEntry represents a course listing (metadata only).
@@ -329,6 +368,7 @@ func (s *CourseService) GetCourse(ctx context.Context, kratosID uuid.UUID, id st
 			CategoryTags:      course.CategoryTags,
 			DataSource:        s3Content.Settings.DataSource,
 		},
+		WizardData:         s3Content.WizardData,
 		Personas:           s3Content.Personas,
 		LearningObjectives: s3Content.LearningObjectives,
 		AssessmentSettings: s3Content.AssessmentSettings,
@@ -401,6 +441,7 @@ func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, in
 			CategoryTags:      course.CategoryTags,
 			DataSource:        input.Settings.DataSource,
 		},
+		WizardData:         input.WizardData,
 		Personas:           input.Personas,
 		LearningObjectives: input.LearningObjectives,
 		AssessmentSettings: input.AssessmentSettings,
@@ -467,6 +508,7 @@ func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, in
 			CreatedBy:  user.ID.String(),
 		},
 		Settings:           s3Content.Settings,
+		WizardData:         s3Content.WizardData,
 		Personas:           s3Content.Personas,
 		LearningObjectives: s3Content.LearningObjectives,
 		AssessmentSettings: s3Content.AssessmentSettings,
@@ -601,6 +643,7 @@ func (s *CourseService) UpdateCourse(ctx context.Context, kratosID uuid.UUID, id
 			CategoryTags:      course.CategoryTags,
 			DataSource:        s3Content.Settings.DataSource,
 		},
+		WizardData:         s3Content.WizardData,
 		Personas:           s3Content.Personas,
 		LearningObjectives: s3Content.LearningObjectives,
 		AssessmentSettings: s3Content.AssessmentSettings,

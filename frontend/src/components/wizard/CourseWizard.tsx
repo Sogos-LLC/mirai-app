@@ -460,6 +460,7 @@ export default function CourseWizard() {
           selectedIds={context.selectedSMEIds}
           onTogglePersona={(smeId) => send({ type: 'TOGGLE_SME', smeId })}
           onEditPersona={(persona: SMEPersona) => send({ type: 'EDIT_SME', persona })}
+          onAddTemplateSME={(persona: SMEPersona) => send({ type: 'ADD_TEMPLATE_SME', persona })}
           onNext={() => send({ type: 'APPROVE_SMES' })}
           onBack={() => send({ type: 'GO_BACK' })}
           onRegenerate={() => send({ type: 'REGENERATE_SMES' })}

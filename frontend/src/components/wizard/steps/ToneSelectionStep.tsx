@@ -84,15 +84,16 @@ export default function ToneSelectionStep({
                   key={option.id}
                   onClick={() => onSelectTone(option.id)}
                   className={`
-                    p-5 rounded-lg border-2 cursor-pointer transition-all
+                    p-5 rounded-lg border-2 cursor-pointer transition-all flex flex-col
                     ${isSelected
                       ? 'border-primary-500 bg-primary-50/50'
                       : 'border-transparent bg-surface hover:border-gray-300'
                     }
                   `}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-primary text-lg">{option.name}</h3>
+                  {/* Title area - fixed height */}
+                  <div className="flex items-start justify-between mb-3 h-[32px]">
+                    <h3 className="font-semibold text-primary text-lg line-clamp-1">{option.name}</h3>
                     <div
                       className={`
                         w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0
@@ -106,11 +107,15 @@ export default function ToneSelectionStep({
                     </div>
                   </div>
 
-                  <p className="text-sm text-secondary mb-4">
-                    {option.description}
-                  </p>
+                  {/* Description area - fixed height */}
+                  <div className="h-[72px] mb-4">
+                    <p className="text-sm text-secondary line-clamp-3">
+                      {option.description}
+                    </p>
+                  </div>
 
-                  <div className="pt-3 border-t">
+                  {/* Detail level area - fixed height */}
+                  <div className="pt-3 border-t h-[72px]">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted">Detail Level</span>
                       <span className={`
@@ -127,7 +132,7 @@ export default function ToneSelectionStep({
                         {detailLevelLabels[option.levelOfDetail]}
                       </span>
                     </div>
-                    <p className="text-xs text-muted mt-1">
+                    <p className="text-xs text-muted mt-1 line-clamp-2">
                       {detailLevelDescriptions[option.levelOfDetail]}
                     </p>
                   </div>

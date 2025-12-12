@@ -83,6 +83,7 @@ export type CourseWizardEvent =
   // Step 3: SME Selection
   | { type: 'TOGGLE_SME'; smeId: string }
   | { type: 'EDIT_SME'; persona: SMEPersona }
+  | { type: 'ADD_TEMPLATE_SME'; persona: SMEPersona }
   | { type: 'APPROVE_SMES' }
   | { type: 'REGENERATE_SMES' }
   // Step 4: Audience Selection
@@ -576,6 +577,24 @@ export const courseWizardMachine = createMachine({
           actions: assign({
             smePersonas: ({ context, event }) =>
               context.smePersonas.map((p) => (p.id === event.persona.id ? event.persona : p)),
+          }),
+        },
+        ADD_TEMPLATE_SME: {
+          actions: assign({
+            smePersonas: ({ context, event }) => {
+              // Don't add if already present
+              if (context.smePersonas.some((p) => p.id === event.persona.id)) {
+                return context.smePersonas;
+              }
+              return [...context.smePersonas, event.persona];
+            },
+            selectedSMEIds: ({ context, event }) => {
+              // Auto-select the added template
+              if (context.selectedSMEIds.includes(event.persona.id)) {
+                return context.selectedSMEIds;
+              }
+              return [...context.selectedSMEIds, event.persona.id];
+            },
           }),
         },
         APPROVE_SMES: {

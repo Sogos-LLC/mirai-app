@@ -3,6 +3,7 @@ syntax = "proto3";
 package mirai.v1;
 
 import "google/protobuf/timestamp.proto";
+import "mirai/v1/course_wizard.proto";
 
 // GenerationJobType represents the type of AI generation job.
 enum GenerationJobType {
@@ -318,9 +319,23 @@ message GetCourseOutlineRequest {
   optional int32 version = 2; // If not specified, returns latest
 }
 
-// GetCourseOutlineResponse contains the outline.
+// GetCourseOutlineResponse contains the outline and wizard data.
 message GetCourseOutlineResponse {
   CourseOutline outline = 1;
+  // Wizard data persisted with the course (SME personas, audience, tone)
+  // Used for realignment feature in course editor
+  StoredWizardData wizard_data = 2;
+}
+
+// StoredWizardData represents wizard selections persisted with the course.
+// This data is used for AI generation context and realignment features.
+message StoredWizardData {
+  repeated SMEPersona sme_personas = 1;
+  repeated string selected_sme_ids = 2;
+  repeated AudiencePersona audience_personas = 3;
+  repeated string selected_audience_ids = 4;
+  ToneOption selected_tone = 5;
+  string desired_outcomes = 6;
 }
 
 // ApproveCourseOutlineRequest approves an outline.

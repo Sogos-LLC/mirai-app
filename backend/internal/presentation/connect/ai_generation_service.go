@@ -104,8 +104,12 @@ func (s *AIGenerationServiceServer) GetCourseOutline(
 		return nil, toConnectError(err)
 	}
 
+	// Also get wizard data for realignment features
+	wizardData, _ := s.aiService.GetWizardData(ctx, kratosID, courseID)
+
 	return connect.NewResponse(&v1.GetCourseOutlineResponse{
-		Outline: courseOutlineToProto(outline),
+		Outline:    courseOutlineToProto(outline),
+		WizardData: s3WizardDataToProto(wizardData),
 	}), nil
 }
 
@@ -348,6 +352,14 @@ func (s *AIGenerationServiceServer) RegenerateComponent(
 		LessonID:           generatedLessonID,
 		ComponentID:        componentID,
 		ModificationPrompt: req.Msg.ModificationPrompt,
+	}
+
+	// Pass alignment targets if provided
+	if req.Msg.AlignmentTargets != nil {
+		serviceReq.AlignmentTargets = &service.AlignmentTargets{
+			PersonaIDs:           req.Msg.AlignmentTargets.PersonaIds,
+			LearningObjectiveIDs: req.Msg.AlignmentTargets.LearningObjectiveIds,
+		}
 	}
 
 	result, err := s.aiService.RegenerateComponent(ctx, kratosID, serviceReq)
@@ -830,6 +842,73 @@ func outlineLessonToProto(lesson *entity.OutlineLesson) *v1.OutlineLesson {
 		LearningObjectives:       lesson.LearningObjectives,
 		IsLastInSection:          lesson.IsLastInSection,
 		IsLastInCourse:           lesson.IsLastInCourse,
+	}
+}
+
+// s3WizardDataToProto converts S3WizardData to proto StoredWizardData.
+// Used for returning wizard data in GetCourseOutlineResponse.
+func s3WizardDataToProto(data *service.S3WizardData) *v1.StoredWizardData {
+	if data == nil {
+		return nil
+	}
+
+	// Convert SME personas
+	smePersonas := make([]*v1.SMEPersona, len(data.SMEPersonas))
+	for i, sme := range data.SMEPersonas {
+		smePersonas[i] = &v1.SMEPersona{
+			Id:          sme.ID,
+			JobTitle:    sme.JobTitle,
+			Description: sme.Description,
+			Skills:      sme.Skills,
+			Voice:       sme.Voice,
+		}
+	}
+
+	// Convert audience personas
+	audiencePersonas := make([]*v1.AudiencePersona, len(data.AudiencePersonas))
+	for i, aud := range data.AudiencePersonas {
+		audiencePersonas[i] = &v1.AudiencePersona{
+			Id:          aud.ID,
+			Name:        aud.Name,
+			Role:        aud.Role,
+			Description: aud.Description,
+			Goals:       aud.Goals,
+		}
+	}
+
+	// Convert selected tone
+	var selectedTone *v1.ToneOption
+	if data.SelectedTone != nil {
+		selectedTone = &v1.ToneOption{
+			Id:          data.SelectedTone.ID,
+			Name:        data.SelectedTone.Name,
+			Description: data.SelectedTone.Description,
+			// Map level of detail string to enum
+			LevelOfDetail: toneDetailLevelFromString(data.SelectedTone.LevelOfDetail),
+		}
+	}
+
+	return &v1.StoredWizardData{
+		SmePersonas:         smePersonas,
+		SelectedSmeIds:      data.SelectedSMEIDs,
+		AudiencePersonas:    audiencePersonas,
+		SelectedAudienceIds: data.SelectedAudienceIDs,
+		SelectedTone:        selectedTone,
+		DesiredOutcomes:     data.DesiredOutcomes,
+	}
+}
+
+// toneDetailLevelFromString converts a string to ToneDetailLevel enum.
+func toneDetailLevelFromString(s string) v1.ToneDetailLevel {
+	switch s {
+	case "brief", "BRIEF":
+		return v1.ToneDetailLevel_TONE_DETAIL_LEVEL_BRIEF
+	case "moderate", "MODERATE":
+		return v1.ToneDetailLevel_TONE_DETAIL_LEVEL_MODERATE
+	case "comprehensive", "COMPREHENSIVE":
+		return v1.ToneDetailLevel_TONE_DETAIL_LEVEL_COMPREHENSIVE
+	default:
+		return v1.ToneDetailLevel_TONE_DETAIL_LEVEL_UNSPECIFIED
 	}
 }
 

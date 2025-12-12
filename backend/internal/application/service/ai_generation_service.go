@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -192,13 +193,62 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 		return s.failJob(ctx, job, fmt.Sprintf("failed to get AI provider: %v", err))
 	}
 
+	// Build SME knowledge from wizard data (only selected SMEs)
+	var smeKnowledge []service.SMEKnowledgeInput
+	var targetAudience service.TargetAudienceInput
+	var additionalContext string
+
+	if content.WizardData != nil {
+		// Convert selected SME personas to AI input format
+		selectedSMESet := make(map[string]bool)
+		for _, id := range content.WizardData.SelectedSMEIDs {
+			selectedSMESet[id] = true
+		}
+		for _, sme := range content.WizardData.SMEPersonas {
+			if selectedSMESet[sme.ID] {
+				smeKnowledge = append(smeKnowledge, service.SMEKnowledgeInput{
+					SMEName:  sme.JobTitle,
+					Domain:   strings.Join(sme.Skills, ", "),
+					Summary:  fmt.Sprintf("%s. Voice: %s", sme.Description, sme.Voice),
+					Keywords: sme.Skills,
+				})
+			}
+		}
+
+		// Convert selected audience personas to AI input format
+		selectedAudienceSet := make(map[string]bool)
+		for _, id := range content.WizardData.SelectedAudienceIDs {
+			selectedAudienceSet[id] = true
+		}
+		var roles []string
+		var goals []string
+		var backgrounds []string
+		for _, aud := range content.WizardData.AudiencePersonas {
+			if selectedAudienceSet[aud.ID] {
+				roles = append(roles, aud.Role)
+				goals = append(goals, aud.Goals...)
+				backgrounds = append(backgrounds, fmt.Sprintf("%s: %s", aud.Name, aud.Description))
+			}
+		}
+		if len(roles) > 0 {
+			targetAudience = service.TargetAudienceInput{
+				Role:              strings.Join(roles, ", "),
+				LearningGoals:     goals,
+				TypicalBackground: strings.Join(backgrounds, "; "),
+			}
+		}
+
+		// Use desired outcomes as additional context
+		additionalContext = content.WizardData.DesiredOutcomes
+	}
+
 	// Generate outline with AI
 	outlineResult, err := aiProvider.GenerateCourseOutline(ctx, service.GenerateOutlineRequest{
 		CourseTitle:       content.Settings.Title,
 		DesiredOutcome:    content.Settings.DesiredOutcome,
-		SMEKnowledge:      []service.SMEKnowledgeInput{},
-		TargetAudience:    service.TargetAudienceInput{},
-		AdditionalContext: "",
+		SMEKnowledge:      smeKnowledge,
+		TargetAudience:    targetAudience,
+		AdditionalContext: additionalContext,
 	})
 	if err != nil {
 		log.Error("AI outline generation failed", "error", err)
@@ -475,6 +525,51 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		return s.failJob(ctx, job, fmt.Sprintf("failed to get AI provider: %v", err))
 	}
 
+	// Build SME knowledge from wizard data (only selected SMEs)
+	var smeKnowledge []service.SMEKnowledgeInput
+	var targetAudience service.TargetAudienceInput
+
+	if content.WizardData != nil {
+		// Convert selected SME personas to AI input format
+		selectedSMESet := make(map[string]bool)
+		for _, id := range content.WizardData.SelectedSMEIDs {
+			selectedSMESet[id] = true
+		}
+		for _, sme := range content.WizardData.SMEPersonas {
+			if selectedSMESet[sme.ID] {
+				smeKnowledge = append(smeKnowledge, service.SMEKnowledgeInput{
+					SMEName:  sme.JobTitle,
+					Domain:   strings.Join(sme.Skills, ", "),
+					Summary:  fmt.Sprintf("%s. Voice: %s", sme.Description, sme.Voice),
+					Keywords: sme.Skills,
+				})
+			}
+		}
+
+		// Convert selected audience personas to AI input format
+		selectedAudienceSet := make(map[string]bool)
+		for _, id := range content.WizardData.SelectedAudienceIDs {
+			selectedAudienceSet[id] = true
+		}
+		var roles []string
+		var goals []string
+		var backgrounds []string
+		for _, aud := range content.WizardData.AudiencePersonas {
+			if selectedAudienceSet[aud.ID] {
+				roles = append(roles, aud.Role)
+				goals = append(goals, aud.Goals...)
+				backgrounds = append(backgrounds, fmt.Sprintf("%s: %s", aud.Name, aud.Description))
+			}
+		}
+		if len(roles) > 0 {
+			targetAudience = service.TargetAudienceInput{
+				Role:              strings.Join(roles, ", "),
+				LearningGoals:     goals,
+				TypicalBackground: strings.Join(backgrounds, "; "),
+			}
+		}
+	}
+
 	// Generate lesson content
 	lessonResult, err := aiProvider.GenerateLessonContent(ctx, service.GenerateLessonRequest{
 		CourseTitle:        content.Settings.Title,
@@ -482,8 +577,8 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		LessonTitle:        lessonTitle,
 		LessonDescription:  lessonDesc,
 		LearningObjectives: learningObjectives,
-		SMEKnowledge:       []service.SMEKnowledgeInput{},
-		TargetAudience:     service.TargetAudienceInput{},
+		SMEKnowledge:       smeKnowledge,
+		TargetAudience:     targetAudience,
 		IsLastInSection:    isLastInSection,
 		IsLastInCourse:     isLastInCourse,
 	})
@@ -638,6 +733,207 @@ func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, par
 	return nil
 }
 
+// ProcessComponentRegenJob processes a component regeneration job.
+func (s *AIGenerationService) ProcessComponentRegenJob(ctx context.Context, job *entity.GenerationJob) error {
+	log := s.logger.With("jobID", job.ID, "courseID", job.CourseID)
+
+	if s.checkJobCancelled(ctx, job.ID) {
+		log.Info("job already cancelled, skipping processing")
+		return nil
+	}
+
+	// Parse input from result path
+	var input ComponentRegenInput
+	if job.ResultPath != nil {
+		if err := json.Unmarshal([]byte(*job.ResultPath), &input); err != nil {
+			return s.failJob(ctx, job, "failed to parse job input")
+		}
+	} else {
+		return s.failJob(ctx, job, "job missing input data")
+	}
+
+	// Update progress
+	progressMsg := "Regenerating component with AI..."
+	job.ProgressMessage = &progressMsg
+	job.ProgressPercent = 20
+	_ = s.jobRepo.Update(ctx, job)
+	s.publishJobEvent(ctx, "updated", job)
+
+	// Read course content from MinIO
+	content, err := s.readCourseContent(ctx, job.TenantID, *job.CourseID)
+	if err != nil {
+		return s.failJob(ctx, job, "failed to read course content")
+	}
+
+	// Find the generated lesson
+	lessonUUID, err := uuid.Parse(input.LessonID)
+	if err != nil {
+		return s.failJob(ctx, job, "invalid lesson ID")
+	}
+
+	var targetLesson *S3GeneratedLesson
+	var lessonIndex int
+	for i := range content.GeneratedLessons {
+		if content.GeneratedLessons[i].ID == lessonUUID.String() {
+			targetLesson = &content.GeneratedLessons[i]
+			lessonIndex = i
+			break
+		}
+	}
+	if targetLesson == nil {
+		return s.failJob(ctx, job, "lesson not found")
+	}
+
+	// Find the component to regenerate
+	componentUUID, err := uuid.Parse(input.ComponentID)
+	if err != nil {
+		return s.failJob(ctx, job, "invalid component ID")
+	}
+
+	var targetComponent *S3LessonComponent
+	var componentIndex int
+	for i := range targetLesson.Components {
+		if targetLesson.Components[i].ID == componentUUID.String() {
+			targetComponent = &targetLesson.Components[i]
+			componentIndex = i
+			break
+		}
+	}
+	if targetComponent == nil {
+		return s.failJob(ctx, job, "component not found")
+	}
+
+	// Update progress
+	job.ProgressPercent = 40
+	_ = s.jobRepo.Update(ctx, job)
+
+	// Get AI provider
+	aiProvider, err := s.aiProviderFactory.GetProvider(ctx, job.TenantID)
+	if err != nil {
+		return s.failJob(ctx, job, fmt.Sprintf("failed to get AI provider: %v", err))
+	}
+
+	// Build lesson context
+	lessonContext := fmt.Sprintf("Course: %s\nLesson: %s", content.Settings.Title, targetLesson.Title)
+
+	// Build target audience from wizard data if alignment targets are provided
+	var targetAudience service.TargetAudienceInput
+	if content.WizardData != nil && len(input.PersonaIDs) > 0 {
+		personaSet := make(map[string]bool)
+		for _, id := range input.PersonaIDs {
+			personaSet[id] = true
+		}
+
+		var roles []string
+		var goals []string
+		var backgrounds []string
+
+		// Check SME personas
+		for _, sme := range content.WizardData.SMEPersonas {
+			if personaSet[sme.ID] {
+				roles = append(roles, sme.JobTitle)
+				backgrounds = append(backgrounds, fmt.Sprintf("SME: %s - %s", sme.JobTitle, sme.Description))
+			}
+		}
+
+		// Check audience personas
+		for _, aud := range content.WizardData.AudiencePersonas {
+			if personaSet[aud.ID] {
+				roles = append(roles, aud.Role)
+				goals = append(goals, aud.Goals...)
+				backgrounds = append(backgrounds, fmt.Sprintf("%s: %s", aud.Name, aud.Description))
+			}
+		}
+
+		if len(roles) > 0 || len(goals) > 0 {
+			targetAudience = service.TargetAudienceInput{
+				Role:              strings.Join(roles, ", "),
+				LearningGoals:     goals,
+				TypicalBackground: strings.Join(backgrounds, "; "),
+			}
+		}
+	}
+
+	// Build modification prompt with learning objectives if specified
+	modPrompt := input.ModificationPrompt
+	if len(input.LearningObjectiveIDs) > 0 {
+		// Get the learning objectives from the outline
+		for _, section := range content.Content.Sections {
+			if lessons, ok := section["lessons"].([]interface{}); ok {
+				for _, lessonData := range lessons {
+					if lesson, ok := lessonData.(map[string]interface{}); ok {
+						if lesson["id"] == targetLesson.OutlineLessonID {
+							if los, ok := lesson["learningObjectives"].([]interface{}); ok {
+								var selectedLOs []string
+								for i, lo := range los {
+									loID := fmt.Sprintf("lo-%d", i)
+									for _, selectedID := range input.LearningObjectiveIDs {
+										if loID == selectedID {
+											if loStr, ok := lo.(string); ok {
+												selectedLOs = append(selectedLOs, loStr)
+											}
+											break
+										}
+									}
+								}
+								if len(selectedLOs) > 0 {
+									modPrompt = fmt.Sprintf("%s\n\nTarget these learning objectives:\n- %s",
+										modPrompt, strings.Join(selectedLOs, "\n- "))
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Regenerate the component
+	regenResult, err := aiProvider.RegenerateComponent(ctx, service.RegenerateComponentRequest{
+		ComponentType:      targetComponent.Type,
+		CurrentContentJSON: string(targetComponent.ContentJSON),
+		ModificationPrompt: modPrompt,
+		LessonContext:      lessonContext,
+		TargetAudience:     targetAudience,
+	})
+	if err != nil {
+		log.Error("AI regeneration failed", "error", err)
+		return s.failJob(ctx, job, fmt.Sprintf("AI regeneration failed: %v", err))
+	}
+
+	// Update progress
+	job.ProgressPercent = 80
+	progressMsg = "Saving regenerated component..."
+	job.ProgressMessage = &progressMsg
+	job.TokensUsed = regenResult.TokensUsed
+	_ = s.jobRepo.Update(ctx, job)
+
+	// Update the component with new content
+	content.GeneratedLessons[lessonIndex].Components[componentIndex].ContentJSON = json.RawMessage(regenResult.ContentJSON)
+	content.GeneratedLessons[lessonIndex].Components[componentIndex].UpdatedAt = time.Now()
+
+	// Save updated content back to MinIO
+	if err := s.writeCourseContent(ctx, job.TenantID, *job.CourseID, content); err != nil {
+		return s.failJob(ctx, job, "failed to save updated content")
+	}
+
+	// Mark job as completed
+	job.Status = valueobject.GenerationJobStatusCompleted
+	job.ProgressPercent = 100
+	now := time.Now()
+	job.CompletedAt = &now
+	completedMsg := "Component regenerated successfully"
+	job.ProgressMessage = &completedMsg
+	if err := s.jobRepo.Update(ctx, job); err != nil {
+		log.Error("failed to update job status", "error", err)
+	}
+
+	s.publishJobEvent(ctx, "completed", job)
+	log.Info("component regeneration completed", "tokens", regenResult.TokensUsed)
+
+	return nil
+}
+
 // GetJob retrieves a generation job by ID.
 func (s *AIGenerationService) GetJob(ctx context.Context, kratosID uuid.UUID, jobID uuid.UUID) (*entity.GenerationJob, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
@@ -760,6 +1056,8 @@ func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) 
 		return s.ProcessOutlineGenerationJob(tenantCtx, job)
 	case valueobject.GenerationJobTypeLessonContent:
 		return s.ProcessLessonGenerationJob(tenantCtx, job)
+	case valueobject.GenerationJobTypeComponentRegen:
+		return s.ProcessComponentRegenJob(tenantCtx, job)
 	default:
 		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
 	}
@@ -783,6 +1081,8 @@ func (s *AIGenerationService) processNextJob(ctx context.Context) error {
 		return s.ProcessOutlineGenerationJob(tenantCtx, job)
 	case valueobject.GenerationJobTypeLessonContent:
 		return s.ProcessLessonGenerationJob(tenantCtx, job)
+	case valueobject.GenerationJobTypeComponentRegen:
+		return s.ProcessComponentRegenJob(tenantCtx, job)
 	default:
 		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
 	}
@@ -1304,6 +1604,26 @@ func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uui
 	return outline, nil
 }
 
+// GetWizardData retrieves the wizard data (personas, tone) stored with a course.
+// This is used by the editor for realignment features.
+func (s *AIGenerationService) GetWizardData(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*S3WizardData, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
+	if err != nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
+	}
+
+	return content.WizardData, nil
+}
+
 // ApproveCourseOutline is a no-op in the new flow (outlines auto-approved).
 func (s *AIGenerationService) ApproveCourseOutline(ctx context.Context, kratosID uuid.UUID, outlineID uuid.UUID) (*entity.CourseOutline, error) {
 	// In the simplified flow, outlines are auto-approved
@@ -1357,9 +1677,90 @@ type GenerateLessonContentResult struct {
 	Job *entity.GenerationJob
 }
 
+// ComponentRegenInput stores inputs for component regeneration job.
+type ComponentRegenInput struct {
+	CourseID             string   `json:"courseId"`
+	LessonID             string   `json:"lessonId"`
+	ComponentID          string   `json:"componentId"`
+	ModificationPrompt   string   `json:"modificationPrompt"`
+	PersonaIDs           []string `json:"personaIds,omitempty"`
+	LearningObjectiveIDs []string `json:"learningObjectiveIds,omitempty"`
+}
+
 // RegenerateComponent starts a job to regenerate a single lesson component.
 func (s *AIGenerationService) RegenerateComponent(ctx context.Context, kratosID uuid.UUID, req RegenerateComponentRequest) (*RegenerateComponentResult, error) {
-	return nil, domainerrors.ErrNotFound.WithMessage("component regeneration not yet implemented")
+	log := s.logger.With("method", "RegenerateComponent", "courseId", req.CourseID, "lessonId", req.LessonID, "componentId", req.ComponentID)
+
+	// Get user
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil {
+		log.Error("failed to get user", "error", err)
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		log.Error("user has no tenant")
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	// Verify course content exists and user has access (via tenant-scoped read)
+	_, err = s.readCourseContent(ctx, *user.TenantID, req.CourseID)
+	if err != nil {
+		log.Error("failed to get course content", "error", err)
+		return nil, domainerrors.ErrNotFound.WithMessage("course not found")
+	}
+
+	// Store input info for the job processor
+	input := ComponentRegenInput{
+		CourseID:           req.CourseID.String(),
+		LessonID:           req.LessonID.String(),
+		ComponentID:        req.ComponentID.String(),
+		ModificationPrompt: req.ModificationPrompt,
+	}
+
+	if req.AlignmentTargets != nil {
+		input.PersonaIDs = req.AlignmentTargets.PersonaIDs
+		input.LearningObjectiveIDs = req.AlignmentTargets.LearningObjectiveIDs
+	}
+
+	inputJSON, err := json.Marshal(input)
+	if err != nil {
+		log.Error("failed to marshal input", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	resultPath := string(inputJSON)
+
+	// Create the job
+	job := &entity.GenerationJob{
+		ID:              uuid.New(),
+		TenantID:        *user.TenantID,
+		Type:            valueobject.GenerationJobTypeComponentRegen,
+		Status:          valueobject.GenerationJobStatusQueued,
+		CourseID:        &req.CourseID,
+		ResultPath:      &resultPath,
+		ProgressPercent: 0,
+		MaxRetries:      3,
+		CreatedByUserID: user.ID,
+		CreatedAt:       time.Now(),
+	}
+
+	if err := s.jobRepo.Create(ctx, job); err != nil {
+		log.Error("failed to create generation job", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Publish job created event
+	s.publishJobEvent(ctx, "created", job)
+
+	log.Info("created component regeneration job", "jobId", job.ID)
+
+	return &RegenerateComponentResult{Job: job}, nil
+}
+
+// AlignmentTargets specifies personas and learning objectives for realignment.
+type AlignmentTargets struct {
+	PersonaIDs           []string
+	LearningObjectiveIDs []string
 }
 
 // RegenerateComponentRequest contains inputs for component regeneration.
@@ -1368,6 +1769,7 @@ type RegenerateComponentRequest struct {
 	LessonID           uuid.UUID
 	ComponentID        uuid.UUID
 	ModificationPrompt string
+	AlignmentTargets   *AlignmentTargets
 }
 
 // RegenerateComponentResult contains the created job.
