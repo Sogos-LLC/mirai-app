@@ -367,65 +367,32 @@ export const outlineReviewMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Approving - Approve outline and start lesson generation
+    // Approving - Start lesson generation (approval is automatic in new flow)
     // --------------------------------------------------------
     approving: {
-      initial: 'approvingOutline',
-      states: {
-        approvingOutline: {
-          invoke: {
-            id: 'approveOutline',
-            src: 'approveOutlineActor',
-            input: ({ context }) => ({
-              courseId: context.courseId,
-              outlineId: context.outline!.id,
-            }),
-            onDone: {
-              target: 'startingLessons',
-              actions: assign({
-                outline: ({ event }) => event.output.outline,
-                progressMessage: 'Starting lesson generation...',
-              }),
-            },
-            onError: {
-              target: '#outlineReview.viewing',
-              actions: assign({
-                error: ({ event }) =>
-                  createAuthError(
-                    'NETWORK_ERROR',
-                    event.error instanceof Error ? event.error.message : 'Failed to approve outline',
-                    true
-                  ),
-              }),
-            },
-          },
+      invoke: {
+        id: 'generateLessons',
+        src: 'generateLessonsActor',
+        input: ({ context }) => ({ courseId: context.courseId }),
+        onDone: {
+          target: 'success',
+          actions: assign({
+            lessonJobId: ({ event }) => event.output.job.id,
+            progressMessage: 'Lessons queued for generation',
+          }),
         },
-        startingLessons: {
-          invoke: {
-            id: 'generateLessons',
-            src: 'generateLessonsActor',
-            input: ({ context }) => ({ courseId: context.courseId }),
-            onDone: {
-              target: '#outlineReview.success',
-              actions: assign({
-                lessonJobId: ({ event }) => event.output.job.id,
-                progressMessage: 'Lessons queued for generation',
-              }),
-            },
-            onError: {
-              target: '#outlineReview.viewing',
-              actions: assign({
-                error: ({ event }) =>
-                  createAuthError(
-                    'NETWORK_ERROR',
-                    event.error instanceof Error
-                      ? event.error.message
-                      : 'Failed to start lesson generation',
-                    true
-                  ),
-              }),
-            },
-          },
+        onError: {
+          target: 'viewing',
+          actions: assign({
+            error: ({ event }) =>
+              createAuthError(
+                'NETWORK_ERROR',
+                event.error instanceof Error
+                  ? event.error.message
+                  : 'Failed to start lesson generation',
+                true
+              ),
+          }),
         },
       },
     },
@@ -517,10 +484,7 @@ export function isLoading(stateValue: unknown): boolean {
     return ['loading', 'approving', 'regenerating'].includes(stateValue);
   }
   if (typeof stateValue === 'object' && stateValue !== null) {
-    return (
-      'pollingOutline' in stateValue ||
-      'approving' in stateValue
-    );
+    return 'pollingOutline' in stateValue;
   }
   return false;
 }

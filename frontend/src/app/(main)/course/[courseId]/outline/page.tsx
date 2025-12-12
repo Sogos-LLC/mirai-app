@@ -500,7 +500,7 @@ export default function OutlineReviewPage() {
             {/* Info box */}
             <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-6">
               <p className="text-sm text-green-800 dark:text-green-200">
-                <strong>Ready to generate your course?</strong> Click &quot;Approve &amp; Generate
+                <strong>Ready to generate your course?</strong> Click &quot;Generate
                 Lessons&quot; to start creating lesson content. This process runs in the background
                 and you&apos;ll be notified when complete.
               </p>
@@ -527,7 +527,7 @@ export default function OutlineReviewPage() {
                     Processing...
                   </>
                 ) : (
-                  'Approve & Generate Lessons'
+                  'Generate Lessons'
                 )}
               </Button>
             </div>
