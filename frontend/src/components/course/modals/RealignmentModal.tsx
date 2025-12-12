@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Check, Loader2, Target, BookOpen, MessageSquare, Plus, X, ChevronDown, User, Users } from 'lucide-react';
+import { Check, Loader2, Target, BookOpen, MessageSquare, Plus, X, ChevronDown, User, Users, AlertCircle } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
 import type { SMEPersona, AudiencePersona } from '@/gen/mirai/v1/course_wizard_pb';
-import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
+import { JobEventType, type LessonComponent, type GenerationJob } from '@/gen/mirai/v1/ai_generation_pb';
+import { useJobStream } from '@/hooks/useJobStream';
 
 export interface LearningObjective {
   id: string;
@@ -19,6 +20,10 @@ export interface RealignParams {
   customPrompt: string;
 }
 
+export interface RealignResult {
+  job?: GenerationJob;
+}
+
 interface RealignmentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,7 +31,7 @@ interface RealignmentModalProps {
   smePersonas: SMEPersona[];
   audiencePersonas: AudiencePersona[];
   learningObjectives: LearningObjective[];
-  onRealign: (params: RealignParams) => Promise<void>;
+  onRealign: (params: RealignParams) => Promise<RealignResult | void>;
   isLoading?: boolean;
 }
 
@@ -46,6 +51,11 @@ export function RealignmentModal({
   const [showPersonaDropdown, setShowPersonaDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // SSE job tracking state
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobError, setJobError] = useState<string | null>(null);
+  const { lastEvent } = useJobStream();
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -56,6 +66,39 @@ export function RealignmentModal({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Monitor SSE events for job completion
+  useEffect(() => {
+    if (!activeJobId || !lastEvent) return;
+
+    // Only process events for this specific job
+    if (lastEvent.job?.id !== activeJobId) return;
+
+    const eventType = lastEvent.eventType;
+
+    if (eventType === JobEventType.COMPLETED) {
+      // Success - close modal
+      setActiveJobId(null);
+      setJobError(null);
+      setSelectedPersonaIds(new Set());
+      setSelectedLOIds(new Set());
+      setCustomPrompt('');
+      onClose();
+    } else if (eventType === JobEventType.FAILED) {
+      // Error - show message, allow retry
+      setActiveJobId(null);
+      setJobError(lastEvent.job?.errorMessage || 'Regeneration failed. Please try again.');
+    }
+    // UPDATED events indicate progress - job still running (no action needed)
+  }, [activeJobId, lastEvent, onClose]);
+
+  // Reset job state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveJobId(null);
+      setJobError(null);
+    }
+  }, [isOpen]);
 
   const addPersona = useCallback((id: string) => {
     setSelectedPersonaIds((prev) => {
@@ -89,26 +132,57 @@ export function RealignmentModal({
   const handleRealign = async () => {
     if (!component) return;
 
-    await onRealign({
-      componentId: component.id,
-      personaIds: Array.from(selectedPersonaIds),
-      learningObjectiveIds: Array.from(selectedLOIds),
-      customPrompt: customPrompt.trim(),
-    });
+    // Clear any previous error
+    setJobError(null);
 
-    // Reset state on success
-    setSelectedPersonaIds(new Set());
-    setSelectedLOIds(new Set());
-    setCustomPrompt('');
-    onClose();
+    try {
+      const result = await onRealign({
+        componentId: component.id,
+        personaIds: Array.from(selectedPersonaIds),
+        learningObjectiveIds: Array.from(selectedLOIds),
+        customPrompt: customPrompt.trim(),
+      });
+
+      // Debug: Log the result to understand structure
+      console.warn('[RealignmentModal] onRealign result:', JSON.stringify(result, null, 2));
+
+      // Track job ID for SSE monitoring - don't close yet
+      // Check for truthy job.id (empty string is falsy in JS but valid in proto)
+      const jobId = result?.job?.id;
+      if (jobId && jobId.length > 0) {
+        console.warn('[RealignmentModal] Setting activeJobId:', jobId);
+        setActiveJobId(jobId);
+        // Modal stays open showing "Regenerating..." until SSE COMPLETED event
+      } else {
+        // Fallback: no job returned (shouldn't happen, but handle gracefully)
+        console.warn('[RealignmentModal] No job ID returned from regenerate component:', result);
+        setSelectedPersonaIds(new Set());
+        setSelectedLOIds(new Set());
+        setCustomPrompt('');
+        onClose();
+      }
+    } catch (error) {
+      // API error - show in modal
+      console.error('[RealignmentModal] Error during regeneration:', error);
+      setJobError(error instanceof Error ? error.message : 'Failed to start regeneration');
+    }
   };
 
   const handleClose = () => {
+    console.warn('[RealignmentModal] handleClose called, activeJobId:', activeJobId);
+    // Don't allow closing while job is in progress
+    if (activeJobId) {
+      console.warn('[RealignmentModal] Blocking close - job in progress');
+      return;
+    }
+
     // Reset state on close
     setSelectedPersonaIds(new Set());
     setSelectedLOIds(new Set());
     setCustomPrompt('');
     setShowPersonaDropdown(false);
+    setActiveJobId(null);
+    setJobError(null);
     onClose();
   };
 
@@ -129,25 +203,42 @@ export function RealignmentModal({
   const hasSelections = selectedPersonaIds.size > 0 || selectedLOIds.size > 0 || customPrompt.trim().length > 0;
   const allPersonas = [...smePersonas, ...audiencePersonas];
 
+  // Include active job in loading state
+  const effectiveIsLoading = isLoading || !!activeJobId;
+
   const footer = (
-    <div className="flex justify-end gap-3">
-      <Button variant="secondary" onClick={handleClose} disabled={isLoading}>
-        Cancel
-      </Button>
-      <Button
-        variant="primary"
-        onClick={handleRealign}
-        disabled={isLoading || !hasSelections}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Regenerating...
-          </>
-        ) : (
-          'Regenerate with Alignment'
-        )}
-      </Button>
+    <div className="flex flex-col gap-3">
+      {/* Error display */}
+      {jobError && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700 dark:text-red-300">{jobError}</p>
+        </div>
+      )}
+      <div className="flex justify-end gap-3">
+        <Button variant="secondary" onClick={handleClose} disabled={effectiveIsLoading}>
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleRealign}
+          disabled={effectiveIsLoading || !hasSelections}
+        >
+          {activeJobId ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Regenerating...
+            </>
+          ) : isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Starting...
+            </>
+          ) : (
+            'Regenerate with Alignment'
+          )}
+        </Button>
+      </div>
     </div>
   );
 

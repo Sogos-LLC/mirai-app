@@ -47,7 +47,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, LessonComponentType } from '@/hooks/useAIGeneration';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 import { EditModal } from '@/components/course/modals/EditModal';
-import { RealignmentModal, type RealignParams, type LearningObjective } from '@/components/course/modals/RealignmentModal';
+import { RealignmentModal, type RealignParams, type RealignResult, type LearningObjective } from '@/components/course/modals/RealignmentModal';
 import { useCourseEditorStore, setOnSaveCallback, setOnPersistCallback, setOnPersistSuccessCallback } from '@/store/zustand/courseEditorStore';
 import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
 import { useIsMobile } from '@/hooks/useBreakpoint';
@@ -490,13 +490,13 @@ export default function CourseEditorPage() {
     setRealignmentComponent(null);
   }, []);
 
-  const handleRealign = useCallback(async (params: RealignParams) => {
+  const handleRealign = useCallback(async (params: RealignParams): Promise<RealignResult | void> => {
     const generatedLessonId = currentLesson?.generated?.id;
     if (!generatedLessonId) return;
 
     setIsRealigning(true);
     try {
-      await regenerateComponent({
+      const result = await regenerateComponent({
         courseId,
         generatedLessonId,
         componentId: params.componentId,
@@ -506,8 +506,8 @@ export default function CourseEditorPage() {
           learningObjectiveIds: params.learningObjectiveIds,
         },
       });
-      // Note: The component will be updated via query invalidation
-      // The modal's onRealign calls onClose after success
+      // Return job info for SSE tracking - modal will wait for COMPLETED event
+      return { job: result.job };
     } catch (error) {
       console.error('Failed to realign component:', error);
       throw error; // Re-throw so the modal can show error state

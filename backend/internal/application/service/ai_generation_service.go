@@ -813,8 +813,31 @@ func (s *AIGenerationService) ProcessComponentRegenJob(ctx context.Context, job 
 		return s.failJob(ctx, job, fmt.Sprintf("failed to get AI provider: %v", err))
 	}
 
-	// Build lesson context
-	lessonContext := fmt.Sprintf("Course: %s\nLesson: %s", content.Settings.Title, targetLesson.Title)
+	// Build lesson context with sibling component content for better AI context
+	type siblingComponentContext struct {
+		Type    string `json:"type"`
+		Order   int    `json:"order"`
+		Content string `json:"content"`
+	}
+	var siblingComponents []siblingComponentContext
+	for _, comp := range targetLesson.Components {
+		if comp.ID != componentUUID.String() {
+			siblingComponents = append(siblingComponents, siblingComponentContext{
+				Type:    comp.Type,
+				Order:   int(comp.Order),
+				Content: string(comp.ContentJSON),
+			})
+		}
+	}
+
+	var lessonContext string
+	if len(siblingComponents) > 0 {
+		siblingJSON, _ := json.Marshal(siblingComponents)
+		lessonContext = fmt.Sprintf("Course: %s\nLesson: %s\n\nOther components in this lesson (for context):\n%s",
+			content.Settings.Title, targetLesson.Title, string(siblingJSON))
+	} else {
+		lessonContext = fmt.Sprintf("Course: %s\nLesson: %s", content.Settings.Title, targetLesson.Title)
+	}
 
 	// Build target audience from wizard data if alignment targets are provided
 	var targetAudience service.TargetAudienceInput

@@ -87,70 +87,117 @@ export class CourseEditorPage {
 
   /** Click on a lesson by index (0-based) */
   async selectLessonByIndex(index: number): Promise<void> {
-    // First, click on a section to expand it
-    // Find all top-level buttons in the sidebar (sections have chevron icons)
-    const sectionButtons = await this.sidebar.locator('button').all();
-    let sectionExpanded = false;
+    console.log(`Attempting to select lesson at index ${index}`);
 
-    for (const btn of sectionButtons) {
+    // Strategy: Find section buttons, expand one, then find nested lesson buttons
+    // Sections are identified by having a chevron icon (svg) as direct child
+    // Lessons are nested inside expanded sections and have a FileText icon
+
+    // Wait for sidebar to be stable
+    await this.page.waitForTimeout(500);
+
+    // Desktop sidebar: aside element with nav inside
+    const desktopNav = this.sidebar.locator('nav');
+    const navExists = await desktopNav.count() > 0;
+
+    if (!navExists) {
+      console.log('Desktop nav not found, trying alternative approach');
+    }
+
+    // Find section buttons - they're the ones with chevron icons (ChevronRight or ChevronDown)
+    // In this UI, sections have: button > svg(chevron) + span(title)
+    const sectionLocator = navExists
+      ? desktopNav.locator('button:has(svg)')
+      : this.sidebar.locator('button:has(svg)');
+
+    const sectionButtons = await sectionLocator.all();
+    console.log(`Found ${sectionButtons.length} section buttons with chevron icons`);
+
+    // Find a collapsed section and expand it
+    let expandedSectionIndex = -1;
+    for (let i = 0; i < sectionButtons.length; i++) {
+      const btn = sectionButtons[i];
       const text = await btn.textContent().catch(() => '');
-      // Look for section headers (not Course Outline title)
-      if (text && !text.includes('Course Outline') && text.trim().length > 5) {
-        console.log(`Clicking section to expand: "${text.substring(0, 40)}..."`);
+
+      // Skip "Course Outline" header
+      if (text?.includes('Course Outline')) continue;
+
+      // Check if section is collapsed (has ChevronRight, not ChevronDown)
+      // ChevronRight has path d="m9 18 6-6-6-6" and ChevronDown has d="m6 9 6 6 6-6"
+      const svgPath = await btn.locator('svg path').getAttribute('d').catch(() => '');
+
+      const isCollapsed = svgPath?.includes('m9 18') || svgPath?.includes('9 18'); // ChevronRight pattern
+      const isExpanded = svgPath?.includes('m6 9') || svgPath?.includes('6 9');  // ChevronDown pattern
+
+      console.log(`Section ${i}: "${text?.substring(0, 30)}..." - collapsed: ${isCollapsed}, expanded: ${isExpanded}`);
+
+      if (isCollapsed || (!isCollapsed && !isExpanded)) {
+        // Click to expand this section
+        console.log(`Expanding section: "${text?.substring(0, 40)}..."`);
         await btn.click();
         await this.page.waitForTimeout(1000); // Wait for expansion animation
-        sectionExpanded = true;
+        expandedSectionIndex = i;
+        break;
+      } else if (isExpanded) {
+        // Section already expanded, use this one
+        expandedSectionIndex = i;
+        console.log(`Section already expanded: "${text?.substring(0, 40)}..."`);
         break;
       }
     }
 
-    if (!sectionExpanded) {
-      console.log('No sections found to expand');
-    }
-
-    // Take screenshot after expansion attempt
+    // Take screenshot after expansion
     await this.screenshot('after-expansion', 'After clicking section to expand');
 
-    // Wait a moment then re-query all buttons
-    await this.page.waitForTimeout(500);
+    if (expandedSectionIndex < 0) {
+      console.log('No sections found to expand, trying direct lesson search');
+    }
 
-    // Now find all buttons again - lessons should be visible after expansion
-    // Lessons appear as buttons AFTER section expansion, they are usually the
-    // more deeply nested ones or the ones that appear after clicking a section
-    const allButtons = await this.sidebar.locator('button').all();
+    // Now find lesson buttons - they appear AFTER section expansion
+    // Lessons have FileText icon (smaller indented buttons without chevrons)
+    // Or we can look for buttons that appear in ml-4 divs (indented lessons)
+
+    // Lessons are: button elements that are NOT section headers
+    // They appear after a section is expanded and have FileText icon
+    const allButtons = navExists
+      ? await desktopNav.locator('button').all()
+      : await this.sidebar.locator('button').all();
+
     const lessonButtons: typeof allButtons = [];
 
     console.log(`Total buttons after expansion: ${allButtons.length}`);
 
     for (const btn of allButtons) {
       const text = await btn.textContent().catch(() => '');
-      const classList = await btn.getAttribute('class').catch(() => '');
 
-      // Skip section headers and UI elements
-      if (
-        !text ||
-        text.includes('Course Outline') ||
-        text.trim().length < 5
-      ) {
+      // Skip empty or header buttons
+      if (!text || text.includes('Course Outline') || text.trim().length < 3) {
         continue;
       }
 
-      // Check if this is a section (sections have chevron rotation or specific keywords)
-      const isSectionHeader =
-        text.match(/^(Introduction to|Lead Management|Opportunity|Contract Lifecycle|Quote-to-Cash|Renewal|Analytics|Post-Sale|Getting Started|Overview|Foundation|Advanced)/i) !== null;
+      // Check if this button has a chevron (making it a section header)
+      const hasChevron = await btn.locator('svg').first().evaluate(
+        (svg) => {
+          const path = svg.querySelector('path');
+          const d = path?.getAttribute('d') || '';
+          // Chevron patterns - ChevronRight or ChevronDown
+          return d.includes('m9 18') || d.includes('m6 9') || d.includes('9 18') || d.includes('6 9');
+        }
+      ).catch(() => false);
 
-      if (!isSectionHeader) {
+      if (!hasChevron) {
+        // This is likely a lesson (no chevron icon)
         lessonButtons.push(btn);
-        console.log(`  Lesson candidate: "${text.substring(0, 40)}..."`);
+        console.log(`  Lesson found: "${text.substring(0, 50)}..."`);
       }
     }
 
-    console.log(`Found ${lessonButtons.length} potential lesson buttons`);
+    console.log(`Found ${lessonButtons.length} lesson buttons`);
 
     if (lessonButtons.length > 0) {
       const targetIndex = Math.min(index, lessonButtons.length - 1);
       const lessonText = await lessonButtons[targetIndex].textContent();
-      console.log(`Clicking lesson ${targetIndex}: "${lessonText?.substring(0, 40)}..."`);
+      console.log(`Clicking lesson ${targetIndex}: "${lessonText?.substring(0, 50)}..."`);
 
       await lessonButtons[targetIndex].click();
       await this.page.waitForTimeout(TIMEOUTS.uiTransition);
@@ -158,9 +205,9 @@ export class CourseEditorPage {
       // Wait for lesson content to load - "Select a Lesson" should disappear
       try {
         await this.page.getByText('Select a Lesson').waitFor({ state: 'hidden', timeout: 15000 });
-        console.log('Lesson content loaded');
+        console.log('Lesson content loaded successfully');
       } catch {
-        console.log('Warning: "Select a Lesson" still visible after clicking');
+        console.log('Warning: "Select a Lesson" still visible - lesson may not have loaded');
       }
 
       await this.screenshot(`lesson-${targetIndex}-selected`, `Selected lesson ${targetIndex}`);
@@ -454,6 +501,261 @@ export class CourseEditorPage {
     } else {
       console.log('Save button not visible - no changes to save');
     }
+  }
+
+  // ===== Realignment Functionality =====
+
+  /** Find the first text component (non-IMAGE) that supports realignment */
+  async findFirstTextComponent() {
+    // Components are in: main > CardContent > DndContext > SortableContext > div.space-y-4 > div.group/item > ...
+    // The actual content wrapper with the 3-dot menu is div.group.relative inside each component
+    // Look specifically in the component list area
+
+    // First find the component list container
+    const componentContainer = this.page.locator('main div.space-y-4');
+
+    // Find all component wrappers (group/item is the outer, group.relative is the inner)
+    // The 3-dot menu button with aria-label="Component options" is inside the inner wrapper
+    const componentWrappers = componentContainer.locator('> div').filter({
+      has: this.page.locator('button[aria-label="Component options"]'),
+    });
+
+    const count = await componentWrappers.count();
+    console.log(`Found ${count} components with options menu`);
+
+    if (count > 0) {
+      // Get the first component that has text content (not just an image)
+      for (let i = 0; i < count; i++) {
+        const wrapper = componentWrappers.nth(i);
+        // Check if this has text/prose content (not just an image)
+        const hasText = await wrapper.locator('.prose, p, h1, h2, h3').count();
+        const hasOnlyImage = await wrapper.locator('figure img, [class*="image-placeholder"]').count() > 0 &&
+                            await wrapper.locator('.prose, p').count() === 0;
+
+        if (hasText > 0 && !hasOnlyImage) {
+          console.log(`Using component ${i} with text content`);
+          return wrapper;
+        }
+      }
+
+      // Fallback to first component
+      console.log('Falling back to first component');
+      return componentWrappers.first();
+    }
+
+    console.log('No components found with options menu');
+    return null;
+  }
+
+  /** Get the text content of a component for comparison */
+  async getComponentTextContent(component: ReturnType<typeof this.page.locator>): Promise<string> {
+    // Try to get text from prose content
+    const prose = component.locator('.prose');
+    if (await prose.count() > 0) {
+      return (await prose.first().textContent()) || '';
+    }
+    // Fallback to any text content
+    return (await component.textContent()) || '';
+  }
+
+  /** Hover over a component and click the 3-dot menu */
+  async openRealignmentMenu(component: ReturnType<typeof this.page.locator>): Promise<void> {
+    // The options button is at top-right (top-2 right-2) INSIDE the component
+    // The delete button is at bottom-right (-bottom-2 -right-2) OUTSIDE the component wrapper
+
+    // First scroll the component into a good position in the viewport
+    await component.scrollIntoViewIfNeeded();
+    await this.page.waitForTimeout(500);
+
+    // Take screenshot before attempting click
+    await this.screenshot('before-menu-click', 'About to click options menu');
+
+    // Hover over the component to reveal the options button
+    // The button has opacity-0 by default and opacity-100 on group-hover
+    await component.hover();
+    await this.page.waitForTimeout(600); // Wait for opacity transition
+
+    // Find the 3-dot menu button within this specific component
+    const menuButton = component.locator('button[aria-label="Component options"]');
+
+    // Verify button is visible
+    const isVisible = await menuButton.isVisible();
+    console.log(`Menu button visible: ${isVisible}`);
+
+    if (!isVisible) {
+      // Try hovering again closer to the top-right where the button is
+      const box = await component.boundingBox();
+      if (box) {
+        // Hover at top-right area of component
+        await this.page.mouse.move(box.x + box.width - 30, box.y + 20);
+        await this.page.waitForTimeout(500);
+      }
+    }
+
+    // Wait for button to be actionable
+    await menuButton.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Use Playwright's click which handles scrolling and waiting
+    // Use position to click center of button, avoiding any potential overlay issues
+    try {
+      await menuButton.click({ position: { x: 10, y: 10 }, timeout: 5000 });
+      console.log('Clicked options menu button');
+    } catch (e) {
+      console.log('Standard click failed, trying with force');
+      // As last resort, use force but on the correct button
+      await menuButton.click({ force: true });
+      console.log('Force clicked options menu button');
+    }
+
+    await this.page.waitForTimeout(300);
+
+    // Verify the dropdown appeared
+    const dropdown = component.locator('div.absolute.top-full');
+    const dropdownVisible = await dropdown.isVisible().catch(() => false);
+    console.log(`Dropdown menu visible: ${dropdownVisible}`);
+
+    // Take screenshot after menu should be open
+    await this.screenshot('after-menu-click', 'After clicking options menu');
+  }
+
+  /** Click the Realignment option in the component menu */
+  async clickRealignmentOption(): Promise<void> {
+    const realignmentButton = this.page.getByRole('button', { name: /Realignment/i });
+    await realignmentButton.click();
+    await this.page.waitForTimeout(500);
+    console.log('Clicked Realignment option');
+  }
+
+  /** Wait for the realignment modal to open */
+  async waitForRealignmentModal(): Promise<void> {
+    await this.page.waitForSelector('[role="dialog"]', { timeout: 5000 });
+    const title = this.page.getByRole('heading', { name: /Realign Content/i });
+    await title.waitFor({ state: 'visible', timeout: 5000 });
+    console.log('Realignment modal is open');
+  }
+
+  /** Check if realignment modal is open */
+  async isRealignmentModalOpen(): Promise<boolean> {
+    const title = this.page.getByRole('heading', { name: /Realign Content/i });
+    return title.isVisible();
+  }
+
+  /** Check if personas are available in the modal (tests Bug #1) */
+  async hasPersonasInModal(): Promise<{ hasPersonas: boolean; hasAddButton: boolean; message: string }> {
+    // Check for "Add Persona" button (indicates personas exist)
+    const addPersonaBtn = this.page.getByText('Add Persona');
+    const hasAddButton = await addPersonaBtn.isVisible().catch(() => false);
+
+    // Check for "No personas available" message
+    const noPersonasMsg = this.page.locator('text=No personas available');
+    const hasNoPersonasMsg = await noPersonasMsg.isVisible().catch(() => false);
+
+    if (hasAddButton) {
+      return { hasPersonas: true, hasAddButton: true, message: 'Personas are available' };
+    } else if (hasNoPersonasMsg) {
+      return { hasPersonas: false, hasAddButton: false, message: 'No personas available (Bug #1)' };
+    } else {
+      return { hasPersonas: false, hasAddButton: false, message: 'Could not determine persona state' };
+    }
+  }
+
+  /** Select a learning objective in the realignment modal */
+  async selectFirstLearningObjective(): Promise<boolean> {
+    // Learning objectives are rendered as buttons with checkbox styling
+    const loButtons = this.page.locator('[role="dialog"] button').filter({
+      has: this.page.locator('svg'), // Has checkbox icon
+    });
+
+    const count = await loButtons.count();
+    console.log(`Found ${count} learning objective buttons`);
+
+    if (count > 0) {
+      // Find one that looks like a learning objective (starts with verb)
+      for (let i = 0; i < count; i++) {
+        const text = await loButtons.nth(i).textContent();
+        if (text && text.match(/^(Identify|Describe|Explain|Express|Apply|Analyze|Evaluate|Create)/i)) {
+          await loButtons.nth(i).click();
+          console.log(`Selected learning objective: "${text.substring(0, 50)}..."`);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /** Fill in the additional instructions textarea */
+  async fillAdditionalInstructions(instructions: string): Promise<void> {
+    const textarea = this.page.locator('[role="dialog"] textarea');
+    await textarea.fill(instructions);
+    console.log(`Filled additional instructions: "${instructions.substring(0, 50)}..."`);
+  }
+
+  /** Click the "Regenerate with Alignment" button */
+  async clickRegenerateWithAlignment(): Promise<void> {
+    const regenButton = this.page.getByRole('button', { name: /Regenerate with Alignment/i });
+    await regenButton.click();
+    console.log('Clicked Regenerate with Alignment');
+  }
+
+  /** Wait for regeneration to complete (polls for job completion) */
+  async waitForRegenerationComplete(timeoutMs = 180000): Promise<{
+    success: boolean;
+    modalClosed: boolean;
+    error?: string;
+  }> {
+    const startTime = Date.now();
+
+    // First check if modal closed immediately (Bug #2 indicator)
+    await this.page.waitForTimeout(2000);
+    const modalStillOpen = await this.isRealignmentModalOpen();
+
+    if (!modalStillOpen) {
+      console.log('Modal closed immediately - potential Bug #2');
+      // Modal closed, but we still need to wait for content to update
+      // Poll for component content changes
+    }
+
+    // Wait for either:
+    // 1. Modal shows loading state and then closes
+    // 2. Content updates in the background
+
+    while (Date.now() - startTime < timeoutMs) {
+      // Check for error in modal
+      const errorVisible = await this.page.locator('text=Failed to regenerate').isVisible().catch(() => false);
+      if (errorVisible) {
+        return { success: false, modalClosed: !modalStillOpen, error: 'Failed to regenerate' };
+      }
+
+      // Check if modal closed (success case when bug is fixed)
+      const modalOpen = await this.isRealignmentModalOpen();
+      if (!modalOpen && modalStillOpen) {
+        // Modal was open, now closed - regeneration complete
+        console.log('Modal closed - regeneration complete');
+        return { success: true, modalClosed: true };
+      }
+
+      // Log progress
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      if (elapsed % 10 === 0 && elapsed > 0) {
+        console.log(`Waiting for regeneration... ${elapsed}s elapsed`);
+      }
+
+      await this.page.waitForTimeout(3000);
+    }
+
+    return { success: false, modalClosed: !await this.isRealignmentModalOpen(), error: 'Timeout' };
+  }
+
+  /** Close the realignment modal (cancel) */
+  async closeRealignmentModal(): Promise<void> {
+    const cancelButton = this.page.getByRole('button', { name: /Cancel/i });
+    if (await cancelButton.isVisible()) {
+      await cancelButton.click();
+    } else {
+      await this.page.keyboard.press('Escape');
+    }
+    await this.page.waitForTimeout(500);
   }
 
   // ===== Utilities =====

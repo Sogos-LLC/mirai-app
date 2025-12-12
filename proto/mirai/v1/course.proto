@@ -4,6 +4,7 @@ package mirai.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
+import "mirai/v1/course_wizard.proto";
 
 // CourseStatus represents the publication state of a course.
 enum CourseStatus {
@@ -277,6 +278,8 @@ message CreateCourseRequest {
   repeated LearningObjective learning_objectives = 4;
   optional AssessmentSettings assessment_settings = 5;
   optional CourseContent content = 6;
+  // Wizard data containing personas, tone, etc. for AI generation
+  optional WizardStepData wizard_data = 7;
 }
 
 // CreateCourseResponse contains the newly created course.

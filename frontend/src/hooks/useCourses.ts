@@ -32,6 +32,15 @@ import {
   CourseBlockSchema,
   LessonSchema,
 } from '@/gen/mirai/v1/course_pb';
+import {
+  WizardStepDataSchema,
+  SMEPersonaSchema,
+  AudiencePersonaSchema,
+  ToneOptionSchema,
+  type SMEPersona,
+  type AudiencePersona,
+  type ToneOption,
+} from '@/gen/mirai/v1/course_wizard_pb';
 import { create } from '@bufbuild/protobuf';
 
 // Re-export types for convenience
@@ -142,6 +151,20 @@ export function useCreateCourse() {
           order: number;
         }>;
       };
+      // Wizard data for AI generation (personas, tone, etc.)
+      wizardData?: {
+        courseName?: string;
+        desiredOutcomes?: string;
+        improvedTitle?: string;
+        description?: string;
+        smePersonas?: SMEPersona[];
+        selectedSmeIds?: string[];
+        audiencePersonas?: AudiencePersona[];
+        selectedAudienceIds?: string[];
+        toneOptions?: ToneOption[];
+        selectedToneId?: string;
+        additionalContext?: string;
+      };
     }) => {
       const request = create(CreateCourseRequestSchema, {
         id: courseData.id,
@@ -212,6 +235,28 @@ export function useCreateCourse() {
                   order: b.order,
                 })
               ) ?? [],
+            })
+          : undefined,
+        // Map wizard data for AI generation
+        wizardData: courseData.wizardData
+          ? create(WizardStepDataSchema, {
+              courseName: courseData.wizardData.courseName ?? '',
+              desiredOutcomes: courseData.wizardData.desiredOutcomes ?? '',
+              improvedTitle: courseData.wizardData.improvedTitle ?? '',
+              description: courseData.wizardData.description ?? '',
+              smePersonas: courseData.wizardData.smePersonas?.map(p =>
+                create(SMEPersonaSchema, p)
+              ) ?? [],
+              selectedSmeIds: courseData.wizardData.selectedSmeIds ?? [],
+              audiencePersonas: courseData.wizardData.audiencePersonas?.map(p =>
+                create(AudiencePersonaSchema, p)
+              ) ?? [],
+              selectedAudienceIds: courseData.wizardData.selectedAudienceIds ?? [],
+              toneOptions: courseData.wizardData.toneOptions?.map(t =>
+                create(ToneOptionSchema, t)
+              ) ?? [],
+              selectedToneId: courseData.wizardData.selectedToneId ?? '',
+              additionalContext: courseData.wizardData.additionalContext ?? '',
             })
           : undefined,
       });

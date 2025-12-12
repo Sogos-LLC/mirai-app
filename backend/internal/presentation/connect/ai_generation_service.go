@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"connectrpc.com/connect"
@@ -105,7 +106,14 @@ func (s *AIGenerationServiceServer) GetCourseOutline(
 	}
 
 	// Also get wizard data for realignment features
-	wizardData, _ := s.aiService.GetWizardData(ctx, kratosID, courseID)
+	wizardData, err := s.aiService.GetWizardData(ctx, kratosID, courseID)
+	if err != nil {
+		// Log the error but don't fail the request - wizard data is supplementary
+		slog.Warn("failed to get wizard data for course",
+			"courseID", courseID.String(),
+			"error", err.Error(),
+		)
+	}
 
 	return connect.NewResponse(&v1.GetCourseOutlineResponse{
 		Outline:    courseOutlineToProto(outline),

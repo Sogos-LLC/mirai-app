@@ -121,11 +121,24 @@ export default function CourseWizard() {
               additionalContext: string;
             };
           }) => {
-            // Step 1: Create a minimal course to get a courseId
+            // Step 1: Create a course with wizard data for AI generation context
             const courseResult = await createCourse.mutate({
               settings: {
                 title: input.title,
                 desiredOutcome: input.description,
+              },
+              // Include wizard data so it's stored with the course
+              // This enables persona-aware outline generation and realignment features
+              wizardData: {
+                improvedTitle: input.title,
+                description: input.description,
+                smePersonas: input.smePersonas,
+                selectedSmeIds: input.smePersonas.map(p => p.id),
+                audiencePersonas: input.audiencePersonas,
+                selectedAudienceIds: input.audiencePersonas.map(p => p.id),
+                toneOptions: input.toneOption ? [input.toneOption] : [],
+                selectedToneId: input.toneOption?.id ?? '',
+                additionalContext: input.additionalContext,
               },
             });
 
@@ -133,6 +146,7 @@ export default function CourseWizard() {
             console.log('[DEBUG-COURSEID] Wizard: createCourse returned', {
               courseId: courseResult.course?.id,
               title: courseResult.course?.settings?.title,
+              hasWizardData: true,
             });
 
             if (!courseResult.course?.id) {
@@ -145,6 +159,7 @@ export default function CourseWizard() {
             console.log('[DEBUG-COURSEID] Wizard: calling generateCourseOutline with courseId:', courseId);
 
             // Step 2: Generate the course outline (starts background job)
+            // The job will read wizard data from the course to generate persona-aware content
             const outlineResult = await generateCourseOutline.mutate({
               courseId,
               desiredOutcome: input.description,

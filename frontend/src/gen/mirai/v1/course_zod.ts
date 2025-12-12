@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { BlockType, CourseStatus, ExportFormat, ExportStatus, FolderType } from "./course_pb";
+import { WizardStepDataSchema } from "./course_wizard_zod";
 
 /**
  * Zod schema for CourseStatus enum
@@ -402,6 +403,7 @@ export const CreateCourseRequestSchema = z.object({
   learningObjectives: z.array(LearningObjectiveSchema),
   assessmentSettings: AssessmentSettingsSchema.optional(),
   content: CourseContentSchema.optional(),
+  wizardData: WizardStepDataSchema.optional(),
 });
 
 export type CreateCourseRequest = z.infer<typeof CreateCourseRequestSchema>;
