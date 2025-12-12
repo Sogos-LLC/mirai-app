@@ -359,26 +359,23 @@ export class CourseEditorPage {
     await this.page.waitForTimeout(500);
   }
 
+  /** Verify the modal is still open (for testing that auto-close is NOT happening) */
+  async verifyModalStillOpen(): Promise<boolean> {
+    const modalTitle = this.page.getByRole('heading', { name: /Edit Image/i });
+    const isOpen = await modalTitle.isVisible();
+    console.log(`Modal is ${isOpen ? 'STILL OPEN' : 'CLOSED'} after image generation`);
+    return isOpen;
+  }
+
   /** Save the current component changes (in modal) */
   async saveChanges(): Promise<void> {
     const saveButton = this.page.getByRole('button', { name: /Save Changes/i });
     await expect(saveButton).toBeVisible({ timeout: TIMEOUTS.elementVisible });
 
-    // Wait for button to be enabled (may be disabled during generation)
-    // The ImageEditor component auto-saves after generation, but the button
-    // may be disabled while isGenerating is true
-    try {
-      await expect(saveButton).toBeEnabled({ timeout: 10000 });
-      await saveButton.click();
-      console.log('Clicked Save Changes in modal');
-    } catch {
-      // If button remains disabled, it means auto-save already happened
-      // and we can close the modal via other means
-      console.log('Save Changes button disabled - auto-save may have already saved');
-      // Try pressing Escape to close modal
-      await this.page.keyboard.press('Escape');
-      console.log('Pressed Escape to close modal');
-    }
+    // Wait for button to be enabled (after generation completes, isGenerating becomes false)
+    await expect(saveButton).toBeEnabled({ timeout: 10000 });
+    await saveButton.click();
+    console.log('Clicked Save Changes in modal');
     await this.page.waitForTimeout(TIMEOUTS.uiTransition);
   }
 

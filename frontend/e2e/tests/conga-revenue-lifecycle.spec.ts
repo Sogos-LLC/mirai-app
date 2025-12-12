@@ -353,12 +353,23 @@ test.describe('Conga Revenue Lifecycle - Full E2E', () => {
 });
 
 // Standalone test that can run with existing course
+// This test PROVES the correct behavior:
+// 1. User clicks Generate Image
+// 2. Image appears in modal preview (modal STAYS OPEN)
+// 3. User clicks Save Changes
+// 4. Modal closes and course shows the image
 test.describe('Image Generation with Existing Course', () => {
-  test('should generate image and show in modal and editor', async ({ page }) => {
+  test('should generate image, keep modal open for review, then save and show in editor', async ({ page }) => {
     // Use the existing course with 21 lessons
     const existingCourseId = '017e4b49-562b-46df-bd34-138ff7e00ba0';
 
     console.log('\n========== IMAGE GENERATION TEST (EXISTING COURSE) ==========\n');
+    console.log('This test verifies the CORRECT behavior:');
+    console.log('  1. Generate Image → modal stays open with image in preview');
+    console.log('  2. User reviews image');
+    console.log('  3. User clicks Save Changes → modal closes');
+    console.log('  4. Course editor shows the image');
+    console.log('');
 
     // Setup logging
     page.on('console', (msg) => {
@@ -418,16 +429,26 @@ test.describe('Image Generation with Existing Course', () => {
     console.log(`Image URL: ${result.imageUrl}`);
     console.log('========================================\n');
 
-    // PROOF SCREENSHOT 1: Image showing in the modal
-    await takeScreenshot(page, 'existing-07-IMAGE-IN-MODAL', 'PROOF: Generated image showing in Edit Image modal');
+    // ===== CRITICAL ASSERTION: Modal must STILL be open after generation =====
+    console.log('Step 5: Verify modal is STILL OPEN (not auto-closed)...');
+    const modalStillOpen = await courseEditor.verifyModalStillOpen();
+    expect(modalStillOpen).toBe(true); // This FAILS if the old auto-close behavior exists
+
+    // PROOF SCREENSHOT 1: Image showing in the modal (modal is still open!)
+    await takeScreenshot(page, 'existing-07-IMAGE-IN-MODAL', 'PROOF: Generated image showing in Edit Image modal - modal stayed open');
 
     expect(result.success).toBe(true);
     expect(result.imageUrl).toBeTruthy();
 
-    // Step 5: Click Save Changes in modal to close it and persist
-    console.log('Step 5: Click Save Changes in modal...');
+    // Step 6: User clicks Save Changes in modal to close it and persist
+    console.log('Step 6: Click Save Changes in modal (user action to close)...');
     await courseEditor.saveChanges();
     await page.waitForTimeout(1500); // Wait for modal to close
+
+    // Verify modal is now closed
+    const modalClosedAfterSave = !(await courseEditor.verifyModalStillOpen());
+    expect(modalClosedAfterSave).toBe(true);
+    console.log('Modal closed after Save Changes clicked');
 
     // PROOF SCREENSHOT 2: Image showing in course editor (after modal closed)
     await takeScreenshot(page, 'existing-08-IMAGE-IN-EDITOR', 'PROOF: Generated image showing in course editor');
@@ -438,7 +459,11 @@ test.describe('Image Generation with Existing Course', () => {
     console.log(`Image visible in editor: ${isImageInEditor}`);
 
     console.log('\n========== TEST COMPLETE ==========');
-    console.log('PROOF: Image generated, shown in modal, saved, and displayed in editor');
+    console.log('PROOF: Correct behavior verified:');
+    console.log('  ✓ Image generated successfully');
+    console.log('  ✓ Modal stayed open after generation');
+    console.log('  ✓ User clicked Save Changes');
+    console.log('  ✓ Modal closed and image appears in editor');
     console.log(`MinIO URL: ${result.imageUrl}`);
     console.log('====================================\n');
   });
