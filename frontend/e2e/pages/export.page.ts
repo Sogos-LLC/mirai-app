@@ -80,31 +80,50 @@ export class ExportPage {
     const maxWaitMs = TIMEOUTS.backgroundJob;
 
     while (Date.now() - startTime < maxWaitMs) {
-      // Check for completed state
-      const completedHeading = this.page.getByRole('heading', { name: /Export Complete/i });
-      if (await completedHeading.isVisible().catch(() => false)) {
+      // Check for completed state - look for text anywhere in modal
+      const completedText = this.page.getByText('Export Complete!');
+      const downloadButton = this.page.getByRole('button', { name: /Download SCORM/i });
+
+      if (await completedText.isVisible().catch(() => false) ||
+          await downloadButton.isVisible().catch(() => false)) {
         console.log('Export completed successfully!');
         await this.screenshot('export-complete', 'Export completed');
         return { success: true };
       }
 
       // Check for failed state
-      const failedHeading = this.page.getByRole('heading', { name: /Export Failed/i });
-      if (await failedHeading.isVisible().catch(() => false)) {
-        const errorText = await this.page.locator('.text-secondary').textContent();
+      const failedText = this.page.getByText('Export Failed');
+      if (await failedText.isVisible().catch(() => false)) {
+        const errorText = await this.page.locator('.text-secondary').first().textContent();
         console.log('Export failed:', errorText);
         await this.screenshot('export-failed', 'Export failed');
         return { success: false, error: errorText || 'Export failed' };
       }
 
-      // Check for progress bar (processing state)
-      const progressBar = this.page.locator('.bg-purple-600.h-2.rounded-full');
-      if (await progressBar.isVisible().catch(() => false)) {
-        const width = await progressBar.getAttribute('style');
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      // Log current state
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+
+      // Check for starting state
+      const startingText = this.page.getByText('Starting Export...');
+      if (await startingText.isVisible().catch(() => false)) {
         if (elapsed % 5 === 0) {
-          console.log(`Export in progress... ${elapsed}s elapsed, style: ${width}`);
+          console.log(`Starting export... ${elapsed}s elapsed`);
         }
+        await this.page.waitForTimeout(1000);
+        continue;
+      }
+
+      // Check for processing state (Exporting Course with progress bar)
+      const exportingText = this.page.getByText('Exporting Course');
+      const progressBar = this.page.locator('.bg-purple-600.h-2.rounded-full');
+      if (await exportingText.isVisible().catch(() => false) ||
+          await progressBar.isVisible().catch(() => false)) {
+        if (elapsed % 5 === 0) {
+          const width = await progressBar.getAttribute('style').catch(() => null);
+          console.log(`Export in progress... ${elapsed}s elapsed, progress: ${width || 'unknown'}`);
+        }
+        await this.page.waitForTimeout(1000);
+        continue;
       }
 
       await this.page.waitForTimeout(1000);

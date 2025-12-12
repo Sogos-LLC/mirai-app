@@ -106,54 +106,27 @@ test.describe('SCORM Export', () => {
     console.log('\n--- Step 2: Start Export ---');
     await exportPage.startExport();
 
-    // Wait a moment for modal to update
-    await page.waitForTimeout(2000);
+    // Wait a moment for modal to update from idle to starting
+    await page.waitForTimeout(1000);
     await exportPage.screenshot('after-export-start', 'After clicking export');
 
-    // Check for either:
-    // 1. Old code: "Export Started!" with OK button (queued state)
-    // 2. New code: Processing state or Export Complete state
-    const exportStartedHeading = page.getByRole('heading', { name: /Export Started/i });
-    const exportCompleteHeading = page.getByRole('heading', { name: /Export Complete/i });
-    const exportingHeading = page.getByText(/Exporting Course/i);
+    // Wait for export to complete (handles all states: starting → processing → completed)
+    console.log('\n--- Step 3: Wait for Export Complete ---');
+    const result = await exportPage.waitForExportComplete();
 
-    const hasOldQueuedState = await exportStartedHeading.isVisible().catch(() => false);
-    const hasNewCompletedState = await exportCompleteHeading.isVisible().catch(() => false);
-    const hasNewProcessingState = await exportingHeading.isVisible().catch(() => false);
+    if (result.success) {
+      console.log('Export completed successfully!');
+      await exportPage.screenshot('export-success', 'Export completed');
 
-    if (hasOldQueuedState) {
-      // Old code path - export started, will complete in background
-      console.log('Export started successfully (old queued state)');
-      console.log('Export job created - will receive notification when complete');
-      await exportPage.screenshot('export-queued', 'Export queued (old UI)');
-
-      // Close modal
-      await exportPage.closeModal();
-
-      // Test passes - export was successfully initiated
-      console.log('\n========== FULL EXPORT FLOW TEST COMPLETE (OLD UI) ==========\n');
-      return;
+      // Verify download button works
+      console.log('\n--- Step 4: Test Download ---');
+      await exportPage.clickDownload();
+    } else {
+      console.error('Export failed:', result.error);
+      await exportPage.screenshot('export-failure', `Export failed: ${result.error}`);
     }
 
-    if (hasNewProcessingState || hasNewCompletedState) {
-      // New code path - wait for completion
-      console.log('\n--- Step 3: Wait for Export Complete ---');
-      const result = await exportPage.waitForExportComplete();
-
-      if (result.success) {
-        console.log('Export completed successfully!');
-        await exportPage.screenshot('export-success', 'Export completed');
-
-        // Verify download button works
-        console.log('\n--- Step 4: Test Download ---');
-        await exportPage.clickDownload();
-      } else {
-        console.error('Export failed:', result.error);
-        await exportPage.screenshot('export-failure', `Export failed: ${result.error}`);
-      }
-
-      expect(result.success).toBe(true);
-    }
+    expect(result.success).toBe(true);
 
     // Close modal
     await exportPage.closeModal();
