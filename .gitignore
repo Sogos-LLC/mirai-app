@@ -52,6 +52,8 @@ local-dev/envoy/certs/
 backend/.env.local
 backend/data/
 backend/main
+backend/server
+backend/migrate
 
 # Generated diagrams
 diagram/
