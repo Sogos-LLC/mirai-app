@@ -2,7 +2,7 @@ name: Build Marketing Site (GitOps)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, uat ]
     paths:
       - 'frontend/**'
       - '.github/workflows/build-marketing.yml'
@@ -75,7 +75,19 @@ jobs:
         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
         sudo mv kustomize /usr/local/bin/
 
-        cd k8s/frontend-marketing
+        BRANCH=${GITHUB_REF#refs/heads/}
+        if [ "$BRANCH" = "uat" ]; then
+          KUSTOMIZE_PATH="k8s-uat/frontend-marketing"
+        else
+          KUSTOMIZE_PATH="k8s/frontend-marketing"
+        fi
+
+        if [ ! -d "$KUSTOMIZE_PATH" ]; then
+          echo "Kustomize path $KUSTOMIZE_PATH does not exist yet, skipping update"
+          exit 0
+        fi
+
+        cd $KUSTOMIZE_PATH
         kustomize edit set image ghcr.io/sogos-llc/mirai-app/mirai-marketing=${{ steps.version.outputs.full-tag }}
 
         echo "Updated marketing kustomization.yaml:"
@@ -83,14 +95,26 @@ jobs:
 
     - name: Commit and push changes
       run: |
+        BRANCH=${GITHUB_REF#refs/heads/}
+        if [ "$BRANCH" = "uat" ]; then
+          KUSTOMIZE_PATH="k8s-uat/frontend-marketing"
+        else
+          KUSTOMIZE_PATH="k8s/frontend-marketing"
+        fi
+
+        if [ ! -d "$KUSTOMIZE_PATH" ]; then
+          echo "Kustomize path $KUSTOMIZE_PATH does not exist, skipping commit"
+          exit 0
+        fi
+
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
         git stash --include-untracked
-        git pull origin main --rebase
+        git pull origin $BRANCH --rebase
         git stash pop || true
 
-        git add k8s/frontend-marketing/kustomization.yaml
+        git add $KUSTOMIZE_PATH/kustomization.yaml
 
         if git diff --staged --quiet; then
           echo "No changes to commit"
@@ -100,6 +124,7 @@ jobs:
           Automated image update by GitHub Actions
           - Image: ${{ steps.version.outputs.full-tag }}
           - Commit: ${{ github.sha }}
+          - Branch: $BRANCH
 
           [skip ci]"
 
@@ -107,12 +132,12 @@ jobs:
           retry_count=0
 
           while [ $retry_count -lt $max_retries ]; do
-            if git push; then
+            if git push origin $BRANCH; then
               echo "Successfully pushed changes"
               break
             else
               echo "Push failed, pulling and retrying..."
-              git pull origin main --rebase
+              git pull origin $BRANCH --rebase
               ((retry_count++))
             fi
           done
