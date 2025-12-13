@@ -14,4 +14,4 @@ resources:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-backend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-backend
-  newTag: 08eaff4
+  newTag: bc9ee8b
