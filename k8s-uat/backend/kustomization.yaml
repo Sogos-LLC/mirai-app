@@ -11,8 +11,9 @@ resources:
 #                  4=ALLOWED_ORIGIN, 5=FRONTEND_URL, 6=MARKETING_URL, 7=BACKEND_URL
 patches:
 - target:
-    kind: Deployment
+    kind: Rollout
     name: mirai-backend
+    group: argoproj.io
   patch: |-
     - op: replace
       path: /spec/replicas

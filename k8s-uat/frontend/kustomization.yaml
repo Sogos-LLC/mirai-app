@@ -26,8 +26,9 @@ patches:
       path: /spec/template/spec/containers/0/env/13/value
       value: "https://get-mirai-uat.sogos.io"
   target:
-    kind: Deployment
+    kind: Rollout
     name: mirai-frontend
+    group: argoproj.io
 
 # Override image tag (will be updated by GitHub Actions)
 images:
