@@ -1,0 +1,47 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mirai-uat
+
+resources:
+- ../../k8s/frontend-marketing
+
+# Override labels for UAT
+commonLabels:
+  environment: uat
+
+# Patches to adapt production manifests for UAT
+patches:
+# Patch deployment for UAT configuration
+- target:
+    kind: Deployment
+    name: mirai-marketing
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 2
+    # NEXT_PUBLIC_* vars - these are baked in at build time
+    # but we override here for any runtime checks
+    - op: replace
+      path: /spec/template/spec/containers/0/env/0/value
+      value: "https://mirai-auth-uat.sogos.io"
+    - op: replace
+      path: /spec/template/spec/containers/0/env/1/value
+      value: "https://mirai-uat.sogos.io"
+    - op: replace
+      path: /spec/template/spec/containers/0/env/2/value
+      value: "https://get-mirai-uat.sogos.io"
+
+# Patch PDB for fewer replicas
+- target:
+    kind: PodDisruptionBudget
+    name: mirai-marketing-pdb
+  patch: |-
+    - op: replace
+      path: /spec/maxUnavailable
+      value: 1
+
+images:
+- name: ghcr.io/sogos-llc/mirai-app/mirai-marketing
+  newName: ghcr.io/sogos-llc/mirai-app/mirai-marketing
+  newTag: uat-latest

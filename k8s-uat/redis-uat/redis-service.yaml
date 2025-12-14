@@ -1,0 +1,18 @@
+# Redis service for UAT environment
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: redis-uat
+  labels:
+    app: redis
+    environment: uat
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    name: redis
+  selector:
+    app: redis

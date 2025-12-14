@@ -1,0 +1,26 @@
+# UAT Environment Namespaces
+# All UAT resources are isolated from production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mirai-uat
+  labels:
+    environment: uat
+    app.kubernetes.io/part-of: mirai-uat
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kratos-uat
+  labels:
+    environment: uat
+    app.kubernetes.io/part-of: mirai-uat
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redis-uat
+  labels:
+    environment: uat
+    app.kubernetes.io/part-of: mirai-uat
