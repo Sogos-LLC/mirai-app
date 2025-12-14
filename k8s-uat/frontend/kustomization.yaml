@@ -7,53 +7,47 @@ resources:
 - ../../k8s/frontend
 
 # Override labels for UAT
-commonLabels:
-  environment: uat
+labels:
+- pairs:
+    environment: uat
+  includeSelectors: false
 
-# Patches to adapt production manifests for UAT
+# Strategic merge patches for UAT configuration
 patches:
-# Patch deployment for UAT configuration
-- target:
+- patch: |-
+    apiVersion: apps/v1
     kind: Deployment
-    name: mirai-frontend
-  patch: |-
-    - op: replace
-      path: /spec/replicas
-      value: 2
-    # S3 bucket - use UAT bucket
-    - op: replace
-      path: /spec/template/spec/containers/0/env/4/value
-      value: "mirai-uat"
-    # Redis - point to UAT
-    - op: replace
-      path: /spec/template/spec/containers/0/env/8/value
-      value: "redis://redis.redis-uat.svc.cluster.local:6379"
-    # Kratos internal URL - point to UAT
-    - op: replace
-      path: /spec/template/spec/containers/0/env/9/value
-      value: "http://kratos-public.kratos-uat.svc.cluster.local:80"
-    # NEXT_PUBLIC_* vars are baked in at build time, but override at runtime for SSR
-    - op: replace
-      path: /spec/template/spec/containers/0/env/10/value
-      value: "https://mirai-auth-uat.sogos.io"
-    - op: replace
-      path: /spec/template/spec/containers/0/env/11/value
-      value: "https://mirai-api-uat.sogos.io"
-    - op: replace
-      path: /spec/template/spec/containers/0/env/12/value
-      value: "https://mirai-uat.sogos.io"
-    - op: replace
-      path: /spec/template/spec/containers/0/env/13/value
-      value: "https://get-mirai-uat.sogos.io"
+    metadata:
+      name: mirai-frontend
+    spec:
+      replicas: 2
+      template:
+        spec:
+          containers:
+          - name: mirai-frontend
+            env:
+            - name: S3_BUCKET
+              value: "mirai-uat"
+            - name: REDIS_URL
+              value: "redis://redis.redis-uat.svc.cluster.local:6379"
+            - name: KRATOS_PUBLIC_URL
+              value: "http://kratos-public.kratos-uat.svc.cluster.local:80"
+            - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
+              value: "https://mirai-auth-uat.sogos.io"
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://mirai-api-uat.sogos.io"
+            - name: NEXT_PUBLIC_APP_URL
+              value: "https://mirai-uat.sogos.io"
+            - name: NEXT_PUBLIC_LANDING_URL
+              value: "https://get-mirai-uat.sogos.io"
 
-# Patch PDB for fewer replicas
-- target:
+- patch: |-
+    apiVersion: policy/v1
     kind: PodDisruptionBudget
-    name: mirai-frontend-pdb
-  patch: |-
-    - op: replace
-      path: /spec/maxUnavailable
-      value: 1
+    metadata:
+      name: mirai-frontend-pdb
+    spec:
+      maxUnavailable: 1
 
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
