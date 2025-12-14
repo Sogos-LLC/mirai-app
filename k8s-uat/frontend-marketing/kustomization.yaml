@@ -10,10 +10,7 @@ resources:
 # Env var indices: 0=NEXT_PUBLIC_KRATOS_BROWSER_URL, 1=NEXT_PUBLIC_APP_URL,
 #                  2=NEXT_PUBLIC_LANDING_URL
 patches:
-- target:
-    kind: Deployment
-    name: mirai-marketing
-  patch: |-
+- patch: |-
     - op: replace
       path: /spec/replicas
       value: 2
@@ -23,9 +20,12 @@ patches:
     - op: replace
       path: /spec/template/spec/containers/0/env/2/value
       value: "https://get-mirai-uat.sogos.io"
+  target:
+    kind: Deployment
+    name: mirai-marketing
 
 # Override image tag (will be updated by GitHub Actions)
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-marketing
   newName: ghcr.io/sogos-llc/mirai-app/mirai-marketing
-  newTag: a4a4f6c
+  newTag: uat-10d9398
