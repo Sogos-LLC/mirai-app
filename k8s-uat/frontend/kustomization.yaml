@@ -12,10 +12,7 @@ resources:
 #                  8=REDIS_URL, 9=KRATOS_PUBLIC_URL, 10=NEXT_PUBLIC_KRATOS_BROWSER_URL,
 #                  11=NEXT_PUBLIC_API_URL, 12=NEXT_PUBLIC_APP_URL, 13=NEXT_PUBLIC_LANDING_URL
 patches:
-- target:
-    kind: Deployment
-    name: mirai-frontend
-  patch: |-
+- patch: |-
     - op: replace
       path: /spec/replicas
       value: 2
@@ -28,9 +25,12 @@ patches:
     - op: replace
       path: /spec/template/spec/containers/0/env/13/value
       value: "https://get-mirai-uat.sogos.io"
+  target:
+    kind: Deployment
+    name: mirai-frontend
 
 # Override image tag (will be updated by GitHub Actions)
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-frontend
-  newTag: 2cb6ace
+  newTag: uat-0a03095
