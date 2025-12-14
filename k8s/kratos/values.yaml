@@ -17,8 +17,6 @@ kratos:
           allowed_origins:
             - https://mirai.sogos.io
             - https://get-mirai.sogos.io
-            - https://mirai-uat.sogos.io
-            - https://get-mirai-uat.sogos.io
           allowed_methods:
             - POST
             - GET
@@ -41,8 +39,6 @@ kratos:
       allowed_return_urls:
         - https://mirai.sogos.io
         - https://get-mirai.sogos.io
-        - https://mirai-uat.sogos.io
-        - https://get-mirai-uat.sogos.io
 
       methods:
         password:

@@ -2,7 +2,7 @@ name: Build Frontend (GitOps)
 
 on:
   push:
-    branches: [ main, uat ]
+    branches: [ main ]
     paths:
       - 'frontend/**'
       - '.github/workflows/build-frontend.yml'
@@ -40,34 +40,9 @@ jobs:
       id: version
       run: |
         SHORT_SHA=$(git rev-parse --short HEAD)
-        BRANCH=${GITHUB_REF#refs/heads/}
-
-        if [ "$BRANCH" = "main" ]; then
-          VERSION="${SHORT_SHA}"
-        else
-          VERSION="${BRANCH}-${SHORT_SHA}"
-        fi
-
-        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "version=${SHORT_SHA}" >> $GITHUB_OUTPUT
         echo "sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
-        echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
-        echo "full-tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> $GITHUB_OUTPUT
-
-    - name: Set environment-specific build args
-      id: env-args
-      run: |
-        BRANCH=${GITHUB_REF#refs/heads/}
-        if [ "$BRANCH" = "uat" ]; then
-          echo "api_url=https://mirai-uat-api.sogos.io" >> $GITHUB_OUTPUT
-          echo "app_url=https://mirai-uat.sogos.io" >> $GITHUB_OUTPUT
-          echo "landing_url=https://get-mirai-uat.sogos.io" >> $GITHUB_OUTPUT
-        else
-          echo "api_url=https://mirai-api.sogos.io" >> $GITHUB_OUTPUT
-          echo "app_url=https://mirai.sogos.io" >> $GITHUB_OUTPUT
-          echo "landing_url=https://get-mirai.sogos.io" >> $GITHUB_OUTPUT
-        fi
-        # Kratos URL is shared between environments
-        echo "kratos_url=https://mirai-auth.sogos.io" >> $GITHUB_OUTPUT
+        echo "full-tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}" >> $GITHUB_OUTPUT
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -77,13 +52,13 @@ jobs:
         push: true
         build-args: |
           BUILD_TIME=${{ github.event.head_commit.timestamp }}
-          NEXT_PUBLIC_API_URL=${{ steps.env-args.outputs.api_url }}
-          NEXT_PUBLIC_APP_URL=${{ steps.env-args.outputs.app_url }}
-          NEXT_PUBLIC_LANDING_URL=${{ steps.env-args.outputs.landing_url }}
-          NEXT_PUBLIC_KRATOS_BROWSER_URL=${{ steps.env-args.outputs.kratos_url }}
+          NEXT_PUBLIC_API_URL=https://mirai-api.sogos.io
+          NEXT_PUBLIC_APP_URL=https://mirai.sogos.io
+          NEXT_PUBLIC_LANDING_URL=https://get-mirai.sogos.io
+          NEXT_PUBLIC_KRATOS_BROWSER_URL=https://mirai-auth.sogos.io
         tags: |
           ${{ steps.version.outputs.full-tag }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.branch }}-latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.version.outputs.sha }}
         labels: |
           org.opencontainers.image.revision=${{ github.sha }}
@@ -96,19 +71,7 @@ jobs:
         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
         sudo mv kustomize /usr/local/bin/
 
-        BRANCH=${GITHUB_REF#refs/heads/}
-        if [ "$BRANCH" = "uat" ]; then
-          KUSTOMIZE_PATH="k8s-uat/frontend"
-        else
-          KUSTOMIZE_PATH="k8s/frontend"
-        fi
-
-        if [ ! -d "$KUSTOMIZE_PATH" ]; then
-          echo "Kustomize path $KUSTOMIZE_PATH does not exist yet, skipping update"
-          exit 0
-        fi
-
-        cd $KUSTOMIZE_PATH
+        cd k8s/frontend
         kustomize edit set image ghcr.io/sogos-llc/mirai-app/mirai-frontend=${{ steps.version.outputs.full-tag }}
 
         echo "Updated frontend kustomization.yaml:"
@@ -116,26 +79,14 @@ jobs:
 
     - name: Commit and push changes
       run: |
-        BRANCH=${GITHUB_REF#refs/heads/}
-        if [ "$BRANCH" = "uat" ]; then
-          KUSTOMIZE_PATH="k8s-uat/frontend"
-        else
-          KUSTOMIZE_PATH="k8s/frontend"
-        fi
-
-        if [ ! -d "$KUSTOMIZE_PATH" ]; then
-          echo "Kustomize path $KUSTOMIZE_PATH does not exist, skipping commit"
-          exit 0
-        fi
-
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
         git stash --include-untracked
-        git pull origin $BRANCH --rebase
+        git pull origin main --rebase
         git stash pop || true
 
-        git add $KUSTOMIZE_PATH/kustomization.yaml
+        git add k8s/frontend/kustomization.yaml
 
         if git diff --staged --quiet; then
           echo "No changes to commit"
@@ -145,7 +96,6 @@ jobs:
           Automated image update by GitHub Actions
           - Image: ${{ steps.version.outputs.full-tag }}
           - Commit: ${{ github.sha }}
-          - Branch: $BRANCH
 
           [skip ci]"
 
@@ -153,12 +103,12 @@ jobs:
           retry_count=0
 
           while [ $retry_count -lt $max_retries ]; do
-            if git push origin $BRANCH; then
+            if git push origin main; then
               echo "Successfully pushed changes"
               break
             else
               echo "Push failed, pulling and retrying..."
-              git pull origin $BRANCH --rebase
+              git pull origin main --rebase
               ((retry_count++))
             fi
           done
