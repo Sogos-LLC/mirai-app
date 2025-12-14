@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mirai-backend
+spec:
+  replicas: 2  # Fewer replicas for UAT
+  template:
+    spec:
+      # Update DNS search to mirai-uat namespace
+      dnsConfig:
+        searches:
+          - mirai-uat.svc.cluster.local
+          - svc.cluster.local
+          - cluster.local
+      containers:
+      - name: backend
+        env:
+        # Override DATABASE_URL to use UAT database
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mirai-uat-db-secret
+              key: dsn
+        # Override URLs to UAT environment
+        - name: ALLOWED_ORIGIN
+          value: "https://mirai-uat.sogos.io"
+        - name: FRONTEND_URL
+          value: "https://mirai-uat.sogos.io"
+        - name: BACKEND_URL
+          value: "https://mirai-uat-api.sogos.io"
+        # Keep other env vars from base (they reference secrets that need to exist in UAT namespace)

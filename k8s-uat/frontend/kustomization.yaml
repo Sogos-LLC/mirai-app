@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mirai-uat
+
+resources:
+- ../../k8s/frontend
+
+# Use JSON patches for environment variable overrides
+# Env var indices: 0=USE_S3_STORAGE, 1=S3_ENDPOINT, 2=S3_ACCESS_KEY, 3=S3_SECRET_KEY,
+#                  4=S3_BUCKET, 5=S3_REGION, 6=S3_BASE_PATH, 7=ENABLE_REDIS_CACHE,
+#                  8=REDIS_URL, 9=KRATOS_PUBLIC_URL, 10=NEXT_PUBLIC_KRATOS_BROWSER_URL,
+#                  11=NEXT_PUBLIC_API_URL, 12=NEXT_PUBLIC_APP_URL, 13=NEXT_PUBLIC_LANDING_URL
+patches:
+- target:
+    kind: Deployment
+    name: mirai-frontend
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 2
+    - op: replace
+      path: /spec/template/spec/containers/0/env/11/value
+      value: "https://mirai-uat-api.sogos.io"
+    - op: replace
+      path: /spec/template/spec/containers/0/env/12/value
+      value: "https://mirai-uat.sogos.io"
+    - op: replace
+      path: /spec/template/spec/containers/0/env/13/value
+      value: "https://get-mirai-uat.sogos.io"
+
+# Override image tag (will be updated by GitHub Actions)
+images:
+- name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
+  newName: ghcr.io/sogos-llc/mirai-app/mirai-frontend
+  newTag: 2cb6ace

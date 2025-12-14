@@ -1,0 +1,51 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: mirai-uat-db
+  namespace: mirai-uat
+  labels:
+    app.kubernetes.io/component: database
+    app.kubernetes.io/name: mirai-uat-db
+    app.kubernetes.io/part-of: mirai
+    environment: uat
+spec:
+  description: "Mirai UAT Database - Single instance, no backups"
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  instances: 1  # Single instance for UAT (no HA needed)
+
+  storage:
+    size: 5Gi
+    storageClass: local-path
+
+  # Minimal resources for UAT
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+  postgresql:
+    parameters:
+      shared_buffers: "128MB"
+      effective_cache_size: "256MB"
+      max_connections: "50"
+      log_statement: "ddl"
+    pg_hba:
+      - "host all all 10.0.0.0/8 scram-sha-256"
+
+  bootstrap:
+    initdb:
+      database: mirai
+      owner: mirai
+      encoding: UTF8
+      postInitSQL:
+        - CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+      secret:
+        name: mirai-uat-db-credentials
+
+  # No backups for UAT (data is ephemeral/test data)
+  # backup: {}
+
+  enableSuperuserAccess: false
