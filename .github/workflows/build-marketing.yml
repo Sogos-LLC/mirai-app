@@ -50,19 +50,38 @@ jobs:
 
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
         echo "sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+        echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
         echo "full-tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> $GITHUB_OUTPUT
+
+    - name: Set environment-specific build args
+      id: env-args
+      run: |
+        BRANCH=${GITHUB_REF#refs/heads/}
+        if [ "$BRANCH" = "uat" ]; then
+          echo "app_url=https://mirai-uat.sogos.io" >> $GITHUB_OUTPUT
+          echo "landing_url=https://get-mirai-uat.sogos.io" >> $GITHUB_OUTPUT
+        else
+          echo "app_url=https://mirai.sogos.io" >> $GITHUB_OUTPUT
+          echo "landing_url=https://get-mirai.sogos.io" >> $GITHUB_OUTPUT
+        fi
+        # Kratos URL is shared between environments
+        echo "kratos_url=https://mirai-auth.sogos.io" >> $GITHUB_OUTPUT
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: ./frontend
-        file: ./frontend/Dockerfile.marketing
+        file: ./frontend/Dockerfile
         push: true
         build-args: |
           BUILD_TIME=${{ github.event.head_commit.timestamp }}
+          BUILD_TARGET=marketing
+          NEXT_PUBLIC_APP_URL=${{ steps.env-args.outputs.app_url }}
+          NEXT_PUBLIC_LANDING_URL=${{ steps.env-args.outputs.landing_url }}
+          NEXT_PUBLIC_KRATOS_BROWSER_URL=${{ steps.env-args.outputs.kratos_url }}
         tags: |
           ${{ steps.version.outputs.full-tag }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.branch }}-latest
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.version.outputs.sha }}
         labels: |
           org.opencontainers.image.revision=${{ github.sha }}

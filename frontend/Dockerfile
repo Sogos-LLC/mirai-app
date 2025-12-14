@@ -31,6 +31,17 @@ ENV NEXT_PUBLIC_KRATOS_BROWSER_URL=${NEXT_PUBLIC_KRATOS_BROWSER_URL}
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 ENV NEXT_PUBLIC_LANDING_URL=${NEXT_PUBLIC_LANDING_URL}
 
+# Build target: "app" (default) or "marketing"
+# Marketing build swaps middleware and layout for stripped-down marketing site
+ARG BUILD_TARGET=app
+RUN if [ "$BUILD_TARGET" = "marketing" ]; then \
+      echo "Building marketing site..." && \
+      cp src/middleware.marketing.ts src/middleware.ts && \
+      cp src/app/layout.marketing.tsx src/app/layout.tsx; \
+    else \
+      echo "Building main app..."; \
+    fi
+
 RUN npm run build
 
 # Production image, copy all the files and run next
