@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: mirai-backend
   namespace: mirai
@@ -7,14 +7,23 @@ metadata:
     app: mirai-backend
 spec:
   replicas: 3
+  revisionHistoryLimit: 5
   selector:
     matchLabels:
       app: mirai-backend
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+    canary:
+      steps:
+      # Start with 20% traffic to canary
+      - setWeight: 20
+      # Pause for 2 minutes to observe metrics
+      - pause: {duration: 2m}
+      # Increase to 50%
+      - setWeight: 50
+      # Pause for 3 minutes
+      - pause: {duration: 3m}
+      # Full rollout
+      - setWeight: 100
   minReadySeconds: 15
   template:
     metadata:
