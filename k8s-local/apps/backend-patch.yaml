@@ -29,12 +29,12 @@ spec:
         - -c
         - |
           echo "Waiting for PostgreSQL DNS..."
-          until nslookup mirai-db.mirai-local.svc.cluster.local > /dev/null 2>&1; do
+          until nslookup mirai-db-rw.mirai-local.svc.cluster.local > /dev/null 2>&1; do
             echo "  DNS not ready, retrying in 2s..."
             sleep 2
           done
           echo "PostgreSQL DNS resolved, checking TCP connectivity..."
-          until nc -z mirai-db.mirai-local.svc.cluster.local 5432; do
+          until nc -z mirai-db-rw.mirai-local.svc.cluster.local 5432; do
             echo "  PostgreSQL not accepting connections, retrying in 2s..."
             sleep 2
           done
@@ -68,7 +68,7 @@ spec:
             sleep 2
           done
           echo "Kratos DNS resolved, checking TCP connectivity..."
-          until nc -z kratos-public.mirai-local.svc.cluster.local 80; do
+          until nc -z kratos-public.mirai-local.svc.cluster.local 4433; do
             echo "  Kratos not accepting connections, retrying in 2s..."
             sleep 2
           done
@@ -79,14 +79,14 @@ spec:
         # Use local images with Never pull policy
         imagePullPolicy: Never
 
-        # Resources for local development (generous for better performance)
+        # Resources for local development (increased for better performance)
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "512Mi"
+            cpu: "500m"
           limits:
-            memory: "1Gi"
-            cpu: "1000m"
+            memory: "2Gi"
+            cpu: "2000m"
 
         # Override environment variables for local development
         env:
@@ -98,17 +98,17 @@ spec:
               name: mirai-db-secret
               key: dsn
         - name: KRATOS_URL
-          value: "http://kratos-public.mirai-local.svc.cluster.local:80"
+          value: "http://kratos-public.mirai-local.svc.cluster.local:4433"
         - name: KRATOS_ADMIN_URL
-          value: "http://kratos-admin.mirai-local.svc.cluster.local:80"
+          value: "http://kratos-admin.mirai-local.svc.cluster.local:4434"
         - name: ALLOWED_ORIGIN
-          value: "https://mirai.test"
+          value: "https://mirai.dev"
         - name: FRONTEND_URL
-          value: "https://mirai.test"
+          value: "https://mirai.dev"
         - name: MARKETING_URL
-          value: "https://get-mirai.test"
+          value: "https://get-mirai.dev"
         - name: BACKEND_URL
-          value: "https://api.mirai.test"
+          value: "https://api.mirai.dev"
         - name: STRIPE_SECRET_KEY
           valueFrom:
             secretKeyRef:
@@ -134,7 +134,7 @@ spec:
         - name: SMTP_PORT
           value: "1025"
         - name: SMTP_FROM
-          value: "noreply@mirai.test"
+          value: "noreply@mirai.dev"
         - name: S3_ENDPOINT
           valueFrom:
             secretKeyRef:
@@ -168,7 +168,7 @@ spec:
             secretKeyRef:
               name: mirai-encryption-secret
               key: encryption-key
-        # Trust mkcert CA for internal HTTPS calls to *.mirai.test
+        # Trust mkcert CA for internal HTTPS calls to *.mirai.dev
         - name: SSL_CERT_FILE
           value: "/etc/ssl/certs/mkcert-ca.pem"
 

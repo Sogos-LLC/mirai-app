@@ -184,15 +184,15 @@ case "${SERVICE}" in
             "${PROJECT_ROOT}/frontend/Dockerfile" \
             "${PROJECT_ROOT}/frontend" \
             "mirai-frontend:local" \
-            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.test --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.test --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.test --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.test"
+            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.dev --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.dev --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.dev --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.dev"
         ;;
     marketing)
         build_and_import \
             "marketing" \
-            "${PROJECT_ROOT}/frontend/Dockerfile.marketing" \
+            "${PROJECT_ROOT}/frontend/Dockerfile" \
             "${PROJECT_ROOT}/frontend" \
             "mirai-marketing:local" \
-            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.test"
+            "--build-arg BUILD_TARGET=marketing --build-arg NEXT_PUBLIC_APP_URL=https://mirai.dev --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.dev"
         ;;
     all)
         log_info "Building all images..."
@@ -211,16 +211,16 @@ case "${SERVICE}" in
             "${PROJECT_ROOT}/frontend/Dockerfile" \
             "${PROJECT_ROOT}/frontend" \
             "mirai-frontend:local" \
-            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.test --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.test --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.test --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.test"
+            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.dev --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.dev --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.dev --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.dev"
 
         echo ""
 
         build_and_import \
             "marketing" \
-            "${PROJECT_ROOT}/frontend/Dockerfile.marketing" \
+            "${PROJECT_ROOT}/frontend/Dockerfile" \
             "${PROJECT_ROOT}/frontend" \
             "mirai-marketing:local" \
-            "--build-arg NEXT_PUBLIC_APP_URL=https://mirai.test"
+            "--build-arg BUILD_TARGET=marketing --build-arg NEXT_PUBLIC_APP_URL=https://mirai.dev --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.dev"
 
         echo ""
         log_success "All images built and imported"

@@ -38,7 +38,7 @@ show_help() {
     echo "'stripe listen'. The stripe CLI generates a new secret each time it starts."
     echo ""
     echo "Workflow:"
-    echo "  1. In terminal 1, run: stripe listen --forward-to https://api.mirai.test/api/v1/billing/webhook"
+    echo "  1. In terminal 1, run: stripe listen --forward-to https://api.mirai.dev/api/v1/billing/webhook"
     echo "  2. Copy the webhook secret shown (whsec_...)"
     echo "  3. In terminal 2, run: ./stripe-webhook.sh whsec_your_secret_here"
     echo ""

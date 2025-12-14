@@ -187,9 +187,9 @@ helm upgrade --install traefik traefik/traefik \
     --timeout 5m
 log_success "Traefik installed"
 
-# Step 6b: Configure CoreDNS for .test domain resolution inside pods
-# This allows backend pods to reach auth.mirai.test, api.mirai.test, etc.
-log_info "Step 6b/17: Configuring CoreDNS for internal .test domain resolution..."
+# Step 6b: Configure CoreDNS for .dev domain resolution inside pods
+# This allows backend pods to reach auth.mirai.dev, api.mirai.dev, etc.
+log_info "Step 6b/17: Configuring CoreDNS for internal .dev domain resolution..."
 
 # Get Traefik service cluster IP
 TRAEFIK_IP=$(kubectl get svc -n kube-system traefik -o jsonpath='{.spec.clusterIP}')
@@ -198,18 +198,18 @@ log_info "  Traefik ClusterIP: ${TRAEFIK_IP}"
 # Get current NodeHosts from CoreDNS
 CURRENT_NODEHOSTS=$(kubectl get configmap coredns -n kube-system -o jsonpath='{.data.NodeHosts}')
 
-# Add .test domains pointing to Traefik (only if not already present)
-if echo "${CURRENT_NODEHOSTS}" | grep -q "mirai.test"; then
-    log_info "  CoreDNS already configured for .test domains"
+# Add .dev domains pointing to Traefik (only if not already present)
+if echo "${CURRENT_NODEHOSTS}" | grep -q "mirai.dev"; then
+    log_info "  CoreDNS already configured for .dev domains"
 else
-    # Append .test domain entries
+    # Append .dev domain entries
     NEW_NODEHOSTS="${CURRENT_NODEHOSTS}
-${TRAEFIK_IP} mirai.test
-${TRAEFIK_IP} api.mirai.test
-${TRAEFIK_IP} auth.mirai.test
-${TRAEFIK_IP} get-mirai.test
-${TRAEFIK_IP} mailpit.mirai.test
-${TRAEFIK_IP} minio.mirai.test"
+${TRAEFIK_IP} mirai.dev
+${TRAEFIK_IP} api.mirai.dev
+${TRAEFIK_IP} auth.mirai.dev
+${TRAEFIK_IP} get-mirai.dev
+${TRAEFIK_IP} mailpit.mirai.dev
+${TRAEFIK_IP} minio.mirai.dev"
 
     # Patch CoreDNS configmap
     kubectl patch configmap coredns -n kube-system --type merge -p "{\"data\":{\"NodeHosts\":$(echo "${NEW_NODEHOSTS}" | jq -Rs .)}}"
@@ -218,7 +218,7 @@ ${TRAEFIK_IP} minio.mirai.test"
     kubectl rollout restart deployment/coredns -n kube-system
     kubectl rollout status deployment/coredns -n kube-system --timeout=60s
 
-    log_success "CoreDNS configured for .test domain resolution"
+    log_success "CoreDNS configured for .dev domain resolution"
 fi
 
 # Step 7: Generate mkcert certificates
@@ -232,7 +232,7 @@ CERT_DIR="${SCRIPT_DIR}/certs"
 mkdir -p "${CERT_DIR}"
 
 # Generate certificate with explicit SANs for all domains
-# (Avoiding wildcards - they can be problematic with .test TLD)
+# (Avoiding wildcards - they can be problematic with .dev TLD)
 cd "${CERT_DIR}"
 
 # Only regenerate if cert doesn't exist or is older than 30 days
@@ -244,13 +244,13 @@ if [[ ! -f "${CERT_FILE}" ]] || [[ $(find "${CERT_FILE}" -mtime +30 2>/dev/null)
     mkcert \
         -cert-file "${CERT_FILE}" \
         -key-file "${KEY_FILE}" \
-        "mirai.test" \
-        "api.mirai.test" \
-        "auth.mirai.test" \
-        "mailpit.mirai.test" \
-        "minio.mirai.test" \
-        "traefik.mirai.test" \
-        "get-mirai.test"
+        "mirai.dev" \
+        "api.mirai.dev" \
+        "auth.mirai.dev" \
+        "mailpit.mirai.dev" \
+        "minio.mirai.dev" \
+        "traefik.mirai.dev" \
+        "get-mirai.dev"
 else
     log_info "  Using existing certificate (less than 30 days old)"
 fi
@@ -272,7 +272,7 @@ kubectl create secret tls mirai-tls \
 log_success "TLS certificates generated and secrets created"
 
 # Step 7b: Create mkcert CA ConfigMap for backend TLS trust
-# This allows the backend to trust internal HTTPS calls to *.mirai.test
+# This allows the backend to trust internal HTTPS calls to *.mirai.dev
 log_info "Step 7b/17: Creating mkcert CA ConfigMap for backend..."
 MKCERT_CAROOT=$(mkcert -CAROOT)
 kubectl create configmap mkcert-ca \
@@ -394,16 +394,18 @@ docker build -t mirai-backend:local -f "${PROJECT_ROOT}/backend/Dockerfile" "${P
 
 log_info "  Building frontend image..."
 docker build -t mirai-frontend:local \
-    --build-arg NEXT_PUBLIC_APP_URL=https://mirai.test \
-    --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.test \
-    --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.test \
-    --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.test \
+    --build-arg NEXT_PUBLIC_APP_URL=https://mirai.dev \
+    --build-arg NEXT_PUBLIC_API_URL=https://api.mirai.dev \
+    --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.dev \
+    --build-arg NEXT_PUBLIC_KRATOS_BROWSER_URL=https://auth.mirai.dev \
     -f "${PROJECT_ROOT}/frontend/Dockerfile" "${PROJECT_ROOT}/frontend"
 
 log_info "  Building marketing image..."
 docker build -t mirai-marketing:local \
-    --build-arg NEXT_PUBLIC_APP_URL=https://mirai.test \
-    -f "${PROJECT_ROOT}/frontend/Dockerfile.marketing" "${PROJECT_ROOT}/frontend"
+    --build-arg BUILD_TARGET=marketing \
+    --build-arg NEXT_PUBLIC_APP_URL=https://mirai.dev \
+    --build-arg NEXT_PUBLIC_LANDING_URL=https://get-mirai.dev \
+    -f "${PROJECT_ROOT}/frontend/Dockerfile" "${PROJECT_ROOT}/frontend"
 
 log_success "Docker images built"
 
@@ -434,7 +436,7 @@ kubectl wait --for=condition=Ready pod -l app=mirai-marketing -n mirai-local --t
 
 # Configure /etc/hosts automatically
 log_info "Configuring /etc/hosts..."
-REQUIRED_HOSTS="mirai.test get-mirai.test auth.mirai.test api.mirai.test minio.mirai.test mailpit.mirai.test traefik.mirai.test"
+REQUIRED_HOSTS="mirai.dev get-mirai.dev auth.mirai.dev api.mirai.dev minio.mirai.dev mailpit.mirai.dev traefik.mirai.dev"
 HOSTS_ENTRY="127.0.0.1 ${REQUIRED_HOSTS}"
 
 # Check if all required hosts are present
@@ -450,12 +452,12 @@ if [ ${#MISSING_HOSTS[@]} -eq 0 ]; then
 else
     log_info "Missing hosts in /etc/hosts: ${MISSING_HOSTS[*]}"
 
-    # Remove any existing partial mirai.test line and add complete one
-    if grep -q "mirai.test" /etc/hosts; then
+    # Remove any existing partial mirai.dev line and add complete one
+    if grep -q "mirai.dev" /etc/hosts; then
         log_info "Updating existing /etc/hosts entry (requires sudo)..."
-        sudo sed -i '' '/mirai\.test/d' /etc/hosts
+        sudo sed -i '' '/mirai\.dev/d' /etc/hosts
     else
-        log_info "Adding mirai.test entries to /etc/hosts (requires sudo)..."
+        log_info "Adding mirai.dev entries to /etc/hosts (requires sudo)..."
     fi
 
     echo "$HOSTS_ENTRY" | sudo tee -a /etc/hosts > /dev/null
@@ -476,20 +478,20 @@ kubectl get pods -n mirai-local -o wide
 echo ""
 
 log_info "Application URLs:"
-echo "  Frontend:   https://mirai.test"
-echo "  Marketing:  https://get-mirai.test"
-echo "  Auth:       https://auth.mirai.test"
-echo "  API:        https://api.mirai.test"
-echo "  Mailpit:    https://mailpit.mirai.test (email testing)"
-echo "  MinIO:      https://minio.mirai.test (storage console)"
-echo "  Traefik:    https://traefik.mirai.test/dashboard/ (ingress dashboard)"
+echo "  Frontend:   https://mirai.dev"
+echo "  Marketing:  https://get-mirai.dev"
+echo "  Auth:       https://auth.mirai.dev"
+echo "  API:        https://api.mirai.dev"
+echo "  Mailpit:    https://mailpit.mirai.dev (email testing)"
+echo "  MinIO:      https://minio.mirai.dev (storage console)"
+echo "  Traefik:    https://traefik.mirai.dev/dashboard/ (ingress dashboard)"
 echo ""
 
 # Open Traefik dashboard in browser
 if command -v open >/dev/null 2>&1; then
     log_info "Opening Traefik dashboard in browser..."
     sleep 2
-    open "https://traefik.mirai.test/dashboard/"
+    open "https://traefik.mirai.dev/dashboard/"
 fi
 
 # k9s recommendation
@@ -505,7 +507,7 @@ fi
 
 echo ""
 log_warning "IMPORTANT: Stripe Webhook Setup (required for registration/payments):"
-echo "  1. In a new terminal: stripe listen --forward-to https://api.mirai.test/api/v1/billing/webhook"
+echo "  1. In a new terminal: stripe listen --forward-to https://api.mirai.dev/api/v1/billing/webhook"
 echo "  2. Copy the webhook secret (whsec_...)"
 echo "  3. Run: ./stripe-webhook.sh whsec_your_secret_here"
 echo ""

@@ -12,20 +12,140 @@ resources:
 # Local permissive network policy (allows all egress including DNS)
 - networkpolicy-local.yaml
 
+# Rename resources to match IngressRoute service names
+# Production uses mirai-*, local uses gateway/frontend/marketing
+replacements:
+# Rename backend deployment and service to gateway
+- source:
+    kind: Deployment
+    name: mirai-backend
+    fieldPath: metadata.name
+  targets:
+    - select:
+        kind: Deployment
+        name: mirai-backend
+      fieldPaths:
+        - metadata.name
+      options:
+        create: false
+- source:
+    kind: Service
+    name: mirai-backend
+    fieldPath: metadata.name
+  targets:
+    - select:
+        kind: Service
+        name: mirai-backend
+      fieldPaths:
+        - metadata.name
+      options:
+        create: false
+
 # Strategic merge patches for local development
 patches:
-- path: backend-patch.yaml
+# Rename backend resources to gateway
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: gateway
+    - op: replace
+      path: /metadata/labels/app
+      value: gateway
+    - op: replace
+      path: /spec/selector/matchLabels/app
+      value: gateway
+    - op: replace
+      path: /spec/template/metadata/labels/app
+      value: gateway
   target:
     kind: Deployment
     name: mirai-backend
-- path: frontend-patch.yaml
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: gateway
+    - op: replace
+      path: /metadata/labels/app
+      value: gateway
+    - op: replace
+      path: /spec/selector/app
+      value: gateway
+  target:
+    kind: Service
+    name: mirai-backend
+# Rename frontend resources
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: frontend
+    - op: replace
+      path: /metadata/labels/app
+      value: frontend
+    - op: replace
+      path: /spec/selector/matchLabels/app
+      value: frontend
+    - op: replace
+      path: /spec/template/metadata/labels/app
+      value: frontend
   target:
     kind: Deployment
     name: mirai-frontend
-- path: marketing-patch.yaml
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: frontend
+    - op: replace
+      path: /metadata/labels/app
+      value: frontend
+    - op: replace
+      path: /spec/selector/app
+      value: frontend
+  target:
+    kind: Service
+    name: mirai-frontend
+# Rename marketing resources
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: marketing
+    - op: replace
+      path: /metadata/labels/app
+      value: marketing
+    - op: replace
+      path: /spec/selector/matchLabels/app
+      value: marketing
+    - op: replace
+      path: /spec/template/metadata/labels/app
+      value: marketing
   target:
     kind: Deployment
     name: mirai-marketing
+- patch: |-
+    - op: replace
+      path: /metadata/name
+      value: marketing
+    - op: replace
+      path: /metadata/labels/app
+      value: marketing
+    - op: replace
+      path: /spec/selector/app
+      value: marketing
+  target:
+    kind: Service
+    name: mirai-marketing
+# Local development patches
+- path: backend-patch.yaml
+  target:
+    kind: Deployment
+    name: gateway
+- path: frontend-patch.yaml
+  target:
+    kind: Deployment
+    name: frontend
+- path: marketing-patch.yaml
+  target:
+    kind: Deployment
+    name: marketing
 - path: migration-patch.yaml
   target:
     kind: Job

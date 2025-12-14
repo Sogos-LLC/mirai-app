@@ -11,11 +11,11 @@ kratos:
 
     serve:
       public:
-        base_url: https://auth.mirai.test
+        base_url: https://auth.mirai.dev
         cors:
           enabled: true
           allowed_origins:
-            - https://mirai.test
+            - https://mirai.dev
             - http://localhost:3000
           allowed_methods:
             - POST
@@ -38,9 +38,9 @@ kratos:
         base_url: http://kratos-admin:80
 
     selfservice:
-      default_browser_return_url: https://mirai.test/dashboard
+      default_browser_return_url: https://mirai.dev/dashboard
       allowed_return_urls:
-        - https://mirai.test
+        - https://mirai.dev
         - http://localhost:3000
 
       methods:
@@ -53,40 +53,40 @@ kratos:
 
       flows:
         error:
-          ui_url: https://mirai.test/auth/error
+          ui_url: https://mirai.dev/auth/error
 
         settings:
-          ui_url: https://mirai.test/auth/settings
+          ui_url: https://mirai.dev/auth/settings
           privileged_session_max_age: 15m
 
         recovery:
           enabled: true
-          ui_url: https://mirai.test/auth/recovery
+          ui_url: https://mirai.dev/auth/recovery
           use: code
 
         verification:
           enabled: false  # Disabled for easier local testing
-          ui_url: https://mirai.test/auth/verification
+          ui_url: https://mirai.dev/auth/verification
           use: code
           after:
-            default_browser_return_url: https://mirai.test/dashboard
+            default_browser_return_url: https://mirai.dev/dashboard
 
         logout:
           after:
-            default_browser_return_url: https://mirai.test/auth/login
+            default_browser_return_url: https://mirai.dev/auth/login
 
         login:
-          ui_url: https://mirai.test/auth/login
+          ui_url: https://mirai.dev/auth/login
           lifespan: 10m
 
         registration:
-          ui_url: https://mirai.test/auth/registration
+          ui_url: https://mirai.dev/auth/registration
           lifespan: 10m
           after:
             password:
               hooks:
                 - hook: session
-            default_browser_return_url: https://mirai.test/dashboard
+            default_browser_return_url: https://mirai.dev/dashboard
 
     log:
       level: debug
@@ -114,13 +114,13 @@ kratos:
     courier:
       smtp:
         connection_uri: smtp://mailpit.mirai-local.svc.cluster.local:1025/?disable_starttls=true
-        from_address: noreply@mirai.test
+        from_address: noreply@mirai.dev
         from_name: Mirai Local
 
     session:
       lifespan: 24h
       cookie:
-        domain: .mirai.test
+        domain: .mirai.dev
         same_site: Lax
         path: /
 
@@ -128,7 +128,7 @@ kratos:
   identitySchemas:
     "identity.schema.json": |
       {
-        "$id": "https://mirai.test/schemas/user.schema.json",
+        "$id": "https://mirai.dev/schemas/user.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "User",
         "type": "object",

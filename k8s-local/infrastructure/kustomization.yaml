@@ -8,11 +8,7 @@ resources:
   # Secrets (LOCAL DEV ONLY - not for production)
   - secrets.yaml
 
-  # PostgreSQL
-  - postgres/pvc.yaml
-  - postgres/configmap.yaml
-  - postgres/deployment.yaml
-  - postgres/service.yaml
+  # PostgreSQL: Using CloudNativePG (CNPG) instead - see setup.sh
 
   # Redis
   - redis/deployment.yaml

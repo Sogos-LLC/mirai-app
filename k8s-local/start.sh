@@ -103,11 +103,30 @@ kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=minio -n mirai-
 log_info "Waiting for Kratos..."
 kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=kratos -n mirai-local --timeout=60s 2>/dev/null || log_warning "Kratos starting..."
 
-# Wait for apps
+# Check TLS certificate exists
+log_info "Checking TLS certificates..."
+if ! kubectl get secret mirai-tls -n mirai-local &>/dev/null; then
+    log_warning "TLS secret 'mirai-tls' not found. Creating..."
+    if command -v mkcert &>/dev/null; then
+        CERT_DIR=$(mktemp -d)
+        mkcert -cert-file "${CERT_DIR}/tls.crt" -key-file "${CERT_DIR}/tls.key" \
+            "*.mirai.dev" "mirai.dev" "get-mirai.dev" "*.get-mirai.dev" 2>/dev/null
+        kubectl create secret tls mirai-tls -n mirai-local \
+            --cert="${CERT_DIR}/tls.crt" --key="${CERT_DIR}/tls.key"
+        rm -rf "${CERT_DIR}"
+        log_success "TLS certificates created"
+    else
+        log_error "mkcert not installed. Run: brew install mkcert && mkcert -install"
+    fi
+else
+    log_success "TLS certificates found"
+fi
+
+# Wait for apps (using actual deployment names: gateway, frontend, marketing)
 log_info "Waiting for applications..."
-kubectl wait --for=condition=Ready pod -l app=mirai-backend -n mirai-local --timeout=30s 2>/dev/null || log_warning "Backend starting..."
-kubectl wait --for=condition=Ready pod -l app=mirai-frontend -n mirai-local --timeout=30s 2>/dev/null || log_warning "Frontend starting..."
-kubectl wait --for=condition=Ready pod -l app=mirai-marketing -n mirai-local --timeout=30s 2>/dev/null || log_warning "Marketing starting..."
+kubectl wait --for=condition=Ready pod -l app=gateway -n mirai-local --timeout=30s 2>/dev/null || log_warning "Backend starting..."
+kubectl wait --for=condition=Ready pod -l app=frontend -n mirai-local --timeout=30s 2>/dev/null || log_warning "Frontend starting..."
+kubectl wait --for=condition=Ready pod -l app=marketing -n mirai-local --timeout=30s 2>/dev/null || log_warning "Marketing starting..."
 
 # Display cluster status
 echo ""
@@ -132,19 +151,19 @@ done
 echo ""
 
 log_info "Application URLs:"
-echo "  Frontend:   https://mirai.test"
-echo "  Marketing:  https://get-mirai.test"
-echo "  Auth:       https://auth.mirai.test"
-echo "  API:        https://api.mirai.test"
-echo "  Mailpit:    https://mailpit.mirai.test"
-echo "  MinIO:      https://minio.mirai.test"
-echo "  Traefik:    https://traefik.mirai.test/dashboard/"
+echo "  Frontend:   https://mirai.dev"
+echo "  Marketing:  https://get-mirai.dev"
+echo "  Auth:       https://auth.mirai.dev"
+echo "  API:        https://api.mirai.dev"
+echo "  Mailpit:    https://mailpit.mirai.dev"
+echo "  MinIO:      https://minio.mirai.dev"
+echo "  Traefik:    https://traefik.mirai.dev/dashboard/"
 echo ""
 
 # Open Traefik dashboard
 if command -v open >/dev/null 2>&1; then
     sleep 1
-    open "https://traefik.mirai.test/dashboard/"
+    open "https://traefik.mirai.dev/dashboard/"
 fi
 
 # k9s handling
@@ -169,7 +188,7 @@ fi
 
 echo ""
 log_warning "Stripe Webhook Setup (required for registration/payments):"
-echo "  1. In a new terminal: stripe listen --forward-to https://api.mirai.test/api/v1/billing/webhook"
+echo "  1. In a new terminal: stripe listen --forward-to https://api.mirai.dev/api/v1/billing/webhook"
 echo "  2. Copy the webhook secret (whsec_...)"
 echo "  3. Run: ./stripe-webhook.sh whsec_your_secret_here"
 echo ""

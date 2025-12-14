@@ -1,5 +1,5 @@
 ---
-# Frontend: mirai.test
+# Frontend: mirai.dev
 # Routes to the main Mirai application (Next.js frontend)
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -10,10 +10,10 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`mirai.test`)
+    - match: Host(`mirai.dev`)
       kind: Rule
       services:
-        - name: mirai-frontend
+        - name: frontend
           port: 80
       middlewares:
         - name: security-headers
@@ -21,7 +21,7 @@ spec:
     secretName: mirai-tls
 
 ---
-# Marketing Site: get-mirai.test
+# Marketing Site: get-mirai.dev
 # Routes to the marketing/landing page (Next.js marketing frontend)
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -32,10 +32,10 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`get-mirai.test`)
+    - match: Host(`get-mirai.dev`)
       kind: Rule
       services:
-        - name: mirai-marketing
+        - name: marketing
           port: 80
       middlewares:
         - name: security-headers
@@ -43,7 +43,7 @@ spec:
     secretName: mirai-tls
 
 ---
-# Backend API: api.mirai.test
+# Backend API: api.mirai.dev
 # Routes to the Connect-RPC backend service
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -54,10 +54,10 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`api.mirai.test`)
+    - match: Host(`api.mirai.dev`)
       kind: Rule
       services:
-        - name: mirai-backend
+        - name: gateway
           port: 8080
       middlewares:
         - name: api-cors
@@ -66,7 +66,7 @@ spec:
     secretName: mirai-tls
 
 ---
-# Kratos Public API: auth.mirai.test
+# Kratos Public API: auth.mirai.dev
 # Routes to Ory Kratos authentication service (public endpoint)
 # Kratos is deployed via Helm to mirai namespace
 # The service name follows the pattern: <release-name>-public
@@ -79,12 +79,12 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`auth.mirai.test`)
+    - match: Host(`auth.mirai.dev`)
       kind: Rule
       services:
         # Kratos Helm chart creates service named "<release>-public"
         - name: kratos-public
-          port: 80
+          port: 4433
       middlewares:
         - name: kratos-cors
         - name: security-headers
@@ -92,7 +92,7 @@ spec:
     secretName: mirai-tls
 
 ---
-# Mailpit: mailpit.mirai.test
+# Mailpit: mailpit.mirai.dev
 # Routes to the Mailpit email testing UI
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -103,7 +103,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`mailpit.mirai.test`)
+    - match: Host(`mailpit.mirai.dev`)
       kind: Rule
       services:
         - name: mailpit
@@ -114,7 +114,7 @@ spec:
     secretName: mirai-tls
 
 ---
-# MinIO Console: minio.mirai.test
+# MinIO Console: minio.mirai.dev
 # Routes to the MinIO web console for storage management
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -125,7 +125,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`minio.mirai.test`)
+    - match: Host(`minio.mirai.dev`)
       kind: Rule
       services:
         - name: minio
@@ -150,7 +150,7 @@ spec:
       kind: Rule
       services:
         # Dummy service - will never be reached due to redirect
-        - name: mirai-frontend
+        - name: frontend
           port: 80
       middlewares:
         - name: https-redirect

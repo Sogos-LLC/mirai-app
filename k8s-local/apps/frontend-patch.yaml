@@ -20,14 +20,14 @@ spec:
         # Use local images with Never pull policy
         imagePullPolicy: Never
 
-        # Resources for local development (increased for Next.js)
+        # Resources for local development (increased for better performance)
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "512Mi"
+            cpu: "500m"
           limits:
-            memory: "1Gi"
-            cpu: "1000m"
+            memory: "2Gi"
+            cpu: "2000m"
 
         # Override environment variables for local development
         # Note: S3_ENDPOINT must use value (not valueFrom) to override production's value
@@ -61,15 +61,15 @@ spec:
           value: "redis://redis.mirai-local.svc.cluster.local:6379"
         # Ory Kratos authentication configuration (local URLs)
         - name: KRATOS_PUBLIC_URL
-          value: "http://kratos-public.mirai-local.svc.cluster.local:80"
+          value: "http://kratos-public.mirai-local.svc.cluster.local:4433"
         - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
-          value: "https://auth.mirai.test"
+          value: "https://auth.mirai.dev"
         - name: NEXT_PUBLIC_API_URL
-          value: "https://api.mirai.test"
+          value: "https://api.mirai.dev"
         - name: NEXT_PUBLIC_APP_URL
-          value: "https://mirai.test"
+          value: "https://mirai.dev"
         - name: NEXT_PUBLIC_LANDING_URL
-          value: "https://get-mirai.test"
+          value: "https://get-mirai.dev"
         # Development mode to prevent production redirects
         - name: NODE_ENV
           value: "development"

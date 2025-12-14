@@ -99,7 +99,7 @@ echo "2. Namespaces"
 echo "-------------"
 check_namespace kube-system
 check_namespace mirai
-check_namespace kratos || echo -e "${YELLOW}⚠${NC} Kratos namespace not found (will be needed for auth.mirai.test)"
+check_namespace kratos || echo -e "${YELLOW}⚠${NC} Kratos namespace not found (will be needed for auth.mirai.dev)"
 echo ""
 
 echo "3. Traefik Installation"
@@ -151,16 +151,16 @@ echo ""
 
 echo "8. DNS Configuration (/etc/hosts)"
 echo "----------------------------------"
-check_hosts_file "mirai.test"
-check_hosts_file "api.mirai.test"
-check_hosts_file "auth.mirai.test"
-check_hosts_file "get-mirai.test"
+check_hosts_file "mirai.dev"
+check_hosts_file "api.mirai.dev"
+check_hosts_file "auth.mirai.dev"
+check_hosts_file "get-mirai.dev"
 echo ""
 
 echo "9. Connectivity Tests"
 echo "---------------------"
 if command -v curl &> /dev/null; then
-    for host in mirai.test get-mirai.test api.mirai.test auth.mirai.test; do
+    for host in mirai.dev get-mirai.dev api.mirai.dev auth.mirai.dev; do
         if timeout 2 curl -ksI https://$host &> /dev/null; then
             echo -e "${GREEN}✓${NC} https://$host is reachable"
         else

@@ -1,201 +1,261 @@
-# Mirai k3d Local Development
+# Mirai Local Development Environment
 
-Kubernetes manifests for running the complete Mirai stack in a local k3d cluster.
+Local Kubernetes development environment using k3d (k3s in Docker).
+
+## Prerequisites
+
+Install required tools:
+
+```bash
+brew install k3d kubectl helm mkcert jq
+```
+
+Ensure Docker Desktop is running.
+
+## Quick Start
+
+```bash
+# 1. Configure environment
+cp .env.example .env
+# Edit .env with your Stripe keys (see below)
+
+# 2. One-time setup (creates cluster, deploys everything)
+./setup.sh
+
+# 3. Access the app
+open https://mirai.dev
+```
+
+## URLs
+
+| Service | URL |
+|---------|-----|
+| App | https://mirai.dev |
+| Marketing | https://get-mirai.dev |
+| API | https://api.mirai.dev |
+| Auth | https://auth.mirai.dev |
+| Traefik Dashboard | https://traefik.mirai.dev/dashboard/ |
+| Mailpit (email testing) | http://localhost:8025 |
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `./setup.sh` | One-time cluster creation and full deployment |
+| `./start.sh` | Start a stopped cluster |
+| `./stop.sh` | Stop the cluster (preserves data) |
+| `./reset.sh` | Delete cluster completely |
+| `./build-local.sh` | Build and deploy code changes |
+| `./status.sh` | Show cluster and pod status |
+| `./logs.sh` | View pod logs |
+| `./stripe-webhook.sh` | Update Stripe webhook secret |
+
+## Daily Workflow
+
+### Starting Development
+
+```bash
+# Start the cluster (if stopped)
+./start.sh
+
+# Or start with k9s monitoring
+./start.sh --k9s
+```
+
+### Making Code Changes
+
+After modifying code, rebuild and deploy:
+
+```bash
+# Build all services
+./build-local.sh
+
+# Build specific service
+./build-local.sh frontend
+./build-local.sh backend
+./build-local.sh marketing
+
+# Build without Docker cache
+./build-local.sh frontend --no-cache
+```
+
+### Viewing Logs
+
+```bash
+# Interactive log viewer
+./logs.sh
+
+# Or use kubectl directly
+kubectl logs -f deployment/frontend -n mirai-local
+kubectl logs -f deployment/gateway -n mirai-local
+```
+
+### Checking Status
+
+```bash
+./status.sh
+```
+
+### Stopping Development
+
+```bash
+# Stop cluster (preserves data)
+./stop.sh
+
+# Or delete everything
+./reset.sh
+```
+
+## Stripe Configuration
+
+### Getting Stripe Keys
+
+1. Go to [Stripe Dashboard](https://dashboard.stripe.com) (Test mode)
+2. Navigate to **Developers > API Keys**
+3. Copy the **Secret key** (starts with `sk_test_`)
+4. Navigate to **Products** and get your price IDs
+
+### Setting Up Webhooks
+
+For payment flows to work locally:
+
+```bash
+# Terminal 1: Start Stripe CLI listener
+stripe listen --forward-to https://api.mirai.dev/api/v1/billing/webhook
+
+# Terminal 2: Update the webhook secret (copy from stripe listen output)
+./stripe-webhook.sh whsec_xxxxx
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        k3d Cluster                          │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │                    Traefik Ingress                     │ │
+│  │   *.mirai.dev  →  TLS termination  →  routing          │ │
+│  └────────────────────────────────────────────────────────┘ │
+│           │              │              │                   │
+│           ▼              ▼              ▼                   │
+│    ┌──────────┐   ┌──────────┐   ┌──────────┐              │
+│    │ frontend │   │ gateway  │   │marketing │              │
+│    │ (Next.js)│   │  (Go)    │   │(Next.js) │              │
+│    └────┬─────┘   └────┬─────┘   └──────────┘              │
+│         │              │                                    │
+│         ▼              ▼                                    │
+│    ┌──────────────────────────────────────┐                │
+│    │              Kratos                   │                │
+│    │         (Authentication)              │                │
+│    └──────────────────────────────────────┘                │
+│         │              │                                    │
+│         ▼              ▼                                    │
+│  ┌───────────┐  ┌───────────┐  ┌───────────┐              │
+│  │ PostgreSQL│  │   Redis   │  │   MinIO   │              │
+│  │  (CNPG)   │  │  (cache)  │  │   (S3)    │              │
+│  └───────────┘  └───────────┘  └───────────┘              │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Directory Structure
 
 ```
 k8s-local/
-├── cluster-config.yaml          # k3d cluster configuration
-├── namespaces.yaml              # Namespace definitions
-├── infrastructure/              # Database, cache, storage
-│   ├── postgres/               # PostgreSQL 16.4 (mirai + kratos DBs)
-│   ├── redis/                  # Redis 7 (cache + queue)
-│   ├── minio/                  # MinIO S3-compatible storage
-│   ├── secrets.yaml            # LOCAL DEV ONLY secrets
-│   ├── kustomization.yaml      # Kustomize config
-│   └── README.md              # Infrastructure documentation
-└── README.md                   # This file
+├── apps/                    # Application deployments
+│   ├── kustomization.yaml   # Kustomize config
+│   ├── backend-patch.yaml   # Backend overrides
+│   ├── frontend-patch.yaml  # Frontend overrides
+│   └── marketing-patch.yaml # Marketing overrides
+├── infrastructure/          # Supporting services
+│   ├── minio/              # S3-compatible storage
+│   └── redis/              # Cache and queues
+├── ingress/                 # Traefik routing
+│   ├── ingressroutes.yaml  # Route definitions
+│   └── middleware.yaml     # Auth, CORS, etc.
+├── kratos/                  # Ory Kratos config
+│   └── values-local.yaml   # Helm values
+├── certs/                   # TLS certificates (generated)
+├── .env                     # Your local secrets (not in git)
+└── *.sh                     # Utility scripts
 ```
-
-## Quick Start
-
-### 1. Create k3d Cluster
-
-```bash
-cd /Users/john/homelab-cluster/apps/mirai/k8s-local
-k3d cluster create mirai-local --config cluster-config.yaml
-```
-
-### 2. Create Namespaces
-
-```bash
-kubectl apply -f namespaces.yaml
-```
-
-### 3. Deploy Infrastructure
-
-```bash
-kubectl apply -k infrastructure/
-```
-
-### 4. Verify Infrastructure
-
-```bash
-# Check all pods are running
-kubectl get pods -n mirai
-
-# Expected output:
-# NAME                        READY   STATUS    RESTARTS   AGE
-# postgres-xxx                1/1     Running   0          1m
-# redis-xxx                   1/1     Running   0          1m
-# minio-xxx                   2/2     Running   0          1m
-```
-
-### 5. Deploy Applications
-
-```bash
-# TODO: Application manifests in separate directories
-# - Ory Kratos (authentication)
-# - Mirai Backend (Connect-RPC API)
-# - Mirai Frontend (Next.js)
-```
-
-## Architecture
-
-### Local vs Production
-
-| Component | Production | Local Dev |
-|-----------|-----------|-----------|
-| **Cluster** | Talos Linux (3x Mac Mini M4) | k3d (Docker) |
-| **Database** | CloudNativePG 3-node HA | Single PostgreSQL pod |
-| **Redis** | Dedicated namespace | Same namespace |
-| **MinIO** | External NAS | In-cluster pod |
-| **Storage** | local-path (NVMe) | k3d default |
-| **Ingress** | Traefik (production) | k3d LoadBalancer |
-
-### Namespaces
-
-All local services run in the `mirai` namespace for simplicity, unlike production which uses separate namespaces (`mirai`, `redis`, `kratos`).
-
-### Service Discovery
-
-Services use fully qualified domain names (FQDN):
-- PostgreSQL: `mirai-db.mirai.svc.cluster.local:5432`
-- Redis: `redis.mirai.svc.cluster.local:6379`
-- MinIO: `minio.mirai.svc.cluster.local:9000`
-
-Applications should use environment variables for these URLs to support both local and production deployments.
-
-## Development Workflow
-
-### Accessing Services
-
-```bash
-# PostgreSQL (both mirai and kratos databases)
-kubectl port-forward -n mirai svc/mirai-db 5432:5432
-psql postgres://postgres:local-dev-password-postgres-change-me@localhost:5432/mirai
-
-# Redis
-kubectl port-forward -n mirai svc/redis 6379:6379
-redis-cli -h localhost
-
-# MinIO Console
-kubectl port-forward -n mirai svc/minio 9001:9001
-# Open http://localhost:9001 (minioadmin / minioadmin-local-dev)
-```
-
-### Running Migrations
-
-```bash
-# Mirai database migrations
-kubectl exec -n mirai deployment/postgres -- \
-  psql -U postgres -d mirai -c "SELECT version()"
-
-# Kratos will run its own migrations on startup
-```
-
-### Logs
-
-```bash
-# Infrastructure logs
-kubectl logs -n mirai deployment/postgres
-kubectl logs -n mirai deployment/redis
-kubectl logs -n mirai deployment/minio
-
-# Follow logs
-kubectl logs -n mirai deployment/postgres -f
-```
-
-### Resource Usage
-
-Local dev infrastructure is configured with minimal resources:
-- PostgreSQL: 256Mi-512Mi RAM, 100m-500m CPU
-- Redis: 128Mi-256Mi RAM, 50m-200m CPU
-- MinIO: 256Mi-512Mi RAM, 100m-500m CPU
-
-Total: ~1-1.5GB RAM for infrastructure (suitable for development laptops)
-
-## Secrets Management
-
-**WARNING**: The `infrastructure/secrets.yaml` file contains hardcoded passwords for LOCAL DEVELOPMENT ONLY.
-
-These secrets should NEVER be used in production:
-- PostgreSQL password: `local-dev-password-postgres-change-me`
-- MinIO credentials: `minioadmin` / `minioadmin-local-dev`
-- Encryption key: 32-byte placeholder
-
-For production, secrets are managed via separate encrypted secret files and external secret stores.
-
-## Cleanup
-
-```bash
-# Delete infrastructure (keeps PVCs)
-kubectl delete -k infrastructure/
-
-# Delete entire cluster
-k3d cluster delete mirai-local
-
-# This will destroy all data including PVCs
-```
-
-## Next Steps
-
-1. Deploy Ory Kratos for authentication
-2. Deploy Mirai backend (Connect-RPC API)
-3. Deploy Mirai frontend (Next.js)
-4. Configure ingress/routing for local access
-5. Set up local development tools (hot reload, debugging)
 
 ## Troubleshooting
 
-### Pods not starting
+### Cluster won't start
 
 ```bash
-kubectl describe pod -n mirai <pod-name>
-kubectl get events -n mirai --sort-by='.lastTimestamp'
+# Check Docker is running
+docker ps
+
+# Check cluster status
+k3d cluster list
+
+# Recreate if needed
+./reset.sh
+./setup.sh
 ```
 
-### PVC not binding
+### Pods not running
 
 ```bash
-kubectl get pvc -n mirai
-kubectl describe pvc -n mirai <pvc-name>
+# Check pod status
+kubectl get pods -n mirai-local
 
-# k3d should have a default StorageClass
-kubectl get storageclass
+# Check events for errors
+kubectl describe pod <pod-name> -n mirai-local
+
+# Check logs
+kubectl logs <pod-name> -n mirai-local
 ```
 
-### Service DNS not resolving
+### TLS certificate errors in browser
 
 ```bash
-# Test from a debug pod
-kubectl run -n mirai debug --image=busybox -it --rm -- sh
-nslookup mirai-db.mirai.svc.cluster.local
+# Regenerate certificates
+mkcert -install
+kubectl delete secret mirai-tls -n mirai-local
+./start.sh  # Will recreate the secret
+
+# Clear browser cache and restart browser
 ```
 
-## Documentation
+### Pages loading slowly (10+ seconds)
 
-- Infrastructure details: [`infrastructure/README.md`](/Users/john/homelab-cluster/apps/mirai/k8s-local/infrastructure/README.md)
-- Production k8s: [`k8s/`](/Users/john/homelab-cluster/apps/mirai/k8s/)
-- Project overview: [`CLAUDE.md`](/Users/john/homelab-cluster/apps/mirai/CLAUDE.md)
+Check frontend can reach Kratos:
+
+```bash
+kubectl exec deployment/frontend -n mirai-local -- \
+  wget -qO- --timeout=2 http://kratos-public.mirai-local.svc.cluster.local:4433/health/alive
+```
+
+If timeout, check `KRATOS_PUBLIC_URL` in frontend-patch.yaml uses port 4433.
+
+### Database connection issues
+
+```bash
+# Check PostgreSQL is running
+kubectl get pods -n mirai-local -l cnpg.io/cluster=mirai-db
+
+# Check connection from gateway
+kubectl exec deployment/gateway -n mirai-local -- \
+  env | grep DATABASE_URL
+```
+
+### Reset everything
+
+```bash
+./reset.sh
+./setup.sh
+```
+
+## Services
+
+| Pod | Purpose | Port |
+|-----|---------|------|
+| frontend | Next.js web app | 3000 |
+| gateway | Go backend API | 8080 |
+| marketing | Marketing site | 3000 |
+| kratos | Authentication | 4433 (public), 4434 (admin) |
+| mirai-db | PostgreSQL | 5432 |
+| redis | Cache/queues | 6379 |
+| minio | S3 storage | 9000 (API), 9001 (console) |
