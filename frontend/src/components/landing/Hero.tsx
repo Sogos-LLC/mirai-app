@@ -18,7 +18,8 @@ export default function Hero() {
         {/* Headline */}
         <h1 className="text-5xl sm:text-6xl font-bold text-primary mb-6 leading-tight">
           Build Engaging Courses{' '}
-          <span className="text-indigo-600 dark:text-indigo-400">10x Faster</span>
+          <span className="text-indigo-600 dark:text-indigo-400">10x Faster</span>{' '}
+          test
         </h1>
 
         {/* Subheadline */}
