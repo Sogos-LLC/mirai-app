@@ -13,41 +13,64 @@ labels:
   includeSelectors: false
 
 # Strategic merge patches for UAT configuration
+# Using target selectors to handle namespace transformation
 patches:
-- patch: |-
-    apiVersion: apps/v1
+- target:
     kind: Deployment
-    metadata:
-      name: mirai-frontend
-    spec:
-      replicas: 2
-      template:
-        spec:
-          containers:
-          - name: mirai-frontend
-            env:
-            - name: S3_BUCKET
-              value: "mirai-uat"
-            - name: REDIS_URL
-              value: "redis://redis.redis-uat.svc.cluster.local:6379"
-            - name: KRATOS_PUBLIC_URL
-              value: "http://kratos-public.kratos-uat.svc.cluster.local:80"
-            - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
-              value: "https://mirai-auth-uat.sogos.io"
-            - name: NEXT_PUBLIC_API_URL
-              value: "https://mirai-api-uat.sogos.io"
-            - name: NEXT_PUBLIC_APP_URL
-              value: "https://mirai-uat.sogos.io"
-            - name: NEXT_PUBLIC_LANDING_URL
-              value: "https://get-mirai-uat.sogos.io"
+    name: mirai-frontend
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 2
+    - op: replace
+      path: /spec/template/spec/containers/0/env
+      value:
+        - name: S3_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: endpoint
+        - name: S3_REGION
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: region
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: secretkey
+        - name: S3_BUCKET
+          value: "mirai-uat"
+        - name: S3_BASE_PATH
+          value: "data"
+        - name: S3_PUBLIC_ENDPOINT
+          value: "https://minio.sogos.io"
+        - name: REDIS_URL
+          value: "redis://redis.redis-uat.svc.cluster.local:6379"
+        - name: KRATOS_PUBLIC_URL
+          value: "http://kratos-public.kratos-uat.svc.cluster.local:80"
+        - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
+          value: "https://mirai-auth-uat.sogos.io"
+        - name: NEXT_PUBLIC_API_URL
+          value: "https://mirai-api-uat.sogos.io"
+        - name: NEXT_PUBLIC_APP_URL
+          value: "https://mirai-uat.sogos.io"
+        - name: NEXT_PUBLIC_LANDING_URL
+          value: "https://get-mirai-uat.sogos.io"
 
-- patch: |-
-    apiVersion: policy/v1
+- target:
     kind: PodDisruptionBudget
-    metadata:
-      name: mirai-frontend-pdb
-    spec:
-      maxUnavailable: 1
+    name: mirai-frontend-pdb
+  patch: |-
+    - op: replace
+      path: /spec/maxUnavailable
+      value: 1
 
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-frontend

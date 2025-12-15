@@ -13,33 +13,32 @@ labels:
   includeSelectors: false
 
 # Strategic merge patches for UAT configuration
+# Using target selectors to handle namespace transformation
 patches:
-- patch: |-
-    apiVersion: apps/v1
+- target:
     kind: Deployment
-    metadata:
-      name: mirai-marketing
-    spec:
-      replicas: 2
-      template:
-        spec:
-          containers:
-          - name: mirai-marketing
-            env:
-            - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
-              value: "https://mirai-auth-uat.sogos.io"
-            - name: NEXT_PUBLIC_APP_URL
-              value: "https://mirai-uat.sogos.io"
-            - name: NEXT_PUBLIC_LANDING_URL
-              value: "https://get-mirai-uat.sogos.io"
+    name: mirai-marketing
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 2
+    - op: replace
+      path: /spec/template/spec/containers/0/env
+      value:
+        - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
+          value: "https://mirai-auth-uat.sogos.io"
+        - name: NEXT_PUBLIC_APP_URL
+          value: "https://mirai-uat.sogos.io"
+        - name: NEXT_PUBLIC_LANDING_URL
+          value: "https://get-mirai-uat.sogos.io"
 
-- patch: |-
-    apiVersion: policy/v1
+- target:
     kind: PodDisruptionBudget
-    metadata:
-      name: mirai-marketing-pdb
-    spec:
-      maxUnavailable: 1
+    name: mirai-marketing-pdb
+  patch: |-
+    - op: replace
+      path: /spec/maxUnavailable
+      value: 1
 
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-marketing

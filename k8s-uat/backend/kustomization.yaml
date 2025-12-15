@@ -12,138 +12,148 @@ labels:
     environment: uat
   includeSelectors: false
 
-# Strategic merge patch for deployment - more robust than JSON patch
+# Strategic merge patches for UAT configuration
+# Using target selectors to handle namespace transformation
 patches:
-- patch: |-
-    apiVersion: apps/v1
+- target:
     kind: Deployment
-    metadata:
-      name: mirai-backend
-    spec:
-      replicas: 2
-      template:
-        spec:
-          dnsConfig:
-            searches:
-              - mirai-uat.svc.cluster.local
-              - svc.cluster.local
-              - cluster.local
-          containers:
-          - name: backend
-            env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: mirai-uat-db-secret
-                  key: dsn
-            - name: KRATOS_URL
-              value: "http://kratos-public.kratos-uat.svc.cluster.local"
-            - name: KRATOS_ADMIN_URL
-              value: "http://kratos-admin.kratos-uat.svc.cluster.local"
-            - name: ALLOWED_ORIGIN
-              value: "https://mirai-uat.sogos.io"
-            - name: FRONTEND_URL
-              value: "https://mirai-uat.sogos.io"
-            - name: MARKETING_URL
-              value: "https://get-mirai-uat.sogos.io"
-            - name: BACKEND_URL
-              value: "https://mirai-api-uat.sogos.io"
-            - name: STRIPE_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: mirai-uat-stripe-secret
-                  key: secret-key
-            - name: STRIPE_WEBHOOK_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: mirai-uat-stripe-secret
-                  key: webhook-secret
-            - name: STRIPE_STARTER_PRICE_ID
-              valueFrom:
-                secretKeyRef:
-                  name: mirai-uat-stripe-secret
-                  key: starter-price-id
-            - name: STRIPE_PRO_PRICE_ID
-              valueFrom:
-                secretKeyRef:
-                  name: mirai-uat-stripe-secret
-                  key: pro-price-id
-            - name: SMTP_FROM
-              value: "noreply-uat@mirai.sogos.io"
-            - name: S3_BUCKET
-              value: "mirai-uat"
-            - name: ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: mirai-uat-encryption-secret
-                  key: encryption-key
+    name: mirai-backend
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 2
+    - op: replace
+      path: /spec/template/spec/dnsConfig/searches
+      value:
+        - mirai-uat.svc.cluster.local
+        - svc.cluster.local
+        - cluster.local
+    - op: replace
+      path: /spec/template/spec/containers/0/env
+      value:
+        - name: PORT
+          value: "8080"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mirai-uat-db-secret
+              key: dsn
+        - name: KRATOS_URL
+          value: "http://kratos-public.kratos-uat.svc.cluster.local"
+        - name: KRATOS_ADMIN_URL
+          value: "http://kratos-admin.kratos-uat.svc.cluster.local"
+        - name: ALLOWED_ORIGIN
+          value: "https://mirai-uat.sogos.io"
+        - name: FRONTEND_URL
+          value: "https://mirai-uat.sogos.io"
+        - name: MARKETING_URL
+          value: "https://get-mirai-uat.sogos.io"
+        - name: BACKEND_URL
+          value: "https://mirai-api-uat.sogos.io"
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mirai-uat-stripe-secret
+              key: secret-key
+        - name: STRIPE_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: mirai-uat-stripe-secret
+              key: webhook-secret
+        - name: STRIPE_STARTER_PRICE_ID
+          valueFrom:
+            secretKeyRef:
+              name: mirai-uat-stripe-secret
+              key: starter-price-id
+        - name: STRIPE_PRO_PRICE_ID
+          valueFrom:
+            secretKeyRef:
+              name: mirai-uat-stripe-secret
+              key: pro-price-id
+        - name: SMTP_HOST
+          value: "mailpit.default.svc.cluster.local"
+        - name: SMTP_PORT
+          value: "1025"
+        - name: SMTP_FROM
+          value: "noreply-uat@mirai.sogos.io"
+        - name: S3_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: endpoint
+        - name: S3_REGION
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: region
+        - name: S3_BUCKET
+          value: "mirai-uat"
+        - name: S3_BASE_PATH
+          value: "data"
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: secretkey
+        - name: S3_PUBLIC_ENDPOINT
+          value: "https://minio.sogos.io"
+        - name: GIN_MODE
+          value: "release"
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mirai-uat-encryption-secret
+              key: encryption-key
 
-# Patch migration job for UAT
-- patch: |-
-    apiVersion: batch/v1
+- target:
     kind: Job
-    metadata:
-      name: mirai-db-migrate
-    spec:
-      template:
-        spec:
-          dnsConfig:
-            searches:
-              - mirai-uat.svc.cluster.local
-              - svc.cluster.local
-              - cluster.local
-          containers:
-          - name: migrate
-            env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: mirai-uat-db-secret
-                  key: dsn
+    name: mirai-db-migrate
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/dnsConfig/searches
+      value:
+        - mirai-uat.svc.cluster.local
+        - svc.cluster.local
+        - cluster.local
+    - op: replace
+      path: /spec/template/spec/containers/0/env
+      value:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mirai-uat-db-secret
+              key: dsn
 
-# Patch PDB for fewer replicas
-- patch: |-
-    apiVersion: policy/v1
+- target:
     kind: PodDisruptionBudget
-    metadata:
-      name: mirai-backend-pdb
-    spec:
-      maxUnavailable: 1
+    name: mirai-backend-pdb
+  patch: |-
+    - op: replace
+      path: /spec/maxUnavailable
+      value: 1
 
-# Patch network policies for UAT namespaces
-- patch: |-
-    apiVersion: networking.k8s.io/v1
+- target:
     kind: NetworkPolicy
-    metadata:
-      name: allow-egress-to-kratos
-    spec:
-      egress:
-      - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kratos-uat
-        ports:
-        - protocol: TCP
-          port: 80
-        - protocol: TCP
-          port: 4433
-        - protocol: TCP
-          port: 4434
+    name: allow-egress-to-kratos
+  patch: |-
+    - op: replace
+      path: /spec/egress/0/to/0/namespaceSelector/matchLabels
+      value:
+        kubernetes.io/metadata.name: kratos-uat
 
-- patch: |-
-    apiVersion: networking.k8s.io/v1
+- target:
     kind: NetworkPolicy
-    metadata:
-      name: allow-egress-to-redis
-    spec:
-      egress:
-      - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: redis-uat
-        ports:
-        - protocol: TCP
-          port: 6379
+    name: allow-egress-to-redis
+  patch: |-
+    - op: replace
+      path: /spec/egress/0/to/0/namespaceSelector/matchLabels
+      value:
+        kubernetes.io/metadata.name: redis-uat
 
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-backend
