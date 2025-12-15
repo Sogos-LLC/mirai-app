@@ -10,15 +10,15 @@ resources:
 labels:
 - pairs:
     environment: uat
-  includeSelectors: false
 
 # Strategic merge patches for UAT configuration
 # Using target selectors to handle namespace transformation
+
+
+
+
 patches:
-- target:
-    kind: Deployment
-    name: mirai-backend
-  patch: |-
+- patch: |-
     - op: replace
       path: /spec/replicas
       value: 2
@@ -109,11 +109,10 @@ patches:
             secretKeyRef:
               name: mirai-uat-encryption-secret
               key: encryption-key
-
-- target:
-    kind: Job
-    name: mirai-db-migrate
-  patch: |-
+  target:
+    kind: Deployment
+    name: mirai-backend
+- patch: |-
     - op: replace
       path: /spec/template/spec/dnsConfig/searches
       value:
@@ -128,34 +127,34 @@ patches:
             secretKeyRef:
               name: mirai-uat-db-secret
               key: dsn
-
-- target:
-    kind: PodDisruptionBudget
-    name: mirai-backend-pdb
-  patch: |-
+  target:
+    kind: Job
+    name: mirai-db-migrate
+- patch: |-
     - op: replace
       path: /spec/maxUnavailable
       value: 1
-
-- target:
-    kind: NetworkPolicy
-    name: allow-egress-to-kratos
-  patch: |-
+  target:
+    kind: PodDisruptionBudget
+    name: mirai-backend-pdb
+- patch: |-
     - op: replace
       path: /spec/egress/0/to/0/namespaceSelector/matchLabels
       value:
         kubernetes.io/metadata.name: kratos-uat
-
-- target:
+  target:
     kind: NetworkPolicy
-    name: allow-egress-to-redis
-  patch: |-
+    name: allow-egress-to-kratos
+- patch: |-
     - op: replace
       path: /spec/egress/0/to/0/namespaceSelector/matchLabels
       value:
         kubernetes.io/metadata.name: redis-uat
+  target:
+    kind: NetworkPolicy
+    name: allow-egress-to-redis
 
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-backend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-backend
-  newTag: uat-latest
+  newTag: uat-20b6297
