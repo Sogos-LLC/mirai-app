@@ -22,6 +22,10 @@ patches:
     - op: replace
       path: /spec/template/spec/containers/0/env
       value:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
           value: "https://mirai-auth-uat.sogos.io"
         - name: NEXT_PUBLIC_APP_URL
