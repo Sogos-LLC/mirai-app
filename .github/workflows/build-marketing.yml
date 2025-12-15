@@ -2,7 +2,7 @@ name: Build Marketing Site (GitOps)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, uat ]
     paths:
       - 'frontend/**'
       - '.github/workflows/build-marketing.yml'
@@ -36,13 +36,41 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Set environment-specific config
+      id: env-config
+      run: |
+        BRANCH=${GITHUB_REF#refs/heads/}
+        echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
+
+        if [ "$BRANCH" = "uat" ]; then
+          echo "app_url=https://mirai-uat.sogos.io" >> $GITHUB_OUTPUT
+          echo "landing_url=https://get-mirai-uat.sogos.io" >> $GITHUB_OUTPUT
+          echo "kratos_url=https://mirai-auth-uat.sogos.io" >> $GITHUB_OUTPUT
+          echo "kustomize_path=k8s-uat/frontend-marketing" >> $GITHUB_OUTPUT
+          echo "environment=uat" >> $GITHUB_OUTPUT
+        else
+          echo "app_url=https://mirai.sogos.io" >> $GITHUB_OUTPUT
+          echo "landing_url=https://get-mirai.sogos.io" >> $GITHUB_OUTPUT
+          echo "kratos_url=https://mirai-auth.sogos.io" >> $GITHUB_OUTPUT
+          echo "kustomize_path=k8s/frontend-marketing" >> $GITHUB_OUTPUT
+          echo "environment=production" >> $GITHUB_OUTPUT
+        fi
+
     - name: Generate version info
       id: version
       run: |
         SHORT_SHA=$(git rev-parse --short HEAD)
-        echo "version=${SHORT_SHA}" >> $GITHUB_OUTPUT
+        BRANCH=${{ steps.env-config.outputs.branch }}
+
+        if [ "$BRANCH" = "main" ]; then
+          VERSION="${SHORT_SHA}"
+        else
+          VERSION="${BRANCH}-${SHORT_SHA}"
+        fi
+
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
         echo "sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
-        echo "full-tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}" >> $GITHUB_OUTPUT
+        echo "full-tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> $GITHUB_OUTPUT
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -53,12 +81,12 @@ jobs:
         build-args: |
           BUILD_TIME=${{ github.event.head_commit.timestamp }}
           BUILD_TARGET=marketing
-          NEXT_PUBLIC_APP_URL=https://mirai.sogos.io
-          NEXT_PUBLIC_LANDING_URL=https://get-mirai.sogos.io
-          NEXT_PUBLIC_KRATOS_BROWSER_URL=https://mirai-auth.sogos.io
+          NEXT_PUBLIC_APP_URL=${{ steps.env-config.outputs.app_url }}
+          NEXT_PUBLIC_LANDING_URL=${{ steps.env-config.outputs.landing_url }}
+          NEXT_PUBLIC_KRATOS_BROWSER_URL=${{ steps.env-config.outputs.kratos_url }}
         tags: |
           ${{ steps.version.outputs.full-tag }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.env-config.outputs.branch == 'uat' && 'uat-latest' || 'latest' }}
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.version.outputs.sha }}
         labels: |
           org.opencontainers.image.revision=${{ github.sha }}
@@ -71,22 +99,25 @@ jobs:
         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
         sudo mv kustomize /usr/local/bin/
 
-        cd k8s/frontend-marketing
+        cd ${{ steps.env-config.outputs.kustomize_path }}
         kustomize edit set image ghcr.io/sogos-llc/mirai-app/mirai-marketing=${{ steps.version.outputs.full-tag }}
 
-        echo "Updated marketing kustomization.yaml:"
+        echo "Updated marketing kustomization.yaml (${{ steps.env-config.outputs.environment }}):"
         cat kustomization.yaml | grep -A 2 "images:"
 
     - name: Commit and push changes
       run: |
+        BRANCH=${{ steps.env-config.outputs.branch }}
+        KUSTOMIZE_PATH=${{ steps.env-config.outputs.kustomize_path }}
+
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
         git stash --include-untracked
-        git pull origin main --rebase
+        git pull origin ${BRANCH} --rebase
         git stash pop || true
 
-        git add k8s/frontend-marketing/kustomization.yaml
+        git add ${KUSTOMIZE_PATH}/kustomization.yaml
 
         if git diff --staged --quiet; then
           echo "No changes to commit"
@@ -96,6 +127,7 @@ jobs:
           Automated image update by GitHub Actions
           - Image: ${{ steps.version.outputs.full-tag }}
           - Commit: ${{ github.sha }}
+          - Environment: ${{ steps.env-config.outputs.environment }}
 
           [skip ci]"
 
@@ -103,12 +135,12 @@ jobs:
           retry_count=0
 
           while [ $retry_count -lt $max_retries ]; do
-            if git push origin main; then
+            if git push origin ${BRANCH}; then
               echo "Successfully pushed changes"
               break
             else
               echo "Push failed, pulling and retrying..."
-              git pull origin main --rebase
+              git pull origin ${BRANCH} --rebase
               ((retry_count++))
             fi
           done
@@ -121,12 +153,18 @@ jobs:
 
     - name: Create deployment summary
       run: |
-        echo "# Marketing Site Deployment" >> $GITHUB_STEP_SUMMARY
+        echo "# Marketing Site Deployment (${{ steps.env-config.outputs.environment }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## Image Details" >> $GITHUB_STEP_SUMMARY
         echo "- **Version:** \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
         echo "- **Full Tag:** \`${{ steps.version.outputs.full-tag }}\`" >> $GITHUB_STEP_SUMMARY
         echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment:** \`${{ steps.env-config.outputs.environment }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Build Args" >> $GITHUB_STEP_SUMMARY
+        echo "- **App URL:** \`${{ steps.env-config.outputs.app_url }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Landing URL:** \`${{ steps.env-config.outputs.landing_url }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Kratos URL:** \`${{ steps.env-config.outputs.kratos_url }}\`" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## Next Steps" >> $GITHUB_STEP_SUMMARY
         echo "- Image built and pushed to GHCR" >> $GITHUB_STEP_SUMMARY

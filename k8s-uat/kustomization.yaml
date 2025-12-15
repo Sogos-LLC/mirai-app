@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# UAT Environment Root Kustomization
+# This aggregates all UAT resources for deployment via ArgoCD
+# NOTE: No global namespace - each sub-kustomization handles its own namespace
+
+resources:
+# Infrastructure (creates mirai-uat, kratos-uat, redis-uat namespaces)
+- namespace.yaml
+- networkpolicies.yaml
+
+# Application tiers (each has own kustomization that patches the base k8s/ manifests)
+- backend
+- frontend
+- frontend-marketing
+
+# Common labels for all UAT resources
+labels:
+- pairs:
+    environment: uat
+  includeSelectors: false

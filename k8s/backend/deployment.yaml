@@ -58,6 +58,10 @@ spec:
         - containerPort: 8080
           name: http
         env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         - name: PORT
           value: "8080"
         - name: DATABASE_URL
@@ -129,6 +133,8 @@ spec:
               key: secretkey
         - name: S3_PUBLIC_ENDPOINT
           value: "https://minio.sogos.io"
+        - name: REDIS_URL
+          value: "redis://redis.redis.svc.cluster.local:6379"
         - name: GIN_MODE
           value: "release"
         - name: ENCRYPTION_KEY

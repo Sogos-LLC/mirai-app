@@ -12,9 +12,10 @@ import type {
   LogoutFlow,
 } from './types';
 import { AUTH_COOKIES, getSessionTokenFromCookies } from '@/lib/auth.config';
+import { KRATOS_BROWSER_URL } from '@/lib/urls';
 
 // Kratos URLs - use browser URL for redirects, internal URL for server-side
-const KRATOS_BROWSER_URL = process.env.NEXT_PUBLIC_KRATOS_BROWSER_URL || 'https://mirai-auth.sogos.io';
+// KRATOS_BROWSER_URL imported from urls.ts (single source of truth)
 const KRATOS_PUBLIC_URL = process.env.KRATOS_PUBLIC_URL || KRATOS_BROWSER_URL;
 
 /**

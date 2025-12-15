@@ -44,12 +44,18 @@ func main() {
 	logger := logging.New()
 	logger.Info("starting mirai backend")
 
-	// Load configuration
+	// Load configuration (includes environment detection and validation)
 	cfg, err := config.Load()
 	if err != nil {
 		logger.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
+
+	// Log detected environment prominently
+	logger.Info("environment detected",
+		"environment", cfg.Environment.String(),
+		"requiresStrictValidation", cfg.Environment.RequiresStrictValidation(),
+	)
 
 	// Connect to database
 	db, err := postgres.NewDB(cfg.DatabaseURL)

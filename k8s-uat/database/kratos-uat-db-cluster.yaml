@@ -1,0 +1,67 @@
+# CloudNativePG Cluster for Kratos UAT Database
+# Single instance, minimal resources, no backups
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: kratos-uat-db
+  namespace: kratos-uat
+  labels:
+    app.kubernetes.io/name: kratos-uat-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: mirai-uat
+    environment: uat
+spec:
+  description: "Kratos UAT Database - Single instance for testing"
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+
+  # Single instance - no HA for UAT
+  instances: 1
+
+  # PostgreSQL configuration - minimal for UAT
+  postgresql:
+    parameters:
+      shared_buffers: "64MB"
+      effective_cache_size: "128MB"
+      max_connections: "30"
+      log_statement: "ddl"
+    pg_hba:
+      - host all all 10.0.0.0/8 scram-sha-256
+      - host all all 192.168.0.0/16 scram-sha-256
+
+  # Bootstrap configuration
+  bootstrap:
+    initdb:
+      database: kratos
+      owner: kratos
+      encoding: UTF8
+      secret:
+        name: kratos-uat-db-credentials
+
+  # Storage configuration - minimal for UAT
+  storage:
+    storageClass: local-path
+    size: 2Gi
+
+  # Resource allocation - minimal for UAT
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+  # Affinity - allow scheduling on control plane
+  affinity:
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
+  # Monitoring
+  monitoring:
+    enablePodMonitor: true
+
+  # Disable superuser access
+  enableSuperuserAccess: false
