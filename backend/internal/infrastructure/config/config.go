@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/sogos/mirai-backend/internal/infrastructure/environment"
 )
 
 // Config holds application configuration.
 type Config struct {
+	// Environment
+	Environment environment.Environment
+
 	// Server
 	Port      string
 	EnableH2C bool // Enable HTTP/2 cleartext for local dev (Envoy upstream)
@@ -63,40 +68,60 @@ type Config struct {
 	StaleJobTimeoutMinutes int // Timeout in minutes before a processing job is considered stale (default: 30)
 }
 
-// Load loads configuration from environment variables.
+// Load loads configuration from environment variables with environment-aware validation.
+// In production/UAT environments, critical resources MUST be explicitly set and match
+// the detected environment to prevent cross-environment data access.
 func Load() (*Config, error) {
+	// Step 1: Detect environment from POD_NAMESPACE or MIRAI_ENV
+	env, err := environment.Detect()
+	if err != nil {
+		return nil, fmt.Errorf("environment detection failed: %w", err)
+	}
+
+	// Step 2: Load DATABASE_URL (always required)
 	databaseURL := getEnv("DATABASE_URL", "")
 	if databaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL environment variable is required")
 	}
 
-	return &Config{
+	// Step 3: Load persistence-related config with environment-aware defaults
+	// For non-local environments, these MUST be explicitly set (no defaults that could
+	// accidentally point to production)
+	kratosURL := getEnvRequired(env, "KRATOS_URL", "http://localhost:4433")
+	kratosAdminURL := getEnvRequired(env, "KRATOS_ADMIN_URL", "http://localhost:4434")
+	allowedOrigin := getEnvRequired(env, "ALLOWED_ORIGIN", "http://localhost:3000")
+	s3Bucket := getEnvRequired(env, "S3_BUCKET", "mirai-dev")
+	redisURL := getEnvRequired(env, "REDIS_URL", "redis://localhost:6379")
+
+	// Build config
+	cfg := &Config{
+		Environment:          env,
 		Port:                 getEnv("PORT", "8080"),
 		EnableH2C:            getEnv("ENABLE_H2C", "false") == "true",
 		DatabaseURL:          databaseURL,
-		KratosURL:            getEnv("KRATOS_URL", "http://kratos-public.kratos.svc.cluster.local"),
-		KratosAdminURL:       getEnv("KRATOS_ADMIN_URL", "http://kratos-admin.kratos.svc.cluster.local"),
-		AllowedOrigin:        getEnv("ALLOWED_ORIGIN", "https://mirai.sogos.io"),
+		KratosURL:            kratosURL,
+		KratosAdminURL:       kratosAdminURL,
+		AllowedOrigin:        allowedOrigin,
 		StripeSecretKey:      getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookSecret:  getEnv("STRIPE_WEBHOOK_SECRET", ""),
 		StripeStarterPriceID: getEnv("STRIPE_STARTER_PRICE_ID", ""),
 		StripeProPriceID:     getEnv("STRIPE_PRO_PRICE_ID", ""),
-		FrontendURL:  getEnv("FRONTEND_URL", "https://mirai.sogos.io"),
-		MarketingURL: getEnv("MARKETING_URL", getEnv("FRONTEND_URL", "https://get-mirai.sogos.io")), // Falls back to FRONTEND_URL for local-dev
-		BackendURL:   getEnv("BACKEND_URL", "http://localhost:8080"),
-		CookieDomain: getEnv("COOKIE_DOMAIN", ""),                       // Empty uses request domain; set to ".sogos.io" for cross-subdomain
-		CookieSecure: getEnv("COOKIE_SECURE", "true") == "true",         // false for local HTTP dev
+		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:3000"),
+		MarketingURL:         getEnv("MARKETING_URL", getEnv("FRONTEND_URL", "http://localhost:3001")),
+		BackendURL:           getEnv("BACKEND_URL", "http://localhost:8080"),
+		CookieDomain:         getEnv("COOKIE_DOMAIN", ""),
+		CookieSecure:         getEnv("COOKIE_SECURE", "true") == "true",
 		// S3/MinIO Storage
-		S3Endpoint:       getEnv("S3_ENDPOINT", "http://192.168.1.226:9768"), // Empty for AWS S3
-		S3PublicEndpoint: getEnv("S3_PUBLIC_ENDPOINT", ""),                   // HTTPS endpoint for presigned URLs
+		S3Endpoint:       getEnv("S3_ENDPOINT", "http://localhost:9000"),
+		S3PublicEndpoint: getEnv("S3_PUBLIC_ENDPOINT", ""),
 		S3Region:         getEnv("S3_REGION", "us-east-1"),
-		S3Bucket:         getEnv("S3_BUCKET", "mirai"),
+		S3Bucket:         s3Bucket,
 		S3BasePath:       getEnv("S3_BASE_PATH", "data"),
 		S3AccessKey:      getEnv("S3_ACCESS_KEY", ""),
 		S3SecretKey:      getEnv("S3_SECRET_KEY", ""),
 		// Cache
 		EnableRedisCache: getEnv("ENABLE_REDIS_CACHE", "true") != "false",
-		RedisURL:         getEnv("REDIS_URL", "redis://redis.redis.svc.cluster.local:6379"),
+		RedisURL:         redisURL,
 		// SMTP/Email
 		SMTPHost:     getEnv("SMTP_HOST", ""),
 		SMTPPort:     getEnv("SMTP_PORT", "1025"),
@@ -108,7 +133,23 @@ func Load() (*Config, error) {
 		EncryptionKey: getEnv("ENCRYPTION_KEY", ""),
 		// Worker
 		StaleJobTimeoutMinutes: getEnvInt("STALE_JOB_TIMEOUT_MINUTES", 30),
-	}, nil
+	}
+
+	// Step 4: Validate configuration matches the detected environment
+	// This prevents UAT from accidentally using production resources
+	if env.RequiresStrictValidation() {
+		validator := environment.NewValidator(env)
+		if err := validator.ValidateConfig(
+			cfg.DatabaseURL,
+			cfg.S3Bucket,
+			cfg.RedisURL,
+			cfg.KratosURL,
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	return cfg, nil
 }
 
 func getEnv(key, defaultValue string) string {
@@ -116,6 +157,21 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// getEnvRequired returns the env var value if set, or the fallback for local env.
+// For non-local environments, the env var MUST be explicitly set.
+func getEnvRequired(env environment.Environment, key, localFallback string) string {
+	value := os.Getenv(key)
+	if value != "" {
+		return value
+	}
+	// Only allow fallback in local environment
+	if env.IsLocal() {
+		return localFallback
+	}
+	// In prod/UAT, return empty string - validation will catch this
+	return ""
 }
 
 func getEnvInt(key string, defaultValue int) int {
