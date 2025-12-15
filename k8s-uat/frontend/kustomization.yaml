@@ -10,15 +10,12 @@ resources:
 labels:
 - pairs:
     environment: uat
-  includeSelectors: false
 
 # Strategic merge patches for UAT configuration
 # Using target selectors to handle namespace transformation
+
 patches:
-- target:
-    kind: Deployment
-    name: mirai-frontend
-  patch: |-
+- patch: |-
     - op: replace
       path: /spec/replicas
       value: 2
@@ -63,16 +60,18 @@ patches:
           value: "https://mirai-uat.sogos.io"
         - name: NEXT_PUBLIC_LANDING_URL
           value: "https://get-mirai-uat.sogos.io"
-
-- target:
-    kind: PodDisruptionBudget
-    name: mirai-frontend-pdb
-  patch: |-
+  target:
+    kind: Deployment
+    name: mirai-frontend
+- patch: |-
     - op: replace
       path: /spec/maxUnavailable
       value: 1
+  target:
+    kind: PodDisruptionBudget
+    name: mirai-frontend-pdb
 
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-frontend
-  newTag: uat-latest
+  newTag: uat-62e4ea0
