@@ -109,6 +109,8 @@ patches:
             secretKeyRef:
               name: mirai-uat-encryption-secret
               key: encryption-key
+        - name: REDIS_URL
+          value: "redis://redis.redis-uat.svc.cluster.local:6379"
   target:
     kind: Deployment
     name: mirai-backend
