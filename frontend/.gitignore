@@ -9,7 +9,6 @@ tsconfig.tsbuildinfo
 
 # Playwright
 e2e/.auth/
-playwright/test-results/
-playwright/screenshots/
+playwright/
 playwright-report/
 test-results/
