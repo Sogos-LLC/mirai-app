@@ -109,76 +109,6 @@ export default function SMEPersonasStep({
               </Button>
             </div>
 
-            {/* Quick Start Templates Section */}
-            <div className="mb-6 p-4 bg-surface-elevated border rounded-lg">
-              <h3 className="text-sm font-semibold text-primary mb-3">
-                Quick Add from Templates
-              </h3>
-              <div className="space-y-2">
-                {smeTemplateCategories.map((category) => {
-                  const isExpanded = expandedCategories.has(category.id);
-                  const addedCount = category.templates.filter((t) => isTemplateAdded(t.id)).length;
-
-                  return (
-                    <div key={category.id}>
-                      <button
-                        onClick={() => toggleCategory(category.id)}
-                        className="w-full flex items-center justify-between p-2 rounded hover:bg-hover transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-muted" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-muted" />
-                          )}
-                          <span className="text-sm font-medium text-primary">{category.name}</span>
-                          {addedCount > 0 && (
-                            <span className="text-xs text-muted">
-                              ({addedCount} added)
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted">
-                          {category.templates.length} templates
-                        </span>
-                      </button>
-
-                      {isExpanded && (
-                        <div className="flex flex-wrap gap-2 pl-6 pt-2 pb-1">
-                          {category.templates.map((template) => {
-                            const added = isTemplateAdded(template.id);
-                            return (
-                              <button
-                                key={template.id}
-                                onClick={() => !added && handleAddTemplate(template)}
-                                disabled={added}
-                                className={`
-                                  flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full
-                                  transition-colors
-                                  ${added
-                                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 cursor-default'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-dark-300 dark:text-dark-text dark:hover:bg-dark-400'
-                                  }
-                                `}
-                                title={template.description}
-                              >
-                                {added ? (
-                                  <Check className="w-3 h-3" />
-                                ) : (
-                                  <Plus className="w-3 h-3" />
-                                )}
-                                {template.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* AI Generated Personas */}
             <h3 className="text-sm font-semibold text-primary mb-3">
               AI Generated Personas
@@ -244,9 +174,79 @@ export default function SMEPersonasStep({
               })}
             </div>
 
-            <p className="text-sm text-muted text-center mb-4">
+            <p className="text-sm text-muted text-center mb-6">
               Select at least one persona. These experts will influence the tone and depth of your course content.
             </p>
+
+            {/* Quick Add Templates Section */}
+            <div className="p-4 bg-surface-elevated border rounded-lg">
+              <p className="text-sm text-muted mb-3">
+                Want to add more experts? Quick add from our template library
+              </p>
+              <div className="space-y-2">
+                {smeTemplateCategories.map((category) => {
+                  const isExpanded = expandedCategories.has(category.id);
+                  const addedCount = category.templates.filter((t) => isTemplateAdded(t.id)).length;
+
+                  return (
+                    <div key={category.id}>
+                      <button
+                        onClick={() => toggleCategory(category.id)}
+                        className="w-full flex items-center justify-between p-2 rounded hover:bg-hover transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-muted" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted" />
+                          )}
+                          <span className="text-sm font-medium text-primary">{category.name}</span>
+                          {addedCount > 0 && (
+                            <span className="text-xs text-muted">
+                              ({addedCount} added)
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted">
+                          {category.templates.length} templates
+                        </span>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="flex flex-wrap gap-2 pl-6 pt-2 pb-1">
+                          {category.templates.map((template) => {
+                            const added = isTemplateAdded(template.id);
+                            return (
+                              <button
+                                key={template.id}
+                                onClick={() => !added && handleAddTemplate(template)}
+                                disabled={added}
+                                className={`
+                                  flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full
+                                  transition-colors
+                                  ${added
+                                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 cursor-default'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-dark-300 dark:text-dark-text dark:hover:bg-dark-400'
+                                  }
+                                `}
+                                title={template.description}
+                              >
+                                {added ? (
+                                  <Check className="w-3 h-3" />
+                                ) : (
+                                  <Plus className="w-3 h-3" />
+                                )}
+                                {template.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <WizardNavigation

@@ -32,7 +32,6 @@ import TitleDescriptionStep from './steps/TitleDescriptionStep';
 import SMEPersonasStep from './steps/SMEPersonasStep';
 import AudiencePersonasStep from './steps/AudiencePersonasStep';
 import ToneSelectionStep from './steps/ToneSelectionStep';
-import AdditionalContextStep from './steps/AdditionalContextStep';
 import GeneratingStep from './steps/GeneratingStep';
 import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -377,7 +376,7 @@ export default function CourseWizard() {
   if (state.matches('generatingOutline') || (typeof stateValue === 'object' && 'generatingOutline' in stateValue)) {
     return (
       <>
-        <WizardProgress currentStep="additionalContext" isGenerating={true} />
+        <WizardProgress currentStep="toneSelection" isGenerating={true} />
         <GeneratingStep
           title="Building Your Outline"
           description="Starting outline generation..."
@@ -459,11 +458,11 @@ export default function CourseWizard() {
           title={context.improvedTitle}
           description={context.description}
           originalCourseName={context.courseName}
+          desiredOutcomes={context.desiredOutcomes}
           onTitleChange={(title) => send({ type: 'SET_TITLE', title })}
           onDescriptionChange={(description) => send({ type: 'SET_DESCRIPTION', description })}
           onNext={() => send({ type: 'APPROVE_TITLE_DESCRIPTION' })}
           onBack={() => send({ type: 'GO_BACK' })}
-          onRegenerate={() => send({ type: 'REGENERATE_TITLE' })}
           onCancel={handleCancel}
           isLoading={isLoading}
         />
@@ -503,22 +502,13 @@ export default function CourseWizard() {
         <ToneSelectionStep
           options={context.toneOptions}
           selectedId={context.selectedToneId}
+          additionalContext={context.additionalContext}
           onSelectTone={(toneId) => send({ type: 'SELECT_TONE', toneId })}
-          onNext={() => send({ type: 'APPROVE_TONE' })}
-          onBack={() => send({ type: 'GO_BACK' })}
-          onRegenerate={() => send({ type: 'REGENERATE_TONES' })}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-        />
-      )}
-
-      {state.matches('additionalContext') && (
-        <AdditionalContextStep
-          context={context.additionalContext}
           onContextChange={(ctx) => send({ type: 'SET_ADDITIONAL_CONTEXT', context: ctx })}
           onNext={() => send({ type: 'SUBMIT_CONTEXT' })}
           onSkip={() => send({ type: 'SKIP_CONTEXT' })}
           onBack={() => send({ type: 'GO_BACK' })}
+          onRegenerate={() => send({ type: 'REGENERATE_TONES' })}
           onCancel={handleCancel}
           isLoading={isLoading}
         />

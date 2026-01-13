@@ -15,6 +15,7 @@ import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 /**
  * Wizard step identifiers matching backend wizard state
+ * Note: 'additionalContext' was merged into 'toneSelection' (now a 5-step wizard)
  */
 export type WizardStep =
   | 'courseName'
@@ -22,7 +23,6 @@ export type WizardStep =
   | 'smeSelection'
   | 'audienceSelection'
   | 'toneSelection'
-  | 'additionalContext'
   | 'outlineJobQueued';
 
 /**
@@ -376,25 +376,6 @@ export const courseWizardMachine = createMachine({
           })),
         },
         {
-          target: 'additionalContext',
-          guard: ({ context }) => context.savedState?.currentStep === 'additionalContext',
-          actions: assign(({ context }) => ({
-            courseName: context.savedState?.data?.courseName ?? '',
-            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
-            improvedTitle: context.savedState?.data?.improvedTitle ?? '',
-            description: context.savedState?.data?.description ?? '',
-            smePersonas: context.savedState?.data?.smePersonas ?? [],
-            selectedSMEIds: context.savedState?.data?.selectedSmeIds ?? [],
-            audiencePersonas: context.savedState?.data?.audiencePersonas ?? [],
-            selectedAudienceIds: context.savedState?.data?.selectedAudienceIds ?? [],
-            toneOptions: context.savedState?.data?.toneOptions ?? [],
-            selectedToneId: context.savedState?.data?.selectedToneId ?? '',
-            additionalContext: context.savedState?.data?.additionalContext ?? '',
-            currentStep: 'additionalContext' as const,
-            flowStartedAt: Date.now(),
-          })),
-        },
-        {
           // Default: start from beginning
           target: 'courseName',
           actions: assign({
@@ -734,7 +715,7 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 5: Tone Selection
+    // Step 5: Tone Selection + Additional Context (merged)
     // --------------------------------------------------------
     toneSelection: {
       entry: assign({
@@ -746,37 +727,28 @@ export const courseWizardMachine = createMachine({
             selectedToneId: ({ event }) => event.toneId,
           }),
         },
-        APPROVE_TONE: {
-          target: 'additionalContext',
-          guard: ({ context }) => context.selectedToneId.length > 0,
-        },
-        REGENERATE_TONES: 'generatingTones',
-        GO_BACK: 'audienceSelection',
-        CANCEL: 'cancelled',
-      },
-    },
-
-    // --------------------------------------------------------
-    // Step 6: Additional Context (Optional)
-    // --------------------------------------------------------
-    additionalContext: {
-      entry: assign({
-        currentStep: 'additionalContext' as const,
-      }),
-      on: {
         SET_ADDITIONAL_CONTEXT: {
           actions: assign({
             additionalContext: ({ event }) => event.context,
           }),
         },
-        SUBMIT_CONTEXT: 'generatingOutline',
+        APPROVE_TONE: {
+          target: 'generatingOutline',
+          guard: ({ context }) => context.selectedToneId.length > 0,
+        },
+        SUBMIT_CONTEXT: {
+          target: 'generatingOutline',
+          guard: ({ context }) => context.selectedToneId.length > 0,
+        },
         SKIP_CONTEXT: {
           target: 'generatingOutline',
+          guard: ({ context }) => context.selectedToneId.length > 0,
           actions: assign({
             additionalContext: '',
           }),
         },
-        GO_BACK: 'toneSelection',
+        REGENERATE_TONES: 'generatingTones',
+        GO_BACK: 'audienceSelection',
         CANCEL: 'cancelled',
       },
     },
@@ -806,7 +778,7 @@ export const courseWizardMachine = createMachine({
           }),
         },
         onError: {
-          target: 'additionalContext',
+          target: 'toneSelection',
           actions: assign({
             error: ({ event }) =>
               createAuthError(
@@ -869,8 +841,8 @@ export const courseWizardMachine = createMachine({
 // ============================================================
 
 /**
- * Get step number (1-6) from step identifier
- * Note: Step 7 (outlineJobQueued) is a confirmation screen, not a wizard step
+ * Get step number (1-5) from step identifier
+ * Note: outlineJobQueued is a confirmation screen, not a wizard step
  */
 export function getStepNumber(step: WizardStep): number {
   const stepMap: Record<WizardStep, number> = {
@@ -879,8 +851,7 @@ export function getStepNumber(step: WizardStep): number {
     smeSelection: 3,
     audienceSelection: 4,
     toneSelection: 5,
-    additionalContext: 6,
-    outlineJobQueued: 6, // Same as additionalContext since it's a confirmation
+    outlineJobQueued: 5, // Same as toneSelection since it's a confirmation
   };
   return stepMap[step];
 }
@@ -894,8 +865,7 @@ export function getStepLabel(step: WizardStep): string {
     titleDescription: 'Title & Description',
     smeSelection: 'SME Personas',
     audienceSelection: 'Target Audience',
-    toneSelection: 'Tone & Style',
-    additionalContext: 'Additional Context',
+    toneSelection: 'Tone & Context',
     outlineJobQueued: 'Generation Started',
   };
   return labelMap[step];
@@ -911,7 +881,6 @@ export function getAllSteps(): WizardStep[] {
     'smeSelection',
     'audienceSelection',
     'toneSelection',
-    'additionalContext',
   ];
 }
 

@@ -109,11 +109,78 @@ export default function AudiencePersonasStep({
               </Button>
             </div>
 
-            {/* Quick Start Templates Section */}
-            <div className="mb-6 p-4 bg-surface-elevated border rounded-lg">
-              <h3 className="text-sm font-semibold text-primary mb-3">
-                Quick Add from Templates
-              </h3>
+            {/* AI Generated Target Audience */}
+            <h3 className="text-sm font-semibold text-primary mb-3">
+              AI Generated Target Audience
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {personas.map((persona) => {
+                const isSelected = selectedIds.includes(persona.id);
+
+                return (
+                  <div
+                    key={persona.id}
+                    onClick={() => onTogglePersona(persona.id)}
+                    className={`
+                      p-4 rounded-lg border-2 cursor-pointer transition-all
+                      ${isSelected
+                        ? 'border-primary-500 bg-primary-50/50'
+                        : 'border-transparent bg-surface hover:border-gray-300'
+                      }
+                    `}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-primary">{persona.name}</h3>
+                        <p className="text-sm text-muted">{persona.role}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => handleEditClick(persona, e)}
+                          className="p-2 rounded hover:bg-hover min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        >
+                          <Edit2 className="w-4 h-4 text-muted" />
+                        </button>
+                        <div
+                          className={`
+                            w-5 h-5 rounded-full border-2 flex items-center justify-center
+                            ${isSelected
+                              ? 'bg-primary-600 border-primary-600'
+                              : 'border-gray-300'
+                            }
+                          `}
+                        >
+                          {isSelected && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-secondary mb-3 line-clamp-2">
+                      {persona.description}
+                    </p>
+                    {persona.goals && persona.goals.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted">Goals:</p>
+                        <ul className="text-xs text-secondary space-y-0.5">
+                          {persona.goals.slice(0, 2).map((goal, i) => (
+                            <li key={i} className="line-clamp-1">• {goal}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-sm text-muted text-center mb-6">
+              Select at least one audience. Content will be tailored to their experience level and goals.
+            </p>
+
+            {/* Quick Add Templates Section */}
+            <div className="p-4 bg-surface-elevated border rounded-lg">
+              <p className="text-sm text-muted mb-3">
+                Want to add more audiences? Quick add from our template library
+              </p>
               <div className="space-y-2">
                 {personaTemplateCategories.map((category) => {
                   const isExpanded = expandedCategories.has(category.id);
@@ -178,73 +245,6 @@ export default function AudiencePersonasStep({
                 })}
               </div>
             </div>
-
-            {/* AI Generated Personas */}
-            <h3 className="text-sm font-semibold text-primary mb-3">
-              AI Generated Personas
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {personas.map((persona) => {
-                const isSelected = selectedIds.includes(persona.id);
-
-                return (
-                  <div
-                    key={persona.id}
-                    onClick={() => onTogglePersona(persona.id)}
-                    className={`
-                      p-4 rounded-lg border-2 cursor-pointer transition-all
-                      ${isSelected
-                        ? 'border-primary-500 bg-primary-50/50'
-                        : 'border-transparent bg-surface hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-primary">{persona.name}</h3>
-                        <p className="text-sm text-muted">{persona.role}</p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => handleEditClick(persona, e)}
-                          className="p-2 rounded hover:bg-hover min-h-[44px] min-w-[44px] flex items-center justify-center"
-                        >
-                          <Edit2 className="w-4 h-4 text-muted" />
-                        </button>
-                        <div
-                          className={`
-                            w-5 h-5 rounded-full border-2 flex items-center justify-center
-                            ${isSelected
-                              ? 'bg-primary-600 border-primary-600'
-                              : 'border-gray-300'
-                            }
-                          `}
-                        >
-                          {isSelected && <Check className="w-3 h-3 text-white" />}
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-secondary mb-3 line-clamp-2">
-                      {persona.description}
-                    </p>
-                    {persona.goals && persona.goals.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted">Goals:</p>
-                        <ul className="text-xs text-secondary space-y-0.5">
-                          {persona.goals.slice(0, 2).map((goal, i) => (
-                            <li key={i} className="line-clamp-1">• {goal}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="text-sm text-muted text-center mb-4">
-              Select at least one audience. Content will be tailored to their experience level and goals.
-            </p>
           </div>
 
           <WizardNavigation

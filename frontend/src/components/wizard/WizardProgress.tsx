@@ -16,7 +16,6 @@ const stepIcons: Record<WizardStep, React.ComponentType<{ className?: string }>>
   smeSelection: Users,
   audienceSelection: Target,
   toneSelection: Palette,
-  additionalContext: FileText,
   outlineJobQueued: Loader2,
 };
 

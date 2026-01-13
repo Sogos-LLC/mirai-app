@@ -8,6 +8,5 @@ export { default as TitleDescriptionStep } from './steps/TitleDescriptionStep';
 export { default as SMEPersonasStep } from './steps/SMEPersonasStep';
 export { default as AudiencePersonasStep } from './steps/AudiencePersonasStep';
 export { default as ToneSelectionStep } from './steps/ToneSelectionStep';
-export { default as AdditionalContextStep } from './steps/AdditionalContextStep';
 export { default as GeneratingStep } from './steps/GeneratingStep';
 export { default as OutlineReviewStep } from './steps/OutlineReviewStep';
