@@ -151,7 +151,7 @@ export default function CourseEditorPage() {
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [localComponents, setLocalComponents] = useState<LessonComponent[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
-  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [addMenuForComponent, setAddMenuForComponent] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [deletingComponentId, setDeletingComponentId] = useState<string | null>(null);
@@ -386,16 +386,25 @@ export default function CourseEditorPage() {
     }
   }, [courseId, selectedLessonId, openEditModal]);
 
-  const handleAddComponent = (type: number) => {
+  const handleAddComponent = (type: number, insertAfterIndex: number) => {
     const newComponent: LessonComponent = {
       id: uuidv4(),
       type,
       contentJson: getDefaultContentForType(type),
-      order: localComponents.length,
+      order: insertAfterIndex + 1,
       $typeName: 'mirai.v1.LessonComponent',
     };
-    setLocalComponents([...localComponents, newComponent]);
-    setShowAddMenu(false);
+
+    // Insert at the specified position and reorder
+    const newComponents = [...localComponents];
+    newComponents.splice(insertAfterIndex + 1, 0, newComponent);
+    // Update order for all components
+    const reorderedComponents = newComponents.map((c, idx) => ({ ...c, order: idx }));
+
+    setLocalComponents(reorderedComponents);
+    // Sync ref immediately so persist callback can access the new component
+    localComponentsRef.current = reorderedComponents;
+    setAddMenuForComponent(null);
     setHasChanges(true);
 
     // Open edit modal for the new component
@@ -735,60 +744,7 @@ export default function CourseEditorPage() {
           {selectedLessonId && currentLesson ? (
             <Card>
               <CardHeader className="py-4 border-b">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <CardTitle as="h2">{currentLesson.title}</CardTitle>
-                  <div className="relative w-full sm:w-auto">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowAddMenu(!showAddMenu)}
-                      className="w-full sm:w-auto min-h-[44px]"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Component
-                    </Button>
-                    {showAddMenu && (
-                      <>
-                        {/* Mobile: Bottom sheet for add menu */}
-                        {isMobile ? (
-                          <BottomSheet
-                            isOpen={showAddMenu}
-                            onClose={() => setShowAddMenu(false)}
-                            title="Add Component"
-                            height="auto"
-                          >
-                            <div className="space-y-2">
-                              {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                                <button
-                                  key={type}
-                                  onClick={() => handleAddComponent(type)}
-                                  className="w-full flex items-center gap-3 px-4 py-4 text-base text-secondary hover:bg-hover transition-colors rounded-lg min-h-[44px]"
-                                >
-                                  <Icon className="w-5 h-5" />
-                                  {name}
-                                </button>
-                              ))}
-                            </div>
-                          </BottomSheet>
-                        ) : (
-                          /* Desktop: Dropdown menu */
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-default rounded-lg shadow-lg z-20">
-                            {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                              <button
-                                key={type}
-                                onClick={() => handleAddComponent(type)}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
-                              >
-                                <Icon className="w-4 h-4" />
-                                {name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
+                <CardTitle as="h2">{currentLesson.title}</CardTitle>
               </CardHeader>
               <CardContent className="py-6">
                 {localComponents.length > 0 ? (
@@ -804,7 +760,7 @@ export default function CourseEditorPage() {
                       strategy={verticalListSortingStrategy}
                     >
                       <div className="space-y-4 pl-4 md:pl-10">
-                        {localComponents.map((component) => (
+                        {localComponents.map((component, index) => (
                           <div key={component.id} className="group/item relative">
                             <SortableComponent
                               component={component}
@@ -812,18 +768,77 @@ export default function CourseEditorPage() {
                               isDragging={activeId === component.id}
                               onOpenRealignment={handleOpenRealignment}
                             />
-                            {/* Delete button - bottom right, visible on mobile, hover on desktop */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeletingComponentId(component.id);
-                              }}
-                              className="absolute -right-2 -bottom-2 p-1.5 bg-red-500 text-white rounded-full lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity hover:bg-red-600 z-20 min-h-[36px] min-w-[36px] flex items-center justify-center"
-                              title="Delete component"
-                              aria-label="Delete component"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {/* Action buttons - bottom right, visible on mobile, hover on desktop */}
+                            <div className="absolute -right-2 -bottom-2 flex items-center gap-1 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity z-20">
+                              {/* Add button */}
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAddMenuForComponent(addMenuForComponent === component.id ? null : component.id);
+                                  }}
+                                  className="p-1.5 bg-purple-500 text-white rounded-full hover:bg-purple-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                                  title="Add component below"
+                                  aria-label="Add component below"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                                {/* Add menu dropdown */}
+                                {addMenuForComponent === component.id && (
+                                  <>
+                                    {isMobile ? (
+                                      <BottomSheet
+                                        isOpen={true}
+                                        onClose={() => setAddMenuForComponent(null)}
+                                        title="Add Component"
+                                        height="auto"
+                                      >
+                                        <div className="space-y-2">
+                                          {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
+                                            <button
+                                              key={type}
+                                              onClick={() => handleAddComponent(type, index)}
+                                              className="w-full flex items-center gap-3 px-4 py-4 text-base text-secondary hover:bg-hover transition-colors rounded-lg min-h-[44px]"
+                                            >
+                                              <Icon className="w-5 h-5" />
+                                              {name}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </BottomSheet>
+                                    ) : (
+                                      <div className="absolute right-0 bottom-full mb-1 w-48 bg-surface border border-default rounded-lg shadow-lg">
+                                        {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
+                                          <button
+                                            key={type}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleAddComponent(type, index);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
+                                          >
+                                            <Icon className="w-4 h-4" />
+                                            {name}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                              {/* Delete button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingComponentId(component.id);
+                                }}
+                                className="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                                title="Delete component"
+                                aria-label="Delete component"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -837,16 +852,56 @@ export default function CourseEditorPage() {
                     </DragOverlay>
                   </DndContext>
                 ) : (
-                  <div className="text-center py-12">
+                  <div className="text-center py-12 relative">
                     <Plus className="w-12 h-12 text-muted mx-auto mb-4" />
                     <p className="text-secondary mb-4">No components yet. Add one to get started.</p>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setShowAddMenu(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Component
-                    </Button>
+                    <div className="relative inline-block">
+                      <Button
+                        variant="secondary"
+                        onClick={() => setAddMenuForComponent(addMenuForComponent === 'first' ? null : 'first')}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Component
+                      </Button>
+                      {addMenuForComponent === 'first' && (
+                        <>
+                          {isMobile ? (
+                            <BottomSheet
+                              isOpen={true}
+                              onClose={() => setAddMenuForComponent(null)}
+                              title="Add Component"
+                              height="auto"
+                            >
+                              <div className="space-y-2">
+                                {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
+                                  <button
+                                    key={type}
+                                    onClick={() => handleAddComponent(type, -1)}
+                                    className="w-full flex items-center gap-3 px-4 py-4 text-base text-secondary hover:bg-hover transition-colors rounded-lg min-h-[44px]"
+                                  >
+                                    <Icon className="w-5 h-5" />
+                                    {name}
+                                  </button>
+                                ))}
+                              </div>
+                            </BottomSheet>
+                          ) : (
+                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-48 bg-surface border border-default rounded-lg shadow-lg z-20">
+                              {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
+                                <button
+                                  key={type}
+                                  onClick={() => handleAddComponent(type, -1)}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
+                                >
+                                  <Icon className="w-4 h-4" />
+                                  {name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -879,10 +934,10 @@ export default function CourseEditorPage() {
       </div>
 
       {/* Click outside to close add menu (desktop only) */}
-      {showAddMenu && !isMobile && (
+      {addMenuForComponent && !isMobile && (
         <div
           className="fixed inset-0 z-10"
-          onClick={() => setShowAddMenu(false)}
+          onClick={() => setAddMenuForComponent(null)}
         />
       )}
 
