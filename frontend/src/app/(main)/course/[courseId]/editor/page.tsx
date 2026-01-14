@@ -22,13 +22,6 @@ import {
   Menu,
   Download,
   Check,
-  Lightbulb,
-  Quote,
-  List,
-  GalleryHorizontal,
-  Play,
-  BarChart3,
-  Minus,
 } from 'lucide-react';
 import {
   DndContext,
@@ -54,6 +47,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, LessonComponentType } from '@/hooks/useAIGeneration';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 import { EditModal } from '@/components/course/modals/EditModal';
+import { AddComponentModal } from '@/components/course/modals/AddComponentModal';
 import { RealignmentModal, type RealignParams, type RealignResult, type LearningObjective } from '@/components/course/modals/RealignmentModal';
 import { useCourseEditorStore, setOnSaveCallback, setOnPersistCallback, setOnPersistSuccessCallback } from '@/store/zustand/courseEditorStore';
 import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
@@ -67,7 +61,6 @@ import {
   ExportFormat,
   ExportStatus,
 } from '@/hooks/useExport';
-import { v4 as uuidv4 } from 'uuid';
 
 interface SortableComponentProps {
   component: LessonComponent;
@@ -133,22 +126,6 @@ function DragPreview({ component }: { component: LessonComponent }) {
     </div>
   );
 }
-
-const COMPONENT_TYPES = [
-  { type: 1, name: 'Text', icon: FileText, description: 'Paragraph text with formatting' },
-  { type: 2, name: 'Heading', icon: Heading, description: 'Section title or subtitle' },
-  { type: 3, name: 'Image', icon: Image, description: 'Single image with caption' },
-  { type: 4, name: 'Quiz', icon: HelpCircle, description: 'Knowledge check question' },
-  { type: 5, name: 'Code', icon: Code, description: 'Syntax-highlighted code block' },
-  { type: 6, name: 'Callout', icon: AlertCircle, description: 'Tip, warning, or note box' },
-  { type: 7, name: 'Statement', icon: Lightbulb, description: 'Key takeaway emphasis' },
-  { type: 8, name: 'Quote', icon: Quote, description: 'Expert quote with attribution' },
-  { type: 9, name: 'List', icon: List, description: 'Bulleted, numbered, or process list' },
-  { type: 10, name: 'Gallery', icon: GalleryHorizontal, description: 'Image carousel or labeled graphic' },
-  { type: 11, name: 'Multimedia', icon: Play, description: 'Video, audio, or embed' },
-  { type: 12, name: 'Chart', icon: BarChart3, description: 'Data visualization or table' },
-  { type: 13, name: 'Divider', icon: Minus, description: 'Visual section separator' },
-];
 
 // Export modal states
 type ExportModalState = 'idle' | 'starting' | 'processing' | 'completed' | 'failed';
@@ -398,18 +375,15 @@ export default function CourseEditorPage() {
     }
   }, [courseId, selectedLessonId, openEditModal]);
 
-  const handleAddComponent = (type: number, insertAfterIndex: number) => {
-    const newComponent: LessonComponent = {
-      id: uuidv4(),
-      type,
-      contentJson: getDefaultContentForType(type),
-      order: insertAfterIndex + 1,
-      $typeName: 'mirai.v1.LessonComponent',
-    };
+  // Called by AddComponentModal after user finishes editing the new component
+  const handleAddComponent = useCallback((component: LessonComponent, contentJson: string) => {
+    // Update component with the final content
+    const finalComponent = { ...component, contentJson };
 
     // Insert at the specified position and reorder
+    const insertIndex = addComponentAfterIndex ?? localComponents.length - 1;
     const newComponents = [...localComponents];
-    newComponents.splice(insertAfterIndex + 1, 0, newComponent);
+    newComponents.splice(insertIndex + 1, 0, finalComponent);
     // Update order for all components
     const reorderedComponents = newComponents.map((c, idx) => ({ ...c, order: idx }));
 
@@ -417,12 +391,7 @@ export default function CourseEditorPage() {
     // Sync ref immediately so persist callback can access the new component
     localComponentsRef.current = reorderedComponents;
     setHasChanges(true);
-
-    // Open edit modal for the new component
-    if (selectedLessonId) {
-      openEditModal(courseId, selectedLessonId, newComponent);
-    }
-  };
+  }, [addComponentAfterIndex, localComponents]);
 
   const handleDeleteComponent = (componentId: string) => {
     setLocalComponents((items) => items.filter((item) => item.id !== componentId));
@@ -860,43 +829,17 @@ export default function CourseEditorPage() {
         </main>
       </div>
 
-      {/* Add Component Modal */}
-      <ResponsiveModal
+      {/* Add Component Modal - unified selection and editing */}
+      <AddComponentModal
         isOpen={addComponentAfterIndex !== null}
         onClose={() => setAddComponentAfterIndex(null)}
-        title="Add Component"
-        size="lg"
-        mobileHeight="full"
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {COMPONENT_TYPES.map(({ type, name, icon: Icon, description }) => (
-            <button
-              key={type}
-              onClick={() => {
-                if (addComponentAfterIndex !== null) {
-                  const insertIndex = addComponentAfterIndex;
-                  // Close modal first, then add component after modal animation
-                  setAddComponentAfterIndex(null);
-                  setTimeout(() => {
-                    handleAddComponent(type, insertIndex);
-                  }, 150);
-                }
-              }}
-              className="flex items-start gap-3 p-4 text-left bg-surface border border-default rounded-lg hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all group"
-            >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-800/40 transition-colors">
-                <Icon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-primary">{name}</h4>
-                <p className="text-sm text-muted mt-0.5 line-clamp-2">{description}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </ResponsiveModal>
+        onAdd={handleAddComponent}
+        insertAfterIndex={addComponentAfterIndex ?? 0}
+        courseId={courseId}
+        lessonId={selectedLessonId ?? ''}
+      />
 
-      {/* Edit Modal */}
+      {/* Edit Modal - for editing existing components */}
       <EditModal />
 
       {/* Delete Confirmation Modal */}
@@ -1069,49 +1012,3 @@ export default function CourseEditorPage() {
   );
 }
 
-function getDefaultContentForType(type: number): string {
-  switch (type) {
-    case 1: // Text
-      return JSON.stringify({ html: '<p>New text content</p>', plaintext: 'New text content' });
-    case 2: // Heading
-      return JSON.stringify({ level: 2, text: 'New Heading' });
-    case 3: // Image
-      return JSON.stringify({ imageDescription: 'Image description', altText: 'Image alt text' });
-    case 4: // Quiz
-      return JSON.stringify({
-        question: 'Your question here?',
-        questionType: 'multiple_choice',
-        options: [
-          { id: 'a', text: 'Option A' },
-          { id: 'b', text: 'Option B' },
-          { id: 'c', text: 'Option C' },
-        ],
-        correctAnswerId: 'a',
-        explanation: 'Explanation here',
-      });
-    case 5: // Code
-      return JSON.stringify({ code: '// Your code here', language: 'javascript' });
-    case 6: // Callout
-      return JSON.stringify({ style: 1, title: 'Note', content: 'Your callout content here' });
-    case 7: // Statement
-      return JSON.stringify({ text: 'Your key takeaway here', subtext: '' });
-    case 8: // Quote
-      return JSON.stringify({ text: 'Your quote here', author: 'Author Name', title: '', source: '' });
-    case 9: // List
-      return JSON.stringify({ style: 'bulleted', items: [{ text: 'First item' }, { text: 'Second item' }], title: '' });
-    case 10: // Gallery
-      return JSON.stringify({ style: 'carousel', items: [{ imageDescription: 'Image description', altText: 'Alt text' }] });
-    case 11: // Multimedia
-      return JSON.stringify({ type: 'video', url: '', title: 'Video Title', description: '', isPlaceholder: true });
-    case 12: // Chart
-      return JSON.stringify({
-        type: 'bar',
-        title: 'Chart Title',
-        series: [{ name: 'Series 1', data: [{ label: 'A', value: 10 }, { label: 'B', value: 20 }] }],
-      });
-    case 13: // Divider
-      return JSON.stringify({ style: 'default' });
-    default:
-      return '{}';
-  }
-}

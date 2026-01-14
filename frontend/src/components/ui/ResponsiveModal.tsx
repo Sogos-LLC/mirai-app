@@ -52,17 +52,25 @@ export function ResponsiveModal({
     }
   }, [isOpen, onClose, isMobile]);
 
-  // Lock body scroll when open (for desktop)
+  // Lock body scroll when open (for desktop) - with scrollbar compensation
   useEffect(() => {
     if (!isMobile && isOpen) {
+      // Calculate scrollbar width before hiding overflow
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
+      // Add padding to prevent layout shift when scrollbar disappears
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
     } else if (!isMobile) {
       document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     }
 
     return () => {
       if (!isMobile) {
         document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
       }
     };
   }, [isOpen, isMobile]);
