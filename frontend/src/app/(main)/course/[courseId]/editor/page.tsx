@@ -135,19 +135,19 @@ function DragPreview({ component }: { component: LessonComponent }) {
 }
 
 const COMPONENT_TYPES = [
-  { type: 1, name: 'Text', icon: FileText },
-  { type: 2, name: 'Heading', icon: Heading },
-  { type: 3, name: 'Image', icon: Image },
-  { type: 4, name: 'Quiz', icon: HelpCircle },
-  { type: 5, name: 'Code', icon: Code },
-  { type: 6, name: 'Callout', icon: AlertCircle },
-  { type: 7, name: 'Statement', icon: Lightbulb },
-  { type: 8, name: 'Quote', icon: Quote },
-  { type: 9, name: 'List', icon: List },
-  { type: 10, name: 'Gallery', icon: GalleryHorizontal },
-  { type: 11, name: 'Multimedia', icon: Play },
-  { type: 12, name: 'Chart', icon: BarChart3 },
-  { type: 13, name: 'Divider', icon: Minus },
+  { type: 1, name: 'Text', icon: FileText, description: 'Paragraph text with formatting' },
+  { type: 2, name: 'Heading', icon: Heading, description: 'Section title or subtitle' },
+  { type: 3, name: 'Image', icon: Image, description: 'Single image with caption' },
+  { type: 4, name: 'Quiz', icon: HelpCircle, description: 'Knowledge check question' },
+  { type: 5, name: 'Code', icon: Code, description: 'Syntax-highlighted code block' },
+  { type: 6, name: 'Callout', icon: AlertCircle, description: 'Tip, warning, or note box' },
+  { type: 7, name: 'Statement', icon: Lightbulb, description: 'Key takeaway emphasis' },
+  { type: 8, name: 'Quote', icon: Quote, description: 'Expert quote with attribution' },
+  { type: 9, name: 'List', icon: List, description: 'Bulleted, numbered, or process list' },
+  { type: 10, name: 'Gallery', icon: GalleryHorizontal, description: 'Image carousel or labeled graphic' },
+  { type: 11, name: 'Multimedia', icon: Play, description: 'Video, audio, or embed' },
+  { type: 12, name: 'Chart', icon: BarChart3, description: 'Data visualization or table' },
+  { type: 13, name: 'Divider', icon: Minus, description: 'Visual section separator' },
 ];
 
 // Export modal states
@@ -163,7 +163,7 @@ export default function CourseEditorPage() {
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [localComponents, setLocalComponents] = useState<LessonComponent[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
-  const [addMenuForComponent, setAddMenuForComponent] = useState<string | null>(null);
+  const [addComponentAfterIndex, setAddComponentAfterIndex] = useState<number | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [deletingComponentId, setDeletingComponentId] = useState<string | null>(null);
@@ -416,7 +416,6 @@ export default function CourseEditorPage() {
     setLocalComponents(reorderedComponents);
     // Sync ref immediately so persist callback can access the new component
     localComponentsRef.current = reorderedComponents;
-    setAddMenuForComponent(null);
     setHasChanges(true);
 
     // Open edit modal for the new component
@@ -783,61 +782,17 @@ export default function CourseEditorPage() {
                             {/* Action buttons - bottom right, visible on mobile, hover on desktop */}
                             <div className="absolute -right-2 -bottom-2 flex items-center gap-1 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity z-20">
                               {/* Add button */}
-                              <div className="relative">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setAddMenuForComponent(addMenuForComponent === component.id ? null : component.id);
-                                  }}
-                                  className="p-1.5 bg-purple-500 text-white rounded-full hover:bg-purple-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
-                                  title="Add component below"
-                                  aria-label="Add component below"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
-                                {/* Add menu dropdown */}
-                                {addMenuForComponent === component.id && (
-                                  <>
-                                    {isMobile ? (
-                                      <BottomSheet
-                                        isOpen={true}
-                                        onClose={() => setAddMenuForComponent(null)}
-                                        title="Add Component"
-                                        height="auto"
-                                      >
-                                        <div className="space-y-2">
-                                          {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                                            <button
-                                              key={type}
-                                              onClick={() => handleAddComponent(type, index)}
-                                              className="w-full flex items-center gap-3 px-4 py-4 text-base text-secondary hover:bg-hover transition-colors rounded-lg min-h-[44px]"
-                                            >
-                                              <Icon className="w-5 h-5" />
-                                              {name}
-                                            </button>
-                                          ))}
-                                        </div>
-                                      </BottomSheet>
-                                    ) : (
-                                      <div className="absolute right-0 bottom-full mb-1 w-48 bg-surface border border-default rounded-lg shadow-lg">
-                                        {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                                          <button
-                                            key={type}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleAddComponent(type, index);
-                                            }}
-                                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
-                                          >
-                                            <Icon className="w-4 h-4" />
-                                            {name}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAddComponentAfterIndex(index);
+                                }}
+                                className="p-1.5 bg-purple-500 text-white rounded-full hover:bg-purple-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                                title="Add component below"
+                                aria-label="Add component below"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
                               {/* Delete button */}
                               <button
                                 onClick={(e) => {
@@ -864,56 +819,16 @@ export default function CourseEditorPage() {
                     </DragOverlay>
                   </DndContext>
                 ) : (
-                  <div className="text-center py-12 relative">
+                  <div className="text-center py-12">
                     <Plus className="w-12 h-12 text-muted mx-auto mb-4" />
                     <p className="text-secondary mb-4">No components yet. Add one to get started.</p>
-                    <div className="relative inline-block">
-                      <Button
-                        variant="secondary"
-                        onClick={() => setAddMenuForComponent(addMenuForComponent === 'first' ? null : 'first')}
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Component
-                      </Button>
-                      {addMenuForComponent === 'first' && (
-                        <>
-                          {isMobile ? (
-                            <BottomSheet
-                              isOpen={true}
-                              onClose={() => setAddMenuForComponent(null)}
-                              title="Add Component"
-                              height="auto"
-                            >
-                              <div className="space-y-2">
-                                {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                                  <button
-                                    key={type}
-                                    onClick={() => handleAddComponent(type, -1)}
-                                    className="w-full flex items-center gap-3 px-4 py-4 text-base text-secondary hover:bg-hover transition-colors rounded-lg min-h-[44px]"
-                                  >
-                                    <Icon className="w-5 h-5" />
-                                    {name}
-                                  </button>
-                                ))}
-                              </div>
-                            </BottomSheet>
-                          ) : (
-                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-48 bg-surface border border-default rounded-lg shadow-lg z-20">
-                              {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                                <button
-                                  key={type}
-                                  onClick={() => handleAddComponent(type, -1)}
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
-                                >
-                                  <Icon className="w-4 h-4" />
-                                  {name}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setAddComponentAfterIndex(-1)}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Component
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -945,13 +860,37 @@ export default function CourseEditorPage() {
         </main>
       </div>
 
-      {/* Click outside to close add menu (desktop only) */}
-      {addMenuForComponent && !isMobile && (
-        <div
-          className="fixed inset-0 z-10"
-          onClick={() => setAddMenuForComponent(null)}
-        />
-      )}
+      {/* Add Component Modal */}
+      <ResponsiveModal
+        isOpen={addComponentAfterIndex !== null}
+        onClose={() => setAddComponentAfterIndex(null)}
+        title="Add Component"
+        size="lg"
+        mobileHeight="full"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {COMPONENT_TYPES.map(({ type, name, icon: Icon, description }) => (
+            <button
+              key={type}
+              onClick={() => {
+                if (addComponentAfterIndex !== null) {
+                  handleAddComponent(type, addComponentAfterIndex);
+                  setAddComponentAfterIndex(null);
+                }
+              }}
+              className="flex items-start gap-3 p-4 text-left bg-surface border border-default rounded-lg hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all group"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-800/40 transition-colors">
+                <Icon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-primary">{name}</h4>
+                <p className="text-sm text-muted mt-0.5 line-clamp-2">{description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </ResponsiveModal>
 
       {/* Edit Modal */}
       <EditModal />
