@@ -137,6 +137,7 @@ type S3WizardData struct {
 	AudiencePersonas    []S3AudiencePersona `json:"audiencePersonas"`
 	SelectedAudienceIDs []string            `json:"selectedAudienceIds"`
 	SelectedTone        *S3ToneOption       `json:"selectedTone,omitempty"`
+	AdditionalContext   string              `json:"additionalContext"`
 	DesiredOutcomes     string              `json:"desiredOutcomes"`
 }
 

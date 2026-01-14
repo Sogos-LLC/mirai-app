@@ -238,8 +238,12 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 			}
 		}
 
-		// Use desired outcomes as additional context
-		additionalContext = content.WizardData.DesiredOutcomes
+		// Use user's additional context if provided, otherwise fall back to desired outcomes
+		if content.WizardData.AdditionalContext != "" {
+			additionalContext = content.WizardData.AdditionalContext
+		} else {
+			additionalContext = content.WizardData.DesiredOutcomes
+		}
 	}
 
 	// Generate outline with AI

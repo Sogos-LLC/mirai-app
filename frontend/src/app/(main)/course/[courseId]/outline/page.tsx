@@ -17,6 +17,8 @@ import {
   Pencil,
   Check,
   X,
+  Copy,
+  CheckCheck,
 } from 'lucide-react';
 import {
   outlineReviewMachine,
@@ -36,6 +38,9 @@ import {
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useIsTouchDevice } from '@/hooks/useBreakpoint';
+import { useGetCourse } from '@/hooks/useCourses';
+import type { CourseOutline } from '@/gen/mirai/v1/ai_generation_pb';
+import type { Course } from '@/gen/mirai/v1/course_pb';
 
 // Inline edit state type
 interface EditState {
@@ -57,6 +62,12 @@ export default function OutlineReviewPage() {
 
   // Inline editing state
   const [editState, setEditState] = useState<EditState | null>(null);
+  // Copy success state
+  const [copied, setCopied] = useState(false);
+
+  // Fetch course data for metadata header
+  const courseQuery = useGetCourse(courseId);
+  const course = courseQuery.data;
 
   // API hooks
   const approveCourseOutline = useApproveCourseOutline();
@@ -178,6 +189,77 @@ export default function OutlineReviewPage() {
     0
   ) ?? 0;
 
+  // Aggregate learning objectives from all lessons
+  const learningOutcomes = useMemo(() => {
+    if (!context.outline?.sections) return [];
+    const allObjectives = context.outline.sections.flatMap((section) =>
+      section.lessons?.flatMap((lesson) => lesson.learningObjectives || []) || []
+    );
+    // Deduplicate and limit to top 5
+    return [...new Set(allObjectives)].slice(0, 5);
+  }, [context.outline]);
+
+  // Build outline text for clipboard
+  const buildOutlineText = (
+    courseData: Course,
+    outline: CourseOutline
+  ): { plain: string; html: string } => {
+    const title = courseData.settings?.title || 'Course Outline';
+    const description = courseData.settings?.desiredOutcome || '';
+
+    let plain = `${title}\n${'='.repeat(title.length)}\n\n`;
+    if (description) plain += `${description}\n\n`;
+
+    let html = `<h1>${title}</h1>`;
+    if (description) html += `<p>${description}</p>`;
+
+    outline.sections?.forEach((section, i) => {
+      plain += `${i + 1}. ${section.title}\n`;
+      html += `<h2>${i + 1}. ${section.title}</h2>`;
+
+      if (section.description) {
+        plain += `   ${section.description}\n`;
+        html += `<p>${section.description}</p>`;
+      }
+
+      section.lessons?.forEach((lesson, j) => {
+        plain += `   ${i + 1}.${j + 1} ${lesson.title}\n`;
+        html += `<h3>${i + 1}.${j + 1} ${lesson.title}</h3>`;
+
+        if (lesson.description) {
+          plain += `      ${lesson.description}\n`;
+          html += `<p>${lesson.description}</p>`;
+        }
+      });
+      plain += '\n';
+    });
+
+    return { plain, html };
+  };
+
+  // Copy outline to clipboard
+  const handleCopyOutline = async () => {
+    if (!context.outline || !course) return;
+
+    const content = buildOutlineText(course, context.outline);
+
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([content.html], { type: 'text/html' }),
+          'text/plain': new Blob([content.plain], { type: 'text/plain' }),
+        }),
+      ]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback to plain text
+      await navigator.clipboard.writeText(content.plain);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   // Loading state
   if (state.matches('loading')) {
     return (
@@ -294,6 +376,59 @@ export default function OutlineReviewPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-4 py-6 sm:py-8">
+        {/* Course Metadata Header */}
+        {course && (
+          <div className="mb-6 p-6 bg-surface rounded-lg border">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl font-bold text-primary mb-2">
+                  {course.settings?.title || 'Untitled Course'}
+                </h1>
+                {course.settings?.desiredOutcome && (
+                  <p className="text-secondary">
+                    {course.settings.desiredOutcome}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCopyOutline}
+                disabled={!context.outline}
+                className="w-full sm:w-auto min-h-[44px] flex-shrink-0"
+              >
+                {copied ? (
+                  <>
+                    <CheckCheck className="w-4 h-4 mr-2 text-green-600" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Outline
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {learningOutcomes.length > 0 && (
+              <div className="pt-4 border-t">
+                <h3 className="text-sm font-semibold text-primary mb-2">
+                  Learning Outcomes
+                </h3>
+                <ul className="text-sm text-secondary space-y-1">
+                  {learningOutcomes.map((outcome, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-indigo-600 dark:text-indigo-400">•</span>
+                      <span>{outcome}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         <Card>
           <CardContent className="py-8">
             {/* Header */}
@@ -303,9 +438,9 @@ export default function OutlineReviewPage() {
                   <ClipboardList className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-bold text-primary">
+                  <h2 className="text-xl sm:text-2xl font-bold text-primary">
                     Review Your Course Outline
-                  </h1>
+                  </h2>
                   <p className="text-sm sm:text-base text-secondary">
                     {context.outline?.sections?.length ?? 0} sections • {totalLessons} lessons
                   </p>
