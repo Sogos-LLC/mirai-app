@@ -874,8 +874,12 @@ export default function CourseEditorPage() {
               key={type}
               onClick={() => {
                 if (addComponentAfterIndex !== null) {
-                  handleAddComponent(type, addComponentAfterIndex);
+                  const insertIndex = addComponentAfterIndex;
+                  // Close modal first, then add component after modal animation
                   setAddComponentAfterIndex(null);
+                  setTimeout(() => {
+                    handleAddComponent(type, insertIndex);
+                  }, 150);
                 }
               }}
               className="flex items-start gap-3 p-4 text-left bg-surface border border-default rounded-lg hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all group"
