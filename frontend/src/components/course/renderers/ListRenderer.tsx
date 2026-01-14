@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 export interface ListItem {
   text: string;
@@ -83,27 +83,51 @@ export function ListRenderer({ content: rawContent, isEditing = false }: ListRen
 
       case 'accordion':
         return (
-          <div className="space-y-2 border border-default rounded-lg overflow-hidden">
-            {content.items.map((item, idx) => (
-              <div key={idx} className="border-b border-default last:border-b-0">
-                <button
-                  onClick={() => toggleItem(idx)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-hover transition-colors"
+          <div className="space-y-2">
+            {content.items.map((item, idx) => {
+              const isExpanded = expandedItems.has(idx);
+              return (
+                <div
+                  key={idx}
+                  className={`
+                    border rounded-lg overflow-hidden transition-all duration-200
+                    ${isExpanded
+                      ? 'border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10'
+                      : 'border-default bg-surface hover:border-purple-200 dark:hover:border-purple-800'
+                    }
+                  `}
                 >
-                  <span className="font-medium text-primary">{item.text}</span>
-                  {expandedItems.has(idx) ? (
-                    <ChevronDown className="w-5 h-5 text-muted" />
-                  ) : (
-                    <ChevronRight className="w-5 h-5 text-muted" />
-                  )}
-                </button>
-                {expandedItems.has(idx) && item.description && (
-                  <div className="px-4 pb-3 text-secondary">
-                    {item.description}
+                  <button
+                    onClick={() => toggleItem(idx)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors"
+                  >
+                    <span className={`font-medium ${isExpanded ? 'text-purple-700 dark:text-purple-300' : 'text-primary'}`}>
+                      {item.text}
+                    </span>
+                    <ChevronDown
+                      className={`
+                        w-5 h-5 transition-transform duration-200 ease-out flex-shrink-0 ml-2
+                        ${isExpanded ? 'rotate-0 text-purple-500' : '-rotate-90 text-muted'}
+                      `}
+                    />
+                  </button>
+                  <div
+                    className={`
+                      grid transition-all duration-200 ease-out
+                      ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}
+                    `}
+                  >
+                    <div className="overflow-hidden">
+                      {item.description && (
+                        <div className="px-4 pb-4 text-secondary text-sm leading-relaxed">
+                          {item.description}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         );
 
