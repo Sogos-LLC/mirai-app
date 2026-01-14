@@ -163,4 +163,4 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-backend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-backend
-  newTag: uat-dde7c09
+  newTag: uat-4b437a1
