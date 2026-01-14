@@ -574,6 +574,12 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		}
 	}
 
+	// Get additional context from wizard data
+	var lessonAdditionalContext string
+	if content.WizardData != nil && content.WizardData.AdditionalContext != "" {
+		lessonAdditionalContext = content.WizardData.AdditionalContext
+	}
+
 	// Generate lesson content
 	lessonResult, err := aiProvider.GenerateLessonContent(ctx, service.GenerateLessonRequest{
 		CourseTitle:        content.Settings.Title,
@@ -585,6 +591,7 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		TargetAudience:     targetAudience,
 		IsLastInSection:    isLastInSection,
 		IsLastInCourse:     isLastInCourse,
+		AdditionalContext:  lessonAdditionalContext,
 	})
 	if err != nil {
 		log.Error("AI lesson generation failed", "error", err)

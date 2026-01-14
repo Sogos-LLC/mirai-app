@@ -1366,6 +1366,14 @@ func buildLessonPrompt(req service.GenerateLessonRequest) string {
 	}
 	sb.WriteString("\n")
 
+	// Include additional context from wizard if provided
+	if req.AdditionalContext != "" {
+		sb.WriteString("## Additional Context\n")
+		sb.WriteString("The course creator has provided the following additional instructions/context:\n")
+		sb.WriteString(req.AdditionalContext)
+		sb.WriteString("\n\n")
+	}
+
 	sb.WriteString("## Subject Matter Expert Knowledge\n")
 	for _, sme := range req.SMEKnowledge {
 		sb.WriteString(fmt.Sprintf("\n### %s (%s)\n", sme.SMEName, sme.Domain))
@@ -1554,6 +1562,14 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 	sb.WriteString(fmt.Sprintf("**Role:** %s\n", req.TargetAudience.Role))
 	sb.WriteString(fmt.Sprintf("**Experience Level:** %s\n\n", req.TargetAudience.ExperienceLevel))
 
+	// Include additional context from wizard if provided
+	if req.AdditionalContext != "" {
+		sb.WriteString("## Additional Context\n")
+		sb.WriteString("The course creator has provided the following additional instructions/context:\n")
+		sb.WriteString(req.AdditionalContext)
+		sb.WriteString("\n\n")
+	}
+
 	// Instructions with position-aware guidance
 	sb.WriteString("## Component Planning Instructions\n")
 	sb.WriteString("Plan 5-8 components for this lesson. For each component, specify:\n")
@@ -1693,6 +1709,13 @@ func buildSingleComponentPromptWithPosition(req service.GenerateLessonRequest, p
 	sb.WriteString("## Target Audience\n")
 	sb.WriteString(fmt.Sprintf("**Role:** %s\n", req.TargetAudience.Role))
 	sb.WriteString(fmt.Sprintf("**Experience Level:** %s\n\n", req.TargetAudience.ExperienceLevel))
+
+	// Include additional context from wizard if provided
+	if req.AdditionalContext != "" {
+		sb.WriteString("## Additional Context\n")
+		sb.WriteString(req.AdditionalContext)
+		sb.WriteString("\n\n")
+	}
 
 	// Type-specific instructions with position awareness
 	sb.WriteString("## Instructions\n")

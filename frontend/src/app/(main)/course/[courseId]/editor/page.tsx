@@ -22,6 +22,7 @@ import {
   Menu,
   Download,
   Check,
+  Lightbulb,
 } from 'lucide-react';
 import {
   DndContext,
@@ -134,6 +135,7 @@ const COMPONENT_TYPES = [
   { type: 4, name: 'Quiz', icon: HelpCircle },
   { type: 5, name: 'Code', icon: Code },
   { type: 6, name: 'Callout', icon: AlertCircle },
+  { type: 7, name: 'Statement', icon: Lightbulb },
 ];
 
 // Export modal states

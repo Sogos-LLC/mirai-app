@@ -596,6 +596,7 @@ func wizardStepDataToS3WizardData(data *entity.WizardStepData) *service.S3Wizard
 		AudiencePersonas:    audiencePersonas,
 		SelectedAudienceIDs: data.SelectedAudienceIDs,
 		SelectedTone:        selectedTone,
+		AdditionalContext:   data.AdditionalContext,
 		DesiredOutcomes:     data.DesiredOutcomes,
 	}
 }

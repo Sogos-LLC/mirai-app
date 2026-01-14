@@ -552,6 +552,9 @@ type GenerateLessonRequest struct {
 	// Knowledge inputs
 	SMEKnowledge   []SMEKnowledgeInput
 	TargetAudience TargetAudienceInput
+
+	// Additional user context for content generation
+	AdditionalContext string
 }
 
 // OutlineSectionSummary provides outline context for lesson generation.
