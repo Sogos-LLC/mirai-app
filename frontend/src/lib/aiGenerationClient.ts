@@ -82,5 +82,31 @@ export async function approveCourseOutline(outlineId: string): Promise<{ outline
   return response;
 }
 
+/**
+ * List jobs by course ID, optionally filtered by type and status
+ */
+export async function listJobsByCourse(
+  courseId: string,
+  options?: {
+    type?: number;
+    status?: number;
+  }
+): Promise<JobResult[]> {
+  const request: Record<string, unknown> = { courseId };
+  if (options?.type !== undefined) {
+    request.type = options.type;
+  }
+  if (options?.status !== undefined) {
+    request.status = options.status;
+  }
+
+  const response = await callMethod<Record<string, unknown>, { jobs: JobResult[] }>(
+    'mirai.v1.AIGenerationService',
+    'ListJobs',
+    request
+  );
+  return response.jobs ?? [];
+}
+
 // Re-export status enum for convenience
 export { GenerationJobStatus };

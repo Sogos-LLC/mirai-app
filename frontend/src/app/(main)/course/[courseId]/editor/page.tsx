@@ -1083,6 +1083,8 @@ function getDefaultContentForType(type: number): string {
       return JSON.stringify({ code: '// Your code here', language: 'javascript' });
     case 6: // Callout
       return JSON.stringify({ style: 1, title: 'Note', content: 'Your callout content here' });
+    case 7: // Statement
+      return JSON.stringify({ text: 'Your key takeaway here', subtext: '' });
     default:
       return '{}';
   }

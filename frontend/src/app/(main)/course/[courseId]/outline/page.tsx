@@ -34,7 +34,10 @@ import {
 import {
   getJob as getJobClient,
   getCourseOutline as getCourseOutlineClient,
+  listJobsByCourse,
+  GenerationJobStatus,
 } from '@/lib/aiGenerationClient';
+import { GenerationJobType } from '@/gen/mirai/v1/ai_generation_pb';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useIsTouchDevice } from '@/hooks/useBreakpoint';
@@ -95,11 +98,39 @@ export default function OutlineReviewPage() {
               return { outline, job: null };
             }
           } catch {
-            // Outline doesn't exist yet
+            // Outline doesn't exist yet - check for active job below
           }
 
-          // Check if there's an active job for this course
-          // For now, return null - the page will show error if no outline
+          // Check if there's an active outline generation job for this course
+          try {
+            const jobs = await listJobsByCourse(input.courseId);
+            // Find an active outline generation job (QUEUED or PROCESSING)
+            const activeOutlineJob = jobs.find(
+              (job) =>
+                job.status === GenerationJobStatus.QUEUED ||
+                job.status === GenerationJobStatus.PROCESSING
+            );
+
+            if (activeOutlineJob) {
+              console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: found active job', {
+                jobId: activeOutlineJob.id,
+                status: activeOutlineJob.status,
+              });
+              return {
+                outline: null,
+                job: {
+                  id: activeOutlineJob.id,
+                  status: activeOutlineJob.status,
+                  progressPercent: activeOutlineJob.progress ?? 0,
+                  progressMessage: undefined,
+                },
+              };
+            }
+          } catch (err) {
+            console.error('[DEBUG-COURSEID] OutlinePage loadOutlineActor: failed to list jobs', err);
+          }
+
+          // No outline and no active job
           return { outline: null, job: null };
         }),
         pollJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {

@@ -9,6 +9,7 @@ import { ImageEditor } from './ImageEditor';
 import { CodeEditor } from './CodeEditor';
 import { CalloutEditor } from './CalloutEditor';
 import { QuizEditor } from './QuizEditor';
+import { StatementEditor } from './StatementEditor';
 
 const COMPONENT_TYPE_LABELS: Record<number, string> = {
   [LessonComponentType.UNSPECIFIED]: 'Component',
@@ -18,6 +19,7 @@ const COMPONENT_TYPE_LABELS: Record<number, string> = {
   [LessonComponentType.QUIZ]: 'Quiz',
   [LessonComponentType.CODE]: 'Code Block',
   [LessonComponentType.CALLOUT]: 'Callout',
+  [LessonComponentType.STATEMENT]: 'Statement',
 };
 
 export function EditModal() {
@@ -55,6 +57,8 @@ export function EditModal() {
         return <CalloutEditor contentJson={component.contentJson} onSave={handleSave} />;
       case LessonComponentType.QUIZ:
         return <QuizEditor contentJson={component.contentJson} onSave={handleSave} />;
+      case LessonComponentType.STATEMENT:
+        return <StatementEditor contentJson={component.contentJson} onSave={handleSave} />;
       default:
         return <div className="text-secondary">Unknown component type</div>;
     }
