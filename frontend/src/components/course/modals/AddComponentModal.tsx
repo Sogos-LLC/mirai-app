@@ -251,11 +251,12 @@ export function AddComponentModal({
       size={phase === 'select' ? 'lg' : 'xl'}
       mobileHeight="full"
     >
-      <div className="relative overflow-hidden">
+      {/* Outer container with negative margin to compensate for inner padding */}
+      <div className="relative overflow-hidden -mx-1">
         {/* Selection Phase */}
         <div
           className={`
-            transition-all duration-200 ease-out
+            transition-all duration-200 ease-out px-1
             ${phase === 'select' && !isTransitioning
               ? 'opacity-100 translate-x-0'
               : phase === 'select' && isTransitioning
@@ -286,7 +287,7 @@ export function AddComponentModal({
         {/* Edit Phase */}
         <div
           className={`
-            transition-all duration-200 ease-out
+            transition-all duration-200 ease-out px-1
             ${phase === 'edit' && !isTransitioning
               ? 'opacity-100 translate-x-0'
               : phase === 'edit' && isTransitioning
