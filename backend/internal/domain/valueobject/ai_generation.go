@@ -129,12 +129,13 @@ func ParseOutlineApprovalStatus(str string) (OutlineApprovalStatus, error) {
 type LessonComponentType string
 
 const (
-	LessonComponentTypeText    LessonComponentType = "text"
-	LessonComponentTypeHeading LessonComponentType = "heading"
-	LessonComponentTypeImage   LessonComponentType = "image"
-	LessonComponentTypeQuiz    LessonComponentType = "quiz"
-	LessonComponentTypeCode    LessonComponentType = "code"
-	LessonComponentTypeCallout LessonComponentType = "callout"
+	LessonComponentTypeText      LessonComponentType = "text"
+	LessonComponentTypeHeading   LessonComponentType = "heading"
+	LessonComponentTypeImage     LessonComponentType = "image"
+	LessonComponentTypeQuiz      LessonComponentType = "quiz"
+	LessonComponentTypeCode      LessonComponentType = "code"
+	LessonComponentTypeCallout   LessonComponentType = "callout"
+	LessonComponentTypeStatement LessonComponentType = "statement"
 )
 
 func (t LessonComponentType) String() string {
@@ -145,7 +146,8 @@ func (t LessonComponentType) IsValid() bool {
 	switch t {
 	case LessonComponentTypeText, LessonComponentTypeHeading,
 		LessonComponentTypeImage, LessonComponentTypeQuiz,
-		LessonComponentTypeCode, LessonComponentTypeCallout:
+		LessonComponentTypeCode, LessonComponentTypeCallout,
+		LessonComponentTypeStatement:
 		return true
 	}
 	return false

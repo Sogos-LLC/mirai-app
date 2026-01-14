@@ -1064,6 +1064,8 @@ func lessonComponentTypeToProto(t valueobject.LessonComponentType) v1.LessonComp
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CODE
 	case valueobject.LessonComponentTypeCallout:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CALLOUT
+	case valueobject.LessonComponentTypeStatement:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_STATEMENT
 	default:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_UNSPECIFIED
 	}
@@ -1083,6 +1085,8 @@ func protoToLessonComponentType(t v1.LessonComponentType) valueobject.LessonComp
 		return valueobject.LessonComponentTypeCode
 	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_CALLOUT:
 		return valueobject.LessonComponentTypeCallout
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_STATEMENT:
+		return valueobject.LessonComponentTypeStatement
 	default:
 		return valueobject.LessonComponentTypeText // Default to text
 	}
