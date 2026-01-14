@@ -43,6 +43,47 @@ enum LessonComponentType {
   LESSON_COMPONENT_TYPE_CODE = 5;
   LESSON_COMPONENT_TYPE_CALLOUT = 6;
   LESSON_COMPONENT_TYPE_STATEMENT = 7;
+  LESSON_COMPONENT_TYPE_QUOTE = 8;
+  LESSON_COMPONENT_TYPE_LIST = 9;
+  LESSON_COMPONENT_TYPE_GALLERY = 10;
+  LESSON_COMPONENT_TYPE_MULTIMEDIA = 11;
+  LESSON_COMPONENT_TYPE_CHART = 12;
+  LESSON_COMPONENT_TYPE_DIVIDER = 13;
+}
+
+// ListStyle defines the visual style for list components.
+enum ListStyle {
+  LIST_STYLE_UNSPECIFIED = 0;
+  LIST_STYLE_BULLETED = 1;
+  LIST_STYLE_NUMBERED = 2;
+  LIST_STYLE_ICON = 3;
+  LIST_STYLE_PROCESS = 4;
+  LIST_STYLE_ACCORDION = 5;
+}
+
+// GalleryStyle defines the layout for gallery components.
+enum GalleryStyle {
+  GALLERY_STYLE_UNSPECIFIED = 0;
+  GALLERY_STYLE_CAROUSEL = 1;
+  GALLERY_STYLE_LABELED_GRAPHIC = 2;
+}
+
+// MultimediaType defines the type of multimedia content.
+enum MultimediaType {
+  MULTIMEDIA_TYPE_UNSPECIFIED = 0;
+  MULTIMEDIA_TYPE_VIDEO = 1;
+  MULTIMEDIA_TYPE_AUDIO = 2;
+  MULTIMEDIA_TYPE_INTERACTIVE = 3;
+}
+
+// ChartType defines the visualization type for chart components.
+enum ChartType {
+  CHART_TYPE_UNSPECIFIED = 0;
+  CHART_TYPE_BAR = 1;
+  CHART_TYPE_LINE = 2;
+  CHART_TYPE_PIE = 3;
+  CHART_TYPE_DONUT = 4;
+  CHART_TYPE_TABLE = 5;
 }
 
 // CalloutStyle defines the visual style for callout components.

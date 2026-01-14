@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import { z } from "zod";
-import { CalloutStyle, GenerationJobStatus, GenerationJobType, HeadingLevel, JobEventType, LessonComponentType, OutlineApprovalStatus } from "./ai_generation_pb";
+import { CalloutStyle, ChartType, GalleryStyle, GenerationJobStatus, GenerationJobType, HeadingLevel, JobEventType, LessonComponentType, ListStyle, MultimediaType, OutlineApprovalStatus } from "./ai_generation_pb";
 import { AudiencePersonaSchema, SMEPersonaSchema, ToneOptionSchema } from "./course_wizard_zod";
 
 /**
@@ -33,6 +33,34 @@ export type OutlineApprovalStatusType = z.infer<typeof OutlineApprovalStatusSche
  */
 export const LessonComponentTypeSchema = z.nativeEnum(LessonComponentType);
 export type LessonComponentTypeType = z.infer<typeof LessonComponentTypeSchema>;
+
+/**
+ * Zod schema for ListStyle enum
+ * @generated from enum mirai.v1.ListStyle
+ */
+export const ListStyleSchema = z.nativeEnum(ListStyle);
+export type ListStyleType = z.infer<typeof ListStyleSchema>;
+
+/**
+ * Zod schema for GalleryStyle enum
+ * @generated from enum mirai.v1.GalleryStyle
+ */
+export const GalleryStyleSchema = z.nativeEnum(GalleryStyle);
+export type GalleryStyleType = z.infer<typeof GalleryStyleSchema>;
+
+/**
+ * Zod schema for MultimediaType enum
+ * @generated from enum mirai.v1.MultimediaType
+ */
+export const MultimediaTypeSchema = z.nativeEnum(MultimediaType);
+export type MultimediaTypeType = z.infer<typeof MultimediaTypeSchema>;
+
+/**
+ * Zod schema for ChartType enum
+ * @generated from enum mirai.v1.ChartType
+ */
+export const ChartTypeSchema = z.nativeEnum(ChartType);
+export type ChartTypeType = z.infer<typeof ChartTypeSchema>;
 
 /**
  * Zod schema for CalloutStyle enum

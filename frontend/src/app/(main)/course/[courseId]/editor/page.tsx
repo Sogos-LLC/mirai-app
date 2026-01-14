@@ -23,6 +23,12 @@ import {
   Download,
   Check,
   Lightbulb,
+  Quote,
+  List,
+  GalleryHorizontal,
+  Play,
+  BarChart3,
+  Minus,
 } from 'lucide-react';
 import {
   DndContext,
@@ -136,6 +142,12 @@ const COMPONENT_TYPES = [
   { type: 5, name: 'Code', icon: Code },
   { type: 6, name: 'Callout', icon: AlertCircle },
   { type: 7, name: 'Statement', icon: Lightbulb },
+  { type: 8, name: 'Quote', icon: Quote },
+  { type: 9, name: 'List', icon: List },
+  { type: 10, name: 'Gallery', icon: GalleryHorizontal },
+  { type: 11, name: 'Multimedia', icon: Play },
+  { type: 12, name: 'Chart', icon: BarChart3 },
+  { type: 13, name: 'Divider', icon: Minus },
 ];
 
 // Export modal states
@@ -1140,6 +1152,22 @@ function getDefaultContentForType(type: number): string {
       return JSON.stringify({ style: 1, title: 'Note', content: 'Your callout content here' });
     case 7: // Statement
       return JSON.stringify({ text: 'Your key takeaway here', subtext: '' });
+    case 8: // Quote
+      return JSON.stringify({ text: 'Your quote here', author: 'Author Name', title: '', source: '' });
+    case 9: // List
+      return JSON.stringify({ style: 'bulleted', items: [{ text: 'First item' }, { text: 'Second item' }], title: '' });
+    case 10: // Gallery
+      return JSON.stringify({ style: 'carousel', items: [{ imageDescription: 'Image description', altText: 'Alt text' }] });
+    case 11: // Multimedia
+      return JSON.stringify({ type: 'video', url: '', title: 'Video Title', description: '', isPlaceholder: true });
+    case 12: // Chart
+      return JSON.stringify({
+        type: 'bar',
+        title: 'Chart Title',
+        series: [{ name: 'Series 1', data: [{ label: 'A', value: 10 }, { label: 'B', value: 20 }] }],
+      });
+    case 13: // Divider
+      return JSON.stringify({ style: 'default' });
     default:
       return '{}';
   }

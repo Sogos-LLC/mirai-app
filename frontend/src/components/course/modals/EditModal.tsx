@@ -10,6 +10,12 @@ import { CodeEditor } from './CodeEditor';
 import { CalloutEditor } from './CalloutEditor';
 import { QuizEditor } from './QuizEditor';
 import { StatementEditor } from './StatementEditor';
+import { QuoteEditor } from './QuoteEditor';
+import { ListEditor } from './ListEditor';
+import { GalleryEditor } from './GalleryEditor';
+import { MultimediaEditor } from './MultimediaEditor';
+import { ChartEditor } from './ChartEditor';
+import { DividerEditor } from './DividerEditor';
 
 const COMPONENT_TYPE_LABELS: Record<number, string> = {
   [LessonComponentType.UNSPECIFIED]: 'Component',
@@ -20,6 +26,12 @@ const COMPONENT_TYPE_LABELS: Record<number, string> = {
   [LessonComponentType.CODE]: 'Code Block',
   [LessonComponentType.CALLOUT]: 'Callout',
   [LessonComponentType.STATEMENT]: 'Statement',
+  [LessonComponentType.QUOTE]: 'Quote',
+  [LessonComponentType.LIST]: 'List',
+  [LessonComponentType.GALLERY]: 'Gallery',
+  [LessonComponentType.MULTIMEDIA]: 'Multimedia',
+  [LessonComponentType.CHART]: 'Chart',
+  [LessonComponentType.DIVIDER]: 'Divider',
 };
 
 export function EditModal() {
@@ -59,6 +71,18 @@ export function EditModal() {
         return <QuizEditor contentJson={component.contentJson} onSave={handleSave} />;
       case LessonComponentType.STATEMENT:
         return <StatementEditor contentJson={component.contentJson} onSave={handleSave} />;
+      case LessonComponentType.QUOTE:
+        return <QuoteEditor contentJson={component.contentJson} onSave={handleSave} />;
+      case LessonComponentType.LIST:
+        return <ListEditor contentJson={component.contentJson} onSave={handleSave} />;
+      case LessonComponentType.GALLERY:
+        return <GalleryEditor contentJson={component.contentJson} onSave={handleSave} />;
+      case LessonComponentType.MULTIMEDIA:
+        return <MultimediaEditor contentJson={component.contentJson} onSave={handleSave} />;
+      case LessonComponentType.CHART:
+        return <ChartEditor contentJson={component.contentJson} onSave={handleSave} />;
+      case LessonComponentType.DIVIDER:
+        return <DividerEditor contentJson={component.contentJson} onSave={handleSave} />;
       default:
         return <div className="text-secondary">Unknown component type</div>;
     }

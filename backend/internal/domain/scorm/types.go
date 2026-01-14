@@ -51,6 +51,12 @@ const (
 	ComponentTypeCode       ComponentType = "code"
 	ComponentTypeKnowledge  ComponentType = "knowledge_check"
 	ComponentTypeStatement  ComponentType = "statement"
+	ComponentTypeQuote      ComponentType = "quote"
+	ComponentTypeList       ComponentType = "list"
+	ComponentTypeGallery    ComponentType = "gallery"
+	ComponentTypeMultimedia ComponentType = "multimedia"
+	ComponentTypeChart      ComponentType = "chart"
+	ComponentTypeDivider    ComponentType = "divider"
 )
 
 // QuizContent represents the JSON structure for quiz components.
@@ -93,6 +99,96 @@ type CodeContent struct {
 type StatementContent struct {
 	Text    string `json:"text"`
 	Subtext string `json:"subtext,omitempty"`
+}
+
+// QuoteContent represents the JSON structure for quote components.
+// Quotes are expert insights with attribution.
+type QuoteContent struct {
+	Text   string `json:"text"`
+	Author string `json:"author"`
+	Title  string `json:"title,omitempty"`
+	Source string `json:"source,omitempty"`
+}
+
+// ListItem represents a single item in a list component.
+type ListItem struct {
+	Text        string `json:"text"`
+	Icon        string `json:"icon,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+// ListContent represents the JSON structure for list components.
+// Lists can be bulleted, numbered, with icons, process steps, or accordions.
+type ListContent struct {
+	Style string     `json:"style"` // bulleted, numbered, icon, process, accordion
+	Items []ListItem `json:"items"`
+	Title string     `json:"title,omitempty"`
+}
+
+// GalleryHotspot represents a clickable hotspot on a labeled graphic.
+type GalleryHotspot struct {
+	ID          string  `json:"id"`
+	X           float64 `json:"x"` // 0-100 percentage
+	Y           float64 `json:"y"` // 0-100 percentage
+	Label       string  `json:"label"`
+	Description string  `json:"description"`
+}
+
+// GalleryItem represents a single image in a gallery.
+type GalleryItem struct {
+	ImageDescription string           `json:"imageDescription"`
+	URL              string           `json:"url,omitempty"`
+	AltText          string           `json:"altText"`
+	Caption          string           `json:"caption,omitempty"`
+	Hotspots         []GalleryHotspot `json:"hotspots,omitempty"`
+}
+
+// GalleryContent represents the JSON structure for gallery components.
+// Galleries can be carousels or labeled graphics with hotspots.
+type GalleryContent struct {
+	Style string        `json:"style"` // carousel, labeled_graphic
+	Items []GalleryItem `json:"items"`
+}
+
+// MultimediaContent represents the JSON structure for multimedia components.
+// Multimedia can be video, audio, or interactive embeds.
+type MultimediaContent struct {
+	Type          string `json:"type"` // video, audio, interactive
+	URL           string `json:"url"`
+	Title         string `json:"title"`
+	Description   string `json:"description,omitempty"`
+	Provider      string `json:"provider,omitempty"` // youtube, vimeo, soundcloud, etc.
+	IsPlaceholder bool   `json:"isPlaceholder,omitempty"`
+}
+
+// ChartDataPoint represents a single data point in a chart.
+type ChartDataPoint struct {
+	Label string  `json:"label"`
+	Value float64 `json:"value"`
+	Color string  `json:"color,omitempty"`
+}
+
+// ChartSeries represents a series of data points in a chart.
+type ChartSeries struct {
+	Name string           `json:"name"`
+	Data []ChartDataPoint `json:"data"`
+}
+
+// ChartContent represents the JSON structure for chart components.
+// Charts can be bar, line, pie, donut, or table.
+type ChartContent struct {
+	Type        string        `json:"type"` // bar, line, pie, donut, table
+	Title       string        `json:"title"`
+	Series      []ChartSeries `json:"series"`
+	XAxisLabel  string        `json:"xAxisLabel,omitempty"`
+	YAxisLabel  string        `json:"yAxisLabel,omitempty"`
+	Description string        `json:"description,omitempty"` // Accessibility description
+}
+
+// DividerContent represents the JSON structure for divider components.
+// Dividers are simple horizontal separators.
+type DividerContent struct {
+	Style string `json:"style,omitempty"` // Reserved for future styling
 }
 
 // PackageResult contains the generated SCORM package.

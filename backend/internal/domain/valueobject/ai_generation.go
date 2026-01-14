@@ -129,13 +129,19 @@ func ParseOutlineApprovalStatus(str string) (OutlineApprovalStatus, error) {
 type LessonComponentType string
 
 const (
-	LessonComponentTypeText      LessonComponentType = "text"
-	LessonComponentTypeHeading   LessonComponentType = "heading"
-	LessonComponentTypeImage     LessonComponentType = "image"
-	LessonComponentTypeQuiz      LessonComponentType = "quiz"
-	LessonComponentTypeCode      LessonComponentType = "code"
-	LessonComponentTypeCallout   LessonComponentType = "callout"
-	LessonComponentTypeStatement LessonComponentType = "statement"
+	LessonComponentTypeText       LessonComponentType = "text"
+	LessonComponentTypeHeading    LessonComponentType = "heading"
+	LessonComponentTypeImage      LessonComponentType = "image"
+	LessonComponentTypeQuiz       LessonComponentType = "quiz"
+	LessonComponentTypeCode       LessonComponentType = "code"
+	LessonComponentTypeCallout    LessonComponentType = "callout"
+	LessonComponentTypeStatement  LessonComponentType = "statement"
+	LessonComponentTypeQuote      LessonComponentType = "quote"
+	LessonComponentTypeList       LessonComponentType = "list"
+	LessonComponentTypeGallery    LessonComponentType = "gallery"
+	LessonComponentTypeMultimedia LessonComponentType = "multimedia"
+	LessonComponentTypeChart      LessonComponentType = "chart"
+	LessonComponentTypeDivider    LessonComponentType = "divider"
 )
 
 func (t LessonComponentType) String() string {
@@ -147,7 +153,10 @@ func (t LessonComponentType) IsValid() bool {
 	case LessonComponentTypeText, LessonComponentTypeHeading,
 		LessonComponentTypeImage, LessonComponentTypeQuiz,
 		LessonComponentTypeCode, LessonComponentTypeCallout,
-		LessonComponentTypeStatement:
+		LessonComponentTypeStatement, LessonComponentTypeQuote,
+		LessonComponentTypeList, LessonComponentTypeGallery,
+		LessonComponentTypeMultimedia, LessonComponentTypeChart,
+		LessonComponentTypeDivider:
 		return true
 	}
 	return false

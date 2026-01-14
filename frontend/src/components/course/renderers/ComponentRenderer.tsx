@@ -20,6 +20,12 @@ import { QuizRenderer } from './QuizRenderer';
 import { CodeRenderer } from './CodeRenderer';
 import { CalloutRenderer } from './CalloutRenderer';
 import { StatementRenderer } from './StatementRenderer';
+import { QuoteRenderer } from './QuoteRenderer';
+import { ListRenderer } from './ListRenderer';
+import { GalleryRenderer } from './GalleryRenderer';
+import { MultimediaRenderer } from './MultimediaRenderer';
+import { ChartRenderer } from './ChartRenderer';
+import { DividerRenderer } from './DividerRenderer';
 
 // Component type enum values from proto
 const COMPONENT_TYPES = {
@@ -31,6 +37,12 @@ const COMPONENT_TYPES = {
   CODE: LessonComponentType.CODE,
   CALLOUT: LessonComponentType.CALLOUT,
   STATEMENT: LessonComponentType.STATEMENT,
+  QUOTE: LessonComponentType.QUOTE,
+  LIST: LessonComponentType.LIST,
+  GALLERY: LessonComponentType.GALLERY,
+  MULTIMEDIA: LessonComponentType.MULTIMEDIA,
+  CHART: LessonComponentType.CHART,
+  DIVIDER: LessonComponentType.DIVIDER,
 } as const;
 
 // Quiz option interface for normalization
@@ -290,6 +302,93 @@ export function ComponentRenderer({
       );
     }
 
+    case COMPONENT_TYPES.QUOTE: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid quote content</div>;
+      }
+      return (
+        <Wrapper>
+          <QuoteRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.LIST: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid list content</div>;
+      }
+      return (
+        <Wrapper>
+          <ListRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.GALLERY: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid gallery content</div>;
+      }
+      return (
+        <Wrapper>
+          <GalleryRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.MULTIMEDIA: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid multimedia content</div>;
+      }
+      return (
+        <Wrapper>
+          <MultimediaRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.CHART: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid chart content</div>;
+      }
+      return (
+        <Wrapper>
+          <ChartRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.DIVIDER: {
+      return (
+        <Wrapper>
+          <DividerRenderer
+            content={content || {}}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
     default:
       return (
         <div className="p-4 bg-gray-100 text-gray-500 rounded">
@@ -312,6 +411,12 @@ export function getComponentTypeName(type: number): string {
     [COMPONENT_TYPES.CODE]: 'Code',
     [COMPONENT_TYPES.CALLOUT]: 'Callout',
     [COMPONENT_TYPES.STATEMENT]: 'Statement',
+    [COMPONENT_TYPES.QUOTE]: 'Quote',
+    [COMPONENT_TYPES.LIST]: 'List',
+    [COMPONENT_TYPES.GALLERY]: 'Gallery',
+    [COMPONENT_TYPES.MULTIMEDIA]: 'Multimedia',
+    [COMPONENT_TYPES.CHART]: 'Chart',
+    [COMPONENT_TYPES.DIVIDER]: 'Divider',
   };
   return names[type] || 'Unknown';
 }
@@ -329,6 +434,12 @@ export function getComponentTypeIcon(type: number): string {
     [COMPONENT_TYPES.CODE]: '<>',
     [COMPONENT_TYPES.CALLOUT]: '!',
     [COMPONENT_TYPES.STATEMENT]: '*',
+    [COMPONENT_TYPES.QUOTE]: '"',
+    [COMPONENT_TYPES.LIST]: '=',
+    [COMPONENT_TYPES.GALLERY]: 'G',
+    [COMPONENT_TYPES.MULTIMEDIA]: 'M',
+    [COMPONENT_TYPES.CHART]: 'C',
+    [COMPONENT_TYPES.DIVIDER]: '-',
   };
   return icons[type] || '?';
 }

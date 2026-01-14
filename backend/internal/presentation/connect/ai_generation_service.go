@@ -1066,6 +1066,18 @@ func lessonComponentTypeToProto(t valueobject.LessonComponentType) v1.LessonComp
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CALLOUT
 	case valueobject.LessonComponentTypeStatement:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_STATEMENT
+	case valueobject.LessonComponentTypeQuote:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_QUOTE
+	case valueobject.LessonComponentTypeList:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_LIST
+	case valueobject.LessonComponentTypeGallery:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_GALLERY
+	case valueobject.LessonComponentTypeMultimedia:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_MULTIMEDIA
+	case valueobject.LessonComponentTypeChart:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CHART
+	case valueobject.LessonComponentTypeDivider:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_DIVIDER
 	default:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_UNSPECIFIED
 	}
@@ -1087,6 +1099,18 @@ func protoToLessonComponentType(t v1.LessonComponentType) valueobject.LessonComp
 		return valueobject.LessonComponentTypeCallout
 	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_STATEMENT:
 		return valueobject.LessonComponentTypeStatement
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_QUOTE:
+		return valueobject.LessonComponentTypeQuote
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_LIST:
+		return valueobject.LessonComponentTypeList
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_GALLERY:
+		return valueobject.LessonComponentTypeGallery
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_MULTIMEDIA:
+		return valueobject.LessonComponentTypeMultimedia
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_CHART:
+		return valueobject.LessonComponentTypeChart
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_DIVIDER:
+		return valueobject.LessonComponentTypeDivider
 	default:
 		return valueobject.LessonComponentTypeText // Default to text
 	}
