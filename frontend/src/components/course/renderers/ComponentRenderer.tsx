@@ -12,12 +12,14 @@ import type {
   CodeContent,
   CalloutContent,
 } from '@/gen/mirai/v1/ai_generation_zod';
+import type { StatementContent } from '@/gen/mirai/v1/ai_generation_pb';
 import { TextRenderer } from './TextRenderer';
 import { HeadingRenderer } from './HeadingRenderer';
 import { ImageRenderer } from './ImageRenderer';
 import { QuizRenderer } from './QuizRenderer';
 import { CodeRenderer } from './CodeRenderer';
 import { CalloutRenderer } from './CalloutRenderer';
+import { StatementRenderer } from './StatementRenderer';
 
 // Component type enum values from proto
 const COMPONENT_TYPES = {
@@ -28,6 +30,7 @@ const COMPONENT_TYPES = {
   QUIZ: LessonComponentType.QUIZ,
   CODE: LessonComponentType.CODE,
   CALLOUT: LessonComponentType.CALLOUT,
+  STATEMENT: LessonComponentType.STATEMENT,
 } as const;
 
 // Quiz option interface for normalization
@@ -271,6 +274,22 @@ export function ComponentRenderer({
       );
     }
 
+    case COMPONENT_TYPES.STATEMENT: {
+      const statementContent = content as StatementContent | null;
+      if (!statementContent) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid statement content</div>;
+      }
+      return (
+        <Wrapper>
+          <StatementRenderer
+            content={statementContent}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
     default:
       return (
         <div className="p-4 bg-gray-100 text-gray-500 rounded">
@@ -292,6 +311,7 @@ export function getComponentTypeName(type: number): string {
     [COMPONENT_TYPES.QUIZ]: 'Quiz',
     [COMPONENT_TYPES.CODE]: 'Code',
     [COMPONENT_TYPES.CALLOUT]: 'Callout',
+    [COMPONENT_TYPES.STATEMENT]: 'Statement',
   };
   return names[type] || 'Unknown';
 }
@@ -308,6 +328,7 @@ export function getComponentTypeIcon(type: number): string {
     [COMPONENT_TYPES.QUIZ]: 'Q',
     [COMPONENT_TYPES.CODE]: '<>',
     [COMPONENT_TYPES.CALLOUT]: '!',
+    [COMPONENT_TYPES.STATEMENT]: '*',
   };
   return icons[type] || '?';
 }

@@ -192,6 +192,17 @@ export const CalloutContentSchema = z.object({
 export type CalloutContent = z.infer<typeof CalloutContentSchema>;
 
 /**
+ * Zod schema for StatementContent
+ * @generated from message mirai.v1.StatementContent
+ */
+export const StatementContentSchema = z.object({
+  text: z.string(),
+  subtext: z.string().optional(),
+});
+
+export type StatementContent = z.infer<typeof StatementContentSchema>;
+
+/**
  * Zod schema for CourseGenerationInput
  * @generated from message mirai.v1.CourseGenerationInput
  */

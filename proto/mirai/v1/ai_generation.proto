@@ -42,6 +42,7 @@ enum LessonComponentType {
   LESSON_COMPONENT_TYPE_QUIZ = 4;
   LESSON_COMPONENT_TYPE_CODE = 5;
   LESSON_COMPONENT_TYPE_CALLOUT = 6;
+  LESSON_COMPONENT_TYPE_STATEMENT = 7;
 }
 
 // CalloutStyle defines the visual style for callout components.
@@ -242,6 +243,13 @@ message CalloutContent {
   CalloutStyle style = 1;
   optional string title = 2;
   string content = 3;
+}
+
+// StatementContent for key takeaway/emphasis components.
+// Used to highlight critical concepts learners should remember.
+message StatementContent {
+  string text = 1;              // The key takeaway text (required)
+  optional string subtext = 2;  // Optional supporting context
 }
 
 // CourseGenerationInput captures inputs for AI course generation.

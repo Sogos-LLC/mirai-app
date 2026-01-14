@@ -327,6 +327,23 @@ func RenderComponent(comp ComponentData, quizIndex int) (RenderedComponent, erro
 			))
 		}
 
+	case ComponentTypeStatement:
+		var stmt StatementContent
+		if err := json.Unmarshal([]byte(comp.ContentJSON), &stmt); err != nil {
+			// Fallback: render as simple statement
+			rendered.HTML = template.HTML(fmt.Sprintf(`<div class="statement"><p class="statement-text">%s</p></div>`, html.EscapeString(comp.ContentJSON)))
+		} else {
+			subtext := ""
+			if stmt.Subtext != "" {
+				subtext = fmt.Sprintf(`<p class="statement-subtext">%s</p>`, html.EscapeString(stmt.Subtext))
+			}
+			rendered.HTML = template.HTML(fmt.Sprintf(
+				`<div class="statement"><p class="statement-text">%s</p>%s</div>`,
+				html.EscapeString(stmt.Text),
+				subtext,
+			))
+		}
+
 	default:
 		// Unknown type - render as text
 		rendered.HTML = template.HTML(fmt.Sprintf(`<div class="unknown-content">%s</div>`, formatTextContent(comp.ContentJSON)))

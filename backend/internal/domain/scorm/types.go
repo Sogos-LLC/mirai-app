@@ -50,6 +50,7 @@ const (
 	ComponentTypeCallout    ComponentType = "callout"
 	ComponentTypeCode       ComponentType = "code"
 	ComponentTypeKnowledge  ComponentType = "knowledge_check"
+	ComponentTypeStatement  ComponentType = "statement"
 )
 
 // QuizContent represents the JSON structure for quiz components.
@@ -85,6 +86,13 @@ type CalloutContent struct {
 type CodeContent struct {
 	Language string `json:"language"`
 	Code     string `json:"code"`
+}
+
+// StatementContent represents the JSON structure for statement components.
+// Statements are key takeaways that emphasize critical concepts.
+type StatementContent struct {
+	Text    string `json:"text"`
+	Subtext string `json:"subtext,omitempty"`
 }
 
 // PackageResult contains the generated SCORM package.

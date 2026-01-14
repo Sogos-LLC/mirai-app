@@ -567,6 +567,11 @@ type singleCalloutComponent struct {
 	Content string `json:"content"`
 }
 
+type singleStatementComponent struct {
+	StatementText    string `json:"statement_text"`
+	StatementSubtext string `json:"statement_subtext"`
+}
+
 // flatLessonComponent matches the new flat schema where all fields are at the same level
 type flatLessonComponent struct {
 	// Discriminator
@@ -751,7 +756,7 @@ func lessonContentSchema() map[string]any {
 						// Discriminator field
 						"component_type": map[string]any{
 							"type":        "string",
-							"enum":        []string{"text", "heading", "image", "quiz"},
+							"enum":        []string{"text", "heading", "image", "quiz", "code", "callout", "statement"},
 							"description": "The type of component. Determines which other fields are used.",
 						},
 						// Text component fields (used when component_type = "text")
@@ -1012,7 +1017,7 @@ func componentPlanSchema() map[string]any {
 					"properties": map[string]any{
 						"component_type": map[string]any{
 							"type":        "string",
-							"enum":        []string{"text", "heading", "image", "quiz"},
+							"enum":        []string{"text", "heading", "image", "quiz", "code", "callout", "statement"},
 							"description": "The type of component",
 						},
 						"purpose": map[string]any{
@@ -1043,6 +1048,8 @@ func singleComponentSchema(componentType string) map[string]any {
 		return singleCodeSchema()
 	case "callout":
 		return singleCalloutSchema()
+	case "statement":
+		return singleStatementSchema()
 	default:
 		return singleTextSchema()
 	}
@@ -1185,6 +1192,23 @@ func singleCalloutSchema() map[string]any {
 			},
 		},
 		"required": []string{"style", "content"},
+	}
+}
+
+func singleStatementSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"statement_text": map[string]any{
+				"type":        "string",
+				"description": "The key takeaway or principle (1-2 sentences max). This should be a memorable 'golden nugget' learners remember.",
+			},
+			"statement_subtext": map[string]any{
+				"type":        "string",
+				"description": "Optional brief supporting context (1 sentence max)",
+			},
+		},
+		"required": []string{"statement_text"},
 	}
 }
 
@@ -1722,6 +1746,16 @@ func buildSingleComponentPromptWithPosition(req service.GenerateLessonRequest, p
 		if pos.IsLast && req.IsLastInSection {
 			sb.WriteString("\n*Consider using a 'tip' or 'success' callout to summarize key section takeaways.*\n")
 		}
+	case "statement":
+		sb.WriteString("Generate a STATEMENT - a key takeaway that emphasizes a critical concept.\n\n")
+		sb.WriteString("**Guidelines:**\n")
+		sb.WriteString("- statement_text: Write 1-2 sentences maximum focusing on ONE key principle or insight\n")
+		sb.WriteString("- statement_subtext: Optional brief supporting context (1 sentence)\n")
+		sb.WriteString("- Make it memorable and quotable - this should be the 'golden nugget' learners remember\n")
+		sb.WriteString("- Avoid jargon - use clear, direct language\n")
+		if pos.IsLast {
+			sb.WriteString("\n*As the final statement, capture the single most important takeaway from this lesson.*\n")
+		}
 	}
 
 	return sb.String()
@@ -1895,6 +1929,24 @@ func parseAndTransformComponent(componentType, responseText string) (*flatLesson
 			summary = fmt.Sprintf("%s: %s...", resp.Style, resp.Content[:40])
 		} else {
 			summary = fmt.Sprintf("%s: %s", resp.Style, resp.Content)
+		}
+
+	case "statement":
+		var resp singleStatementComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse statement component: %w", err)
+		}
+		content := map[string]any{
+			"text":    resp.StatementText,
+			"subtext": resp.StatementSubtext,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		// Summary: first 50 chars of statement text
+		if len(resp.StatementText) > 50 {
+			summary = fmt.Sprintf("Statement: %s...", resp.StatementText[:50])
+		} else {
+			summary = fmt.Sprintf("Statement: %s", resp.StatementText)
 		}
 
 	default:
