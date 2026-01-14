@@ -11,6 +11,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   BookOpen,
   FileText,
   Image,
@@ -22,6 +23,9 @@ import {
   Menu,
   Download,
   Check,
+  MoreVertical,
+  Pencil,
+  Target,
 } from 'lucide-react';
 import {
   DndContext,
@@ -64,12 +68,30 @@ import {
 
 interface SortableComponentProps {
   component: LessonComponent;
+  index: number;
+  totalCount: number;
   onClick: () => void;
   isDragging: boolean;
   onOpenRealignment?: (component: LessonComponent) => void;
+  onDelete: (id: string) => void;
+  onMoveUp: (index: number) => void;
+  onMoveDown: (index: number) => void;
 }
 
-function SortableComponent({ component, onClick, isDragging, onOpenRealignment }: SortableComponentProps) {
+function SortableComponent({
+  component,
+  index,
+  totalCount,
+  onClick,
+  isDragging,
+  onOpenRealignment,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+}: SortableComponentProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const {
     attributes,
     listeners,
@@ -83,30 +105,171 @@ function SortableComponent({ component, onClick, isDragging, onOpenRealignment }
     transition,
   };
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
+
+  // Check if this component type supports realignment
+  const supportsRealignment = [
+    LessonComponentType.TEXT,
+    LessonComponentType.STATEMENT,
+    LessonComponentType.QUOTE,
+    LessonComponentType.LIST,
+    LessonComponentType.CALLOUT,
+  ].includes(component.type);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative cursor-pointer ${isDragging ? 'opacity-0' : ''}`}
-      onClick={onClick}
+      className={`group relative ${isDragging ? 'opacity-0' : ''}`}
     >
-      {/* Drag handle - visible on hover (desktop) or always visible (mobile) */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing -translate-x-full z-10 min-h-[44px] min-w-[44px]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripVertical className="w-5 h-5 text-muted" />
-      </button>
+      {/* Main content area with actions */}
+      <div className="flex items-stretch">
+        {/* Drag handle - left gutter */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="flex-shrink-0 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-4 h-4 text-muted" />
+        </button>
 
-      {/* Component content */}
-      <div className="hover:ring-2 hover:ring-purple-300 hover:ring-offset-2 rounded-lg transition-all">
-        <ComponentRenderer
-          component={component}
-          isEditing={false}
-          onOpenRealignment={onOpenRealignment}
-        />
+        {/* Component content - clickable to edit */}
+        <div
+          className="flex-1 min-w-0 cursor-pointer rounded-lg transition-all group-hover:bg-purple-50/50 dark:group-hover:bg-purple-900/10"
+          onClick={onClick}
+        >
+          <ComponentRenderer
+            component={component}
+            isEditing={false}
+            onOpenRealignment={onOpenRealignment}
+          />
+        </div>
+
+        {/* Actions menu - right edge */}
+        <div className="flex-shrink-0 w-10 flex items-start justify-center pt-2 relative" ref={menuRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
+            className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            aria-label="Component actions"
+          >
+            <MoreVertical className="w-4 h-4 text-muted" />
+          </button>
+
+          {/* Dropdown menu */}
+          {menuOpen && (
+            <div className="absolute right-0 top-10 z-50 w-48 bg-white dark:bg-dark-surface-elevated rounded-lg shadow-lg border border-default py-1 animate-fadeIn">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onClick();
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Pencil className="w-4 h-4 text-muted" />
+                <span className="text-primary">Edit</span>
+              </button>
+
+              {supportsRealignment && onOpenRealignment && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onOpenRealignment(component);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <Target className="w-4 h-4 text-muted" />
+                  <span className="text-primary">Realign to objectives</span>
+                </button>
+              )}
+
+              <div className="h-px bg-gray-100 dark:bg-gray-800 my-1" />
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onMoveUp(index);
+                }}
+                disabled={index === 0}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronUp className="w-4 h-4 text-muted" />
+                <span className="text-primary">Move up</span>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onMoveDown(index);
+                }}
+                disabled={index === totalCount - 1}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronDown className="w-4 h-4 text-muted" />
+                <span className="text-primary">Move down</span>
+              </button>
+
+              <div className="h-px bg-gray-100 dark:bg-gray-800 my-1" />
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onDelete(component.id);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// "Add between" divider component
+interface AddBetweenProps {
+  onAdd: () => void;
+}
+
+function AddBetween({ onAdd }: AddBetweenProps) {
+  return (
+    <div className="group/add relative h-4 -my-1">
+      {/* Hover area - larger than visual */}
+      <div className="absolute inset-x-0 -inset-y-2 flex items-center justify-center">
+        {/* Line that appears on hover */}
+        <div className="absolute inset-x-8 h-px bg-purple-300 dark:bg-purple-700 opacity-0 group-hover/add:opacity-100 transition-opacity" />
+
+        {/* Add button */}
+        <button
+          onClick={onAdd}
+          className="relative z-10 flex items-center gap-2 px-3 py-1 text-xs font-medium text-purple-600 dark:text-purple-400 bg-white dark:bg-dark-surface rounded-full border border-purple-200 dark:border-purple-800 opacity-0 group-hover/add:opacity-100 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all shadow-sm"
+        >
+          <Plus className="w-3 h-3" />
+          Add
+        </button>
       </div>
     </div>
   );
@@ -404,6 +567,26 @@ export default function CourseEditorPage() {
       handleDeleteComponent(deletingComponentId);
     }
   };
+
+  // Move component up in the list
+  const handleMoveUp = useCallback((index: number) => {
+    if (index === 0) return;
+    setLocalComponents((items) => {
+      const newItems = arrayMove(items, index, index - 1);
+      return newItems.map((item, idx) => ({ ...item, order: idx }));
+    });
+    setHasChanges(true);
+  }, []);
+
+  // Move component down in the list
+  const handleMoveDown = useCallback((index: number) => {
+    setLocalComponents((items) => {
+      if (index >= items.length - 1) return items;
+      const newItems = arrayMove(items, index, index + 1);
+      return newItems.map((item, idx) => ({ ...item, order: idx }));
+    });
+    setHasChanges(true);
+  }, []);
 
   const handleSave = async () => {
     // Need the generated lesson ID, not the outline lesson ID
@@ -740,42 +923,25 @@ export default function CourseEditorPage() {
                       strategy={verticalListSortingStrategy}
                     >
                       <div className="space-y-4 pl-4 md:pl-10">
+                        {/* Add at top */}
+                        <AddBetween onAdd={() => setAddComponentAfterIndex(-1)} />
+
                         {localComponents.map((component, index) => (
-                          <div key={component.id} className="group/item relative">
+                          <React.Fragment key={component.id}>
                             <SortableComponent
                               component={component}
+                              index={index}
+                              totalCount={localComponents.length}
                               onClick={() => handleComponentClick(component)}
                               isDragging={activeId === component.id}
                               onOpenRealignment={handleOpenRealignment}
+                              onDelete={(id) => setDeletingComponentId(id)}
+                              onMoveUp={handleMoveUp}
+                              onMoveDown={handleMoveDown}
                             />
-                            {/* Action buttons - bottom right, visible on mobile, hover on desktop */}
-                            <div className="absolute -right-2 -bottom-2 flex items-center gap-1 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity z-20">
-                              {/* Add button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setAddComponentAfterIndex(index);
-                                }}
-                                className="p-1.5 bg-purple-500 text-white rounded-full hover:bg-purple-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
-                                title="Add component below"
-                                aria-label="Add component below"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                              </button>
-                              {/* Delete button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeletingComponentId(component.id);
-                                }}
-                                className="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 min-h-[36px] min-w-[36px] flex items-center justify-center"
-                                title="Delete component"
-                                aria-label="Delete component"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
+                            {/* Add between components */}
+                            <AddBetween onAdd={() => setAddComponentAfterIndex(index)} />
+                          </React.Fragment>
                         ))}
                       </div>
                     </SortableContext>
