@@ -4,16 +4,8 @@
  */
 
 // ===== Environment URLs =====
-export const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'https://mirai.sogos.io';
-export const KRATOS_ADMIN_URL = process.env.KRATOS_ADMIN_URL || 'http://localhost:4434';
-
-// ===== Test User =====
-export const TEST_USER = {
-  email: process.env.E2E_TEST_EMAIL || 'playwright-test@mirai.local',
-  password: process.env.E2E_TEST_PASSWORD || 'PlaywrightTest123!',
-  firstName: 'Playwright',
-  lastName: 'Test',
-} as const;
+// Default to UAT environment for all tests
+export const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'https://mirai-uat.sogos.io';
 
 // ===== Paths =====
 export const PATHS = {

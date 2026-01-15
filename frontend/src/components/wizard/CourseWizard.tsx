@@ -226,9 +226,14 @@ export default function CourseWizard() {
   // Handle redirect to outline page after job is queued
   useEffect(() => {
     if (state.matches('outlineJobQueued') && context.courseId) {
-      router.push(`/course/${context.courseId}/outline`);
+      // Pass the jobId so the outline page can poll for it directly
+      // This avoids race conditions with job discovery via listJobsByCourse
+      const url = context.outlineJobId
+        ? `/course/${context.courseId}/outline?jobId=${context.outlineJobId}`
+        : `/course/${context.courseId}/outline`;
+      router.push(url);
     }
-  }, [state, context.courseId, router]);
+  }, [state, context.courseId, context.outlineJobId, router]);
 
   // Handle redirect to dashboard (after cancellation)
   useEffect(() => {

@@ -12,6 +12,8 @@ import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 export interface OutlineReviewContext {
   courseId: string;
+  // Initial job ID from wizard (used to avoid race condition in job discovery)
+  initialJobId: string | null;
   outline: CourseOutline | null;
   outlineJobId: string | null;
   lessonJobId: string | null;
@@ -78,8 +80,10 @@ const JOB_STATUS = {
 
 /**
  * Load outline - checks if outline exists or if generation is in progress
+ * @param courseId - The course ID to load outline for
+ * @param initialJobId - Optional job ID from wizard to avoid race condition
  */
-export const loadOutlineActor = fromPromise<LoadOutlineResponse, { courseId: string }>(
+export const loadOutlineActor = fromPromise<LoadOutlineResponse, { courseId: string; initialJobId?: string }>(
   async () => {
     throw new NetworkError('loadOutlineActor must be provided by the component');
   }
@@ -136,6 +140,8 @@ export const generateLessonsActor = fromPromise<GenerateLessonsResponse, { cours
 
 export interface OutlineReviewInput {
   courseId: string;
+  // Optional job ID passed from wizard to avoid race condition in job discovery
+  initialJobId?: string;
 }
 
 // ============================================================
@@ -147,6 +153,7 @@ export const outlineReviewMachine = createMachine({
   initial: 'loading',
   context: ({ input }: { input: OutlineReviewInput }): OutlineReviewContext => ({
     courseId: input.courseId,
+    initialJobId: input.initialJobId ?? null,
     outline: null,
     outlineJobId: null,
     lessonJobId: null,
@@ -171,7 +178,7 @@ export const outlineReviewMachine = createMachine({
       invoke: {
         id: 'loadOutline',
         src: 'loadOutlineActor',
-        input: ({ context }) => ({ courseId: context.courseId }),
+        input: ({ context }) => ({ courseId: context.courseId, initialJobId: context.initialJobId ?? undefined }),
         onDone: [
           {
             // Outline exists and is ready

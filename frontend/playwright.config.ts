@@ -4,21 +4,23 @@ import { BASE_URL, AUTH } from './e2e/config';
 /**
  * Playwright configuration for Mirai E2E tests.
  *
- * Targets production Talos cluster at https://mirai.sogos.io
+ * Targets UAT environment at https://mirai-uat.sogos.io
+ *
+ * Auth Setup:
+ *   Auth state is stored in e2e/.auth/user.json. To refresh:
+ *   npx playwright codegen https://mirai-uat.sogos.io/auth/login --save-storage=./e2e/.auth/user.json --ignore-https-errors
  *
  * Test Structure:
  * - e2e/tests/wizard.spec.ts - Course creation wizard tests
  * - e2e/tests/image-generation.spec.ts - Image generation tests
  *
  * Usage:
- *   npx playwright test                           # Run all tests
+ *   npx playwright test                           # Run all tests headless
  *   npx playwright test tests/wizard.spec.ts      # Run wizard tests only
- *   npx playwright test tests/image-generation    # Run image gen tests only
  *   npx playwright test --headed                  # Run with browser visible
  *   npx playwright test --ui                      # Run with Playwright UI
  */
 export default defineConfig({
-  // Test directory - tests are in e2e/tests/
   testDir: './e2e/tests',
 
   // Run tests sequentially - auth state is shared
@@ -34,11 +36,8 @@ export default defineConfig({
   // List reporter for clean console output
   reporter: 'list',
 
-  // Global setup creates test user and saves auth state
-  globalSetup: './e2e/global-setup.ts',
-
   use: {
-    // Production Talos cluster (from config)
+    // UAT environment (from config)
     baseURL: BASE_URL,
 
     // Allow self-signed certs
@@ -53,7 +52,7 @@ export default defineConfig({
     // Capture trace for debugging
     trace: 'on',
 
-    // Use saved auth state from global setup
+    // Use manually saved auth state
     storageState: AUTH.stateFile,
   },
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useMachine } from '@xstate/react';
 import { fromPromise } from 'xstate';
 import {
@@ -57,11 +57,14 @@ interface EditState {
 export default function OutlineReviewPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const courseId = params.courseId as string;
+  // Get jobId from URL params if provided (passed from wizard to avoid race condition)
+  const initialJobId = searchParams.get('jobId');
   const isTouch = useIsTouchDevice();
 
   // DEBUG: Track courseID through the system
-  console.log('[DEBUG-COURSEID] OutlinePage: courseId from URL params:', courseId);
+  console.log('[DEBUG-COURSEID] OutlinePage: courseId from URL params:', courseId, 'initialJobId:', initialJobId);
 
   // Inline editing state
   const [editState, setEditState] = useState<EditState | null>(null);
@@ -81,9 +84,9 @@ export default function OutlineReviewPage() {
   const machineWithActors = useMemo(() => {
     return outlineReviewMachine.provide({
       actors: {
-        loadOutlineActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
+        loadOutlineActor: fromPromise(async ({ input }: { input: { courseId: string; initialJobId?: string } }) => {
           // DEBUG: Track courseID through the system
-          console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: loading outline for courseId:', input.courseId);
+          console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: loading outline for courseId:', input.courseId, 'initialJobId:', input.initialJobId);
           try {
             // Try to get the outline
             const outline = await getCourseOutlineClient(input.courseId);
@@ -101,7 +104,32 @@ export default function OutlineReviewPage() {
             // Outline doesn't exist yet - check for active job below
           }
 
-          // Check if there's an active outline generation job for this course
+          // If we have an initial job ID from the wizard, use it directly
+          // This avoids race conditions with job discovery via listJobsByCourse
+          if (input.initialJobId) {
+            try {
+              const job = await getJobClient(input.initialJobId);
+              if (job && (job.status === GenerationJobStatus.QUEUED || job.status === GenerationJobStatus.PROCESSING)) {
+                console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: using initial job from URL', {
+                  jobId: job.id,
+                  status: job.status,
+                });
+                return {
+                  outline: null,
+                  job: {
+                    id: job.id,
+                    status: job.status,
+                    progressPercent: job.progress ?? 0,
+                    progressMessage: undefined,
+                  },
+                };
+              }
+            } catch (err) {
+              console.error('[DEBUG-COURSEID] OutlinePage loadOutlineActor: failed to get initial job', err);
+            }
+          }
+
+          // Fallback: Check if there's an active outline generation job for this course
           try {
             const jobs = await listJobsByCourse(input.courseId);
             // Find an active outline generation job (QUEUED or PROCESSING)
@@ -112,7 +140,7 @@ export default function OutlineReviewPage() {
             );
 
             if (activeOutlineJob) {
-              console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: found active job', {
+              console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: found active job via list', {
                 jobId: activeOutlineJob.id,
                 status: activeOutlineJob.status,
               });
@@ -175,9 +203,9 @@ export default function OutlineReviewPage() {
     });
   }, [approveCourseOutline, generateAllLessons, generateCourseOutline]);
 
-  // Initialize machine with courseId
+  // Initialize machine with courseId and optional jobId from URL
   const [state, send] = useMachine(machineWithActors, {
-    input: { courseId },
+    input: { courseId, initialJobId: initialJobId ?? undefined },
   });
 
   const context = state.context;
