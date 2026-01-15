@@ -31,13 +31,17 @@ import {
   useGenerateAllLessons,
   useGenerateCourseOutline,
 } from '@/hooks/useAIGeneration';
+import { createClient } from '@connectrpc/connect';
+import { transport } from '@/lib/connect';
 import {
-  getJob as getJobClient,
-  getCourseOutline as getCourseOutlineClient,
-  listJobsByCourse,
+  AIGenerationService,
   GenerationJobStatus,
-} from '@/lib/aiGenerationClient';
-import { GenerationJobType } from '@/gen/mirai/v1/ai_generation_pb';
+  GenerationJobType,
+  GetJobRequestSchema,
+  GetCourseOutlineRequestSchema,
+  ListJobsRequestSchema,
+} from '@/gen/mirai/v1/ai_generation_pb';
+import { create } from '@bufbuild/protobuf';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useIsTouchDevice } from '@/hooks/useBreakpoint';
@@ -80,6 +84,9 @@ export default function OutlineReviewPage() {
   const generateAllLessons = useGenerateAllLessons();
   const generateCourseOutline = useGenerateCourseOutline();
 
+  // Create connect client for direct API calls
+  const aiClient = useMemo(() => createClient(AIGenerationService, transport), []);
+
   // Create machine with provided actors
   const machineWithActors = useMemo(() => {
     return outlineReviewMachine.provide({
@@ -90,30 +97,33 @@ export default function OutlineReviewPage() {
 
           // Step 1: Try to get the outline
           try {
-            console.log('[OutlinePage] Attempting to fetch outline...');
-            const outline = await getCourseOutlineClient(input.courseId);
-            if (outline) {
+            console.log('[OutlinePage] Attempting to fetch outline via connect client...');
+            const outlineRequest = create(GetCourseOutlineRequestSchema, { courseId: input.courseId });
+            const outlineResponse = await aiClient.getCourseOutline(outlineRequest);
+            if (outlineResponse.outline) {
               console.log('[OutlinePage] Outline found!', {
-                outlineId: outline.id,
-                sectionsCount: outline.sections?.length,
+                outlineId: outlineResponse.outline.id,
+                sectionsCount: outlineResponse.outline.sections?.length,
               });
-              return { outline, job: null };
+              return { outline: outlineResponse.outline, job: null };
             }
-            console.log('[OutlinePage] getCourseOutline returned null/undefined');
+            console.log('[OutlinePage] getCourseOutline returned no outline');
           } catch (err) {
             console.log('[OutlinePage] getCourseOutline threw error (expected if outline not ready):', err instanceof Error ? err.message : err);
           }
 
           // Step 2: If we have an initial job ID from the wizard, use it directly
           if (input.initialJobId) {
-            console.log('[OutlinePage] Attempting to fetch job by initialJobId:', input.initialJobId);
+            console.log('[OutlinePage] Attempting to fetch job by initialJobId via connect client:', input.initialJobId);
             try {
-              const job = await getJobClient(input.initialJobId);
+              const jobRequest = create(GetJobRequestSchema, { jobId: input.initialJobId });
+              const jobResponse = await aiClient.getJob(jobRequest);
+              const job = jobResponse.job;
               console.log('[OutlinePage] GetJob response:', {
                 jobId: job?.id,
                 status: job?.status,
                 statusName: job?.status !== undefined ? GenerationJobStatus[job.status] : 'undefined',
-                progress: job?.progress,
+                progress: job?.progressPercent,
                 errorMessage: job?.errorMessage,
               });
 
@@ -124,8 +134,8 @@ export default function OutlineReviewPage() {
                   job: {
                     id: job.id,
                     status: job.status,
-                    progressPercent: job.progress ?? 0,
-                    progressMessage: undefined,
+                    progressPercent: job.progressPercent ?? 0,
+                    progressMessage: job.progressMessage,
                   },
                 };
               } else {
@@ -139,10 +149,12 @@ export default function OutlineReviewPage() {
           }
 
           // Step 3: Fallback - list jobs by courseId
-          console.log('[OutlinePage] Falling back to listJobsByCourse...');
+          console.log('[OutlinePage] Falling back to listJobs via connect client...');
           try {
-            const jobs = await listJobsByCourse(input.courseId);
-            console.log('[OutlinePage] listJobsByCourse returned', jobs.length, 'jobs');
+            const listRequest = create(ListJobsRequestSchema, { courseId: input.courseId });
+            const listResponse = await aiClient.listJobs(listRequest);
+            const jobs = listResponse.jobs ?? [];
+            console.log('[OutlinePage] listJobs returned', jobs.length, 'jobs');
             jobs.forEach((job, i) => {
               console.log(`[OutlinePage] Job ${i}:`, {
                 id: job.id,
@@ -165,15 +177,15 @@ export default function OutlineReviewPage() {
                 job: {
                   id: activeOutlineJob.id,
                   status: activeOutlineJob.status,
-                  progressPercent: activeOutlineJob.progress ?? 0,
-                  progressMessage: undefined,
+                  progressPercent: activeOutlineJob.progressPercent ?? 0,
+                  progressMessage: activeOutlineJob.progressMessage,
                 },
               };
             } else {
               console.log('[OutlinePage] No active job found in list');
             }
           } catch (err) {
-            console.error('[OutlinePage] listJobsByCourse failed:', err instanceof Error ? err.message : err);
+            console.error('[OutlinePage] listJobs failed:', err instanceof Error ? err.message : err);
           }
 
           // No outline and no active job - will trigger error state
@@ -181,15 +193,17 @@ export default function OutlineReviewPage() {
           return { outline: null, job: null };
         }),
         pollJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
-          const job = await getJobClient(input.jobId);
-          return { job };
+          const jobRequest = create(GetJobRequestSchema, { jobId: input.jobId });
+          const jobResponse = await aiClient.getJob(jobRequest);
+          return { job: jobResponse.job };
         }),
         getOutlineActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
-          const outline = await getCourseOutlineClient(input.courseId);
-          if (!outline) {
+          const outlineRequest = create(GetCourseOutlineRequestSchema, { courseId: input.courseId });
+          const outlineResponse = await aiClient.getCourseOutline(outlineRequest);
+          if (!outlineResponse.outline) {
             throw new Error('Outline not found');
           }
-          return { outline };
+          return { outline: outlineResponse.outline };
         }),
         approveOutlineActor: fromPromise(
           async ({ input }: { input: { courseId: string; outlineId: string } }) => {
@@ -220,7 +234,7 @@ export default function OutlineReviewPage() {
         ),
       },
     });
-  }, [approveCourseOutline, generateAllLessons, generateCourseOutline]);
+  }, [aiClient, approveCourseOutline, generateAllLessons, generateCourseOutline]);
 
   // Initialize machine with courseId and optional jobId from URL
   const [state, send] = useMachine(machineWithActors, {
