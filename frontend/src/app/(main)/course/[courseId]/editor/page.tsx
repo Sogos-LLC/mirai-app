@@ -154,7 +154,6 @@ function SortableComponent({
           <ComponentRenderer
             component={component}
             isEditing={false}
-            onOpenRealignment={onOpenRealignment}
           />
         </div>
 

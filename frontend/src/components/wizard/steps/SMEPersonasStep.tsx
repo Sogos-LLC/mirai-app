@@ -90,7 +90,7 @@ export default function SMEPersonasStep({
                 </div>
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-primary">
-                    Select Your Instructors
+                    Select Your Subject Matter Experts
                   </h2>
                   <p className="text-sm sm:text-base text-secondary">
                     Choose the expert personas that will guide your course content.
