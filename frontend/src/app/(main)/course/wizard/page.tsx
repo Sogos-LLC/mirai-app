@@ -36,7 +36,7 @@ export default function CourseWizardPage() {
         </button>
         <h1 className="text-2xl md:text-3xl font-bold text-primary">Create New Course</h1>
         <p className="text-secondary mt-2">
-          Let AI guide you through creating an engaging course in 7 simple steps
+          Let AI guide you through creating an engaging course in 5 simple steps
         </p>
       </div>
 
