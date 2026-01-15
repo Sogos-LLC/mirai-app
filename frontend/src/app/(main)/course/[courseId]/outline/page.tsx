@@ -25,6 +25,7 @@ import {
   isLoading,
   isSuccess,
   isPollingOutline,
+  isOutlineQueued,
 } from '@/machines/outlineReviewMachine';
 import {
   useApproveCourseOutline,
@@ -364,7 +365,7 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Polling outline state
+  // Polling outline state (user chose to wait)
   if (isPollingOutline(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -378,6 +379,52 @@ export default function OutlineReviewPage() {
                 className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${context.progressPercent}%` }}
               />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Outline queued state - show "you'll be notified" message
+  if (isOutlineQueued(stateValue)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12 text-center">
+            <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ClipboardList className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-primary mb-2">
+              Your outline is being created!
+            </h2>
+            <p className="text-secondary mb-6">
+              We&apos;re generating a detailed course outline based on your inputs.
+              This typically takes 30-60 seconds.
+            </p>
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>You&apos;ll be notified</strong> when your outline is ready for review.
+                Check the bell icon in the header.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => send({ type: 'DISMISS_QUEUED' })}
+                className="w-full"
+              >
+                Got it!
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => send({ type: 'WAIT_FOR_OUTLINE' })}
+                className="text-secondary"
+              >
+                I&apos;ll wait here
+              </Button>
             </div>
           </CardContent>
         </Card>

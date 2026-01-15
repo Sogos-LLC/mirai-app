@@ -2,7 +2,7 @@
  * MySQL Course Wizard Test
  *
  * Creates a course "Getting Started with MySQL" through the wizard
- * to reproduce the "Something went wrong" error on outline generation.
+ * and verifies the "You'll be notified" UX flow when outline is queued.
  */
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
@@ -180,32 +180,60 @@ test.describe('MySQL Course Wizard', () => {
       await screenshot(page, '08_before_generate_outline');
       await generateOutlineBtn.click();
 
-      // Wait for the response (error expected)
-      console.log('Waiting for response after Generate Outline...');
-      await page.waitForTimeout(15000);
-      logState(page, 'After Generate Outline');
-      await screenshot(page, '09_after_generate_outline');
+      // Wait for navigation to outline page
+      console.log('Waiting for navigation to outline page...');
+      await page.waitForURL('**/outline**', { timeout: 30000 });
+      logState(page, 'After Generate Outline - Navigated to Outline Page');
+      await screenshot(page, '09_outline_page_loaded');
 
-      // Check for error message
-      const errorHeading = page.locator('text="Something went wrong"');
-      if (await errorHeading.isVisible({ timeout: 20000 }).catch(() => false)) {
-        console.log('\n❌ ERROR CAPTURED: "Something went wrong" message appeared!');
-        await screenshot(page, '10_ERROR_something_went_wrong');
+      // Wait a moment for the state to settle
+      await page.waitForTimeout(2000);
 
-        // Capture error details
-        const errorDetail = page.locator('text="No outline found"');
-        if (await errorDetail.isVisible({ timeout: 2000 }).catch(() => false)) {
-          console.log('Error detail: "No outline found for this course"');
+      // Check for the "Your outline is being created!" message (new UX)
+      const outlineQueuedHeading = page.locator('text="Your outline is being created!"');
+      if (await outlineQueuedHeading.isVisible({ timeout: 10000 }).catch(() => false)) {
+        console.log('\n✅ SUCCESS: "Your outline is being created!" message appeared!');
+        await screenshot(page, '10_outline_queued_message');
+
+        // Verify the notification info is shown
+        const notificationInfo = page.locator('text="You\'ll be notified"');
+        if (await notificationInfo.isVisible({ timeout: 2000 }).catch(() => false)) {
+          console.log('✅ Notification info message is visible');
         }
 
-        // Look for Go to Dashboard button
-        const dashboardBtn = page.locator('button:has-text("Go to Dashboard")');
-        if (await dashboardBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-          console.log('Found "Go to Dashboard" button on error page');
+        // Look for "Got it!" button
+        const gotItBtn = page.locator('button:has-text("Got it!")');
+        if (await gotItBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+          console.log('✅ Found "Got it!" button');
+          await screenshot(page, '11_before_got_it_click');
+
+          // Click "Got it!" to go to dashboard
+          console.log('Clicking "Got it!" button...');
+          await gotItBtn.click();
+
+          // Wait for navigation to dashboard
+          await page.waitForURL('**/dashboard**', { timeout: 10000 });
+          console.log('✅ Successfully redirected to dashboard');
+          logState(page, 'After Got It - Dashboard');
+          await screenshot(page, '12_dashboard_after_got_it');
         }
       } else {
-        console.log('No error message found - checking current page state');
-        await screenshot(page, '10_no_error_found');
+        // Check for error message (old behavior, should not happen now)
+        const errorHeading = page.locator('text="Something went wrong"');
+        if (await errorHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
+          console.log('\n❌ ERROR: "Something went wrong" message appeared (unexpected)!');
+          await screenshot(page, '10_ERROR_something_went_wrong');
+        } else {
+          // Maybe the outline generated quickly and we're viewing it
+          const viewingOutline = page.locator('text="Review Your Course Outline"');
+          if (await viewingOutline.isVisible({ timeout: 5000 }).catch(() => false)) {
+            console.log('\n✅ Outline generated quickly - now viewing outline');
+            await screenshot(page, '10_viewing_outline');
+          } else {
+            console.log('Unexpected state - taking diagnostic screenshot');
+            await screenshot(page, '10_unexpected_state');
+          }
+        }
       }
     } else {
       console.log('Generate Outline button not found, taking diagnostic screenshot');

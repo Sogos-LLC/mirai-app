@@ -32,8 +32,10 @@ export type OutlineReviewEvent =
   | { type: 'REGENERATE_OUTLINE' }
   | { type: 'UPDATE_SECTION_TITLE'; sectionIndex: number; title: string }
   | { type: 'UPDATE_LESSON'; sectionIndex: number; lessonIndex: number; title: string; description: string }
-  // Success
+  // Success / Queued
   | { type: 'DISMISS_SUCCESS' }
+  | { type: 'DISMISS_QUEUED' }
+  | { type: 'WAIT_FOR_OUTLINE' }
   // Common
   | { type: 'RETRY' }
   | { type: 'DISMISS_ERROR' };
@@ -195,15 +197,15 @@ export const outlineReviewMachine = createMachine({
             }),
           },
           {
-            // Outline is still generating
-            target: 'pollingOutline',
+            // Outline is still generating - show "you'll be notified" message
+            target: 'outlineQueued',
             guard: ({ event }) =>
               event.output.job !== null &&
               (event.output.job.status === JOB_STATUS.QUEUED ||
                 event.output.job.status === JOB_STATUS.PROCESSING),
             actions: assign({
               outlineJobId: ({ event }) => event.output.job?.id || null,
-              progressMessage: 'Outline is being generated...',
+              progressMessage: 'Your outline is being generated...',
             }),
           },
           {
@@ -226,6 +228,17 @@ export const outlineReviewMachine = createMachine({
               ),
           }),
         },
+      },
+    },
+
+    // --------------------------------------------------------
+    // Outline Queued - Show "you'll be notified" message
+    // User can choose to wait or go to dashboard
+    // --------------------------------------------------------
+    outlineQueued: {
+      on: {
+        DISMISS_QUEUED: 'backgroundGeneration',
+        WAIT_FOR_OUTLINE: 'pollingOutline',
       },
     },
 
@@ -511,4 +524,11 @@ export function isPollingOutline(stateValue: unknown): boolean {
     return 'pollingOutline' in stateValue;
   }
   return false;
+}
+
+/**
+ * Check if outline is queued (showing "you'll be notified" message)
+ */
+export function isOutlineQueued(stateValue: unknown): boolean {
+  return stateValue === 'outlineQueued';
 }
