@@ -16,6 +16,8 @@ async function callMethod<I, O>(
 ): Promise<O> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/${service}/${method}`;
 
+  console.log(`[AIGenClient] ${method} request:`, JSON.stringify(request));
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -28,10 +30,13 @@ async function callMethod<I, O>(
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error(`[AIGenClient] ${method} failed:`, response.status, errorText);
     throw new Error(`Connect call failed: ${response.status} ${errorText}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log(`[AIGenClient] ${method} response:`, JSON.stringify(result));
+  return result;
 }
 
 /**

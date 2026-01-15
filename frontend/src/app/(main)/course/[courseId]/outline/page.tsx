@@ -86,34 +86,39 @@ export default function OutlineReviewPage() {
       actors: {
         loadOutlineActor: fromPromise(async ({ input }: { input: { courseId: string; initialJobId?: string } }) => {
           // DEBUG: Track courseID through the system
-          console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: loading outline for courseId:', input.courseId, 'initialJobId:', input.initialJobId);
+          console.log('[OutlinePage] loadOutlineActor START', { courseId: input.courseId, initialJobId: input.initialJobId });
+
+          // Step 1: Try to get the outline
           try {
-            // Try to get the outline
+            console.log('[OutlinePage] Attempting to fetch outline...');
             const outline = await getCourseOutlineClient(input.courseId);
             if (outline) {
-              // DEBUG: Track courseID through the system
-              console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: outline loaded', {
+              console.log('[OutlinePage] Outline found!', {
                 outlineId: outline.id,
-                outlineCourseId: outline.courseId,
-                inputCourseId: input.courseId,
-                match: outline.courseId === input.courseId,
+                sectionsCount: outline.sections?.length,
               });
               return { outline, job: null };
             }
-          } catch {
-            // Outline doesn't exist yet - check for active job below
+            console.log('[OutlinePage] getCourseOutline returned null/undefined');
+          } catch (err) {
+            console.log('[OutlinePage] getCourseOutline threw error (expected if outline not ready):', err instanceof Error ? err.message : err);
           }
 
-          // If we have an initial job ID from the wizard, use it directly
-          // This avoids race conditions with job discovery via listJobsByCourse
+          // Step 2: If we have an initial job ID from the wizard, use it directly
           if (input.initialJobId) {
+            console.log('[OutlinePage] Attempting to fetch job by initialJobId:', input.initialJobId);
             try {
               const job = await getJobClient(input.initialJobId);
+              console.log('[OutlinePage] GetJob response:', {
+                jobId: job?.id,
+                status: job?.status,
+                statusName: job?.status !== undefined ? GenerationJobStatus[job.status] : 'undefined',
+                progress: job?.progress,
+                errorMessage: job?.errorMessage,
+              });
+
               if (job && (job.status === GenerationJobStatus.QUEUED || job.status === GenerationJobStatus.PROCESSING)) {
-                console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: using initial job from URL', {
-                  jobId: job.id,
-                  status: job.status,
-                });
+                console.log('[OutlinePage] Job is active (QUEUED or PROCESSING), returning job for polling');
                 return {
                   outline: null,
                   job: {
@@ -123,16 +128,30 @@ export default function OutlineReviewPage() {
                     progressMessage: undefined,
                   },
                 };
+              } else {
+                console.log('[OutlinePage] Job exists but not in active state, status:', job?.status, GenerationJobStatus[job?.status ?? 0]);
               }
             } catch (err) {
-              console.error('[DEBUG-COURSEID] OutlinePage loadOutlineActor: failed to get initial job', err);
+              console.error('[OutlinePage] Failed to get job by initialJobId:', err instanceof Error ? err.message : err);
             }
+          } else {
+            console.log('[OutlinePage] No initialJobId provided');
           }
 
-          // Fallback: Check if there's an active outline generation job for this course
+          // Step 3: Fallback - list jobs by courseId
+          console.log('[OutlinePage] Falling back to listJobsByCourse...');
           try {
             const jobs = await listJobsByCourse(input.courseId);
-            // Find an active outline generation job (QUEUED or PROCESSING)
+            console.log('[OutlinePage] listJobsByCourse returned', jobs.length, 'jobs');
+            jobs.forEach((job, i) => {
+              console.log(`[OutlinePage] Job ${i}:`, {
+                id: job.id,
+                status: job.status,
+                statusName: GenerationJobStatus[job.status],
+                courseId: job.courseId,
+              });
+            });
+
             const activeOutlineJob = jobs.find(
               (job) =>
                 job.status === GenerationJobStatus.QUEUED ||
@@ -140,10 +159,7 @@ export default function OutlineReviewPage() {
             );
 
             if (activeOutlineJob) {
-              console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: found active job via list', {
-                jobId: activeOutlineJob.id,
-                status: activeOutlineJob.status,
-              });
+              console.log('[OutlinePage] Found active job via list:', activeOutlineJob.id);
               return {
                 outline: null,
                 job: {
@@ -153,12 +169,15 @@ export default function OutlineReviewPage() {
                   progressMessage: undefined,
                 },
               };
+            } else {
+              console.log('[OutlinePage] No active job found in list');
             }
           } catch (err) {
-            console.error('[DEBUG-COURSEID] OutlinePage loadOutlineActor: failed to list jobs', err);
+            console.error('[OutlinePage] listJobsByCourse failed:', err instanceof Error ? err.message : err);
           }
 
-          // No outline and no active job
+          // No outline and no active job - will trigger error state
+          console.log('[OutlinePage] loadOutlineActor END - returning null outline and null job (will show error)');
           return { outline: null, job: null };
         }),
         pollJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
