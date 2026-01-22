@@ -572,6 +572,49 @@ type singleStatementComponent struct {
 	StatementSubtext string `json:"statement_subtext"`
 }
 
+type singleQuoteComponent struct {
+	Text        string `json:"text"`
+	Attribution string `json:"attribution"`
+}
+
+type singleListComponent struct {
+	Style string           `json:"style"`
+	Title string           `json:"title"`
+	Items []listItemResult `json:"items"`
+}
+
+type listItemResult struct {
+	Text string `json:"text"`
+}
+
+type singleGalleryComponent struct {
+	Style  string               `json:"style"`
+	Images []galleryImageResult `json:"images"`
+}
+
+type galleryImageResult struct {
+	Description string `json:"description"`
+	AltText     string `json:"alt_text"`
+	Caption     string `json:"caption"`
+}
+
+type singleMultimediaComponent struct {
+	MediaType   string `json:"media_type"`
+	Description string `json:"description"`
+	Caption     string `json:"caption"`
+}
+
+type singleChartComponent struct {
+	ChartType string    `json:"chart_type"`
+	Title     string    `json:"title"`
+	Labels    []string  `json:"labels"`
+	Values    []float64 `json:"values"`
+}
+
+type singleDividerComponent struct {
+	Style string `json:"style"`
+}
+
 // flatLessonComponent matches the new flat schema where all fields are at the same level
 type flatLessonComponent struct {
 	// Discriminator
@@ -1016,8 +1059,12 @@ func componentPlanSchema() map[string]any {
 					"type": "object",
 					"properties": map[string]any{
 						"component_type": map[string]any{
-							"type":        "string",
-							"enum":        []string{"text", "heading", "image", "quiz", "code", "callout", "statement"},
+							"type": "string",
+							"enum": []string{
+								"text", "heading", "image", "quiz", "code",
+								"callout", "statement", "quote", "list",
+								"gallery", "multimedia", "chart", "divider",
+							},
 							"description": "The type of component",
 						},
 						"purpose": map[string]any{
@@ -1050,6 +1097,18 @@ func singleComponentSchema(componentType string) map[string]any {
 		return singleCalloutSchema()
 	case "statement":
 		return singleStatementSchema()
+	case "quote":
+		return singleQuoteSchema()
+	case "list":
+		return singleListSchema()
+	case "gallery":
+		return singleGallerySchema()
+	case "multimedia":
+		return singleMultimediaSchema()
+	case "chart":
+		return singleChartSchema()
+	case "divider":
+		return singleDividerSchema()
 	default:
 		return singleTextSchema()
 	}
@@ -1212,6 +1271,159 @@ func singleStatementSchema() map[string]any {
 	}
 }
 
+func singleQuoteSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"text": map[string]any{
+				"type":        "string",
+				"description": "The quote text (1-3 sentences)",
+			},
+			"attribution": map[string]any{
+				"type":        "string",
+				"description": "Who said it - name, title, or source",
+			},
+		},
+		"required": []string{"text", "attribution"},
+	}
+}
+
+func singleListSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"style": map[string]any{
+				"type":        "string",
+				"enum":        []string{"bulleted", "numbered", "process"},
+				"description": "List style: bulleted for unordered, numbered for sequences, process for steps",
+			},
+			"title": map[string]any{
+				"type":        "string",
+				"description": "Optional title above the list",
+			},
+			"items": map[string]any{
+				"type":        "array",
+				"description": "List items (3-7 items recommended)",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"text": map[string]any{
+							"type":        "string",
+							"description": "The list item text",
+						},
+					},
+					"required": []string{"text"},
+				},
+			},
+		},
+		"required": []string{"style", "items"},
+	}
+}
+
+func singleGallerySchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"style": map[string]any{
+				"type":        "string",
+				"enum":        []string{"carousel", "labeled_graphic"},
+				"description": "Gallery style: carousel for slideshow, labeled_graphic for annotated image",
+			},
+			"images": map[string]any{
+				"type":        "array",
+				"description": "Images in the gallery (2-5 images)",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"description": map[string]any{
+							"type":        "string",
+							"description": "Detailed image description for AI generation",
+						},
+						"alt_text": map[string]any{
+							"type":        "string",
+							"description": "Accessibility alt text",
+						},
+						"caption": map[string]any{
+							"type":        "string",
+							"description": "Optional caption below image",
+						},
+					},
+					"required": []string{"description", "alt_text"},
+				},
+			},
+		},
+		"required": []string{"style", "images"},
+	}
+}
+
+func singleMultimediaSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"media_type": map[string]any{
+				"type":        "string",
+				"enum":        []string{"video", "audio"},
+				"description": "Type of media content",
+			},
+			"description": map[string]any{
+				"type":        "string",
+				"description": "What the video/audio should show or explain",
+			},
+			"caption": map[string]any{
+				"type":        "string",
+				"description": "Optional caption or transcript hint",
+			},
+		},
+		"required": []string{"media_type", "description"},
+	}
+}
+
+func singleChartSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"chart_type": map[string]any{
+				"type":        "string",
+				"enum":        []string{"bar", "line", "pie", "table"},
+				"description": "Type of data visualization",
+			},
+			"title": map[string]any{
+				"type":        "string",
+				"description": "Chart title",
+			},
+			"labels": map[string]any{
+				"type":        "array",
+				"description": "Data labels (categories, x-axis values)",
+				"items": map[string]any{
+					"type": "string",
+				},
+			},
+			"values": map[string]any{
+				"type":        "array",
+				"description": "Data values corresponding to labels",
+				"items": map[string]any{
+					"type": "number",
+				},
+			},
+		},
+		"required": []string{"chart_type", "title", "labels", "values"},
+	}
+}
+
+func singleDividerSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"style": map[string]any{
+				"type":        "string",
+				"enum":        []string{"line", "dots", "space"},
+				"description": "Divider style",
+			},
+		},
+		"required": []string{},
+	}
+}
+
 // calloutStyleToNumber converts a string style to its numeric enum value
 func calloutStyleToNumber(style string) int {
 	switch strings.ToLower(style) {
@@ -1227,6 +1439,68 @@ func calloutStyleToNumber(style string) int {
 		return 5
 	default:
 		return 1 // Default to info
+	}
+}
+
+// listStyleToNumber converts a list style string to its numeric enum value
+func listStyleToNumber(style string) int {
+	switch strings.ToLower(style) {
+	case "bulleted":
+		return 1
+	case "numbered":
+		return 2
+	case "icon":
+		return 3
+	case "process":
+		return 4
+	case "accordion":
+		return 5
+	default:
+		return 1 // Default to bulleted
+	}
+}
+
+// galleryStyleToNumber converts a gallery style string to its numeric enum value
+func galleryStyleToNumber(style string) int {
+	switch strings.ToLower(style) {
+	case "carousel":
+		return 1
+	case "labeled_graphic":
+		return 2
+	default:
+		return 1 // Default to carousel
+	}
+}
+
+// multimediaTypeToNumber converts a multimedia type string to its numeric enum value
+func multimediaTypeToNumber(mediaType string) int {
+	switch strings.ToLower(mediaType) {
+	case "video":
+		return 1
+	case "audio":
+		return 2
+	case "interactive":
+		return 3
+	default:
+		return 1 // Default to video
+	}
+}
+
+// chartTypeToNumber converts a chart type string to its numeric enum value
+func chartTypeToNumber(chartType string) int {
+	switch strings.ToLower(chartType) {
+	case "bar":
+		return 1
+	case "line":
+		return 2
+	case "pie":
+		return 3
+	case "donut":
+		return 4
+	case "table":
+		return 5
+	default:
+		return 1 // Default to bar
 	}
 }
 
@@ -1452,6 +1726,10 @@ func buildRegeneratePrompt(req service.RegenerateComponentRequest) string {
 func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 	var sb strings.Builder
 
+	// Detect context and select relevant schemas
+	ctx := DetectCourseContext(req)
+	relevantSchemas := SelectRelevantSchemas(ctx)
+
 	sb.WriteString("You are an expert instructional designer planning components for a lesson.\n\n")
 
 	// Course context
@@ -1570,46 +1848,29 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 		sb.WriteString("\n\n")
 	}
 
+	// Inject component schemas based on context
+	sb.WriteString(BuildComponentSchemasPromptSection(relevantSchemas))
+
 	// Instructions with position-aware guidance
 	sb.WriteString("## Component Planning Instructions\n")
-	sb.WriteString("Plan 5-8 components for this lesson. For each component, specify:\n")
-	sb.WriteString("1. The type (text, heading, image, or quiz)\n")
+	sb.WriteString("Plan 5-8 components for this lesson using the component types above. For each component, specify:\n")
+	sb.WriteString("1. The type (from the available types listed above)\n")
 	sb.WriteString("2. A brief purpose describing what it will contain\n\n")
 
 	sb.WriteString("Required components:\n")
 	sb.WriteString("- At least 1 heading (for structure)\n")
-	sb.WriteString("- At least 2 text components (for content)\n")
+	sb.WriteString("- At least 2 text components (for core content)\n")
 	sb.WriteString("- At least 1 image (for visual learning)\n")
-	sb.WriteString("- At least 1 quiz (for knowledge check)\n\n")
+	sb.WriteString("- At least 1 quiz (for knowledge check)\n")
+	sb.WriteString("- Consider using callout, statement, or list for variety and engagement\n\n")
 
-	// Position-specific guidance
-	if req.IsFirstInCourse {
-		sb.WriteString("**IMPORTANT - First Lesson of Course:**\n")
-		sb.WriteString("- Start with a welcoming introduction to the entire course\n")
-		sb.WriteString("- Set expectations for what learners will achieve\n")
-		sb.WriteString("- Build excitement and motivation\n\n")
-	} else if req.IsFirstInSection {
-		sb.WriteString("**IMPORTANT - First Lesson of Section:**\n")
-		sb.WriteString("- Introduce the section's theme and goals\n")
-		sb.WriteString("- Connect to what was learned in the previous section\n")
-		sb.WriteString("- Set expectations for this section\n\n")
-	}
-
-	if req.IsLastInCourse {
-		sb.WriteString("**IMPORTANT - Final Lesson of Course:**\n")
-		sb.WriteString("- Include a comprehensive summary/conclusion component\n")
-		sb.WriteString("- Celebrate the learner's achievement\n")
-		sb.WriteString("- Provide next steps or resources for continued learning\n\n")
-	} else if req.IsLastInSection {
-		sb.WriteString("**IMPORTANT - Last Lesson of Section:**\n")
-		sb.WriteString("- Include a section summary component\n")
-		sb.WriteString("- Prepare learners for the transition to the next section\n\n")
-	}
+	// Position-specific guidance (context-aware)
+	sb.WriteString(BuildPositionGuidanceSection(ctx))
 
 	sb.WriteString("General structure:\n")
 	sb.WriteString("1. Introduction heading and text\n")
 	sb.WriteString("2. Main content with explanations and examples\n")
-	sb.WriteString("3. Visual element (image or diagram)\n")
+	sb.WriteString("3. Visual elements and emphasis components\n")
 	sb.WriteString("4. Quiz to check understanding\n")
 	sb.WriteString("5. Summary or key takeaways\n")
 
@@ -1971,6 +2232,112 @@ func parseAndTransformComponent(componentType, responseText string) (*flatLesson
 		} else {
 			summary = fmt.Sprintf("Statement: %s", resp.StatementText)
 		}
+
+	case "quote":
+		var resp singleQuoteComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse quote component: %w", err)
+		}
+		content := map[string]any{
+			"text":        resp.Text,
+			"attribution": resp.Attribution,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		// Summary: first 40 chars of quote
+		if len(resp.Text) > 40 {
+			summary = fmt.Sprintf("Quote: \"%s...\"", resp.Text[:40])
+		} else {
+			summary = fmt.Sprintf("Quote: \"%s\"", resp.Text)
+		}
+
+	case "list":
+		var resp singleListComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse list component: %w", err)
+		}
+		// Convert to numbered style enum if needed
+		styleNum := listStyleToNumber(resp.Style)
+		items := make([]map[string]string, len(resp.Items))
+		for i, item := range resp.Items {
+			items[i] = map[string]string{"text": item.Text}
+		}
+		content := map[string]any{
+			"style": styleNum,
+			"title": resp.Title,
+			"items": items,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		summary = fmt.Sprintf("List (%s): %d items", resp.Style, len(resp.Items))
+
+	case "gallery":
+		var resp singleGalleryComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse gallery component: %w", err)
+		}
+		styleNum := galleryStyleToNumber(resp.Style)
+		images := make([]map[string]any, len(resp.Images))
+		for i, img := range resp.Images {
+			images[i] = map[string]any{
+				"description": img.Description,
+				"altText":     img.AltText,
+				"caption":     img.Caption,
+			}
+		}
+		content := map[string]any{
+			"style":  styleNum,
+			"images": images,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		summary = fmt.Sprintf("Gallery (%s): %d images", resp.Style, len(resp.Images))
+
+	case "multimedia":
+		var resp singleMultimediaComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse multimedia component: %w", err)
+		}
+		typeNum := multimediaTypeToNumber(resp.MediaType)
+		content := map[string]any{
+			"type":        typeNum,
+			"description": resp.Description,
+			"caption":     resp.Caption,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		summary = fmt.Sprintf("Multimedia (%s)", resp.MediaType)
+
+	case "chart":
+		var resp singleChartComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			return nil, "", "", fmt.Errorf("failed to parse chart component: %w", err)
+		}
+		typeNum := chartTypeToNumber(resp.ChartType)
+		content := map[string]any{
+			"type":  typeNum,
+			"title": resp.Title,
+			"data": map[string]any{
+				"labels": resp.Labels,
+				"values": resp.Values,
+			},
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		summary = fmt.Sprintf("Chart (%s): %s", resp.ChartType, resp.Title)
+
+	case "divider":
+		var resp singleDividerComponent
+		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
+			// Divider may return empty object, that's OK
+			resp = singleDividerComponent{Style: "line"}
+		}
+		content := map[string]any{
+			"style": resp.Style,
+		}
+		jsonBytes, _ := json.Marshal(content)
+		contentJSON = string(jsonBytes)
+		summary = "Divider"
 
 	default:
 		return nil, "", "", fmt.Errorf("unknown component type: %s", componentType)
