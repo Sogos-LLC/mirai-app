@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
-  CheckCircle2,
   Pencil,
   Check,
   X,
@@ -23,8 +22,8 @@ import {
 import {
   outlineReviewMachine,
   isLoading,
-  isSuccess,
   isPollingOutline,
+  isPollingLessons,
   isOutlineQueued,
 } from '@/machines/outlineReviewMachine';
 import {
@@ -194,6 +193,11 @@ export default function OutlineReviewPage() {
           return { outline: null, job: null };
         }),
         pollJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
+          const jobRequest = create(GetJobRequestSchema, { jobId: input.jobId });
+          const jobResponse = await aiClient.getJob(jobRequest);
+          return { job: jobResponse.job };
+        }),
+        pollLessonJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
           const jobRequest = create(GetJobRequestSchema, { jobId: input.jobId });
           const jobResponse = await aiClient.getJob(jobRequest);
           return { job: jobResponse.job };
@@ -386,45 +390,37 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Outline queued state - show "you'll be notified" message
+  // Outline queued state - show progress with option to leave
   if (isOutlineQueued(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ClipboardList className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+              <Loader2 className="w-10 h-10 text-indigo-600 dark:text-indigo-400 animate-spin" />
             </div>
             <h2 className="text-2xl font-bold text-primary mb-2">
-              Your outline is being created!
+              Creating your outline...
             </h2>
             <p className="text-secondary mb-6">
               We&apos;re generating a detailed course outline based on your inputs.
               This typically takes 30-60 seconds.
             </p>
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>You&apos;ll be notified</strong> when your outline is ready for review.
-                Check the bell icon in the header.
-              </p>
-            </div>
             <div className="flex flex-col gap-3">
               <Button
                 variant="primary"
                 size="lg"
-                onClick={() => send({ type: 'DISMISS_QUEUED' })}
+                onClick={() => send({ type: 'WAIT_FOR_OUTLINE' })}
                 className="w-full"
               >
-                Got it!
+                Wait for outline
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => send({ type: 'WAIT_FOR_OUTLINE' })}
-                className="text-secondary"
+              <button
+                onClick={() => send({ type: 'DISMISS_QUEUED' })}
+                className="text-sm text-muted hover:text-secondary transition-colors"
               >
-                I&apos;ll wait here
-              </Button>
+                Notify me instead
+              </button>
             </div>
           </CardContent>
         </Card>
@@ -432,36 +428,35 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Success state - celebration with OK button
-  if (isSuccess(stateValue)) {
+  // Polling lessons state - show progress while generating lessons
+  if (isPollingLessons(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+            <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Loader2 className="w-10 h-10 text-indigo-600 dark:text-indigo-400 animate-spin" />
             </div>
             <h2 className="text-2xl font-bold text-primary mb-2">
-              Awesome! Your course is being created
+              Generating your lessons...
             </h2>
-            <p className="text-secondary mb-6">
-              We&apos;re generating {totalLessons} lessons based on your outline.
+            <p className="text-secondary mb-4">
+              Creating {totalLessons} lessons based on your outline.
               This typically takes 5-7 minutes.
             </p>
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>You&apos;ll be notified</strong> when your course is ready.
-                Check the bell icon or your email.
-              </p>
+            <p className="text-sm text-secondary mb-4">{context.progressMessage}</p>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-6">
+              <div
+                className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${context.progressPercent}%` }}
+              />
             </div>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => send({ type: 'DISMISS_SUCCESS' })}
-              className="min-w-[200px]"
+            <button
+              onClick={() => send({ type: 'DISMISS_LESSON_GENERATION' })}
+              className="text-sm text-muted hover:text-secondary transition-colors"
             >
-              Got it!
-            </Button>
+              Notify me instead
+            </button>
           </CardContent>
         </Card>
       </div>

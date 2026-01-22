@@ -32,10 +32,10 @@ export type OutlineReviewEvent =
   | { type: 'REGENERATE_OUTLINE' }
   | { type: 'UPDATE_SECTION_TITLE'; sectionIndex: number; title: string }
   | { type: 'UPDATE_LESSON'; sectionIndex: number; lessonIndex: number; title: string; description: string }
-  // Success / Queued
-  | { type: 'DISMISS_SUCCESS' }
+  // Queued states
   | { type: 'DISMISS_QUEUED' }
   | { type: 'WAIT_FOR_OUTLINE' }
+  | { type: 'DISMISS_LESSON_GENERATION' }
   // Common
   | { type: 'RETRY' }
   | { type: 'DISMISS_ERROR' };
@@ -133,6 +133,15 @@ export const regenerateOutlineActor = fromPromise<RegenerateOutlineResponse, { c
 export const generateLessonsActor = fromPromise<GenerateLessonsResponse, { courseId: string }>(
   async () => {
     throw new NetworkError('generateLessonsActor must be provided by the component');
+  }
+);
+
+/**
+ * Poll lesson job status
+ */
+export const pollLessonJobActor = fromPromise<GetJobResponse, { jobId: string }>(
+  async () => {
+    throw new NetworkError('pollLessonJobActor must be provided by the component');
   }
 );
 
@@ -395,10 +404,11 @@ export const outlineReviewMachine = createMachine({
         src: 'generateLessonsActor',
         input: ({ context }) => ({ courseId: context.courseId }),
         onDone: {
-          target: 'success',
+          target: 'pollingLessons',
           actions: assign({
             lessonJobId: ({ event }) => event.output.job.id,
-            progressMessage: 'Lessons queued for generation',
+            progressPercent: 5,
+            progressMessage: 'Starting lesson generation...',
           }),
         },
         onError: {
@@ -418,11 +428,71 @@ export const outlineReviewMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Success - Show celebration, user clicks OK to redirect
+    // Polling Lessons - Wait for lesson generation to complete
     // --------------------------------------------------------
-    success: {
+    pollingLessons: {
+      initial: 'polling',
       on: {
-        DISMISS_SUCCESS: 'backgroundGeneration',
+        DISMISS_LESSON_GENERATION: 'backgroundGeneration',
+      },
+      states: {
+        polling: {
+          invoke: {
+            id: 'pollLessonJob',
+            src: 'pollLessonJobActor',
+            input: ({ context }) => ({ jobId: context.lessonJobId! }),
+            onDone: [
+              {
+                // Job completed - go to complete state
+                target: '#outlineReview.complete',
+                guard: ({ event }) => event.output.job.status === JOB_STATUS.COMPLETED,
+                actions: assign({
+                  progressPercent: 100,
+                  progressMessage: 'All lessons generated!',
+                }),
+              },
+              {
+                // Job failed
+                target: '#outlineReview.error',
+                guard: ({ event }) => event.output.job.status === JOB_STATUS.FAILED,
+                actions: assign({
+                  error: ({ event }) =>
+                    createAuthError(
+                      'GENERATION_FAILED',
+                      event.output.job.errorMessage || 'Lesson generation failed',
+                      true
+                    ),
+                }),
+              },
+              {
+                // Still processing - continue polling
+                target: 'waiting',
+                actions: assign({
+                  progressPercent: ({ event }) =>
+                    Math.min(95, 5 + (event.output.job.progressPercent || 0) * 0.9),
+                  progressMessage: ({ event }) =>
+                    event.output.job.progressMessage || 'Generating lessons...',
+                }),
+              },
+            ],
+            onError: {
+              target: '#outlineReview.error',
+              actions: assign({
+                error: ({ event }) =>
+                  createAuthError(
+                    'NETWORK_ERROR',
+                    event.error instanceof Error ? event.error.message : 'Failed to poll job status',
+                    true
+                  ),
+              }),
+            },
+          },
+        },
+        waiting: {
+          after: {
+            5000: 'polling', // Poll every 5 seconds for lessons (longer than outline)
+          },
+        },
       },
     },
 
@@ -531,4 +601,14 @@ export function isPollingOutline(stateValue: unknown): boolean {
  */
 export function isOutlineQueued(stateValue: unknown): boolean {
   return stateValue === 'outlineQueued';
+}
+
+/**
+ * Check if polling for lessons
+ */
+export function isPollingLessons(stateValue: unknown): boolean {
+  if (typeof stateValue === 'object' && stateValue !== null) {
+    return 'pollingLessons' in stateValue;
+  }
+  return false;
 }
