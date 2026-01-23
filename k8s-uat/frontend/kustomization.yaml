@@ -80,4 +80,4 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-frontend
-  newTag: uat-d0286d5
+  newTag: uat-7b50eae
