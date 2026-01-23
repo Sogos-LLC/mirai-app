@@ -9,5 +9,9 @@ resources:
 
 labels:
 - pairs:
-    environment: uat
     app.kubernetes.io/part-of: mirai-uat
+    environment: uat
+images:
+- name: ghcr.io/sogos-llc/mirai-app/embedding-service
+  newName: ghcr.io/sogos-llc/mirai-app/embedding-service
+  newTag: uat-d9e7920
