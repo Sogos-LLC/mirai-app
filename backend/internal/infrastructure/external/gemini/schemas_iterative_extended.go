@@ -23,8 +23,8 @@ func singleListSchema() map[string]any {
 		"properties": map[string]any{
 			"style": map[string]any{
 				"type":        "string",
-				"enum":        []string{"bulleted", "numbered", "icon", "process", "accordion"},
-				"description": "List style: bulleted (unordered), numbered (sequences), icon (with emojis), process (step-by-step), accordion (expandable - great for learning UX)",
+				"enum":        []string{"accordion", "numbered", "process", "icon", "bulleted"},
+				"description": "List style - DEFAULT TO 'accordion' for any explanatory content. Only use 'numbered' for sequential steps, 'process' for workflows. AVOID 'bulleted'.",
 			},
 			"title": map[string]any{
 				"type":        "string",
@@ -32,17 +32,17 @@ func singleListSchema() map[string]any {
 			},
 			"items": map[string]any{
 				"type":        "array",
-				"description": "List items (3-7 items recommended)",
+				"description": "List items (3-5 items recommended, max 7)",
 				"items": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
 						"text": map[string]any{
 							"type":        "string",
-							"description": "The list item text (for accordion: the collapsed header)",
+							"description": "The list item text (for accordion: the collapsed header that users click)",
 						},
 						"description": map[string]any{
 							"type":        "string",
-							"description": "Optional description (required for accordion style - shows when expanded)",
+							"description": "REQUIRED for accordion style - the expanded content shown when clicked. Include 1-2 sentences of explanation.",
 						},
 					},
 					"required": []string{"text"},

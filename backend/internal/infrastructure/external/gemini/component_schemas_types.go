@@ -71,8 +71,8 @@ var componentSchemas = map[string]ComponentSchemaDefinition{
 	},
 	"list": {
 		Type:        "list",
-		Description: "Structured list - PREFER THIS over long text. Styles: 'bulleted' (unordered points), 'numbered' (sequential steps), 'icon' (features with checkmarks), 'process' (workflows/pipelines), 'accordion' (expandable Q&A - GREAT for learning)",
-		Schema:      `{style: "bulleted"|"numbered"|"icon"|"process"|"accordion", items: [{text: string, description?: string (required for accordion)}], title?: string}`,
+		Description: "Structured list - DEFAULT TO 'accordion' for any list with explanations. Styles: 'accordion' (expandable - BEST for learning, DEFAULT), 'numbered' (sequential steps only), 'process' (workflows), 'icon' (feature lists), 'bulleted' (simple unordered - AVOID)",
+		Schema:      `{style: "accordion"|"numbered"|"process"|"icon"|"bulleted" (DEFAULT: accordion), items: [{text: string, description: string (REQUIRED for accordion)}], title?: string}`,
 		Categories:  []ComponentCategory{CategoryFormatting, CategoryContent},
 	},
 	"gallery": {

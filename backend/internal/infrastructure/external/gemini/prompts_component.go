@@ -173,12 +173,13 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 	sb.WriteString("- ❌ Content dumping without structure\n")
 	sb.WriteString("- ❌ Walls of text that ignore visual hierarchy\n\n")
 
-	sb.WriteString("**List Style Selection:**\n")
-	sb.WriteString("- 'bulleted' - Unordered items, general points, features\n")
-	sb.WriteString("- 'numbered' - Sequential steps, ranked priorities, ordered procedures\n")
-	sb.WriteString("- 'icon' - Feature lists, benefits, visual emphasis with checkmarks\n")
-	sb.WriteString("- 'process' - Workflows, multi-step procedures, pipelines\n")
-	sb.WriteString("- 'accordion' - Expandable Q&A, detailed explanations, FAQs (GREAT for learning UX)\n\n")
+	sb.WriteString("**List Style Selection (CRITICAL):**\n")
+	sb.WriteString("- 'accordion' (DEFAULT) - Expandable items with details. USE THIS for any list that explains concepts. BEST for learning UX.\n")
+	sb.WriteString("- 'numbered' - ONLY for sequential steps (1, 2, 3...) or ranked items\n")
+	sb.WriteString("- 'process' - ONLY for multi-stage workflows or pipelines\n")
+	sb.WriteString("- 'icon' - Feature lists with checkmarks\n")
+	sb.WriteString("- 'bulleted' - AVOID. Only use for truly simple unordered items with no explanations\n\n")
+	sb.WriteString("**ALWAYS DEFAULT TO 'accordion'** unless the content is purely sequential steps.\n\n")
 
 	// Anti-patterns section - critical rules to prevent poor lesson structure
 	sb.WriteString("## CRITICAL RULES (MUST FOLLOW)\n")

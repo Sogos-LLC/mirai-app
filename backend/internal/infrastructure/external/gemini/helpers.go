@@ -39,7 +39,7 @@ func listStyleToNumber(style string) int {
 	case "accordion":
 		return 5
 	default:
-		return 1 // Default to bulleted
+		return 5 // Default to accordion (best for learning UX)
 	}
 }
 
