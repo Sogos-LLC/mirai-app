@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { Upload, FileText, X, Check, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import React, { useCallback, useState, useEffect } from 'react';
+import { Upload, FileText, X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
 import type { ProcessedSource } from './KnowledgeVerificationModal';
@@ -12,15 +12,18 @@ export interface PendingFile {
   name: string;
   size: number;
   mimeType: string;
+  status: 'pending' | 'uploading' | 'done' | 'error';
+  error?: string;
 }
 
 interface KnowledgeUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: () => void;
+  onUploadFile: (file: PendingFile) => Promise<ProcessedSource>;
   pendingFiles: PendingFile[];
   onAddFiles: (files: PendingFile[]) => void;
   onRemoveFile: (fileId: string) => void;
+  onUpdateFileStatus: (fileId: string, status: PendingFile['status'], error?: string) => void;
   processedSources?: ProcessedSource[];
 }
 
@@ -48,14 +51,33 @@ function generateFileId(): string {
 export function KnowledgeUploadModal({
   isOpen,
   onClose,
-  onUpload,
+  onUploadFile,
   pendingFiles,
   onAddFiles,
   onRemoveFile,
+  onUpdateFileStatus,
   processedSources = [],
 }: KnowledgeUploadModalProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-upload files when they're added with 'pending' status
+  useEffect(() => {
+    const pendingToUpload = pendingFiles.filter(f => f.status === 'pending');
+
+    pendingToUpload.forEach(async (file) => {
+      // Mark as uploading
+      onUpdateFileStatus(file.id, 'uploading');
+
+      try {
+        await onUploadFile(file);
+        onUpdateFileStatus(file.id, 'done');
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+        onUpdateFileStatus(file.id, 'error', errorMsg);
+      }
+    });
+  }, [pendingFiles, onUploadFile, onUpdateFileStatus]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -80,15 +102,19 @@ export function KnowledgeUploadModal({
         const isValidType = SUPPORTED_TYPES.includes(file.type) || SUPPORTED_EXTENSIONS.includes(ext);
 
         if (isValidType) {
-          // Check for duplicates
-          const isDuplicate = pendingFiles.some((pf) => pf.name === file.name && pf.size === file.size);
-          if (!isDuplicate) {
+          // Check for duplicates in pending files
+          const isDuplicatePending = pendingFiles.some((pf) => pf.name === file.name && pf.size === file.size);
+          // Check for duplicates in processed sources
+          const isDuplicateProcessed = processedSources.some((ps) => ps.name === file.name);
+
+          if (!isDuplicatePending && !isDuplicateProcessed) {
             validFiles.push({
               id: generateFileId(),
               file,
               name: file.name,
               size: file.size,
               mimeType: file.type || 'application/octet-stream',
+              status: 'pending',
             });
           }
         } else {
@@ -106,7 +132,7 @@ export function KnowledgeUploadModal({
         onAddFiles(validFiles);
       }
     },
-    [pendingFiles, onAddFiles]
+    [pendingFiles, processedSources, onAddFiles]
   );
 
   const handleDrop = useCallback(
@@ -129,41 +155,44 @@ export function KnowledgeUploadModal({
     [processFiles]
   );
 
-  const hasNewFiles = pendingFiles.length > 0;
-  const hasProcessed = processedSources.length > 0;
-  const isAddingMore = hasProcessed;
+  // Check if any files are currently uploading
+  const isUploading = pendingFiles.some(f => f.status === 'uploading');
+  const hasProcessed = processedSources.length > 0 || pendingFiles.some(f => f.status === 'done');
+  const hasPendingOrUploading = pendingFiles.some(f => f.status === 'pending' || f.status === 'uploading');
 
-  // Determine button text and action based on state
-  const getPrimaryButton = () => {
-    if (hasNewFiles) {
-      return {
-        label: `Upload ${pendingFiles.length} File${pendingFiles.length > 1 ? 's' : ''}`,
-        onClick: onUpload,
-        icon: <Upload className="w-4 h-4 mr-2" />,
-      };
+  // Render file status icon
+  const renderFileStatus = (file: PendingFile) => {
+    switch (file.status) {
+      case 'pending':
+      case 'uploading':
+        return (
+          <span className="text-xs text-primary-600 flex items-center gap-1 dark:text-primary-400">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Processing...
+          </span>
+        );
+      case 'done':
+        return (
+          <span className="text-xs text-green-600 flex items-center gap-1 dark:text-green-400">
+            <CheckCircle className="w-3 h-3" />
+            Indexed
+          </span>
+        );
+      case 'error':
+        return (
+          <span className="text-xs text-red-600 flex items-center gap-1 dark:text-red-400" title={file.error}>
+            <AlertCircle className="w-3 h-3" />
+            Error
+          </span>
+        );
     }
-    if (hasProcessed) {
-      return {
-        label: 'Done',
-        onClick: onClose,
-        icon: <ArrowRight className="w-4 h-4 mr-2" />,
-      };
-    }
-    return {
-      label: 'Ready to Upload Knowledge',
-      onClick: onUpload,
-      icon: <Upload className="w-4 h-4 mr-2" />,
-      disabled: true,
-    };
   };
-
-  const primaryButton = getPrimaryButton();
 
   return (
     <ResponsiveModal
       isOpen={isOpen}
       onClose={onClose}
-      title={isAddingMore ? 'Knowledge Sources' : 'Add Knowledge Sources'}
+      title="Add Knowledge Sources"
       size="lg"
       mobileHeight="full"
       footer={
@@ -173,11 +202,17 @@ export function KnowledgeUploadModal({
           </Button>
           <Button
             variant="primary"
-            onClick={primaryButton.onClick}
-            disabled={primaryButton.disabled}
+            onClick={onClose}
+            disabled={hasPendingOrUploading}
           >
-            {primaryButton.icon}
-            {primaryButton.label}
+            {isUploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Done'
+            )}
           </Button>
         </div>
       }
@@ -194,7 +229,34 @@ export function KnowledgeUploadModal({
           </div>
         )}
 
-        {/* Already processed sources (read-only) - shown at top */}
+        {/* File upload zone */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`
+            border-2 border-dashed rounded-lg p-6 text-center transition-colors
+            ${isDragOver ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-300 dark:border-gray-600 bg-surface'}
+          `}
+        >
+          <Upload className="w-8 h-8 mx-auto mb-2 text-muted" />
+          <p className="text-primary font-medium mb-1">
+            Drag and drop files here, or{' '}
+            <label className="text-primary-600 hover:text-primary-700 cursor-pointer underline dark:text-primary-400 dark:hover:text-primary-300">
+              browse
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.docx,.txt,.md"
+                onChange={handleFileInput}
+                className="hidden"
+              />
+            </label>
+          </p>
+          <p className="text-sm text-muted">Supported: PDF, DOCX, TXT, Markdown</p>
+        </div>
+
+        {/* Already processed sources (from previous sessions) */}
         {processedSources.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-primary mb-3">
@@ -224,63 +286,47 @@ export function KnowledgeUploadModal({
           </div>
         )}
 
-        {/* File upload zone */}
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`
-            border-2 border-dashed rounded-lg p-6 text-center transition-colors
-            ${isDragOver ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-300 dark:border-gray-600 bg-surface'}
-          `}
-        >
-          <Upload className="w-8 h-8 mx-auto mb-2 text-muted" />
-          <p className="text-primary font-medium mb-1">
-            {isAddingMore ? 'Add more files' : 'Drag and drop files here'}, or{' '}
-            <label className="text-primary-600 hover:text-primary-700 cursor-pointer underline dark:text-primary-400 dark:hover:text-primary-300">
-              browse
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.docx,.txt,.md"
-                onChange={handleFileInput}
-                className="hidden"
-              />
-            </label>
-          </p>
-          <p className="text-sm text-muted">Supported: PDF, DOCX, TXT, Markdown</p>
-        </div>
-
-        {/* Pending files list */}
+        {/* Current files list (pending, uploading, done, error) */}
         {pendingFiles.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-primary mb-3">
-              New Files to Upload ({pendingFiles.length})
+              {isUploading ? 'Processing Files...' : 'Files'}
             </h3>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {pendingFiles.map((pf) => (
                 <div
                   key={pf.id}
-                  className="flex items-center justify-between p-3 bg-surface-elevated border rounded-lg"
+                  className={`flex items-center justify-between p-3 border rounded-lg ${
+                    pf.status === 'done'
+                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                      : pf.status === 'error'
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                        : 'bg-surface-elevated border-default'
+                  }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                    {pf.status === 'done' ? (
+                      <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    ) : pf.status === 'error' ? (
+                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                    ) : (
+                      <FileText className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                    )}
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-primary truncate">{pf.name}</p>
                       <p className="text-xs text-muted">{formatFileSize(pf.size)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-amber-600 flex items-center gap-1 dark:text-amber-400">
-                      <Check className="w-3 h-3" />
-                      Ready
-                    </span>
-                    <button
-                      onClick={() => onRemoveFile(pf.id)}
-                      className="p-1.5 rounded hover:bg-hover text-muted hover:text-red-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {renderFileStatus(pf)}
+                    {(pf.status === 'error' || pf.status === 'done') && (
+                      <button
+                        onClick={() => onRemoveFile(pf.id)}
+                        className="p-1.5 rounded hover:bg-hover text-muted hover:text-red-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -288,13 +334,13 @@ export function KnowledgeUploadModal({
           </div>
         )}
 
-        {/* Dynamic helper text */}
+        {/* Helper text */}
         <p className="text-sm text-muted text-center">
-          {hasNewFiles
-            ? `Click Upload to index ${pendingFiles.length} new file${pendingFiles.length > 1 ? 's' : ''}`
-            : isAddingMore
-              ? 'Add more files or click Done to continue with your wizard'
-              : 'These documents will be processed and used to enhance AI-generated content'}
+          {isUploading
+            ? 'Files are being processed and indexed for RAG...'
+            : hasProcessed
+              ? 'Files indexed successfully. Add more files or click Done to continue.'
+              : 'Drop files to automatically upload and index them for AI-enhanced content generation.'}
         </p>
       </div>
     </ResponsiveModal>

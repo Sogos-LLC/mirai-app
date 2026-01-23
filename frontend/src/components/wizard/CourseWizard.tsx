@@ -38,14 +38,13 @@ import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import {
   KnowledgeUploadModal,
-  KnowledgeProcessingModal,
   KnowledgeVerificationModal,
   type PendingFile,
   type ProcessedSource,
 } from './modals';
 
 // Modal state types
-type KnowledgeModalState = 'closed' | 'upload' | 'processing' | 'verification';
+type KnowledgeModalState = 'closed' | 'upload' | 'verification';
 
 // Generate session ID for pre-course knowledge sources
 function generateSessionId(): string {
@@ -59,7 +58,6 @@ export default function CourseWizard() {
   const [knowledgeModalState, setKnowledgeModalState] = useState<KnowledgeModalState>('closed');
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [processedSources, setProcessedSources] = useState<ProcessedSource[]>([]);
-  const [processingStatus, setProcessingStatus] = useState<'processing' | 'success'>('processing');
   const [sessionId] = useState(() => generateSessionId());
 
   // API hooks - wizard generation
@@ -302,8 +300,15 @@ export default function CourseWizard() {
   }, []);
 
   const handleCloseKnowledgeModal = useCallback(() => {
+    // When closing, move successfully uploaded files to processedSources
+    const successfulFiles = pendingFiles.filter(f => f.status === 'done');
+    if (successfulFiles.length > 0) {
+      // Note: The actual processed source data was added via handleUploadFile
+      // We just clear the pending files that are done
+      setPendingFiles(prev => prev.filter(f => f.status !== 'done'));
+    }
     setKnowledgeModalState('closed');
-  }, []);
+  }, [pendingFiles]);
 
   const handleAddFiles = useCallback((files: PendingFile[]) => {
     setPendingFiles((prev) => [...prev, ...files]);
@@ -317,59 +322,45 @@ export default function CourseWizard() {
     send({ type: 'REMOVE_FILE', fileId });
   }, [send]);
 
-  const handleUploadKnowledge = useCallback(async () => {
-    if (pendingFiles.length === 0) return;
-
-    // Transition to processing modal
-    setKnowledgeModalState('processing');
-    setProcessingStatus('processing');
-
-    try {
-      // Process each file through the backend
-      const results: ProcessedSource[] = [];
-
-      for (const file of pendingFiles) {
-        // Read file content as Uint8Array
-        const arrayBuffer = await file.file.arrayBuffer();
-        const fileContent = new Uint8Array(arrayBuffer);
-
-        const result = await uploadAndProcess.mutate({
-          sessionId,
-          filename: file.name,
-          contentType: file.mimeType,
-          fileContent,
-        });
-
-        results.push({
-          id: result.sourceId,
-          name: result.name,
-          summary: result.summary,
-          chunkCount: result.chunkCount,
-          tokenCount: result.tokenCount,
-        });
-      }
-
-      setProcessedSources(results);
-      setProcessingStatus('success');
-    } catch (error) {
-      console.error('Failed to process knowledge sources:', error);
-      // Return to upload modal on error
-      setKnowledgeModalState('upload');
-    }
-  }, [pendingFiles, sessionId, uploadAndProcess]);
-
-  const handleProcessingComplete = useCallback(() => {
-    // Transition from success checkmark to verification modal
-    setKnowledgeModalState('verification');
+  const handleUpdateFileStatus = useCallback((fileId: string, status: PendingFile['status'], error?: string) => {
+    setPendingFiles((prev) =>
+      prev.map((f) =>
+        f.id === fileId ? { ...f, status, error } : f
+      )
+    );
   }, []);
+
+  const handleUploadFile = useCallback(async (file: PendingFile): Promise<ProcessedSource> => {
+    // Read file content as Uint8Array
+    const arrayBuffer = await file.file.arrayBuffer();
+    const fileContent = new Uint8Array(arrayBuffer);
+
+    const result = await uploadAndProcess.mutate({
+      sessionId,
+      filename: file.name,
+      contentType: file.mimeType,
+      fileContent,
+    });
+
+    const processed: ProcessedSource = {
+      id: result.sourceId,
+      name: result.name,
+      summary: result.summary,
+      chunkCount: result.chunkCount,
+      tokenCount: result.tokenCount,
+    };
+
+    // Add to processed sources
+    setProcessedSources((prev) => [...prev, processed]);
+
+    return processed;
+  }, [sessionId, uploadAndProcess]);
 
   const handleVerificationClose = useCallback(() => {
     setKnowledgeModalState('closed');
   }, []);
 
   const handleAddMoreFiles = useCallback(() => {
-    // Clear pending files so user can add fresh batch
-    setPendingFiles([]);
     // Transition back to upload modal
     setKnowledgeModalState('upload');
   }, []);
@@ -629,18 +620,12 @@ export default function CourseWizard() {
       <KnowledgeUploadModal
         isOpen={knowledgeModalState === 'upload'}
         onClose={handleCloseKnowledgeModal}
-        onUpload={handleUploadKnowledge}
+        onUploadFile={handleUploadFile}
         pendingFiles={pendingFiles}
         onAddFiles={handleAddFiles}
         onRemoveFile={handleRemoveFile}
+        onUpdateFileStatus={handleUpdateFileStatus}
         processedSources={processedSources}
-      />
-
-      <KnowledgeProcessingModal
-        isOpen={knowledgeModalState === 'processing'}
-        status={processingStatus}
-        fileCount={pendingFiles.length}
-        onSuccessComplete={handleProcessingComplete}
       />
 
       <KnowledgeVerificationModal
