@@ -1,7 +1,9 @@
 package connect
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/sogos/mirai-backend/gen/mirai/v1/miraiv1connect"
@@ -12,6 +14,11 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 )
+
+// StorageAdapter interface for generating presigned URLs.
+type StorageAdapter interface {
+	GenerateUploadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
+}
 
 // ServerConfig contains all dependencies needed for the Connect server.
 type ServerConfig struct {
@@ -26,7 +33,9 @@ type ServerConfig struct {
 	TenantSettingsService *service.TenantSettingsService
 	NotificationService   *service.NotificationService
 	AIGenerationService   *service.AIGenerationService
-	CourseWizardService   *service.CourseWizardService
+	CourseWizardService    *service.CourseWizardService
+	KnowledgeSourceService *service.KnowledgeSourceService
+	BaseStorage            StorageAdapter // For knowledge source presigned URLs
 
 	PendingRegRepo         repository.PendingRegistrationRepository
 	UserRepo               repository.UserRepository // For tenant context in auth interceptor
@@ -136,6 +145,15 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	if cfg.CourseWizardService != nil {
 		path, handler = miraiv1connect.NewCourseWizardServiceHandler(
 			NewCourseWizardServiceServer(cfg.CourseWizardService, cfg.AIGenerationService, cfg.CourseService),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// KnowledgeSourceService - RAG knowledge management
+	if cfg.KnowledgeSourceService != nil && cfg.BaseStorage != nil {
+		path, handler = miraiv1connect.NewKnowledgeSourceServiceHandler(
+			NewKnowledgeServiceServer(cfg.KnowledgeSourceService, cfg.BaseStorage),
 			interceptors,
 		)
 		mux.Handle(path, handler)

@@ -15,20 +15,19 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
-	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
 
 // KnowledgeServiceServer implements the KnowledgeSourceService Connect handler.
 type KnowledgeServiceServer struct {
 	miraiv1connect.UnimplementedKnowledgeSourceServiceHandler
 	knowledgeService *service.KnowledgeSourceService
-	storageClient    *storage.S3Storage
+	storageClient    StorageAdapter
 }
 
 // NewKnowledgeServiceServer creates a new KnowledgeServiceServer.
 func NewKnowledgeServiceServer(
 	knowledgeService *service.KnowledgeSourceService,
-	storageClient *storage.S3Storage,
+	storageClient StorageAdapter,
 ) *KnowledgeServiceServer {
 	return &KnowledgeServiceServer{
 		knowledgeService: knowledgeService,

@@ -16,10 +16,12 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/cache"
 	"github.com/sogos/mirai-backend/internal/infrastructure/config"
 	"github.com/sogos/mirai-backend/internal/infrastructure/crypto"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/embedding"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/gemini"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/kratos"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/smtp"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/stripe"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/vectordb"
 	"github.com/sogos/mirai-backend/internal/infrastructure/logging"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/postgres"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/sqlc"
@@ -84,6 +86,7 @@ func main() {
 	notificationRepo := sqlc.NewNotificationRepository(db.DB)
 	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
 	wizardStateRepo := sqlc.NewWizardStateRepository(db.DB)
+	knowledgeRepo := sqlc.NewKnowledgeSourceRepository(db.DB)
 
 	// Initialize shared HTTP client
 	httpClient := httputil.NewClient()
@@ -199,6 +202,17 @@ func main() {
 		logger.Warn("ENCRYPTION_KEY not configured, AI features requiring API keys will not work")
 	}
 
+	// Initialize RAG infrastructure (embedding + vector DB)
+	var embeddingClient *embedding.Client
+	var vectorClient *vectordb.QdrantClient
+	if cfg.EmbeddingURL != "" && cfg.QdrantURL != "" {
+		embeddingClient = embedding.NewClient(cfg.EmbeddingURL)
+		vectorClient = vectordb.NewQdrantClient(cfg.QdrantURL)
+		logger.Info("RAG infrastructure initialized", "embeddingURL", cfg.EmbeddingURL, "qdrantURL", cfg.QdrantURL)
+	} else {
+		logger.Warn("RAG infrastructure not configured (EMBEDDING_URL and/or QDRANT_URL not set)")
+	}
+
 	// Initialize application services
 	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, pendingRegRepo, kratosClient, stripeClient, encryptor, logger, cfg.FrontendURL, cfg.MarketingURL, cfg.BackendURL)
 	billingService := service.NewBillingService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
@@ -278,6 +292,10 @@ func main() {
 		logger.Warn("AI services not initialized (encryption key required)")
 	}
 
+	// Knowledge Source service (for RAG)
+	knowledgeSourceService := service.NewKnowledgeSourceService(knowledgeRepo, embeddingClient, vectorClient)
+	logger.Info("knowledge source service initialized")
+
 	// Background services for deferred account provisioning
 	provisioningService := service.NewProvisioningService(pendingRegRepo, tenantRepo, userRepo, companyRepo, kratosClient, emailClient, encryptor, logger, cfg.FrontendURL)
 	cleanupService := service.NewCleanupService(pendingRegRepo, logger)
@@ -294,8 +312,10 @@ func main() {
 		CourseExportService:   courseExportService,
 		TenantSettingsService: tenantSettingsService,
 		NotificationService:   notificationService,
-		AIGenerationService:   aiGenerationService,
-		CourseWizardService:   courseWizardService,
+		AIGenerationService:    aiGenerationService,
+		CourseWizardService:    courseWizardService,
+		KnowledgeSourceService: knowledgeSourceService,
+		BaseStorage:            baseStorage,
 		PendingRegRepo:         pendingRegRepo,
 		UserRepo:               userRepo,               // For tenant context in auth interceptor
 		Cache:                  globalCache,            // For caching user tenant mappings (not tenant-scoped)
