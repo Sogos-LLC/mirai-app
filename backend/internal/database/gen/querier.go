@@ -31,6 +31,7 @@ type Querier interface {
 	CountCourses(ctx context.Context, arg CountCoursesParams) (int32, error)
 	CountCoursesByFolderID(ctx context.Context, folderID uuid.NullUUID) (int32, error)
 	CountExportsByStatus(ctx context.Context, courseID uuid.UUID) (CountExportsByStatusRow, error)
+	CountKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.UUID) (int32, error)
 	CountNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
 	CountPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) (int32, error)
 	CountUnreadNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
@@ -54,6 +55,9 @@ type Querier interface {
 	// Invitation CRUD operations
 	// Schema: invitations table with RLS isolation by tenant_id
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error)
+	// Knowledge source CRUD operations
+	// Schema: knowledge_sources table with RLS isolation by tenant_id
+	CreateKnowledgeSource(ctx context.Context, arg CreateKnowledgeSourceParams) (KnowledgeSource, error)
 	// Notification CRUD operations
 	// Schema: notifications table with RLS isolation by tenant_id
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
@@ -74,6 +78,8 @@ type Querier interface {
 	DeleteCourse(ctx context.Context, id uuid.UUID) error
 	DeleteExpiredPendingRegistrations(ctx context.Context) (int64, error)
 	DeleteFolder(ctx context.Context, id uuid.UUID) error
+	DeleteKnowledgeSource(ctx context.Context, id uuid.UUID) error
+	DeleteKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.UUID) error
 	DeleteNotification(ctx context.Context, id uuid.UUID) error
 	DeletePendingRegistration(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
@@ -101,6 +107,7 @@ type Querier interface {
 	GetGenerationJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error)
 	GetInvitationByID(ctx context.Context, id uuid.UUID) (Invitation, error)
 	GetInvitationByToken(ctx context.Context, token string) (Invitation, error)
+	GetKnowledgeSourceByID(ctx context.Context, id uuid.UUID) (KnowledgeSource, error)
 	GetNotificationByID(ctx context.Context, id uuid.UUID) (Notification, error)
 	// Note: This looks for 'admin' role instead of deprecated 'owner'
 	GetOwnerByCompanyID(ctx context.Context, companyID uuid.NullUUID) (User, error)
@@ -109,6 +116,7 @@ type Querier interface {
 	GetPendingRegistrationByCheckoutSessionID(ctx context.Context, checkoutSessionID string) (PendingRegistration, error)
 	GetPendingRegistrationByEmail(ctx context.Context, email string) (PendingRegistration, error)
 	GetPendingRegistrationByID(ctx context.Context, id uuid.UUID) (PendingRegistration, error)
+	GetReadySourcesByCourse(ctx context.Context, courseID uuid.UUID) ([]KnowledgeSource, error)
 	GetSharedFolder(ctx context.Context, tenantID uuid.UUID) (Folder, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
 	GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamMember, error)
@@ -136,8 +144,10 @@ type Querier interface {
 	ListGenerationJobs(ctx context.Context, arg ListGenerationJobsParams) ([]GenerationJob, error)
 	ListGenerationJobsByParentID(ctx context.Context, parentJobID uuid.NullUUID) ([]GenerationJob, error)
 	ListInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
+	ListKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.UUID) ([]KnowledgeSource, error)
 	ListNotificationsByUserID(ctx context.Context, arg ListNotificationsByUserIDParams) ([]Notification, error)
 	ListPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
+	ListPendingKnowledgeSources(ctx context.Context, limit int32) ([]KnowledgeSource, error)
 	ListPendingRegistrationsByStatus(ctx context.Context, status string) ([]PendingRegistration, error)
 	// Defense-in-depth: explicit tenant_id filter in addition to RLS
 	ListRootFolders(ctx context.Context, tenantID uuid.UUID) ([]Folder, error)
@@ -160,6 +170,8 @@ type Querier interface {
 	UpdateFolder(ctx context.Context, arg UpdateFolderParams) (Folder, error)
 	UpdateGenerationJob(ctx context.Context, arg UpdateGenerationJobParams) error
 	UpdateInvitation(ctx context.Context, arg UpdateInvitationParams) (Invitation, error)
+	UpdateKnowledgeSourceStatus(ctx context.Context, arg UpdateKnowledgeSourceStatusParams) (KnowledgeSource, error)
+	UpdateKnowledgeSourceVideoURLs(ctx context.Context, arg UpdateKnowledgeSourceVideoURLsParams) (KnowledgeSource, error)
 	UpdatePendingRegistration(ctx context.Context, arg UpdatePendingRegistrationParams) (PendingRegistration, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)

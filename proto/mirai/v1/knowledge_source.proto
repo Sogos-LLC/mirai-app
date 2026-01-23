@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// KNOWLEDGE SOURCE TYPES - Knowledge sources for RAG-enhanced generation
+// =============================================================================
+//
+// To regenerate after changes: cd proto && buf generate
+// =============================================================================
+
+// KnowledgeSourceType defines the type of knowledge source.
+enum KnowledgeSourceType {
+  KNOWLEDGE_SOURCE_TYPE_UNSPECIFIED = 0;
+  KNOWLEDGE_SOURCE_TYPE_FILE_UPLOAD = 1;
+  KNOWLEDGE_SOURCE_TYPE_GOOGLE_DRIVE = 2;     // Phase 2
+  KNOWLEDGE_SOURCE_TYPE_ONEDRIVE = 3;         // Phase 2
+  KNOWLEDGE_SOURCE_TYPE_S3 = 4;               // Phase 2
+  KNOWLEDGE_SOURCE_TYPE_GOOGLE_SHEETS = 5;    // Phase 2
+  KNOWLEDGE_SOURCE_TYPE_MICROSOFT_365 = 6;    // Phase 2
+  KNOWLEDGE_SOURCE_TYPE_URL = 7;              // Phase 2
+}
+
+// KnowledgeSourceStatus tracks the ingestion state.
+enum KnowledgeSourceStatus {
+  KNOWLEDGE_SOURCE_STATUS_UNSPECIFIED = 0;
+  KNOWLEDGE_SOURCE_STATUS_PENDING = 1;      // Uploaded, not yet processed
+  KNOWLEDGE_SOURCE_STATUS_PROCESSING = 2;   // Ingestion in progress
+  KNOWLEDGE_SOURCE_STATUS_READY = 3;        // Available for retrieval
+  KNOWLEDGE_SOURCE_STATUS_FAILED = 4;       // Ingestion failed
+}
+
+// KnowledgeSource represents a single knowledge source for a course.
+message KnowledgeSource {
+  string id = 1;
+  string tenant_id = 2;
+  string course_id = 3;
+
+  KnowledgeSourceType type = 4;
+  KnowledgeSourceStatus status = 5;
+
+  string name = 6;                           // Display name
+  string file_path = 7;                      // MinIO path for file uploads
+  string mime_type = 8;                      // MIME type of the file
+  int64 file_size_bytes = 9;                 // File size in bytes
+
+  int32 chunk_count = 10;                    // Number of chunks created
+  optional string error_message = 11;        // Error message if failed
+
+  // Detected video URLs in the content (for multimedia component generation)
+  repeated string video_urls = 12;
+
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  optional google.protobuf.Timestamp processed_at = 15;
+}
+
+// RetrievedChunk represents a chunk retrieved from vector search.
+message RetrievedChunk {
+  string id = 1;
+  string source_id = 2;
+  string source_name = 3;
+  string content = 4;
+  float similarity_score = 5;
+  optional int32 chunk_index = 6;
+}
