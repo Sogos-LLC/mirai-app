@@ -59,12 +59,6 @@ CREATE POLICY knowledge_sources_isolation ON knowledge_sources
     USING (tenant_id = current_tenant_id() OR is_superadmin())
     WITH CHECK (tenant_id = current_tenant_id() OR is_superadmin());
 
--- Updated_at trigger
-CREATE TRIGGER update_knowledge_sources_updated_at
-    BEFORE UPDATE ON knowledge_sources
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
 -- Comments
 COMMENT ON TABLE knowledge_sources IS 'Knowledge sources for RAG-enhanced course generation';
 COMMENT ON COLUMN knowledge_sources.file_path IS 'MinIO path for uploaded files';
