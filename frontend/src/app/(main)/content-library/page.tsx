@@ -515,7 +515,7 @@ export default function ContentLibrary() {
                       className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-50 rounded-lg transition-colors min-h-[44px]"
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/course/${course.id}/preview`);
+                        router.push(`/preview/${course.id}`);
                       }}
                     >
                       <Eye className="w-4 h-4" />

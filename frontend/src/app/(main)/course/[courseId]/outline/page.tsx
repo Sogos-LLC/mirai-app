@@ -265,7 +265,7 @@ export default function OutlineReviewPage() {
   // Handle completion states
   useEffect(() => {
     if (state.matches('complete')) {
-      router.push(`/course/${courseId}/preview`);
+      router.push(`/preview/${courseId}`);
     } else if (state.matches('backgroundGeneration')) {
       router.push('/dashboard');
     }

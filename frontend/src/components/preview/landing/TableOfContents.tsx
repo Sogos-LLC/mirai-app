@@ -10,10 +10,8 @@ interface TableOfContentsProps {
 }
 
 export function TableOfContents({ sections, onLessonClick }: TableOfContentsProps) {
-  // All sections expanded by default
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(
-    () => new Set(sections.map((_, i) => i))
-  );
+  // All sections collapsed by default
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
   const toggleSection = (index: number) => {
     setExpandedSections((prev) => {
