@@ -94,6 +94,8 @@ data:
   config.yaml: |
     # Qdrant configuration for RAG
     storage:
+      storage_path: /qdrant/storage
+      snapshots_path: /qdrant/storage/snapshots
       on_disk_payload: true
 
     service:
