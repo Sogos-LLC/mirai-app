@@ -119,11 +119,10 @@ func parseQuizComponent(responseText string, comp *flatLessonComponent) (string,
 		options[i] = map[string]string{"id": opt.ID, "text": opt.Text}
 	}
 	content := map[string]any{
-		"question":          resp.QuizQuestion,
-		"question_type":     "multiple_choice",
-		"options":           options,
-		"correct_answer_id": resp.QuizCorrectAnswerID,
-		"explanation":       resp.QuizExplanation,
+		"quizQuestion":        resp.QuizQuestion,
+		"quizOptions":         options,
+		"quizCorrectAnswerId": resp.QuizCorrectAnswerID,
+		"quizExplanation":     resp.QuizExplanation,
 	}
 	jsonBytes, _ := json.Marshal(content)
 	// Summary: first 40 chars of question
@@ -153,10 +152,9 @@ func parseCalloutComponent(responseText string) (string, string) {
 	if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
 		return "", ""
 	}
-	// Convert string style to numeric enum value (matches proto CalloutStyle)
-	styleNum := calloutStyleToNumber(resp.Style)
+	// Keep string style as-is (matches proto CalloutContent.style which is string)
 	content := map[string]any{
-		"style":   styleNum,
+		"style":   resp.Style,
 		"title":   resp.Title,
 		"content": resp.Content,
 	}
@@ -178,8 +176,8 @@ func parseStatementComponent(responseText string) (string, string) {
 		return "", ""
 	}
 	content := map[string]any{
-		"text":    resp.StatementText,
-		"subtext": resp.StatementSubtext,
+		"statementText":    resp.StatementText,
+		"statementSubtext": resp.StatementSubtext,
 	}
 	jsonBytes, _ := json.Marshal(content)
 	// Summary: first 50 chars of statement text
