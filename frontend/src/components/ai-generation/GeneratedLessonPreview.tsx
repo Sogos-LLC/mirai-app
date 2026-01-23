@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { GeneratedLesson, LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
+import type { GeneratedLesson, LessonComponent } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { ComponentRenderer } from '@/components/course/renderers';
 
 interface GeneratedLessonPreviewProps {

@@ -19,7 +19,8 @@ import {
   ArrowLeft,
   LucideIcon,
 } from 'lucide-react';
-import { LessonComponentType, LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
+import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
+import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import { HeadingEditor } from './HeadingEditor';
 import { TextEditor } from './TextEditor';

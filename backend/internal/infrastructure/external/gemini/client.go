@@ -584,7 +584,8 @@ type singleListComponent struct {
 }
 
 type listItemResult struct {
-	Text string `json:"text"`
+	Text        string `json:"text"`
+	Description string `json:"description,omitempty"`
 }
 
 type singleGalleryComponent struct {
@@ -1294,8 +1295,8 @@ func singleListSchema() map[string]any {
 		"properties": map[string]any{
 			"style": map[string]any{
 				"type":        "string",
-				"enum":        []string{"bulleted", "numbered", "process"},
-				"description": "List style: bulleted for unordered, numbered for sequences, process for steps",
+				"enum":        []string{"bulleted", "numbered", "icon", "process", "accordion"},
+				"description": "List style: bulleted (unordered), numbered (sequences), icon (with emojis), process (step-by-step), accordion (expandable - great for learning UX)",
 			},
 			"title": map[string]any{
 				"type":        "string",
@@ -1309,7 +1310,11 @@ func singleListSchema() map[string]any {
 					"properties": map[string]any{
 						"text": map[string]any{
 							"type":        "string",
-							"description": "The list item text",
+							"description": "The list item text (for accordion: the collapsed header)",
+						},
+						"description": map[string]any{
+							"type":        "string",
+							"description": "Optional description (required for accordion style - shows when expanded)",
 						},
 					},
 					"required": []string{"text"},
@@ -2238,9 +2243,10 @@ func parseAndTransformComponent(componentType, responseText string) (*flatLesson
 		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
 			return nil, "", "", fmt.Errorf("failed to parse quote component: %w", err)
 		}
+		// Frontend expects 'author' not 'attribution'
 		content := map[string]any{
-			"text":        resp.Text,
-			"attribution": resp.Attribution,
+			"text":   resp.Text,
+			"author": resp.Attribution,
 		}
 		jsonBytes, _ := json.Marshal(content)
 		contentJSON = string(jsonBytes)
@@ -2256,16 +2262,23 @@ func parseAndTransformComponent(componentType, responseText string) (*flatLesson
 		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
 			return nil, "", "", fmt.Errorf("failed to parse list component: %w", err)
 		}
-		// Convert to numbered style enum if needed
-		styleNum := listStyleToNumber(resp.Style)
-		items := make([]map[string]string, len(resp.Items))
+		// Keep style as string - frontend expects string, not number
+		items := make([]map[string]any, len(resp.Items))
 		for i, item := range resp.Items {
-			items[i] = map[string]string{"text": item.Text}
+			itemMap := map[string]any{"text": item.Text}
+			// Include description for accordion items
+			if item.Description != "" {
+				itemMap["description"] = item.Description
+			}
+			items[i] = itemMap
 		}
 		content := map[string]any{
-			"style": styleNum,
-			"title": resp.Title,
+			"style": resp.Style,
 			"items": items,
+		}
+		// Only include title if not empty
+		if resp.Title != "" {
+			content["title"] = resp.Title
 		}
 		jsonBytes, _ := json.Marshal(content)
 		contentJSON = string(jsonBytes)
@@ -2276,18 +2289,18 @@ func parseAndTransformComponent(componentType, responseText string) (*flatLesson
 		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
 			return nil, "", "", fmt.Errorf("failed to parse gallery component: %w", err)
 		}
-		styleNum := galleryStyleToNumber(resp.Style)
-		images := make([]map[string]any, len(resp.Images))
+		// Keep style as string, use 'items' not 'images', use camelCase field names
+		items := make([]map[string]any, len(resp.Images))
 		for i, img := range resp.Images {
-			images[i] = map[string]any{
-				"description": img.Description,
-				"altText":     img.AltText,
-				"caption":     img.Caption,
+			items[i] = map[string]any{
+				"imageDescription": img.Description,
+				"altText":          img.AltText,
+				"caption":          img.Caption,
 			}
 		}
 		content := map[string]any{
-			"style":  styleNum,
-			"images": images,
+			"style": resp.Style,
+			"items": items,
 		}
 		jsonBytes, _ := json.Marshal(content)
 		contentJSON = string(jsonBytes)
@@ -2298,11 +2311,13 @@ func parseAndTransformComponent(componentType, responseText string) (*flatLesson
 		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
 			return nil, "", "", fmt.Errorf("failed to parse multimedia component: %w", err)
 		}
-		typeNum := multimediaTypeToNumber(resp.MediaType)
+		// Keep type as string, add url/title/isPlaceholder for frontend
 		content := map[string]any{
-			"type":        typeNum,
-			"description": resp.Description,
-			"caption":     resp.Caption,
+			"type":          resp.MediaType,
+			"url":           "",                // Empty URL - placeholder for user to fill
+			"title":         resp.Description,  // Use description as title
+			"description":   resp.Description,
+			"isPlaceholder": true, // AI-generated content is always a placeholder
 		}
 		jsonBytes, _ := json.Marshal(content)
 		contentJSON = string(jsonBytes)
@@ -2313,13 +2328,26 @@ func parseAndTransformComponent(componentType, responseText string) (*flatLesson
 		if err := json.Unmarshal([]byte(responseText), &resp); err != nil {
 			return nil, "", "", fmt.Errorf("failed to parse chart component: %w", err)
 		}
-		typeNum := chartTypeToNumber(resp.ChartType)
+		// Keep type as string, convert labels/values to series format
+		dataPoints := make([]map[string]any, len(resp.Labels))
+		for i := range resp.Labels {
+			value := 0.0
+			if i < len(resp.Values) {
+				value = resp.Values[i]
+			}
+			dataPoints[i] = map[string]any{
+				"label": resp.Labels[i],
+				"value": value,
+			}
+		}
 		content := map[string]any{
-			"type":  typeNum,
+			"type":  resp.ChartType,
 			"title": resp.Title,
-			"data": map[string]any{
-				"labels": resp.Labels,
-				"values": resp.Values,
+			"series": []map[string]any{
+				{
+					"name": "Data",
+					"data": dataPoints,
+				},
 			},
 		}
 		jsonBytes, _ := json.Marshal(content)

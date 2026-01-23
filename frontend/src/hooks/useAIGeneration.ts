@@ -16,7 +16,7 @@ import {
   listGeneratedLessons,
   generateComponentImage,
   updateLessonComponents,
-} from '@/gen/mirai/v1/ai_generation-AIGenerationService_connectquery';
+} from '@/gen/mirai/v1/ai_generation_service-AIGenerationService_connectquery';
 import {
   listNotifications,
   getUnreadCount,
@@ -25,7 +25,6 @@ import {
   GenerationJobType,
   GenerationJobStatus,
   OutlineApprovalStatus,
-  LessonComponentType,
   type GenerationJob,
   type CourseOutline,
   type OutlineSection,
@@ -33,6 +32,13 @@ import {
   type GeneratedLesson,
   type LessonComponent,
   type CourseGenerationInput,
+  CourseGenerationInputSchema,
+  LessonComponentSchema,
+  ComponentAlignmentSchema,
+  ComponentAlignmentTargetsSchema,
+} from '@/gen/mirai/v1/ai_generation_types_pb';
+import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
+import {
   GenerateCourseOutlineRequestSchema,
   ApproveCourseOutlineRequestSchema,
   RejectCourseOutlineRequestSchema,
@@ -40,13 +46,9 @@ import {
   GenerateAllLessonsRequestSchema,
   RegenerateComponentRequestSchema,
   CancelJobRequestSchema,
-  CourseGenerationInputSchema,
   GenerateComponentImageRequestSchema,
   UpdateLessonComponentsRequestSchema,
-  LessonComponentSchema,
-  ComponentAlignmentSchema,
-  ComponentAlignmentTargetsSchema,
-} from '@/gen/mirai/v1/ai_generation_pb';
+} from '@/gen/mirai/v1/ai_generation_service_pb';
 
 // Re-export types and enums
 export {

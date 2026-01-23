@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { ImageContent } from '@/gen/mirai/v1/ai_generation_zod';
+import type { ImageContent } from '@/gen/mirai/v1/component_content_zod';
 import { useGenerateComponentImage } from '@/hooks/useAIGeneration';
 
 interface ImageRendererProps {
@@ -136,11 +136,11 @@ export function ImageRenderer({
           <label className="block text-xs font-medium text-secondary mb-1">Alt Text (for accessibility)</label>
           <input
             type="text"
-            value={content.altText}
+            value={content.imageAltText}
             onChange={(e) =>
               onEdit({
                 ...content,
-                altText: e.target.value,
+                imageAltText: e.target.value,
               })
             }
             className="w-full px-3 py-2 border border-default rounded bg-surface text-primary focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -152,11 +152,11 @@ export function ImageRenderer({
           <label className="block text-xs font-medium text-secondary mb-1">Caption (optional)</label>
           <input
             type="text"
-            value={content.caption || ''}
+            value={content.imageCaption || ''}
             onChange={(e) =>
               onEdit({
                 ...content,
-                caption: e.target.value || undefined,
+                imageCaption: e.target.value || undefined,
               })
             }
             className="w-full px-3 py-2 border border-default rounded bg-surface text-primary focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -195,7 +195,7 @@ export function ImageRenderer({
               ) : !imageError ? (
                 <img
                   src={content.url}
-                  alt={content.altText || 'Preview'}
+                  alt={content.imageAltText || 'Preview'}
                   onError={() => setImageError(true)}
                   className="max-w-full h-auto rounded-lg shadow"
                 />
@@ -234,10 +234,10 @@ export function ImageRenderer({
                 Image Placeholder
               </p>
               <p className="text-sm text-primary leading-relaxed">
-                {content.imageDescription || content.altText || 'An image will be added here'}
+                {content.imageDescription || content.imageAltText || 'An image will be added here'}
               </p>
-              {content.caption && (
-                <p className="mt-2 text-xs text-secondary italic">{content.caption}</p>
+              {content.imageCaption && (
+                <p className="mt-2 text-xs text-secondary italic">{content.imageCaption}</p>
               )}
             </div>
           </div>
@@ -251,13 +251,13 @@ export function ImageRenderer({
       <div className="relative overflow-hidden rounded-lg shadow-md">
         <img
           src={content.url}
-          alt={content.altText}
+          alt={content.imageAltText}
           onError={() => setImageError(true)}
           className="max-w-full h-auto mx-auto"
         />
       </div>
-      {content.caption && (
-        <figcaption className="mt-2 text-center text-sm text-secondary italic">{content.caption}</figcaption>
+      {content.imageCaption && (
+        <figcaption className="mt-2 text-center text-sm text-secondary italic">{content.imageCaption}</figcaption>
       )}
     </figure>
   );

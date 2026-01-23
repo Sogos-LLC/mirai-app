@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
-import { CalloutStyle } from '@/gen/mirai/v1/ai_generation_pb';
+import { CalloutStyle } from '@/gen/mirai/v1/component_enums_pb';
 
 interface CalloutContent {
   style: number;

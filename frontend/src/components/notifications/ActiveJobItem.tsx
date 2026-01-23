@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Loader2, X } from 'lucide-react';
-import type { GenerationJob } from '@/gen/mirai/v1/ai_generation_pb';
-import { GenerationJobType, GenerationJobStatus } from '@/gen/mirai/v1/ai_generation_pb';
+import type { GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { GenerationJobType, GenerationJobStatus } from '@/gen/mirai/v1/ai_generation_types_pb';
 
 interface ActiveJobItemProps {
   job: GenerationJob;

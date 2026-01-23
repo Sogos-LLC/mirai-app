@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
-import { CalloutStyle } from '@/gen/mirai/v1/ai_generation_pb';
-import type { CalloutContent } from '@/gen/mirai/v1/ai_generation_zod';
+import { CalloutStyle } from '@/gen/mirai/v1/component_enums_pb';
+import type { CalloutContent } from '@/gen/mirai/v1/component_content_zod';
 
 // Re-export for compatibility
 export type { CalloutContent };
@@ -90,7 +90,7 @@ const styleConfig: Record<
 export function CalloutRenderer({ content, isEditing = false, onEdit }: CalloutRendererProps) {
   const [editContent, setEditContent] = useState(content);
 
-  const config = styleConfig[content.style] || styleConfig[CALLOUT_STYLES.INFO];
+  const config = styleConfig[content.style as unknown as CalloutStyleValue] || styleConfig[CALLOUT_STYLES.INFO];
   const Icon = config.icon;
 
   if (isEditing && onEdit) {
@@ -101,7 +101,7 @@ export function CalloutRenderer({ content, isEditing = false, onEdit }: CalloutR
             <select
               value={editContent.style}
               onChange={(e) => {
-                const updated = { ...editContent, style: Number(e.target.value) as CalloutStyleValue };
+                const updated = { ...editContent, style: e.target.value };
                 setEditContent(updated);
                 onEdit(updated);
               }}

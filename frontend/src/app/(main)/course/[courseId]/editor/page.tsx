@@ -54,7 +54,7 @@ import { EditModal } from '@/components/course/modals/EditModal';
 import { AddComponentModal } from '@/components/course/modals/AddComponentModal';
 import { RealignmentModal, type RealignParams, type RealignResult, type LearningObjective } from '@/components/course/modals/RealignmentModal';
 import { useCourseEditorStore, setOnSaveCallback, setOnPersistCallback, setOnPersistSuccessCallback } from '@/store/zustand/courseEditorStore';
-import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
+import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';

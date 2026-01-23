@@ -77,8 +77,8 @@ var componentSchemas = map[string]ComponentSchemaDefinition{
 	},
 	"list": {
 		Type:        "list",
-		Description: "Structured list for steps, features, or related items",
-		Schema:      `{style: "bulleted"|"numbered"|"process", items: [{text: string}], title?: string}`,
+		Description: "Structured list for steps, features, or related items. Use 'accordion' style for expandable Q&A or detailed explanations - great for learning UX",
+		Schema:      `{style: "bulleted"|"numbered"|"icon"|"process"|"accordion", items: [{text: string, description?: string}], title?: string}`,
 		Categories:  []ComponentCategory{CategoryFormatting, CategoryContent},
 	},
 	"gallery": {

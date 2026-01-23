@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
-import { LessonComponentType } from '@/gen/mirai/v1/ai_generation_pb';
+import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
 import type {
   TextContent,
   HeadingContent,
@@ -10,8 +10,8 @@ import type {
   QuizContent,
   CodeContent,
   CalloutContent,
-} from '@/gen/mirai/v1/ai_generation_zod';
-import type { StatementContent } from '@/gen/mirai/v1/ai_generation_pb';
+  StatementContent,
+} from '@/gen/mirai/v1/component_content_zod';
 import { TextRenderer } from './TextRenderer';
 import { HeadingRenderer } from './HeadingRenderer';
 import { ImageRenderer } from './ImageRenderer';
@@ -67,14 +67,13 @@ function parseContent<T>(contentJson: string): T | null {
   }
 }
 
-// Transform snake_case quiz JSON to camelCase
+// Transform snake_case quiz JSON to camelCase matching new proto schema
 function normalizeQuizContent(raw: Record<string, unknown>): QuizContent {
   return {
-    question: (raw.question as string) || '',
-    questionType: (raw.questionType as string) || (raw.question_type as string) || 'multiple_choice',
-    options: (raw.options as QuizOption[]) || [],
-    correctAnswerId: (raw.correctAnswerId as string) || (raw.correct_answer_id as string) || '',
-    explanation: (raw.explanation as string) || '',
+    quizQuestion: (raw.quizQuestion as string) || (raw.quiz_question as string) || (raw.question as string) || '',
+    quizOptions: (raw.quizOptions as QuizOption[]) || (raw.quiz_options as QuizOption[]) || (raw.options as QuizOption[]) || [],
+    quizCorrectAnswerId: (raw.quizCorrectAnswerId as string) || (raw.quiz_correct_answer_id as string) || (raw.correctAnswerId as string) || (raw.correct_answer_id as string) || '',
+    quizExplanation: (raw.quizExplanation as string) || (raw.quiz_explanation as string) || (raw.explanation as string) || '',
   };
 }
 

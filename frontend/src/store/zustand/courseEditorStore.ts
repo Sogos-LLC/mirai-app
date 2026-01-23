@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
+import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_types_pb';
 
 // ============================================================================
 // Course Editor UI State

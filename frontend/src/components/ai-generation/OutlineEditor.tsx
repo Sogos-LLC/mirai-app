@@ -22,8 +22,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { create } from '@bufbuild/protobuf';
-import type { OutlineSection, OutlineLesson } from '@/gen/mirai/v1/ai_generation_pb';
-import { OutlineSectionSchema, OutlineLessonSchema } from '@/gen/mirai/v1/ai_generation_pb';
+import type { OutlineSection, OutlineLesson } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { OutlineSectionSchema, OutlineLessonSchema } from '@/gen/mirai/v1/ai_generation_types_pb';
 
 interface OutlineEditorProps {
   sections: OutlineSection[];

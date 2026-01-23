@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Lightbulb } from 'lucide-react';
-import type { StatementContent } from '@/gen/mirai/v1/ai_generation_pb';
+import type { StatementContent } from '@/gen/mirai/v1/component_content_zod';
 
 // Re-export for compatibility
 export type { StatementContent };
@@ -25,9 +25,9 @@ export function StatementRenderer({ content, isEditing = false, onEdit }: Statem
             <span className="text-sm font-medium">Key Takeaway</span>
           </div>
           <textarea
-            value={editContent.text}
+            value={editContent.statementText}
             onChange={(e) => {
-              const updated = { ...editContent, text: e.target.value };
+              const updated = { ...editContent, statementText: e.target.value };
               setEditContent(updated);
               onEdit(updated);
             }}
@@ -37,9 +37,9 @@ export function StatementRenderer({ content, isEditing = false, onEdit }: Statem
           />
           <input
             type="text"
-            value={editContent.subtext || ''}
+            value={editContent.statementSubtext || ''}
             onChange={(e) => {
-              const updated = { ...editContent, subtext: e.target.value };
+              const updated = { ...editContent, statementSubtext: e.target.value };
               setEditContent(updated);
               onEdit(updated);
             }}
@@ -57,11 +57,11 @@ export function StatementRenderer({ content, isEditing = false, onEdit }: Statem
         <Lightbulb className="w-6 h-6 flex-shrink-0 text-indigo-500 mt-1" />
         <div className="flex-1">
           <p className="text-xl font-semibold text-indigo-900 dark:text-indigo-100">
-            {content.text}
+            {content.statementText}
           </p>
-          {content.subtext && (
+          {content.statementSubtext && (
             <p className="mt-2 text-sm text-indigo-700 dark:text-indigo-300">
-              {content.subtext}
+              {content.statementSubtext}
             </p>
           )}
         </div>

@@ -34,19 +34,21 @@ import {
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/lib/connect';
 import {
-  AIGenerationService,
   GenerationJobStatus,
   GenerationJobType,
+  type CourseOutline,
+} from '@/gen/mirai/v1/ai_generation_types_pb';
+import {
+  AIGenerationService,
   GetJobRequestSchema,
   GetCourseOutlineRequestSchema,
   ListJobsRequestSchema,
-} from '@/gen/mirai/v1/ai_generation_pb';
+} from '@/gen/mirai/v1/ai_generation_service_pb';
 import { create } from '@bufbuild/protobuf';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useIsTouchDevice } from '@/hooks/useBreakpoint';
 import { useGetCourse } from '@/hooks/useCourses';
-import type { CourseOutline } from '@/gen/mirai/v1/ai_generation_pb';
 import type { Course } from '@/gen/mirai/v1/course_pb';
 
 // Inline edit state type

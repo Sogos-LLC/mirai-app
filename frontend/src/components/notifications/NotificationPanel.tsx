@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '@/store/zustand';
 import type { Notification } from '@/gen/mirai/v1/notification_pb';
-import type { GenerationJob } from '@/gen/mirai/v1/ai_generation_pb';
+import type { GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { NotificationItem } from './NotificationItem';
 import { ActiveJobItem } from './ActiveJobItem';
 

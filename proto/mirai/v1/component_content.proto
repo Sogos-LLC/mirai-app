@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+// =============================================================================
+// COMPONENT CONTENT SCHEMAS - Single Source of Truth
+// =============================================================================
+//
+// These messages define the JSON content structure for all lesson components.
+// Both backend (Go) and frontend (TypeScript) MUST use these generated types.
+//
+// To regenerate after changes: cd proto && buf generate
+// For help: buf generate --help
+//
+// Generated files:
+//   - Go:  backend/gen/mirai/v1/component_content.pb.go
+//   - TS:  frontend/src/gen/mirai/v1/component_content_pb.ts
+// =============================================================================
+
+// TextContent - Rich HTML-formatted text for explanations and narratives.
+message TextContent {
+  string text_html = 1; // HTML content (<p>, <strong>, <em>, <ul>, <li>)
+}
+
+// HeadingContent - Section or subsection header.
+message HeadingContent {
+  int32 heading_level = 1;  // Level 1-4 (2=section, 3=subsection)
+  string heading_text = 2;
+}
+
+// ImageContent - Image with description and accessibility info.
+message ImageContent {
+  string image_description = 1;       // Detailed description for AI generation
+  string image_alt_text = 2;          // Accessibility alt text
+  optional string image_caption = 3;  // Caption below image
+  optional string url = 4;            // URL (empty until uploaded)
+}
+
+// QuizOption - Single answer option in a quiz.
+message QuizOption {
+  string id = 1;   // Option identifier (a, b, c, d)
+  string text = 2; // Option text
+}
+
+// QuizContent - Multiple choice knowledge check question.
+message QuizContent {
+  string quiz_question = 1;               // The question
+  repeated QuizOption quiz_options = 2;   // Answer options (typically 4)
+  string quiz_correct_answer_id = 3;      // Correct answer ID
+  string quiz_explanation = 4;            // Explanation shown after answering
+}
+
+// CodeContent - Syntax-highlighted code snippet.
+message CodeContent {
+  string code = 1;     // The code content
+  string language = 2; // Language: javascript, python, go, etc.
+}
+
+// CalloutContent - Highlighted box for important information.
+message CalloutContent {
+  string style = 1;           // info, warning, success, error, tip
+  optional string title = 2;  // Optional title
+  string content = 3;         // Content text (1-2 sentences)
+}
+
+// StatementContent - Key takeaway or memorable principle.
+message StatementContent {
+  string statement_text = 1;             // Main statement (1-2 sentences)
+  optional string statement_subtext = 2; // Optional context
+}
+
+// QuoteContent - Expert quote with attribution.
+message QuoteContent {
+  string text = 1;            // The quote text
+  string author = 2;          // Who said it
+  optional string title = 3;  // Author's title/role
+  optional string source = 4; // Source (book, article, etc.)
+}
+
+// ListItem - Single item in a list.
+message ListItem {
+  string text = 1;                   // Item text
+  optional string icon = 2;          // Icon (for icon style)
+  optional string description = 3;   // Description (for accordion style)
+}
+
+// ListContent - Structured list component.
+message ListContent {
+  string style = 1;           // bulleted, numbered, icon, process, accordion
+  repeated ListItem items = 2; // List items (3-7 recommended)
+  optional string title = 3;  // Optional title above list
+}
+
+// GalleryHotspot - Interactive point on a labeled graphic.
+message GalleryHotspot {
+  string id = 1;          // Unique identifier
+  double x = 2;           // X position (0-100%)
+  double y = 3;           // Y position (0-100%)
+  string label = 4;       // Short label
+  string description = 5; // Description on click/hover
+}
+
+// GalleryItem - Single image in a gallery.
+message GalleryItem {
+  string image_description = 1;       // Description for AI generation
+  optional string url = 2;            // Image URL (empty until uploaded)
+  string alt_text = 3;                // Accessibility alt text
+  optional string caption = 4;        // Optional caption
+  repeated GalleryHotspot hotspots = 5; // Hotspots for labeled_graphic
+}
+
+// GalleryContent - Multiple images as carousel or labeled graphic.
+message GalleryContent {
+  string style = 1;             // carousel or labeled_graphic
+  repeated GalleryItem items = 2; // Gallery items (2-5 recommended)
+}
+
+// MultimediaContent - Video, audio, or interactive media placeholder.
+message MultimediaContent {
+  string type = 1;                // video, audio, interactive
+  string url = 2;                 // Media URL (empty when placeholder)
+  string title = 3;               // Media title
+  optional string description = 4; // What media should contain
+  optional string provider = 5;   // Provider hint (youtube, vimeo, etc.)
+  optional bool is_placeholder = 6; // True when awaiting actual media
+}
+
+// ChartDataPoint - Single data point in a chart.
+message ChartDataPoint {
+  string label = 1;          // Label (x-axis value or category)
+  double value = 2;          // Numeric value
+  optional string color = 3; // Custom color
+}
+
+// ChartSeries - Data series in a chart.
+message ChartSeries {
+  string name = 1;                   // Series name (for legend)
+  repeated ChartDataPoint data = 2;  // Data points
+}
+
+// ChartContent - Data visualization component.
+message ChartContent {
+  string type = 1;                   // bar, line, pie, donut, table
+  string title = 2;                  // Chart title
+  repeated ChartSeries series = 3;   // Data series
+  optional string x_axis_label = 4;  // X-axis label
+  optional string y_axis_label = 5;  // Y-axis label
+  optional string description = 6;   // Description/interpretation
+}
+
+// DividerContent - Visual separator between sections.
+message DividerContent {
+  optional string style = 1; // line, dots, space (default: line)
+}

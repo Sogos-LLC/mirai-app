@@ -3,7 +3,7 @@ import type {
   GenerationJob,
   CourseOutline,
   OutlineSection,
-} from '@/gen/mirai/v1/ai_generation_pb';
+} from '@/gen/mirai/v1/ai_generation_types_pb';
 import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 // ============================================================

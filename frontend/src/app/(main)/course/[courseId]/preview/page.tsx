@@ -19,7 +19,7 @@ import { useGetCourseOutline, useListGeneratedLessons } from '@/hooks/useAIGener
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useIsMobile } from '@/hooks/useBreakpoint';
-import type { GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
+import type { GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_types_pb';
 
 interface LessonNavItem {
   outlineLessonId: string;

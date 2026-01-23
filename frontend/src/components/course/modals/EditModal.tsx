@@ -1,7 +1,7 @@
 'use client';
 
 import { useCourseEditorStore } from '@/store/zustand/courseEditorStore';
-import { LessonComponentType } from '@/gen/mirai/v1/ai_generation_pb';
+import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import { HeadingEditor } from './HeadingEditor';
 import { TextEditor } from './TextEditor';

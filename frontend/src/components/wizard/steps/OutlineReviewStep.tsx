@@ -4,7 +4,7 @@ import React from 'react';
 import { ClipboardList, RefreshCw, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import type { CourseOutline, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
+import type { CourseOutline, OutlineSection } from '@/gen/mirai/v1/ai_generation_types_pb';
 import WizardNavigation from '../WizardNavigation';
 
 interface OutlineReviewStepProps {

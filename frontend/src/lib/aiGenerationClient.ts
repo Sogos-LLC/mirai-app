@@ -6,7 +6,7 @@
  * For React components, prefer using the hooks from @/hooks/useAIGeneration.
  */
 
-import { GenerationJobStatus, type GenerationJob, type CourseOutline } from '@/gen/mirai/v1/ai_generation_pb';
+import { GenerationJobStatus, type GenerationJob, type CourseOutline } from '@/gen/mirai/v1/ai_generation_types_pb';
 
 // Helper to call a Connect service method
 async function callMethod<I, O>(

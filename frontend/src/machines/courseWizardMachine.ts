@@ -6,7 +6,7 @@ import type {
   WizardStepData,
   WizardState,
 } from '@/gen/mirai/v1/course_wizard_pb';
-import type { CourseOutline, GenerationJob } from '@/gen/mirai/v1/ai_generation_pb';
+import type { CourseOutline, GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 // ============================================================
