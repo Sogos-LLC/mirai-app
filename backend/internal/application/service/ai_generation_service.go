@@ -899,6 +899,14 @@ func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, par
 		return nil
 	}
 
+	// Publish job completion event to frontend via SSE
+	// This is critical - without this, the frontend will show the job as "processing" forever
+	if result.FailedCount > 0 {
+		s.publishJobEvent(ctx, "failed", parentJob)
+	} else {
+		s.publishJobEvent(ctx, "completed", parentJob)
+	}
+
 	courseTitle := "Your Course"
 	if result.FailedCount > 0 {
 		errMsg := fmt.Sprintf("%d lesson(s) failed to generate", result.FailedCount)
