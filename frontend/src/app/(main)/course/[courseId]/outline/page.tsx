@@ -24,7 +24,6 @@ import {
   isLoading,
   isPollingOutline,
   isPollingLessons,
-  isOutlineQueued,
 } from '@/machines/outlineReviewMachine';
 import {
   useApproveCourseOutline,
@@ -385,44 +384,6 @@ export default function OutlineReviewPage() {
                 className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${context.progressPercent}%` }}
               />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Outline queued state - show progress with option to leave
-  if (isOutlineQueued(stateValue)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="py-12 text-center">
-            <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Loader2 className="w-10 h-10 text-indigo-600 dark:text-indigo-400 animate-spin" />
-            </div>
-            <h2 className="text-2xl font-bold text-primary mb-2">
-              Creating your outline...
-            </h2>
-            <p className="text-secondary mb-6">
-              We&apos;re generating a detailed course outline based on your inputs.
-              This typically takes 30-60 seconds.
-            </p>
-            <div className="flex flex-col gap-3">
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => send({ type: 'WAIT_FOR_OUTLINE' })}
-                className="w-full"
-              >
-                Wait for outline
-              </Button>
-              <button
-                onClick={() => send({ type: 'DISMISS_QUEUED' })}
-                className="text-sm text-muted hover:text-secondary transition-colors"
-              >
-                Notify me instead
-              </button>
             </div>
           </CardContent>
         </Card>
