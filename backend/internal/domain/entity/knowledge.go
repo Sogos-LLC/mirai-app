@@ -9,9 +9,9 @@ import (
 
 // KnowledgeSource represents a knowledge source for RAG-enhanced course generation.
 type KnowledgeSource struct {
-	ID       uuid.UUID
-	TenantID uuid.UUID
-	CourseID *uuid.UUID // Optional - nil for pre-course session sources
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CourseID  *uuid.UUID // Optional - nil for pre-course session sources
 	SessionID *string    // For pre-course wizard flow
 
 	Type   valueobject.KnowledgeSourceType
@@ -32,9 +32,22 @@ type KnowledgeSource struct {
 	// Detected video URLs in the content
 	VideoURLs []string
 
+	// Document index for AI navigation (Internal Data Only mode)
+	DocumentIndex *DocumentIndex
+
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	ProcessedAt *time.Time
+}
+
+// DocumentIndex provides a structured outline of document contents for AI navigation.
+// Used during "Internal Data Only" mode to help AI understand what content is available.
+type DocumentIndex struct {
+	Title                string   // Document title (extracted or inferred)
+	MainTopics           []string // Main sections/topics found in the document
+	KeyConcepts          []string // Important terms and concepts
+	EstimatedLessonCount int      // How many lessons this content could support
+	ContentDepth         string   // "basic", "intermediate", "advanced"
 }
 
 // IsReady returns true if the source is ready for retrieval.

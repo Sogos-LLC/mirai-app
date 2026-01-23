@@ -113,3 +113,17 @@ WHERE session_id = $1 AND course_id IS NULL;
 
 -- name: CountKnowledgeSourcesBySession :one
 SELECT COUNT(*)::int as count FROM knowledge_sources WHERE session_id = $1;
+
+-- name: UpdateKnowledgeSourceWithDocumentIndex :one
+-- Update knowledge source with document index for Internal Data Only mode
+UPDATE knowledge_sources SET
+    status = $1,
+    error_message = $2,
+    chunk_count = $3,
+    summary = $4,
+    token_count = $5,
+    document_index = $6,
+    processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
+    updated_at = NOW()
+WHERE id = $7
+RETURNING *;

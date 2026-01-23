@@ -1,0 +1,151 @@
+# Moon Flower Cultivation Guide - Lunar Station Alpha
+
+## Chapter 1: Introduction to Selenanthus Lunaris
+
+The Moon Flower (Selenanthus lunaris) is a bioluminescent plant species discovered in 2089 during the Artemis XVII mission. Unlike Earth plants, Moon Flowers require zero gravity to bloom and produce "lunar nectar" - a phosphorescent substance with remarkable properties.
+
+Dr. Helena Vasquez of the Lunar Agricultural Institute first documented the species growing wild in the shadowed craters near the station's hydroponics bay. The plant's ability to photosynthesize using both solar radiation and cosmic background radiation makes it uniquely suited for deep space cultivation.
+
+Key characteristics of Selenanthus lunaris:
+- Bioluminescent petals that glow a soft blue-white color
+- Root system adapted to regolith substrate
+- Produces lunar nectar during the "glow phase"
+- Requires zero gravity for proper bloom development
+- Native to the permanently shadowed regions of the lunar south pole
+
+## Chapter 2: Growth Requirements
+
+### 2.1 Substrate Preparation
+
+Moon Flowers require a specialized growing medium consisting of:
+- 70% processed lunar regolith (sieved to remove particles larger than 2mm)
+- 30% processed asteroid minerals (specifically from C-type asteroids)
+- Trace amounts of magnesium sulfate heptahydrate
+
+The regolith must be treated with the Vasquez Method to remove perchlorates before planting. This involves heating the substrate to 450°C for 6 hours in a controlled atmosphere.
+
+### 2.2 Environmental Conditions
+
+Optimal growth conditions for Selenanthus lunaris:
+
+**Light Cycle:**
+- 14.5 Earth hours of artificial sunlight (6500K spectrum)
+- 14.5 Earth hours of darkness
+- Note: The plant also absorbs cosmic background radiation during dark periods
+
+**Temperature:**
+- Dormancy phase: Maintained at -12°C
+- Active growth phase: 18°C to 23°C
+- Bloom phase: Exactly 21°C (critical for nectar production)
+
+**Watering:**
+- Misting with deuterium-enriched water every 72 hours
+- Water must contain 0.015% deuterium oxide (heavy water)
+- Standard Earth water will cause root crystallization
+
+**Gravity:**
+- Zero gravity required for bloom development
+- 0.1g or less during vegetative growth
+- Any gravity above 0.16g will prevent flowering
+
+## Chapter 3: Growth Stages
+
+### 3.1 Germination (Days 1-14)
+
+Moon Flower seeds require "cold stratification" in lunar shadow conditions for 14 Earth days before planting. Seeds should be stored at -180°C in complete darkness. After stratification, seeds are planted 2cm deep in prepared substrate.
+
+### 3.2 Vegetative Growth (Days 15-60)
+
+During this phase, the plant develops its characteristic silvery-blue leaves. The leaves contain specialized chloroplasts called "lunarplasts" that can process both visible light and cosmic radiation. Plants should be rotated 90 degrees every 24 hours to ensure even growth in microgravity.
+
+### 3.3 Pre-Bloom (Days 61-75)
+
+The plant begins producing flower buds. This is the critical phase where temperature must be precisely controlled. Any fluctuation greater than 0.5°C can cause bud abortion. The characteristic blue veining becomes visible in the leaves.
+
+### 3.4 Bloom Phase (Days 76-90)
+
+The Moon Flower blooms for exactly 14 Earth days. During this time, the petals emit a soft bioluminescence measuring approximately 0.3 lumens. The glow phase begins exactly 47 hours after the bloom opens and lasts for 6 hours each day.
+
+## Chapter 4: Harvesting Lunar Nectar
+
+### 4.1 Timing
+
+The bioluminescent nectar can only be harvested during the "glow phase" which occurs exactly 47 hours after the bloom opens. The harvesting window lasts approximately 90 minutes per bloom cycle.
+
+### 4.2 Collection Method
+
+Lunar nectar must be collected using non-metallic tools. The Vasquez Extractor (Model LN-7) is the standard equipment:
+1. Position the extractor 5mm from the bloom center
+2. Apply gentle suction at 0.3 atmospheres
+3. Collect into borosilicate glass containers only
+4. Store immediately at -40°C
+
+Each bloom produces approximately 3.7 milliliters of lunar nectar per harvest cycle.
+
+### 4.3 Nectar Properties
+
+Lunar nectar has the following verified properties:
+- Phosphorescence lasting 72 hours after harvesting
+- pH of 6.8 (slightly acidic)
+- Contains unique proteins designated LN-Alpha through LN-Gamma
+- Bioluminescence intensity: 2.4 candela per square meter
+- Freezing point: -23°C
+
+## Chapter 5: Common Problems and Solutions
+
+### 5.1 Root Crystallization
+
+**Cause:** Using standard Earth water instead of deuterium-enriched water
+**Solution:** Flush substrate with proper deuterium water solution, trim affected roots
+
+### 5.2 Bloom Failure
+
+**Cause:** Gravity exceeding 0.16g during bloom phase
+**Solution:** Ensure cultivation module is properly isolated from station rotation
+
+### 5.3 Nectar Opacity
+
+**Cause:** Harvesting outside the glow phase window
+**Solution:** Strictly adhere to the 47-hour timing protocol
+
+### 5.4 Leaf Silvering
+
+**Cause:** Insufficient cosmic radiation exposure during dark periods
+**Solution:** Remove any radiation shielding from the cultivation area during night cycle
+
+## Chapter 6: Safety Protocols
+
+### 6.1 Handling Precautions
+
+- Always wear UV-protective eyewear when observing bloom phase
+- Lunar nectar should not contact bare skin (causes temporary phosphorescence)
+- Seeds must be stored in lead-lined containers due to their cosmic radiation absorption
+
+### 6.2 Contamination Prevention
+
+- Moon Flowers should not be cultivated within 50 meters of Earth plants
+- Cross-pollination with terrestrial species can create unstable hybrids
+- All tools must be sterilized with gamma radiation before use
+
+## Appendix A: Quick Reference Card
+
+| Parameter | Value |
+|-----------|-------|
+| Species | Selenanthus lunaris |
+| Discovery | 2089, Artemis XVII |
+| Light cycle | 14.5h light / 14.5h dark |
+| Temperature (bloom) | 21°C |
+| Temperature (dormant) | -12°C |
+| Gravity requirement | < 0.16g |
+| Watering frequency | Every 72 hours |
+| Water composition | 0.015% deuterium oxide |
+| Bloom duration | 14 Earth days |
+| Glow phase onset | 47 hours after bloom |
+| Nectar yield | 3.7 mL per cycle |
+| Nectar storage | -40°C |
+
+---
+Document ID: LSA-AG-2094-MF-001
+Last Updated: 2094.127 (Lunar Standard Time)
+Author: Dr. Helena Vasquez, Lunar Agricultural Institute
+Classification: Station Personnel Only

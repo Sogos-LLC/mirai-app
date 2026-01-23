@@ -37,6 +37,7 @@ import {
   SMEPersonaSchema,
   AudiencePersonaSchema,
   ToneOptionSchema,
+  type WizardStepData,
   type SMEPersona,
   type AudiencePersona,
   type ToneOption,
@@ -152,19 +153,8 @@ export function useCreateCourse() {
         }>;
       };
       // Wizard data for AI generation (personas, tone, etc.)
-      wizardData?: {
-        courseName?: string;
-        desiredOutcomes?: string;
-        improvedTitle?: string;
-        description?: string;
-        smePersonas?: SMEPersona[];
-        selectedSmeIds?: string[];
-        audiencePersonas?: AudiencePersona[];
-        selectedAudienceIds?: string[];
-        toneOptions?: ToneOption[];
-        selectedToneId?: string;
-        additionalContext?: string;
-      };
+      // Uses generated proto type - no manual duplication
+      wizardData?: Partial<WizardStepData>;
     }) => {
       const request = create(CreateCourseRequestSchema, {
         id: courseData.id,
@@ -257,6 +247,7 @@ export function useCreateCourse() {
               ) ?? [],
               selectedToneId: courseData.wizardData.selectedToneId ?? '',
               additionalContext: courseData.wizardData.additionalContext ?? '',
+              internalDataOnly: courseData.wizardData.internalDataOnly ?? false,
             })
           : undefined,
       });

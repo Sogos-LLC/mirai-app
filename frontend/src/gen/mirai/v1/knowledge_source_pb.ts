@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/knowledge_source.proto.
  */
 export const file_mirai_v1_knowledge_source: GenFile = /*@__PURE__*/
-  fileDesc("Ch9taXJhaS92MS9rbm93bGVkZ2Vfc291cmNlLnByb3RvEghtaXJhaS52MSLhBAoPS25vd2xlZGdlU291cmNlEgoKAmlkGAEgASgJEhEKCXRlbmFudF9pZBgCIAEoCRIRCgljb3Vyc2VfaWQYAyABKAkSKwoEdHlwZRgEIAEoDjIdLm1pcmFpLnYxLktub3dsZWRnZVNvdXJjZVR5cGUSLwoGc3RhdHVzGAUgASgOMh8ubWlyYWkudjEuS25vd2xlZGdlU291cmNlU3RhdHVzEgwKBG5hbWUYBiABKAkSEQoJZmlsZV9wYXRoGAcgASgJEhEKCW1pbWVfdHlwZRgIIAEoCRIXCg9maWxlX3NpemVfYnl0ZXMYCSABKAMSEwoLY2h1bmtfY291bnQYCiABKAUSGgoNZXJyb3JfbWVzc2FnZRgLIAEoCUgAiAEBEhIKCnZpZGVvX3VybHMYDCADKAkSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMcHJvY2Vzc2VkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBEhcKCnNlc3Npb25faWQYECABKAlIAogBARIUCgdzdW1tYXJ5GBEgASgJSAOIAQESGAoLdG9rZW5fY291bnQYEiABKAVIBIgBAUIQCg5fZXJyb3JfbWVzc2FnZUIPCg1fcHJvY2Vzc2VkX2F0Qg0KC19zZXNzaW9uX2lkQgoKCF9zdW1tYXJ5Qg4KDF90b2tlbl9jb3VudCKZAQoOUmV0cmlldmVkQ2h1bmsSCgoCaWQYASABKAkSEQoJc291cmNlX2lkGAIgASgJEhMKC3NvdXJjZV9uYW1lGAMgASgJEg8KB2NvbnRlbnQYBCABKAkSGAoQc2ltaWxhcml0eV9zY29yZRgFIAEoAhIYCgtjaHVua19pbmRleBgGIAEoBUgAiAEBQg4KDF9jaHVua19pbmRleCq+AgoTS25vd2xlZGdlU291cmNlVHlwZRIlCiFLTk9XTEVER0VfU09VUkNFX1RZUEVfVU5TUEVDSUZJRUQQABIlCiFLTk9XTEVER0VfU09VUkNFX1RZUEVfRklMRV9VUExPQUQQARImCiJLTk9XTEVER0VfU09VUkNFX1RZUEVfR09PR0xFX0RSSVZFEAISIgoeS05PV0xFREdFX1NPVVJDRV9UWVBFX09ORURSSVZFEAMSHAoYS05PV0xFREdFX1NPVVJDRV9UWVBFX1MzEAQSJwojS05PV0xFREdFX1NPVVJDRV9UWVBFX0dPT0dMRV9TSEVFVFMQBRInCiNLTk9XTEVER0VfU09VUkNFX1RZUEVfTUlDUk9TT0ZUXzM2NRAGEh0KGUtOT1dMRURHRV9TT1VSQ0VfVFlQRV9VUkwQByrUAQoVS25vd2xlZGdlU291cmNlU3RhdHVzEicKI0tOT1dMRURHRV9TT1VSQ0VfU1RBVFVTX1VOU1BFQ0lGSUVEEAASIwofS05PV0xFREdFX1NPVVJDRV9TVEFUVVNfUEVORElORxABEiYKIktOT1dMRURHRV9TT1VSQ0VfU1RBVFVTX1BST0NFU1NJTkcQAhIhCh1LTk9XTEVER0VfU09VUkNFX1NUQVRVU19SRUFEWRADEiIKHktOT1dMRURHRV9TT1VSQ0VfU1RBVFVTX0ZBSUxFRBAEQpoBCgxjb20ubWlyYWkudjFCFEtub3dsZWRnZVNvdXJjZVByb3RvUAFaM2dpdGh1Yi5jb20vc29nb3MvbWlyYWktYmFja2VuZC9nZW4vbWlyYWkvdjE7bWlyYWl2MaICA01YWKoCCE1pcmFpLlYxygIITWlyYWlcVjHiAhRNaXJhaVxWMVxHUEJNZXRhZGF0YeoCCU1pcmFpOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("Ch9taXJhaS92MS9rbm93bGVkZ2Vfc291cmNlLnByb3RvEghtaXJhaS52MSKqBQoPS25vd2xlZGdlU291cmNlEgoKAmlkGAEgASgJEhEKCXRlbmFudF9pZBgCIAEoCRIRCgljb3Vyc2VfaWQYAyABKAkSKwoEdHlwZRgEIAEoDjIdLm1pcmFpLnYxLktub3dsZWRnZVNvdXJjZVR5cGUSLwoGc3RhdHVzGAUgASgOMh8ubWlyYWkudjEuS25vd2xlZGdlU291cmNlU3RhdHVzEgwKBG5hbWUYBiABKAkSEQoJZmlsZV9wYXRoGAcgASgJEhEKCW1pbWVfdHlwZRgIIAEoCRIXCg9maWxlX3NpemVfYnl0ZXMYCSABKAMSEwoLY2h1bmtfY291bnQYCiABKAUSGgoNZXJyb3JfbWVzc2FnZRgLIAEoCUgAiAEBEhIKCnZpZGVvX3VybHMYDCADKAkSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoMcHJvY2Vzc2VkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBEhcKCnNlc3Npb25faWQYECABKAlIAogBARIUCgdzdW1tYXJ5GBEgASgJSAOIAQESGAoLdG9rZW5fY291bnQYEiABKAVIBIgBARI0Cg5kb2N1bWVudF9pbmRleBgTIAEoCzIXLm1pcmFpLnYxLkRvY3VtZW50SW5kZXhIBYgBAUIQCg5fZXJyb3JfbWVzc2FnZUIPCg1fcHJvY2Vzc2VkX2F0Qg0KC19zZXNzaW9uX2lkQgoKCF9zdW1tYXJ5Qg4KDF90b2tlbl9jb3VudEIRCg9fZG9jdW1lbnRfaW5kZXgigAEKDURvY3VtZW50SW5kZXgSDQoFdGl0bGUYASABKAkSEwoLbWFpbl90b3BpY3MYAiADKAkSFAoMa2V5X2NvbmNlcHRzGAMgAygJEh4KFmVzdGltYXRlZF9sZXNzb25fY291bnQYBCABKAUSFQoNY29udGVudF9kZXB0aBgFIAEoCSKZAQoOUmV0cmlldmVkQ2h1bmsSCgoCaWQYASABKAkSEQoJc291cmNlX2lkGAIgASgJEhMKC3NvdXJjZV9uYW1lGAMgASgJEg8KB2NvbnRlbnQYBCABKAkSGAoQc2ltaWxhcml0eV9zY29yZRgFIAEoAhIYCgtjaHVua19pbmRleBgGIAEoBUgAiAEBQg4KDF9jaHVua19pbmRleCq+AgoTS25vd2xlZGdlU291cmNlVHlwZRIlCiFLTk9XTEVER0VfU09VUkNFX1RZUEVfVU5TUEVDSUZJRUQQABIlCiFLTk9XTEVER0VfU09VUkNFX1RZUEVfRklMRV9VUExPQUQQARImCiJLTk9XTEVER0VfU09VUkNFX1RZUEVfR09PR0xFX0RSSVZFEAISIgoeS05PV0xFREdFX1NPVVJDRV9UWVBFX09ORURSSVZFEAMSHAoYS05PV0xFREdFX1NPVVJDRV9UWVBFX1MzEAQSJwojS05PV0xFREdFX1NPVVJDRV9UWVBFX0dPT0dMRV9TSEVFVFMQBRInCiNLTk9XTEVER0VfU09VUkNFX1RZUEVfTUlDUk9TT0ZUXzM2NRAGEh0KGUtOT1dMRURHRV9TT1VSQ0VfVFlQRV9VUkwQByrUAQoVS25vd2xlZGdlU291cmNlU3RhdHVzEicKI0tOT1dMRURHRV9TT1VSQ0VfU1RBVFVTX1VOU1BFQ0lGSUVEEAASIwofS05PV0xFREdFX1NPVVJDRV9TVEFUVVNfUEVORElORxABEiYKIktOT1dMRURHRV9TT1VSQ0VfU1RBVFVTX1BST0NFU1NJTkcQAhIhCh1LTk9XTEVER0VfU09VUkNFX1NUQVRVU19SRUFEWRADEiIKHktOT1dMRURHRV9TT1VSQ0VfU1RBVFVTX0ZBSUxFRBAEQpoBCgxjb20ubWlyYWkudjFCFEtub3dsZWRnZVNvdXJjZVByb3RvUAFaM2dpdGh1Yi5jb20vc29nb3MvbWlyYWktYmFja2VuZC9nZW4vbWlyYWkvdjE7bWlyYWl2MaICA01YWKoCCE1pcmFpLlYxygIITWlyYWlcVjHiAhRNaXJhaVxWMVxHUEJNZXRhZGF0YeoCCU1pcmFpOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * KnowledgeSource represents a single knowledge source for a course.
@@ -130,6 +130,14 @@ export type KnowledgeSource = Message<"mirai.v1.KnowledgeSource"> & {
    * @generated from field: optional int32 token_count = 18;
    */
   tokenCount?: number;
+
+  /**
+   * Structured index of document contents for AI navigation
+   * Used for "Internal Data Only" mode course planning
+   *
+   * @generated from field: optional mirai.v1.DocumentIndex document_index = 19;
+   */
+  documentIndex?: DocumentIndex;
 };
 
 /**
@@ -138,6 +146,57 @@ export type KnowledgeSource = Message<"mirai.v1.KnowledgeSource"> & {
  */
 export const KnowledgeSourceSchema: GenMessage<KnowledgeSource> = /*@__PURE__*/
   messageDesc(file_mirai_v1_knowledge_source, 0);
+
+/**
+ * DocumentIndex provides a structured outline of document contents for AI navigation.
+ * Used during "Internal Data Only" mode to help AI understand what content is available
+ * without having to load the entire document into context.
+ *
+ * @generated from message mirai.v1.DocumentIndex
+ */
+export type DocumentIndex = Message<"mirai.v1.DocumentIndex"> & {
+  /**
+   * Document title (extracted or inferred)
+   *
+   * @generated from field: string title = 1;
+   */
+  title: string;
+
+  /**
+   * Main topics/sections found in the document
+   *
+   * @generated from field: repeated string main_topics = 2;
+   */
+  mainTopics: string[];
+
+  /**
+   * Key concepts and terms found in the document
+   *
+   * @generated from field: repeated string key_concepts = 3;
+   */
+  keyConcepts: string[];
+
+  /**
+   * Estimated number of lessons this content could support
+   *
+   * @generated from field: int32 estimated_lesson_count = 4;
+   */
+  estimatedLessonCount: number;
+
+  /**
+   * Content depth assessment: "basic", "intermediate", "advanced"
+   *
+   * @generated from field: string content_depth = 5;
+   */
+  contentDepth: string;
+};
+
+/**
+ * Describes the message mirai.v1.DocumentIndex.
+ * Use `create(DocumentIndexSchema)` to create a new message.
+ */
+export const DocumentIndexSchema: GenMessage<DocumentIndex> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_source, 1);
 
 /**
  * RetrievedChunk represents a chunk retrieved from vector search.
@@ -181,7 +240,7 @@ export type RetrievedChunk = Message<"mirai.v1.RetrievedChunk"> & {
  * Use `create(RetrievedChunkSchema)` to create a new message.
  */
 export const RetrievedChunkSchema: GenMessage<RetrievedChunk> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_knowledge_source, 1);
+  messageDesc(file_mirai_v1_knowledge_source, 2);
 
 /**
  * KnowledgeSourceType defines the type of knowledge source.

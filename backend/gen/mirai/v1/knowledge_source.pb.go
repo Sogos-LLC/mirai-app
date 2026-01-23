@@ -168,7 +168,10 @@ type KnowledgeSource struct {
 	// RAG-generated summary proving the document was successfully indexed
 	Summary *string `protobuf:"bytes,17,opt,name=summary,proto3,oneof" json:"summary,omitempty"`
 	// Total token count of the document
-	TokenCount    *int32 `protobuf:"varint,18,opt,name=token_count,json=tokenCount,proto3,oneof" json:"token_count,omitempty"`
+	TokenCount *int32 `protobuf:"varint,18,opt,name=token_count,json=tokenCount,proto3,oneof" json:"token_count,omitempty"`
+	// Structured index of document contents for AI navigation
+	// Used for "Internal Data Only" mode course planning
+	DocumentIndex *DocumentIndex `protobuf:"bytes,19,opt,name=document_index,json=documentIndex,proto3,oneof" json:"document_index,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -329,6 +332,97 @@ func (x *KnowledgeSource) GetTokenCount() int32 {
 	return 0
 }
 
+func (x *KnowledgeSource) GetDocumentIndex() *DocumentIndex {
+	if x != nil {
+		return x.DocumentIndex
+	}
+	return nil
+}
+
+// DocumentIndex provides a structured outline of document contents for AI navigation.
+// Used during "Internal Data Only" mode to help AI understand what content is available
+// without having to load the entire document into context.
+type DocumentIndex struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Document title (extracted or inferred)
+	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	// Main topics/sections found in the document
+	MainTopics []string `protobuf:"bytes,2,rep,name=main_topics,json=mainTopics,proto3" json:"main_topics,omitempty"`
+	// Key concepts and terms found in the document
+	KeyConcepts []string `protobuf:"bytes,3,rep,name=key_concepts,json=keyConcepts,proto3" json:"key_concepts,omitempty"`
+	// Estimated number of lessons this content could support
+	EstimatedLessonCount int32 `protobuf:"varint,4,opt,name=estimated_lesson_count,json=estimatedLessonCount,proto3" json:"estimated_lesson_count,omitempty"`
+	// Content depth assessment: "basic", "intermediate", "advanced"
+	ContentDepth  string `protobuf:"bytes,5,opt,name=content_depth,json=contentDepth,proto3" json:"content_depth,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DocumentIndex) Reset() {
+	*x = DocumentIndex{}
+	mi := &file_mirai_v1_knowledge_source_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DocumentIndex) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DocumentIndex) ProtoMessage() {}
+
+func (x *DocumentIndex) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_knowledge_source_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DocumentIndex.ProtoReflect.Descriptor instead.
+func (*DocumentIndex) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_knowledge_source_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *DocumentIndex) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *DocumentIndex) GetMainTopics() []string {
+	if x != nil {
+		return x.MainTopics
+	}
+	return nil
+}
+
+func (x *DocumentIndex) GetKeyConcepts() []string {
+	if x != nil {
+		return x.KeyConcepts
+	}
+	return nil
+}
+
+func (x *DocumentIndex) GetEstimatedLessonCount() int32 {
+	if x != nil {
+		return x.EstimatedLessonCount
+	}
+	return 0
+}
+
+func (x *DocumentIndex) GetContentDepth() string {
+	if x != nil {
+		return x.ContentDepth
+	}
+	return ""
+}
+
 // RetrievedChunk represents a chunk retrieved from vector search.
 type RetrievedChunk struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -344,7 +438,7 @@ type RetrievedChunk struct {
 
 func (x *RetrievedChunk) Reset() {
 	*x = RetrievedChunk{}
-	mi := &file_mirai_v1_knowledge_source_proto_msgTypes[1]
+	mi := &file_mirai_v1_knowledge_source_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -356,7 +450,7 @@ func (x *RetrievedChunk) String() string {
 func (*RetrievedChunk) ProtoMessage() {}
 
 func (x *RetrievedChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_knowledge_source_proto_msgTypes[1]
+	mi := &file_mirai_v1_knowledge_source_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -369,7 +463,7 @@ func (x *RetrievedChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetrievedChunk.ProtoReflect.Descriptor instead.
 func (*RetrievedChunk) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_knowledge_source_proto_rawDescGZIP(), []int{1}
+	return file_mirai_v1_knowledge_source_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RetrievedChunk) GetId() string {
@@ -418,7 +512,7 @@ var File_mirai_v1_knowledge_source_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"\n" +
-	"\x1fmirai/v1/knowledge_source.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x98\x06\n" +
+	"\x1fmirai/v1/knowledge_source.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf0\x06\n" +
 	"\x0fKnowledgeSource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1b\n" +
@@ -444,13 +538,22 @@ const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"session_id\x18\x10 \x01(\tH\x02R\tsessionId\x88\x01\x01\x12\x1d\n" +
 	"\asummary\x18\x11 \x01(\tH\x03R\asummary\x88\x01\x01\x12$\n" +
 	"\vtoken_count\x18\x12 \x01(\x05H\x04R\n" +
-	"tokenCount\x88\x01\x01B\x10\n" +
+	"tokenCount\x88\x01\x01\x12C\n" +
+	"\x0edocument_index\x18\x13 \x01(\v2\x17.mirai.v1.DocumentIndexH\x05R\rdocumentIndex\x88\x01\x01B\x10\n" +
 	"\x0e_error_messageB\x0f\n" +
 	"\r_processed_atB\r\n" +
 	"\v_session_idB\n" +
 	"\n" +
 	"\b_summaryB\x0e\n" +
-	"\f_token_count\"\xd9\x01\n" +
+	"\f_token_countB\x11\n" +
+	"\x0f_document_index\"\xc4\x01\n" +
+	"\rDocumentIndex\x12\x14\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1f\n" +
+	"\vmain_topics\x18\x02 \x03(\tR\n" +
+	"mainTopics\x12!\n" +
+	"\fkey_concepts\x18\x03 \x03(\tR\vkeyConcepts\x124\n" +
+	"\x16estimated_lesson_count\x18\x04 \x01(\x05R\x14estimatedLessonCount\x12#\n" +
+	"\rcontent_depth\x18\x05 \x01(\tR\fcontentDepth\"\xd9\x01\n" +
 	"\x0eRetrievedChunk\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x1f\n" +
@@ -491,25 +594,27 @@ func file_mirai_v1_knowledge_source_proto_rawDescGZIP() []byte {
 }
 
 var file_mirai_v1_knowledge_source_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_mirai_v1_knowledge_source_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_mirai_v1_knowledge_source_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_mirai_v1_knowledge_source_proto_goTypes = []any{
 	(KnowledgeSourceType)(0),      // 0: mirai.v1.KnowledgeSourceType
 	(KnowledgeSourceStatus)(0),    // 1: mirai.v1.KnowledgeSourceStatus
 	(*KnowledgeSource)(nil),       // 2: mirai.v1.KnowledgeSource
-	(*RetrievedChunk)(nil),        // 3: mirai.v1.RetrievedChunk
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(*DocumentIndex)(nil),         // 3: mirai.v1.DocumentIndex
+	(*RetrievedChunk)(nil),        // 4: mirai.v1.RetrievedChunk
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 }
 var file_mirai_v1_knowledge_source_proto_depIdxs = []int32{
 	0, // 0: mirai.v1.KnowledgeSource.type:type_name -> mirai.v1.KnowledgeSourceType
 	1, // 1: mirai.v1.KnowledgeSource.status:type_name -> mirai.v1.KnowledgeSourceStatus
-	4, // 2: mirai.v1.KnowledgeSource.created_at:type_name -> google.protobuf.Timestamp
-	4, // 3: mirai.v1.KnowledgeSource.updated_at:type_name -> google.protobuf.Timestamp
-	4, // 4: mirai.v1.KnowledgeSource.processed_at:type_name -> google.protobuf.Timestamp
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	5, // 2: mirai.v1.KnowledgeSource.created_at:type_name -> google.protobuf.Timestamp
+	5, // 3: mirai.v1.KnowledgeSource.updated_at:type_name -> google.protobuf.Timestamp
+	5, // 4: mirai.v1.KnowledgeSource.processed_at:type_name -> google.protobuf.Timestamp
+	3, // 5: mirai.v1.KnowledgeSource.document_index:type_name -> mirai.v1.DocumentIndex
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_knowledge_source_proto_init() }
@@ -518,14 +623,14 @@ func file_mirai_v1_knowledge_source_proto_init() {
 		return
 	}
 	file_mirai_v1_knowledge_source_proto_msgTypes[0].OneofWrappers = []any{}
-	file_mirai_v1_knowledge_source_proto_msgTypes[1].OneofWrappers = []any{}
+	file_mirai_v1_knowledge_source_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_knowledge_source_proto_rawDesc), len(file_mirai_v1_knowledge_source_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -17,6 +17,41 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 
 	sb.WriteString("You are an expert instructional designer planning components for a lesson.\n\n")
 
+	// CRITICAL: Internal Data Only constraint
+	if req.InternalDataOnly {
+		sb.WriteString("## CRITICAL CONSTRAINT: INTERNAL DATA ONLY MODE\n")
+		sb.WriteString("**All lesson content MUST come from the provided source material below.**\n\n")
+		sb.WriteString("You are strictly forbidden from:\n")
+		sb.WriteString("- Adding any information not present in the source documents\n")
+		sb.WriteString("- Making up examples, facts, statistics, or explanations\n")
+		sb.WriteString("- Using general knowledge to fill gaps\n")
+		sb.WriteString("- Defaulting to coding, computer science, or any specific domain examples unless the source material is about that topic\n")
+		sb.WriteString("- Creating more content than the source material can support\n\n")
+		sb.WriteString("If source material is insufficient for planned components, create FEWER components.\n")
+		sb.WriteString("Quality over quantity - smaller, accurate lessons are better than hallucinated ones.\n\n")
+
+		// Include RAG context
+		if len(req.RAGContext) > 0 {
+			sb.WriteString("## Source Content (Retrieved from Knowledge Sources)\n")
+			sb.WriteString("Use ONLY this content to build the lesson. Every fact, example, and explanation must come from here:\n\n")
+
+			// Group chunks by source for better organization
+			sourceChunks := make(map[string][]service.RAGChunkInput)
+			for _, chunk := range req.RAGContext {
+				sourceChunks[chunk.SourceName] = append(sourceChunks[chunk.SourceName], chunk)
+			}
+
+			for sourceName, chunks := range sourceChunks {
+				sb.WriteString(fmt.Sprintf("### From: %s\n", sourceName))
+				for _, chunk := range chunks {
+					sb.WriteString(fmt.Sprintf("```\n%s\n```\n\n", chunk.Content))
+				}
+			}
+		} else {
+			sb.WriteString("**WARNING:** No source content provided. Generate minimal placeholder content.\n\n")
+		}
+	}
+
 	// Course context
 	sb.WriteString("## Course Overview\n")
 	sb.WriteString(fmt.Sprintf("**Course Title:** %s\n", req.CourseTitle))

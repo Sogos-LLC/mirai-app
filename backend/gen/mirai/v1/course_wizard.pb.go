@@ -316,8 +316,12 @@ type WizardStepData struct {
 	SelectedToneId      string                 `protobuf:"bytes,9,opt,name=selected_tone_id,json=selectedToneId,proto3" json:"selected_tone_id,omitempty"`
 	AdditionalContext   string                 `protobuf:"bytes,10,opt,name=additional_context,json=additionalContext,proto3" json:"additional_context,omitempty"`
 	DesiredOutcomes     string                 `protobuf:"bytes,11,opt,name=desired_outcomes,json=desiredOutcomes,proto3" json:"desired_outcomes,omitempty"` // Course outcomes - the "north star" for all content generation
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Internal Data Only mode: When enabled, course content is generated
+	// exclusively from uploaded knowledge sources. AI will not add external
+	// information or fill gaps - course size adapts to available content.
+	InternalDataOnly bool `protobuf:"varint,12,opt,name=internal_data_only,json=internalDataOnly,proto3" json:"internal_data_only,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *WizardStepData) Reset() {
@@ -425,6 +429,13 @@ func (x *WizardStepData) GetDesiredOutcomes() string {
 		return x.DesiredOutcomes
 	}
 	return ""
+}
+
+func (x *WizardStepData) GetInternalDataOnly() bool {
+	if x != nil {
+		return x.InternalDataOnly
+	}
+	return false
 }
 
 // WizardState tracks wizard progress for resume capability.
@@ -1501,7 +1512,7 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12)\n" +
 	"\vdescription\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x12K\n" +
-	"\x0flevel_of_detail\x18\x04 \x01(\x0e2\x19.mirai.v1.ToneDetailLevelB\b\xbaH\x05\x82\x01\x02\x10\x01R\rlevelOfDetail\"\x96\x04\n" +
+	"\x0flevel_of_detail\x18\x04 \x01(\x0e2\x19.mirai.v1.ToneDetailLevelB\b\xbaH\x05\x82\x01\x02\x10\x01R\rlevelOfDetail\"\xc4\x04\n" +
 	"\x0eWizardStepData\x12\x1f\n" +
 	"\vcourse_name\x18\x01 \x01(\tR\n" +
 	"courseName\x12%\n" +
@@ -1515,7 +1526,8 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\x10selected_tone_id\x18\t \x01(\tR\x0eselectedToneId\x12-\n" +
 	"\x12additional_context\x18\n" +
 	" \x01(\tR\x11additionalContext\x12)\n" +
-	"\x10desired_outcomes\x18\v \x01(\tR\x0fdesiredOutcomes\"\x9a\x02\n" +
+	"\x10desired_outcomes\x18\v \x01(\tR\x0fdesiredOutcomes\x12,\n" +
+	"\x12internal_data_only\x18\f \x01(\bR\x10internalDataOnly\"\x9a\x02\n" +
 	"\vWizardState\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x17\n" +

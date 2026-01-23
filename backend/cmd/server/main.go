@@ -282,6 +282,9 @@ func main() {
 		jobEventAdapter := service.NewJobEventAdapter(notificationPubSub, logger)
 		aiGenerationService.SetJobEventPublisher(jobEventAdapter)
 
+		// Set up knowledge searcher for Internal Data Only mode (RAG-grounded generation)
+		aiGenerationService.SetKnowledgeSearcher(knowledgeSourceService)
+
 		// Course Wizard service (AI-guided course creation with RAG support)
 		courseWizardService = service.NewCourseWizardService(
 			userRepo,

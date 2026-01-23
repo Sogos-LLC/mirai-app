@@ -710,7 +710,9 @@ type UploadAndProcessResponse struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Source *KnowledgeSource       `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
 	// AI-generated summary proving RAG works
-	RagSummary    string `protobuf:"bytes,2,opt,name=rag_summary,json=ragSummary,proto3" json:"rag_summary,omitempty"`
+	RagSummary string `protobuf:"bytes,2,opt,name=rag_summary,json=ragSummary,proto3" json:"rag_summary,omitempty"`
+	// Structured document index for AI navigation (topics, concepts, etc.)
+	DocumentIndex *DocumentIndex `protobuf:"bytes,3,opt,name=document_index,json=documentIndex,proto3" json:"document_index,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -757,6 +759,13 @@ func (x *UploadAndProcessResponse) GetRagSummary() string {
 		return x.RagSummary
 	}
 	return ""
+}
+
+func (x *UploadAndProcessResponse) GetDocumentIndex() *DocumentIndex {
+	if x != nil {
+		return x.DocumentIndex
+	}
+	return nil
 }
 
 // ListKnowledgeSourcesBySessionRequest for listing session sources.
@@ -1095,11 +1104,12 @@ const file_mirai_v1_knowledge_service_proto_rawDesc = "" +
 	"session_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tsessionId\x12#\n" +
 	"\bfilename\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bfilename\x12*\n" +
 	"\fcontent_type\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vcontentType\x12*\n" +
-	"\ffile_content\x18\x04 \x01(\fB\a\xbaH\x04z\x02\x10\x01R\vfileContent\"n\n" +
+	"\ffile_content\x18\x04 \x01(\fB\a\xbaH\x04z\x02\x10\x01R\vfileContent\"\xae\x01\n" +
 	"\x18UploadAndProcessResponse\x121\n" +
 	"\x06source\x18\x01 \x01(\v2\x19.mirai.v1.KnowledgeSourceR\x06source\x12\x1f\n" +
 	"\vrag_summary\x18\x02 \x01(\tR\n" +
-	"ragSummary\"N\n" +
+	"ragSummary\x12>\n" +
+	"\x0edocument_index\x18\x03 \x01(\v2\x17.mirai.v1.DocumentIndexR\rdocumentIndex\"N\n" +
 	"$ListKnowledgeSourcesBySessionRequest\x12&\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tsessionId\"\\\n" +
@@ -1168,6 +1178,7 @@ var file_mirai_v1_knowledge_service_proto_goTypes = []any{
 	(KnowledgeSourceType)(0),                      // 20: mirai.v1.KnowledgeSourceType
 	(*KnowledgeSource)(nil),                       // 21: mirai.v1.KnowledgeSource
 	(*RetrievedChunk)(nil),                        // 22: mirai.v1.RetrievedChunk
+	(*DocumentIndex)(nil),                         // 23: mirai.v1.DocumentIndex
 }
 var file_mirai_v1_knowledge_service_proto_depIdxs = []int32{
 	20, // 0: mirai.v1.CreateKnowledgeSourceRequest.type:type_name -> mirai.v1.KnowledgeSourceType
@@ -1176,33 +1187,34 @@ var file_mirai_v1_knowledge_service_proto_depIdxs = []int32{
 	21, // 3: mirai.v1.GetKnowledgeSourceResponse.source:type_name -> mirai.v1.KnowledgeSource
 	22, // 4: mirai.v1.SearchKnowledgeResponse.chunks:type_name -> mirai.v1.RetrievedChunk
 	21, // 5: mirai.v1.UploadAndProcessResponse.source:type_name -> mirai.v1.KnowledgeSource
-	21, // 6: mirai.v1.ListKnowledgeSourcesBySessionResponse.sources:type_name -> mirai.v1.KnowledgeSource
-	22, // 7: mirai.v1.SearchKnowledgeBySessionResponse.chunks:type_name -> mirai.v1.RetrievedChunk
-	0,  // 8: mirai.v1.KnowledgeSourceService.GetUploadURL:input_type -> mirai.v1.GetUploadURLRequest
-	2,  // 9: mirai.v1.KnowledgeSourceService.CreateKnowledgeSource:input_type -> mirai.v1.CreateKnowledgeSourceRequest
-	12, // 10: mirai.v1.KnowledgeSourceService.UploadAndProcess:input_type -> mirai.v1.UploadAndProcessRequest
-	4,  // 11: mirai.v1.KnowledgeSourceService.ListKnowledgeSources:input_type -> mirai.v1.ListKnowledgeSourcesRequest
-	14, // 12: mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession:input_type -> mirai.v1.ListKnowledgeSourcesBySessionRequest
-	16, // 13: mirai.v1.KnowledgeSourceService.LinkSessionToCourse:input_type -> mirai.v1.LinkSessionToCourseRequest
-	6,  // 14: mirai.v1.KnowledgeSourceService.GetKnowledgeSource:input_type -> mirai.v1.GetKnowledgeSourceRequest
-	8,  // 15: mirai.v1.KnowledgeSourceService.DeleteKnowledgeSource:input_type -> mirai.v1.DeleteKnowledgeSourceRequest
-	10, // 16: mirai.v1.KnowledgeSourceService.SearchKnowledge:input_type -> mirai.v1.SearchKnowledgeRequest
-	18, // 17: mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession:input_type -> mirai.v1.SearchKnowledgeBySessionRequest
-	1,  // 18: mirai.v1.KnowledgeSourceService.GetUploadURL:output_type -> mirai.v1.GetUploadURLResponse
-	3,  // 19: mirai.v1.KnowledgeSourceService.CreateKnowledgeSource:output_type -> mirai.v1.CreateKnowledgeSourceResponse
-	13, // 20: mirai.v1.KnowledgeSourceService.UploadAndProcess:output_type -> mirai.v1.UploadAndProcessResponse
-	5,  // 21: mirai.v1.KnowledgeSourceService.ListKnowledgeSources:output_type -> mirai.v1.ListKnowledgeSourcesResponse
-	15, // 22: mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession:output_type -> mirai.v1.ListKnowledgeSourcesBySessionResponse
-	17, // 23: mirai.v1.KnowledgeSourceService.LinkSessionToCourse:output_type -> mirai.v1.LinkSessionToCourseResponse
-	7,  // 24: mirai.v1.KnowledgeSourceService.GetKnowledgeSource:output_type -> mirai.v1.GetKnowledgeSourceResponse
-	9,  // 25: mirai.v1.KnowledgeSourceService.DeleteKnowledgeSource:output_type -> mirai.v1.DeleteKnowledgeSourceResponse
-	11, // 26: mirai.v1.KnowledgeSourceService.SearchKnowledge:output_type -> mirai.v1.SearchKnowledgeResponse
-	19, // 27: mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession:output_type -> mirai.v1.SearchKnowledgeBySessionResponse
-	18, // [18:28] is the sub-list for method output_type
-	8,  // [8:18] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	23, // 6: mirai.v1.UploadAndProcessResponse.document_index:type_name -> mirai.v1.DocumentIndex
+	21, // 7: mirai.v1.ListKnowledgeSourcesBySessionResponse.sources:type_name -> mirai.v1.KnowledgeSource
+	22, // 8: mirai.v1.SearchKnowledgeBySessionResponse.chunks:type_name -> mirai.v1.RetrievedChunk
+	0,  // 9: mirai.v1.KnowledgeSourceService.GetUploadURL:input_type -> mirai.v1.GetUploadURLRequest
+	2,  // 10: mirai.v1.KnowledgeSourceService.CreateKnowledgeSource:input_type -> mirai.v1.CreateKnowledgeSourceRequest
+	12, // 11: mirai.v1.KnowledgeSourceService.UploadAndProcess:input_type -> mirai.v1.UploadAndProcessRequest
+	4,  // 12: mirai.v1.KnowledgeSourceService.ListKnowledgeSources:input_type -> mirai.v1.ListKnowledgeSourcesRequest
+	14, // 13: mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession:input_type -> mirai.v1.ListKnowledgeSourcesBySessionRequest
+	16, // 14: mirai.v1.KnowledgeSourceService.LinkSessionToCourse:input_type -> mirai.v1.LinkSessionToCourseRequest
+	6,  // 15: mirai.v1.KnowledgeSourceService.GetKnowledgeSource:input_type -> mirai.v1.GetKnowledgeSourceRequest
+	8,  // 16: mirai.v1.KnowledgeSourceService.DeleteKnowledgeSource:input_type -> mirai.v1.DeleteKnowledgeSourceRequest
+	10, // 17: mirai.v1.KnowledgeSourceService.SearchKnowledge:input_type -> mirai.v1.SearchKnowledgeRequest
+	18, // 18: mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession:input_type -> mirai.v1.SearchKnowledgeBySessionRequest
+	1,  // 19: mirai.v1.KnowledgeSourceService.GetUploadURL:output_type -> mirai.v1.GetUploadURLResponse
+	3,  // 20: mirai.v1.KnowledgeSourceService.CreateKnowledgeSource:output_type -> mirai.v1.CreateKnowledgeSourceResponse
+	13, // 21: mirai.v1.KnowledgeSourceService.UploadAndProcess:output_type -> mirai.v1.UploadAndProcessResponse
+	5,  // 22: mirai.v1.KnowledgeSourceService.ListKnowledgeSources:output_type -> mirai.v1.ListKnowledgeSourcesResponse
+	15, // 23: mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession:output_type -> mirai.v1.ListKnowledgeSourcesBySessionResponse
+	17, // 24: mirai.v1.KnowledgeSourceService.LinkSessionToCourse:output_type -> mirai.v1.LinkSessionToCourseResponse
+	7,  // 25: mirai.v1.KnowledgeSourceService.GetKnowledgeSource:output_type -> mirai.v1.GetKnowledgeSourceResponse
+	9,  // 26: mirai.v1.KnowledgeSourceService.DeleteKnowledgeSource:output_type -> mirai.v1.DeleteKnowledgeSourceResponse
+	11, // 27: mirai.v1.KnowledgeSourceService.SearchKnowledge:output_type -> mirai.v1.SearchKnowledgeResponse
+	19, // 28: mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession:output_type -> mirai.v1.SearchKnowledgeBySessionResponse
+	19, // [19:29] is the sub-list for method output_type
+	9,  // [9:19] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_knowledge_service_proto_init() }

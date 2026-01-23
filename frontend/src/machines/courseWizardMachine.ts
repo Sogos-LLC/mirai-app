@@ -60,6 +60,10 @@ export interface CourseWizardContext {
   // Knowledge Sources (added via modal on step 1, not a separate step)
   pendingFiles: PendingFile[];
 
+  // Internal Data Only mode - when enabled, course content is generated
+  // exclusively from uploaded knowledge sources
+  internalDataOnly: boolean;
+
   // Step 5: Tone Options + Additional Context
   toneOptions: ToneOption[];
   selectedToneId: string;
@@ -108,6 +112,8 @@ export type CourseWizardEvent =
   // Knowledge Sources (available from Step 1 via modal)
   | { type: 'ADD_FILES'; files: PendingFile[] }
   | { type: 'REMOVE_FILE'; fileId: string }
+  // Internal Data Only mode
+  | { type: 'SET_INTERNAL_DATA_ONLY'; enabled: boolean }
   // Step 5: Tone Selection
   | { type: 'SELECT_TONE'; toneId: string }
   | { type: 'APPROVE_TONE' }
@@ -174,6 +180,7 @@ export const initialContext: CourseWizardContext = {
   audiencePersonas: [],
   selectedAudienceIds: [],
   pendingFiles: [],
+  internalDataOnly: false,
   toneOptions: [],
   selectedToneId: '',
   additionalContext: '',
@@ -251,6 +258,7 @@ export const generateOutlineActor = fromPromise<
     audiencePersonas: AudiencePersona[];
     toneOption: ToneOption | undefined;
     additionalContext: string;
+    internalDataOnly: boolean;
   }
 >(async () => {
   throw new NetworkError('generateOutlineActor must be provided by the component');
@@ -431,6 +439,11 @@ export const courseWizardMachine = createMachine({
           actions: assign({
             pendingFiles: ({ context, event }) =>
               context.pendingFiles.filter((f) => f.id !== event.fileId),
+          }),
+        },
+        SET_INTERNAL_DATA_ONLY: {
+          actions: assign({
+            internalDataOnly: ({ event }) => event.enabled,
           }),
         },
         GENERATE_OUTCOMES: {
@@ -798,6 +811,7 @@ export const courseWizardMachine = createMachine({
           ),
           toneOption: context.toneOptions.find((t) => t.id === context.selectedToneId),
           additionalContext: context.additionalContext,
+          internalDataOnly: context.internalDataOnly,
         }),
         onDone: {
           target: 'outlineJobQueued',
@@ -960,5 +974,6 @@ export function buildWizardStepData(context: CourseWizardContext): Partial<Wizar
     toneOptions: context.toneOptions,
     selectedToneId: context.selectedToneId,
     additionalContext: context.additionalContext,
+    internalDataOnly: context.internalDataOnly,
   };
 }

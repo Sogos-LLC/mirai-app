@@ -277,6 +277,9 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 	// Generate RAG summary to prove system works
 	ragSummary := generateDocumentSummary(textContent, filename)
 
+	// Generate document index for Internal Data Only mode navigation
+	documentIndex := generateDocumentIndex(textContent, filename)
+
 	// Update status to ready with summary
 	updatedSource, err := s.knowledgeService.UpdateStatusWithSummary(
 		ctx, source.ID,
@@ -291,8 +294,9 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 	}
 
 	return connect.NewResponse(&v1.UploadAndProcessResponse{
-		Source:     knowledgeSourceToProto(updatedSource),
-		RagSummary: ragSummary,
+		Source:        knowledgeSourceToProto(updatedSource),
+		RagSummary:    ragSummary,
+		DocumentIndex: documentIndex,
 	}), nil
 }
 
@@ -401,6 +405,137 @@ func generateDocumentSummary(content string, filename string) string {
 	// For MVP: return a simple summary based on content preview
 	// TODO: Use Gemini to generate a proper RAG-based summary
 	return fmt.Sprintf("This document contains information that has been successfully indexed and is now available for AI-enhanced course generation. Preview: %s", preview)
+}
+
+// generateDocumentIndex creates a structured index of document contents.
+// This provides a "map" for AI to understand what content is available.
+// For MVP, uses simple text analysis. Can be enhanced with AI later.
+func generateDocumentIndex(content string, filename string) *v1.DocumentIndex {
+	lines := strings.Split(content, "\n")
+
+	// Extract main topics (headings)
+	var mainTopics []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Markdown headings (# or ##)
+		if strings.HasPrefix(line, "# ") {
+			topic := strings.TrimPrefix(line, "# ")
+			mainTopics = append(mainTopics, topic)
+		} else if strings.HasPrefix(line, "## ") {
+			topic := strings.TrimPrefix(line, "## ")
+			mainTopics = append(mainTopics, topic)
+		} else if strings.HasPrefix(line, "Chapter ") || strings.HasPrefix(line, "Section ") {
+			// Common document structure patterns
+			mainTopics = append(mainTopics, line)
+		} else if len(line) < 80 && strings.ToUpper(line) == line && len(line) > 3 {
+			// ALL CAPS short lines are often headings
+			mainTopics = append(mainTopics, line)
+		}
+	}
+
+	// Limit to first 10 topics
+	if len(mainTopics) > 10 {
+		mainTopics = mainTopics[:10]
+	}
+
+	// Extract key concepts (frequent multi-word phrases and important terms)
+	keyConcepts := extractKeyConcepts(content)
+
+	// Estimate lesson count based on content
+	// Roughly: 1 lesson per 2000 chars or per major topic
+	charEstimate := len(content) / 2000
+	topicEstimate := len(mainTopics)
+	estimatedLessons := charEstimate
+	if topicEstimate > estimatedLessons {
+		estimatedLessons = topicEstimate
+	}
+	if estimatedLessons < 1 {
+		estimatedLessons = 1
+	}
+	if estimatedLessons > 20 {
+		estimatedLessons = 20
+	}
+
+	// Determine content depth based on content length and vocabulary
+	contentDepth := "basic"
+	if len(content) > 10000 {
+		contentDepth = "intermediate"
+	}
+	if len(content) > 30000 || len(mainTopics) > 5 {
+		contentDepth = "advanced"
+	}
+
+	// Extract title from filename or first heading
+	title := strings.TrimSuffix(filename, ".txt")
+	title = strings.TrimSuffix(title, ".md")
+	title = strings.TrimSuffix(title, ".pdf")
+	if len(mainTopics) > 0 {
+		title = mainTopics[0]
+	}
+
+	return &v1.DocumentIndex{
+		Title:                title,
+		MainTopics:           mainTopics,
+		KeyConcepts:          keyConcepts,
+		EstimatedLessonCount: int32(estimatedLessons),
+		ContentDepth:         contentDepth,
+	}
+}
+
+// extractKeyConcepts extracts important terms and concepts from text.
+func extractKeyConcepts(content string) []string {
+	// Simple approach: find words that appear frequently and are capitalized
+	// or multi-word phrases that appear multiple times
+	words := strings.Fields(strings.ToLower(content))
+	wordCount := make(map[string]int)
+
+	// Count word frequency (skip common words)
+	commonWords := map[string]bool{
+		"the": true, "a": true, "an": true, "and": true, "or": true, "but": true,
+		"in": true, "on": true, "at": true, "to": true, "for": true, "of": true,
+		"with": true, "by": true, "from": true, "as": true, "is": true, "was": true,
+		"are": true, "were": true, "be": true, "been": true, "being": true,
+		"have": true, "has": true, "had": true, "do": true, "does": true, "did": true,
+		"will": true, "would": true, "could": true, "should": true, "may": true,
+		"might": true, "must": true, "can": true, "this": true, "that": true,
+		"these": true, "those": true, "it": true, "its": true, "their": true,
+		"they": true, "them": true, "we": true, "us": true, "our": true,
+		"you": true, "your": true, "he": true, "she": true, "him": true, "her": true,
+		"not": true, "no": true, "yes": true, "if": true, "then": true, "else": true,
+		"when": true, "where": true, "what": true, "which": true, "who": true,
+		"how": true, "why": true, "all": true, "each": true, "every": true,
+		"both": true, "few": true, "more": true, "most": true, "some": true,
+		"any": true, "other": true, "into": true, "through": true, "during": true,
+		"before": true, "after": true, "above": true, "below": true, "between": true,
+	}
+
+	for _, word := range words {
+		// Clean punctuation
+		word = strings.Trim(word, ".,;:!?\"'()[]{}*")
+		if len(word) < 4 || commonWords[word] {
+			continue
+		}
+		wordCount[word]++
+	}
+
+	// Find words that appear at least 3 times
+	var concepts []string
+	for word, count := range wordCount {
+		if count >= 3 {
+			concepts = append(concepts, word)
+		}
+	}
+
+	// Sort by frequency (simple approach: just take first 10)
+	if len(concepts) > 10 {
+		concepts = concepts[:10]
+	}
+
+	return concepts
 }
 
 // knowledgeSourceToProto converts a domain entity to proto.

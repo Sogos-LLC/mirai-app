@@ -149,6 +149,7 @@ export default function CourseWizard() {
               audiencePersonas: AudiencePersona[];
               toneOption: ToneOption | undefined;
               additionalContext: string;
+              internalDataOnly: boolean;
             };
           }) => {
             // Step 1: Create a course with wizard data for AI generation context
@@ -169,6 +170,7 @@ export default function CourseWizard() {
                 toneOptions: input.toneOption ? [input.toneOption] : [],
                 selectedToneId: input.toneOption?.id ?? '',
                 additionalContext: input.additionalContext,
+                internalDataOnly: input.internalDataOnly,
               },
             });
 
@@ -557,6 +559,8 @@ export default function CourseWizard() {
           knowledgeFileCount={pendingFiles.length}
           processedSourcesCount={processedSources.length}
           onOpenKnowledgeModal={handleOpenKnowledgeModal}
+          internalDataOnly={context.internalDataOnly}
+          onInternalDataOnlyChange={(enabled) => send({ type: 'SET_INTERNAL_DATA_ONLY', enabled })}
         />
       )}
 

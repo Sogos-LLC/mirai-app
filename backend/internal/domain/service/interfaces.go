@@ -486,6 +486,31 @@ type GenerateOutlineRequest struct {
 	SMEKnowledge      []SMEKnowledgeInput // Knowledge from selected SMEs
 	TargetAudience    TargetAudienceInput // Target audience profile
 	AdditionalContext string
+
+	// Internal Data Only mode fields
+	InternalDataOnly bool                   // When true, use only RAG content
+	DocumentIndices  []DocumentIndexInput   // Structured indices of uploaded documents
+	RAGContext       []RAGChunkInput        // Retrieved chunks from knowledge sources
+}
+
+// DocumentIndexInput represents a document's structured index for AI navigation.
+type DocumentIndexInput struct {
+	SourceID             string   // Knowledge source ID
+	SourceName           string   // Document name
+	Title                string   // Document title
+	MainTopics           []string // Major sections/topics
+	KeyConcepts          []string // Important terms and concepts
+	EstimatedLessonCount int      // How many lessons this content could support
+	ContentDepth         string   // "basic", "intermediate", "advanced"
+}
+
+// RAGChunkInput represents a retrieved knowledge chunk for content generation.
+type RAGChunkInput struct {
+	SourceID        string  // Knowledge source ID for citation
+	SourceName      string  // Document name for citation
+	Content         string  // The actual chunk content
+	ChunkIndex      int     // Position in original document
+	SimilarityScore float32 // Relevance score from vector search
 }
 
 // SMEKnowledgeInput represents knowledge from an SME.
@@ -579,6 +604,10 @@ type GenerateLessonRequest struct {
 
 	// Additional user context for content generation
 	AdditionalContext string
+
+	// Internal Data Only mode fields
+	InternalDataOnly bool            // When true, use only RAG content
+	RAGContext       []RAGChunkInput // Retrieved chunks from knowledge sources
 }
 
 // OutlineSectionSummary provides outline context for lesson generation.

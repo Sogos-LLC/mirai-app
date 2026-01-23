@@ -181,6 +181,8 @@ type Querier interface {
 	UpdateInvitation(ctx context.Context, arg UpdateInvitationParams) (Invitation, error)
 	UpdateKnowledgeSourceStatus(ctx context.Context, arg UpdateKnowledgeSourceStatusParams) (KnowledgeSource, error)
 	UpdateKnowledgeSourceVideoURLs(ctx context.Context, arg UpdateKnowledgeSourceVideoURLsParams) (KnowledgeSource, error)
+	// Update knowledge source with document index for Internal Data Only mode
+	UpdateKnowledgeSourceWithDocumentIndex(ctx context.Context, arg UpdateKnowledgeSourceWithDocumentIndexParams) (KnowledgeSource, error)
 	// Update status with RAG-generated summary and token count
 	UpdateKnowledgeSourceWithSummary(ctx context.Context, arg UpdateKnowledgeSourceWithSummaryParams) (KnowledgeSource, error)
 	UpdatePendingRegistration(ctx context.Context, arg UpdatePendingRegistrationParams) (PendingRegistration, error)

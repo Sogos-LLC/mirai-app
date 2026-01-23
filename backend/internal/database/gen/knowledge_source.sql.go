@@ -50,7 +50,7 @@ INSERT INTO knowledge_sources (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count
+RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index
 `
 
 type CreateKnowledgeSourceParams struct {
@@ -99,6 +99,7 @@ func (q *Queries) CreateKnowledgeSource(ctx context.Context, arg CreateKnowledge
 		&i.SessionID,
 		&i.Summary,
 		&i.TokenCount,
+		&i.DocumentIndex,
 	)
 	return i, err
 }
@@ -117,7 +118,7 @@ INSERT INTO knowledge_sources (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count
+RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index
 `
 
 type CreateKnowledgeSourceWithSessionParams struct {
@@ -165,6 +166,7 @@ func (q *Queries) CreateKnowledgeSourceWithSession(ctx context.Context, arg Crea
 		&i.SessionID,
 		&i.Summary,
 		&i.TokenCount,
+		&i.DocumentIndex,
 	)
 	return i, err
 }
@@ -188,7 +190,7 @@ func (q *Queries) DeleteKnowledgeSourcesByCourse(ctx context.Context, courseID u
 }
 
 const getKnowledgeSourceByID = `-- name: GetKnowledgeSourceByID :one
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count FROM knowledge_sources WHERE id = $1
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index FROM knowledge_sources WHERE id = $1
 `
 
 func (q *Queries) GetKnowledgeSourceByID(ctx context.Context, id uuid.UUID) (KnowledgeSource, error) {
@@ -213,12 +215,13 @@ func (q *Queries) GetKnowledgeSourceByID(ctx context.Context, id uuid.UUID) (Kno
 		&i.SessionID,
 		&i.Summary,
 		&i.TokenCount,
+		&i.DocumentIndex,
 	)
 	return i, err
 }
 
 const getReadySourcesByCourse = `-- name: GetReadySourcesByCourse :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index FROM knowledge_sources
 WHERE course_id = $1 AND status = 'ready'
 ORDER BY created_at ASC
 `
@@ -251,6 +254,7 @@ func (q *Queries) GetReadySourcesByCourse(ctx context.Context, courseID uuid.Nul
 			&i.SessionID,
 			&i.Summary,
 			&i.TokenCount,
+			&i.DocumentIndex,
 		); err != nil {
 			return nil, err
 		}
@@ -266,7 +270,7 @@ func (q *Queries) GetReadySourcesByCourse(ctx context.Context, courseID uuid.Nul
 }
 
 const getReadySourcesBySession = `-- name: GetReadySourcesBySession :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index FROM knowledge_sources
 WHERE session_id = $1 AND status = 'ready'
 ORDER BY created_at ASC
 `
@@ -300,6 +304,7 @@ func (q *Queries) GetReadySourcesBySession(ctx context.Context, sessionID sql.Nu
 			&i.SessionID,
 			&i.Summary,
 			&i.TokenCount,
+			&i.DocumentIndex,
 		); err != nil {
 			return nil, err
 		}
@@ -336,7 +341,7 @@ func (q *Queries) LinkSessionToCourse(ctx context.Context, arg LinkSessionToCour
 }
 
 const listKnowledgeSourcesByCourse = `-- name: ListKnowledgeSourcesByCourse :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index FROM knowledge_sources
 WHERE course_id = $1
 ORDER BY created_at DESC
 `
@@ -369,6 +374,7 @@ func (q *Queries) ListKnowledgeSourcesByCourse(ctx context.Context, courseID uui
 			&i.SessionID,
 			&i.Summary,
 			&i.TokenCount,
+			&i.DocumentIndex,
 		); err != nil {
 			return nil, err
 		}
@@ -384,7 +390,7 @@ func (q *Queries) ListKnowledgeSourcesByCourse(ctx context.Context, courseID uui
 }
 
 const listKnowledgeSourcesBySession = `-- name: ListKnowledgeSourcesBySession :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index FROM knowledge_sources
 WHERE session_id = $1
 ORDER BY created_at DESC
 `
@@ -418,6 +424,7 @@ func (q *Queries) ListKnowledgeSourcesBySession(ctx context.Context, sessionID s
 			&i.SessionID,
 			&i.Summary,
 			&i.TokenCount,
+			&i.DocumentIndex,
 		); err != nil {
 			return nil, err
 		}
@@ -433,7 +440,7 @@ func (q *Queries) ListKnowledgeSourcesBySession(ctx context.Context, sessionID s
 }
 
 const listPendingKnowledgeSources = `-- name: ListPendingKnowledgeSources :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index FROM knowledge_sources
 WHERE status = 'pending'
 ORDER BY created_at ASC
 LIMIT $1
@@ -467,6 +474,7 @@ func (q *Queries) ListPendingKnowledgeSources(ctx context.Context, limit int32) 
 			&i.SessionID,
 			&i.Summary,
 			&i.TokenCount,
+			&i.DocumentIndex,
 		); err != nil {
 			return nil, err
 		}
@@ -489,7 +497,7 @@ UPDATE knowledge_sources SET
     processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $4
-RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count
+RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index
 `
 
 type UpdateKnowledgeSourceStatusParams struct {
@@ -526,6 +534,7 @@ func (q *Queries) UpdateKnowledgeSourceStatus(ctx context.Context, arg UpdateKno
 		&i.SessionID,
 		&i.Summary,
 		&i.TokenCount,
+		&i.DocumentIndex,
 	)
 	return i, err
 }
@@ -535,7 +544,7 @@ UPDATE knowledge_sources SET
     video_urls = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count
+RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index
 `
 
 type UpdateKnowledgeSourceVideoURLsParams struct {
@@ -565,6 +574,67 @@ func (q *Queries) UpdateKnowledgeSourceVideoURLs(ctx context.Context, arg Update
 		&i.SessionID,
 		&i.Summary,
 		&i.TokenCount,
+		&i.DocumentIndex,
+	)
+	return i, err
+}
+
+const updateKnowledgeSourceWithDocumentIndex = `-- name: UpdateKnowledgeSourceWithDocumentIndex :one
+UPDATE knowledge_sources SET
+    status = $1,
+    error_message = $2,
+    chunk_count = $3,
+    summary = $4,
+    token_count = $5,
+    document_index = $6,
+    processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
+    updated_at = NOW()
+WHERE id = $7
+RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index
+`
+
+type UpdateKnowledgeSourceWithDocumentIndexParams struct {
+	Status        KnowledgeSourceStatus `db:"status" json:"status"`
+	ErrorMessage  sql.NullString        `db:"error_message" json:"error_message"`
+	ChunkCount    sql.NullInt32         `db:"chunk_count" json:"chunk_count"`
+	Summary       sql.NullString        `db:"summary" json:"summary"`
+	TokenCount    sql.NullInt32         `db:"token_count" json:"token_count"`
+	DocumentIndex pqtype.NullRawMessage `db:"document_index" json:"document_index"`
+	ID            uuid.UUID             `db:"id" json:"id"`
+}
+
+// Update knowledge source with document index for Internal Data Only mode
+func (q *Queries) UpdateKnowledgeSourceWithDocumentIndex(ctx context.Context, arg UpdateKnowledgeSourceWithDocumentIndexParams) (KnowledgeSource, error) {
+	row := q.db.QueryRowContext(ctx, updateKnowledgeSourceWithDocumentIndex,
+		arg.Status,
+		arg.ErrorMessage,
+		arg.ChunkCount,
+		arg.Summary,
+		arg.TokenCount,
+		arg.DocumentIndex,
+		arg.ID,
+	)
+	var i KnowledgeSource
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CourseID,
+		&i.Type,
+		&i.Status,
+		&i.Name,
+		&i.FilePath,
+		&i.MimeType,
+		&i.FileSizeBytes,
+		&i.ChunkCount,
+		&i.ErrorMessage,
+		&i.VideoUrls,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProcessedAt,
+		&i.SessionID,
+		&i.Summary,
+		&i.TokenCount,
+		&i.DocumentIndex,
 	)
 	return i, err
 }
@@ -579,7 +649,7 @@ UPDATE knowledge_sources SET
     processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $6
-RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count
+RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index
 `
 
 type UpdateKnowledgeSourceWithSummaryParams struct {
@@ -621,6 +691,7 @@ func (q *Queries) UpdateKnowledgeSourceWithSummary(ctx context.Context, arg Upda
 		&i.SessionID,
 		&i.Summary,
 		&i.TokenCount,
+		&i.DocumentIndex,
 	)
 	return i, err
 }

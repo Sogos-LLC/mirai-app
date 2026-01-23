@@ -56,6 +56,12 @@ type JobEventPublisher interface {
 	PublishJobEvent(ctx context.Context, userID uuid.UUID, eventType string, job *entity.GenerationJob) error
 }
 
+// KnowledgeSearcher provides RAG search capabilities for internal data only mode.
+type KnowledgeSearcher interface {
+	SearchKnowledge(ctx context.Context, courseID uuid.UUID, query string, topK int) ([]*entity.RetrievedChunk, error)
+	ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeSource, error)
+}
+
 // AIGenerationService handles AI-powered content generation.
 // All course content is stored in MinIO - no PostgreSQL tables for outlines/lessons.
 type AIGenerationService struct {
@@ -70,6 +76,7 @@ type AIGenerationService struct {
 	imageStorage       ImageStorage
 	contentStorage     *storage.TenantAwareStorage
 	jobEventPublisher  JobEventPublisher
+	knowledgeSearcher  KnowledgeSearcher // For Internal Data Only RAG queries
 	logger             service.Logger
 }
 
@@ -100,6 +107,11 @@ func NewAIGenerationService(
 		contentStorage:     contentStorage,
 		logger:             logger,
 	}
+}
+
+// SetKnowledgeSearcher sets the knowledge searcher for Internal Data Only mode.
+func (s *AIGenerationService) SetKnowledgeSearcher(searcher KnowledgeSearcher) {
+	s.knowledgeSearcher = searcher
 }
 
 // SetJobEventPublisher sets the optional job event publisher for real-time streaming.
@@ -246,14 +258,82 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 		}
 	}
 
-	// Generate outline with AI
-	outlineResult, err := aiProvider.GenerateCourseOutline(ctx, service.GenerateOutlineRequest{
+	// Build outline request
+	outlineRequest := service.GenerateOutlineRequest{
 		CourseTitle:       content.Settings.Title,
 		DesiredOutcome:    content.Settings.DesiredOutcome,
 		SMEKnowledge:      smeKnowledge,
 		TargetAudience:    targetAudience,
 		AdditionalContext: additionalContext,
-	})
+	}
+
+	// Handle Internal Data Only mode - fetch RAG context
+	if content.WizardData != nil && content.WizardData.InternalDataOnly {
+		outlineRequest.InternalDataOnly = true
+		log.Info("Internal Data Only mode enabled, fetching RAG context")
+
+		if s.knowledgeSearcher != nil {
+			// Fetch knowledge sources for the course to get document indices
+			sources, err := s.knowledgeSearcher.ListByCourse(ctx, *job.CourseID)
+			if err != nil {
+				log.Warn("failed to list knowledge sources", "error", err)
+			} else {
+				// Build document indices from sources
+				for _, src := range sources {
+					if src.DocumentIndex != nil {
+						outlineRequest.DocumentIndices = append(outlineRequest.DocumentIndices, service.DocumentIndexInput{
+							SourceID:             src.ID.String(),
+							SourceName:           src.Name,
+							Title:                src.DocumentIndex.Title,
+							MainTopics:           src.DocumentIndex.MainTopics,
+							KeyConcepts:          src.DocumentIndex.KeyConcepts,
+							EstimatedLessonCount: src.DocumentIndex.EstimatedLessonCount,
+							ContentDepth:         src.DocumentIndex.ContentDepth,
+						})
+					}
+				}
+
+				// Perform RAG search for course content
+				// Use course title and desired outcomes as initial queries
+				queries := []string{
+					content.Settings.Title,
+					content.Settings.DesiredOutcome,
+				}
+				if additionalContext != "" {
+					queries = append(queries, additionalContext)
+				}
+
+				seenChunks := make(map[string]bool)
+				for _, query := range queries {
+					chunks, err := s.knowledgeSearcher.SearchKnowledge(ctx, *job.CourseID, query, 10)
+					if err != nil {
+						log.Warn("RAG search failed", "query", query, "error", err)
+						continue
+					}
+					for _, chunk := range chunks {
+						// Deduplicate chunks
+						if seenChunks[chunk.ID] {
+							continue
+						}
+						seenChunks[chunk.ID] = true
+						outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
+							SourceID:        chunk.SourceID.String(),
+							SourceName:      chunk.SourceName,
+							Content:         chunk.Content,
+							ChunkIndex:      int(*chunk.ChunkIndex),
+							SimilarityScore: chunk.SimilarityScore,
+						})
+					}
+				}
+				log.Info("RAG context retrieved", "documentIndices", len(outlineRequest.DocumentIndices), "chunks", len(outlineRequest.RAGContext))
+			}
+		} else {
+			log.Warn("Internal Data Only mode enabled but no knowledge searcher configured")
+		}
+	}
+
+	// Generate outline with AI
+	outlineResult, err := aiProvider.GenerateCourseOutline(ctx, outlineRequest)
 	if err != nil {
 		log.Error("AI outline generation failed", "error", err)
 		return s.failJob(ctx, job, fmt.Sprintf("AI generation failed: %v", err))
@@ -599,6 +679,58 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		lessonAdditionalContext = content.WizardData.AdditionalContext
 	}
 
+	// Check if Internal Data Only mode is enabled
+	var internalDataOnly bool
+	var ragContext []service.RAGChunkInput
+	if content.WizardData != nil && content.WizardData.InternalDataOnly {
+		internalDataOnly = true
+		log.Info("Internal Data Only mode enabled, fetching RAG context for lesson",
+			"lessonTitle", lessonTitle)
+
+		// Fetch RAG context for the lesson using learning objectives as queries
+		if s.knowledgeSearcher != nil && job.CourseID != nil {
+			// Build search query from lesson title and learning objectives
+			searchQueries := []string{lessonTitle + " " + lessonDesc}
+			for _, obj := range learningObjectives {
+				searchQueries = append(searchQueries, obj)
+			}
+
+			// Execute RAG queries and collect chunks
+			seenChunks := make(map[string]bool) // Deduplicate by content hash
+			for _, query := range searchQueries {
+				chunks, err := s.knowledgeSearcher.SearchKnowledge(ctx, *job.CourseID, query, 5)
+				if err != nil {
+					log.Warn("RAG search failed for lesson", "query", query, "error", err)
+					continue
+				}
+				for _, chunk := range chunks {
+					// Simple deduplication by first 100 chars of content
+					hashKey := chunk.Content
+					if len(hashKey) > 100 {
+						hashKey = hashKey[:100]
+					}
+					if !seenChunks[hashKey] {
+						seenChunks[hashKey] = true
+						chunkIndex := 0
+						if chunk.ChunkIndex != nil {
+							chunkIndex = int(*chunk.ChunkIndex)
+						}
+						ragContext = append(ragContext, service.RAGChunkInput{
+							SourceID:        chunk.SourceID.String(),
+							SourceName:      chunk.SourceName,
+							Content:         chunk.Content,
+							ChunkIndex:      chunkIndex,
+							SimilarityScore: chunk.SimilarityScore,
+						})
+					}
+				}
+			}
+			log.Info("Fetched RAG context for lesson",
+				"lessonTitle", lessonTitle,
+				"chunkCount", len(ragContext))
+		}
+	}
+
 	// Generate lesson content
 	lessonResult, err := aiProvider.GenerateLessonContent(ctx, service.GenerateLessonRequest{
 		CourseTitle:        content.Settings.Title,
@@ -611,6 +743,8 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		IsLastInSection:    isLastInSection,
 		IsLastInCourse:     isLastInCourse,
 		AdditionalContext:  lessonAdditionalContext,
+		InternalDataOnly:   internalDataOnly,
+		RAGContext:         ragContext,
 	})
 	if err != nil {
 		log.Error("AI lesson generation failed", "error", err)

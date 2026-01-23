@@ -20,6 +20,9 @@ interface CourseNameStepProps {
   knowledgeFileCount?: number;
   processedSourcesCount?: number;
   onOpenKnowledgeModal?: () => void;
+  // Internal Data Only mode
+  internalDataOnly?: boolean;
+  onInternalDataOnlyChange?: (enabled: boolean) => void;
 }
 
 export default function CourseNameStep({
@@ -35,6 +38,8 @@ export default function CourseNameStep({
   knowledgeFileCount = 0,
   processedSourcesCount = 0,
   onOpenKnowledgeModal,
+  internalDataOnly = false,
+  onInternalDataOnlyChange,
 }: CourseNameStepProps) {
   const hasProcessedSources = processedSourcesCount > 0;
   const hasPendingFiles = knowledgeFileCount > 0;
@@ -149,6 +154,26 @@ export default function CourseNameStep({
                 These outcomes serve as the north star guiding all content generation.
               </p>
             </div>
+
+            {/* Internal Data Only mode - only show when knowledge sources are present */}
+            {hasProcessedSources && onInternalDataOnlyChange && (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-left">
+                <input
+                  type="checkbox"
+                  id="internalDataOnly"
+                  checked={internalDataOnly}
+                  onChange={(e) => onInternalDataOnlyChange(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                />
+                <label htmlFor="internalDataOnly" className="text-sm text-amber-800 dark:text-amber-200">
+                  <span className="font-semibold">Internal Data Only</span>
+                  <span className="block mt-1 text-amber-700 dark:text-amber-300">
+                    Generate course content exclusively from your uploaded documents.
+                    AI will not add external information or fill gaps — course size adapts to available content.
+                  </span>
+                </label>
+              </div>
+            )}
           </form>
         </div>
 

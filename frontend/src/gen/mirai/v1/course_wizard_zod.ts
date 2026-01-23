@@ -156,6 +156,7 @@ export const WizardStepDataSchema = z.object({
   selectedToneId: z.string(),
   additionalContext: z.string(),
   desiredOutcomes: z.string(),
+  internalDataOnly: z.boolean(),
 });
 
 export type WizardStepData = z.infer<typeof WizardStepDataSchema>;

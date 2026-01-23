@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Upload, FileText, X, Check, AlertCircle, Paperclip, CheckCircle } from 'lucide-react';
+import { Upload, FileText, X, Check, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
 import type { ProcessedSource } from './KnowledgeVerificationModal';
@@ -129,13 +129,41 @@ export function KnowledgeUploadModal({
     [processFiles]
   );
 
-  const canUpload = pendingFiles.length > 0;
+  const hasNewFiles = pendingFiles.length > 0;
+  const hasProcessed = processedSources.length > 0;
+  const isAddingMore = hasProcessed;
+
+  // Determine button text and action based on state
+  const getPrimaryButton = () => {
+    if (hasNewFiles) {
+      return {
+        label: `Upload ${pendingFiles.length} File${pendingFiles.length > 1 ? 's' : ''}`,
+        onClick: onUpload,
+        icon: <Upload className="w-4 h-4 mr-2" />,
+      };
+    }
+    if (hasProcessed) {
+      return {
+        label: 'Done',
+        onClick: onClose,
+        icon: <ArrowRight className="w-4 h-4 mr-2" />,
+      };
+    }
+    return {
+      label: 'Ready to Upload Knowledge',
+      onClick: onUpload,
+      icon: <Upload className="w-4 h-4 mr-2" />,
+      disabled: true,
+    };
+  };
+
+  const primaryButton = getPrimaryButton();
 
   return (
     <ResponsiveModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add Knowledge Sources"
+      title={isAddingMore ? 'Knowledge Sources' : 'Add Knowledge Sources'}
       size="lg"
       mobileHeight="full"
       footer={
@@ -145,11 +173,11 @@ export function KnowledgeUploadModal({
           </Button>
           <Button
             variant="primary"
-            onClick={onUpload}
-            disabled={!canUpload}
+            onClick={primaryButton.onClick}
+            disabled={primaryButton.disabled}
           >
-            <Paperclip className="w-4 h-4 mr-2" />
-            Ready to Upload Knowledge
+            {primaryButton.icon}
+            {primaryButton.label}
           </Button>
         </div>
       }
@@ -166,40 +194,13 @@ export function KnowledgeUploadModal({
           </div>
         )}
 
-        {/* File upload zone */}
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`
-            border-2 border-dashed rounded-lg p-8 text-center transition-colors
-            ${isDragOver ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-300 dark:border-gray-600 bg-surface'}
-          `}
-        >
-          <Upload className="w-10 h-10 mx-auto mb-3 text-muted" />
-          <p className="text-primary font-medium mb-1">
-            Drag and drop files here, or{' '}
-            <label className="text-primary-600 hover:text-primary-700 cursor-pointer underline dark:text-primary-400 dark:hover:text-primary-300">
-              browse
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.docx,.txt,.md"
-                onChange={handleFileInput}
-                className="hidden"
-              />
-            </label>
-          </p>
-          <p className="text-sm text-muted">Supported: PDF, DOCX, TXT, Markdown</p>
-        </div>
-
-        {/* Already processed sources (read-only) */}
+        {/* Already processed sources (read-only) - shown at top */}
         {processedSources.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-primary mb-3">
-              Already Indexed ({processedSources.length})
+              Indexed Documents ({processedSources.length})
             </h3>
-            <div className="space-y-2 max-h-32 overflow-y-auto mb-4">
+            <div className="space-y-2 max-h-32 overflow-y-auto">
               {processedSources.map((source) => (
                 <div
                   key={source.id}
@@ -223,11 +224,38 @@ export function KnowledgeUploadModal({
           </div>
         )}
 
+        {/* File upload zone */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`
+            border-2 border-dashed rounded-lg p-6 text-center transition-colors
+            ${isDragOver ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-300 dark:border-gray-600 bg-surface'}
+          `}
+        >
+          <Upload className="w-8 h-8 mx-auto mb-2 text-muted" />
+          <p className="text-primary font-medium mb-1">
+            {isAddingMore ? 'Add more files' : 'Drag and drop files here'}, or{' '}
+            <label className="text-primary-600 hover:text-primary-700 cursor-pointer underline dark:text-primary-400 dark:hover:text-primary-300">
+              browse
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.docx,.txt,.md"
+                onChange={handleFileInput}
+                className="hidden"
+              />
+            </label>
+          </p>
+          <p className="text-sm text-muted">Supported: PDF, DOCX, TXT, Markdown</p>
+        </div>
+
         {/* Pending files list */}
         {pendingFiles.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-primary mb-3">
-              {processedSources.length > 0 ? 'New Files to Add' : 'Selected Files'} ({pendingFiles.length})
+              New Files to Upload ({pendingFiles.length})
             </h3>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {pendingFiles.map((pf) => (
@@ -243,7 +271,7 @@ export function KnowledgeUploadModal({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-green-600 flex items-center gap-1 dark:text-green-400">
+                    <span className="text-xs text-amber-600 flex items-center gap-1 dark:text-amber-400">
                       <Check className="w-3 h-3" />
                       Ready
                     </span>
@@ -260,8 +288,13 @@ export function KnowledgeUploadModal({
           </div>
         )}
 
+        {/* Dynamic helper text */}
         <p className="text-sm text-muted text-center">
-          These documents will be processed and used to enhance AI-generated content.
+          {hasNewFiles
+            ? `Click Upload to index ${pendingFiles.length} new file${pendingFiles.length > 1 ? 's' : ''}`
+            : isAddingMore
+              ? 'Add more files or click Done to continue with your wizard'
+              : 'These documents will be processed and used to enhance AI-generated content'}
         </p>
       </div>
     </ResponsiveModal>

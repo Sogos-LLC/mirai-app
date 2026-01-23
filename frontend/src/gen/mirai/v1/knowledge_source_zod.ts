@@ -20,6 +20,35 @@ export const KnowledgeSourceStatusSchema = z.nativeEnum(KnowledgeSourceStatus);
 export type KnowledgeSourceStatusType = z.infer<typeof KnowledgeSourceStatusSchema>;
 
 /**
+ * Zod schema for DocumentIndex
+ * @generated from message mirai.v1.DocumentIndex
+ */
+export const DocumentIndexSchema = z.object({
+  title: z.string(),
+  mainTopics: z.array(z.string()),
+  keyConcepts: z.array(z.string()),
+  estimatedLessonCount: z.number().int(),
+  contentDepth: z.string(),
+});
+
+export type DocumentIndex = z.infer<typeof DocumentIndexSchema>;
+
+/**
+ * Zod schema for RetrievedChunk
+ * @generated from message mirai.v1.RetrievedChunk
+ */
+export const RetrievedChunkSchema = z.object({
+  id: z.string(),
+  sourceId: z.string(),
+  sourceName: z.string(),
+  content: z.string(),
+  similarityScore: z.number(),
+  chunkIndex: z.number().int().optional(),
+});
+
+export type RetrievedChunk = z.infer<typeof RetrievedChunkSchema>;
+
+/**
  * Zod schema for KnowledgeSource
  * @generated from message mirai.v1.KnowledgeSource
  */
@@ -42,22 +71,8 @@ export const KnowledgeSourceSchema = z.object({
   sessionId: z.string().optional(),
   summary: z.string().optional(),
   tokenCount: z.number().int().optional(),
+  documentIndex: DocumentIndexSchema.optional(),
 });
 
 export type KnowledgeSource = z.infer<typeof KnowledgeSourceSchema>;
-
-/**
- * Zod schema for RetrievedChunk
- * @generated from message mirai.v1.RetrievedChunk
- */
-export const RetrievedChunkSchema = z.object({
-  id: z.string(),
-  sourceId: z.string(),
-  sourceName: z.string(),
-  content: z.string(),
-  similarityScore: z.number(),
-  chunkIndex: z.number().int().optional(),
-});
-
-export type RetrievedChunk = z.infer<typeof RetrievedChunkSchema>;
 

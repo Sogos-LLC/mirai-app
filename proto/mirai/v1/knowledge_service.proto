@@ -125,6 +125,8 @@ message UploadAndProcessResponse {
   KnowledgeSource source = 1;
   // AI-generated summary proving RAG works
   string rag_summary = 2;
+  // Structured document index for AI navigation (topics, concepts, etc.)
+  DocumentIndex document_index = 3;
 }
 
 // ListKnowledgeSourcesBySessionRequest for listing session sources.

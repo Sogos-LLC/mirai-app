@@ -13,6 +13,35 @@ func buildSingleComponentPromptWithPosition(req service.GenerateLessonRequest, p
 
 	sb.WriteString("You are generating a single educational component for a lesson.\n\n")
 
+	// CRITICAL: Internal Data Only constraint
+	if req.InternalDataOnly {
+		sb.WriteString("## CRITICAL CONSTRAINT: INTERNAL DATA ONLY MODE\n")
+		sb.WriteString("**This component's content MUST come ONLY from the provided source material.**\n\n")
+		sb.WriteString("You are strictly forbidden from:\n")
+		sb.WriteString("- Adding any information not present in the source documents\n")
+		sb.WriteString("- Making up examples, facts, or explanations\n")
+		sb.WriteString("- Using general knowledge to fill gaps\n")
+		sb.WriteString("- Defaulting to domain-specific examples not in the source\n\n")
+
+		// Include RAG context
+		if len(req.RAGContext) > 0 {
+			sb.WriteString("## Source Content (Use ONLY this material)\n")
+
+			// Group chunks by source for better organization
+			sourceChunks := make(map[string][]service.RAGChunkInput)
+			for _, chunk := range req.RAGContext {
+				sourceChunks[chunk.SourceName] = append(sourceChunks[chunk.SourceName], chunk)
+			}
+
+			for sourceName, chunks := range sourceChunks {
+				sb.WriteString(fmt.Sprintf("**[%s]**\n", sourceName))
+				for _, chunk := range chunks {
+					sb.WriteString(fmt.Sprintf("```\n%s\n```\n\n", chunk.Content))
+				}
+			}
+		}
+	}
+
 	// Course and lesson context
 	sb.WriteString("## Context\n")
 	sb.WriteString(fmt.Sprintf("**Course:** %s\n", req.CourseTitle))
