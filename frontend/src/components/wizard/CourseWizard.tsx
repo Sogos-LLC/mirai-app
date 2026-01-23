@@ -31,10 +31,12 @@ import CourseNameStep from './steps/CourseNameStep';
 import TitleDescriptionStep from './steps/TitleDescriptionStep';
 import SMEPersonasStep from './steps/SMEPersonasStep';
 import AudiencePersonasStep from './steps/AudiencePersonasStep';
+import KnowledgeSourcesStep from './steps/KnowledgeSourcesStep';
 import ToneSelectionStep from './steps/ToneSelectionStep';
 import GeneratingStep from './steps/GeneratingStep';
 import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import type { PendingFile } from '@/machines/courseWizardMachine';
 
 export default function CourseWizard() {
   const router = useRouter();
@@ -471,6 +473,19 @@ export default function CourseWizard() {
           onNext={() => send({ type: 'APPROVE_AUDIENCES' })}
           onBack={() => send({ type: 'GO_BACK' })}
           onRegenerate={() => send({ type: 'REGENERATE_AUDIENCES' })}
+          onCancel={handleCancel}
+          isLoading={isLoading}
+        />
+      )}
+
+      {state.matches('knowledgeSources') && (
+        <KnowledgeSourcesStep
+          pendingFiles={context.pendingFiles}
+          onAddFiles={(files: PendingFile[]) => send({ type: 'ADD_FILES', files })}
+          onRemoveFile={(fileId) => send({ type: 'REMOVE_FILE', fileId })}
+          onNext={() => send({ type: 'APPROVE_KNOWLEDGE_SOURCES' })}
+          onSkip={() => send({ type: 'SKIP_KNOWLEDGE_SOURCES' })}
+          onBack={() => send({ type: 'GO_BACK' })}
           onCancel={handleCancel}
           isLoading={isLoading}
         />

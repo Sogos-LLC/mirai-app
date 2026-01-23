@@ -7,6 +7,17 @@ import type {
   WizardState,
 } from '@/gen/mirai/v1/course_wizard_pb';
 import type { CourseOutline, GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
+
+/**
+ * Pending file to be uploaded after course creation
+ */
+export interface PendingFile {
+  id: string;
+  file: File;
+  name: string;
+  size: number;
+  mimeType: string;
+}
 import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 // ============================================================
@@ -15,13 +26,14 @@ import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 /**
  * Wizard step identifiers matching backend wizard state
- * Note: 'additionalContext' was merged into 'toneSelection' (now a 5-step wizard)
+ * Note: 'additionalContext' was merged into 'toneSelection' (now a 6-step wizard)
  */
 export type WizardStep =
   | 'courseName'
   | 'titleDescription'
   | 'smeSelection'
   | 'audienceSelection'
+  | 'knowledgeSources'
   | 'toneSelection'
   | 'outlineJobQueued';
 
@@ -45,7 +57,10 @@ export interface CourseWizardContext {
   audiencePersonas: AudiencePersona[];
   selectedAudienceIds: string[];
 
-  // Step 5: Tone Options
+  // Step 5: Knowledge Sources (optional)
+  pendingFiles: PendingFile[];
+
+  // Step 6: Tone Options
   toneOptions: ToneOption[];
   selectedToneId: string;
 
@@ -92,7 +107,12 @@ export type CourseWizardEvent =
   | { type: 'ADD_TEMPLATE_AUDIENCE'; persona: AudiencePersona }
   | { type: 'APPROVE_AUDIENCES' }
   | { type: 'REGENERATE_AUDIENCES' }
-  // Step 5: Tone Selection
+  // Step 5: Knowledge Sources
+  | { type: 'ADD_FILES'; files: PendingFile[] }
+  | { type: 'REMOVE_FILE'; fileId: string }
+  | { type: 'APPROVE_KNOWLEDGE_SOURCES' }
+  | { type: 'SKIP_KNOWLEDGE_SOURCES' }
+  // Step 6: Tone Selection
   | { type: 'SELECT_TONE'; toneId: string }
   | { type: 'APPROVE_TONE' }
   | { type: 'REGENERATE_TONES' }
@@ -157,6 +177,7 @@ export const initialContext: CourseWizardContext = {
   selectedSMEIds: [],
   audiencePersonas: [],
   selectedAudienceIds: [],
+  pendingFiles: [],
   toneOptions: [],
   selectedToneId: '',
   additionalContext: '',
@@ -358,6 +379,23 @@ export const courseWizardMachine = createMachine({
           })),
         },
         {
+          target: 'knowledgeSources',
+          guard: ({ context }) => context.savedState?.currentStep === 'knowledgeSources',
+          actions: assign(({ context }) => ({
+            courseName: context.savedState?.data?.courseName ?? '',
+            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
+            improvedTitle: context.savedState?.data?.improvedTitle ?? '',
+            description: context.savedState?.data?.description ?? '',
+            smePersonas: context.savedState?.data?.smePersonas ?? [],
+            selectedSMEIds: context.savedState?.data?.selectedSmeIds ?? [],
+            audiencePersonas: context.savedState?.data?.audiencePersonas ?? [],
+            selectedAudienceIds: context.savedState?.data?.selectedAudienceIds ?? [],
+            pendingFiles: [], // Files cannot be restored from saved state
+            currentStep: 'knowledgeSources' as const,
+            flowStartedAt: Date.now(),
+          })),
+        },
+        {
           target: 'toneSelection',
           guard: ({ context }) => context.savedState?.currentStep === 'toneSelection',
           actions: assign(({ context }) => ({
@@ -369,6 +407,7 @@ export const courseWizardMachine = createMachine({
             selectedSMEIds: context.savedState?.data?.selectedSmeIds ?? [],
             audiencePersonas: context.savedState?.data?.audiencePersonas ?? [],
             selectedAudienceIds: context.savedState?.data?.selectedAudienceIds ?? [],
+            pendingFiles: [], // Files cannot be restored from saved state
             toneOptions: context.savedState?.data?.toneOptions ?? [],
             selectedToneId: context.savedState?.data?.selectedToneId ?? '',
             currentStep: 'toneSelection' as const,
@@ -666,11 +705,44 @@ export const courseWizardMachine = createMachine({
           }),
         },
         APPROVE_AUDIENCES: {
-          target: 'generatingTones',
+          target: 'knowledgeSources',
           guard: ({ context }) => context.selectedAudienceIds.length > 0,
         },
         REGENERATE_AUDIENCES: 'generatingAudiences',
         GO_BACK: 'smeSelection',
+        CANCEL: 'cancelled',
+      },
+    },
+
+    // --------------------------------------------------------
+    // Step 5: Knowledge Sources (Optional)
+    // --------------------------------------------------------
+    knowledgeSources: {
+      entry: assign({
+        currentStep: 'knowledgeSources' as const,
+      }),
+      on: {
+        ADD_FILES: {
+          actions: assign({
+            pendingFiles: ({ context, event }) => [...context.pendingFiles, ...event.files],
+          }),
+        },
+        REMOVE_FILE: {
+          actions: assign({
+            pendingFiles: ({ context, event }) =>
+              context.pendingFiles.filter((f) => f.id !== event.fileId),
+          }),
+        },
+        APPROVE_KNOWLEDGE_SOURCES: {
+          target: 'generatingTones',
+        },
+        SKIP_KNOWLEDGE_SOURCES: {
+          target: 'generatingTones',
+          actions: assign({
+            pendingFiles: [],
+          }),
+        },
+        GO_BACK: 'audienceSelection',
         CANCEL: 'cancelled',
       },
     },
@@ -748,7 +820,7 @@ export const courseWizardMachine = createMachine({
           }),
         },
         REGENERATE_TONES: 'generatingTones',
-        GO_BACK: 'audienceSelection',
+        GO_BACK: 'knowledgeSources',
         CANCEL: 'cancelled',
       },
     },
@@ -841,7 +913,7 @@ export const courseWizardMachine = createMachine({
 // ============================================================
 
 /**
- * Get step number (1-5) from step identifier
+ * Get step number (1-6) from step identifier
  * Note: outlineJobQueued is a confirmation screen, not a wizard step
  */
 export function getStepNumber(step: WizardStep): number {
@@ -850,8 +922,9 @@ export function getStepNumber(step: WizardStep): number {
     titleDescription: 2,
     smeSelection: 3,
     audienceSelection: 4,
-    toneSelection: 5,
-    outlineJobQueued: 5, // Same as toneSelection since it's a confirmation
+    knowledgeSources: 5,
+    toneSelection: 6,
+    outlineJobQueued: 6, // Same as toneSelection since it's a confirmation
   };
   return stepMap[step];
 }
@@ -865,6 +938,7 @@ export function getStepLabel(step: WizardStep): string {
     titleDescription: 'Title & Description',
     smeSelection: 'SME Personas',
     audienceSelection: 'Target Audience',
+    knowledgeSources: 'Knowledge',
     toneSelection: 'Tone & Context',
     outlineJobQueued: 'Generation Started',
   };
@@ -880,6 +954,7 @@ export function getAllSteps(): WizardStep[] {
     'titleDescription',
     'smeSelection',
     'audienceSelection',
+    'knowledgeSources',
     'toneSelection',
   ];
 }

@@ -9,8 +9,8 @@ import { takeScreenshot, waitForAIGeneration } from '../helpers';
  * 2. Title & Description - Review AI-generated title
  * 3. SME Personas - Select subject matter experts
  * 4. Target Audience - Select audience personas
- * 5. Tone & Style - Select communication style
- * 6. Additional Context - Add extra instructions (no AI)
+ * 5. Knowledge Sources - Upload documents (optional)
+ * 6. Tone & Style - Select communication style + Additional Context
  * 7. Generate Outline - Triggers background job
  */
 export class WizardPage {
@@ -83,19 +83,51 @@ export class WizardPage {
 
   // ===== STEP 4: Target Audience =====
 
-  /** Click "Generate Tones" to proceed to tone step and wait for AI */
-  async clickGenerateTones(): Promise<void> {
-    console.log('\n--- Wizard Step 4: Target Audience → Generate Tones ---');
-    const btn = this.page.getByRole('button', { name: /generate tones/i });
+  /** Click "Continue" or "Skip" to proceed to knowledge sources step */
+  async clickContinueToKnowledgeSources(): Promise<void> {
+    console.log('\n--- Wizard Step 4: Target Audience → Knowledge Sources ---');
+    // The button says "Generate Tones" but now goes to Knowledge Sources first
+    const btn = this.page.getByRole('button', { name: /generate audiences|continue/i }).last();
     await expect(btn).toBeVisible({ timeout: 10000 });
     await expect(btn).toBeEnabled({ timeout: 10000 });
-    console.log('Clicking Generate Tones...');
+    console.log('Clicking to proceed to Knowledge Sources...');
     await btn.click();
-    await waitForAIGeneration(this.page, 'tone options');
-    await this.screenshot('step5-tone', 'Tone & Style step');
+    await this.page.waitForTimeout(2000);
+    await this.screenshot('step5-knowledge-sources', 'Knowledge Sources step');
   }
 
-  // ===== STEP 5: Tone & Style + Additional Context (Combined) =====
+  // ===== STEP 5: Knowledge Sources =====
+
+  /**
+   * Handle the knowledge sources step.
+   * This step is optional - can upload files or skip.
+   * @param files - Optional array of file paths to upload
+   */
+  async handleKnowledgeSourcesStep(files?: string[]): Promise<void> {
+    console.log('\n--- Wizard Step 5: Knowledge Sources ---');
+
+    // If files provided, upload them
+    if (files && files.length > 0) {
+      const fileInput = this.page.locator('input[type="file"]');
+      if (await fileInput.count() > 0) {
+        await fileInput.setInputFiles(files);
+        await this.page.waitForTimeout(1000);
+        await this.screenshot('files-uploaded', 'Files uploaded');
+      }
+    }
+
+    // Click Continue or Skip to proceed (button label changes based on files)
+    const continueBtn = this.page.getByRole('button', { name: /continue|skip/i }).last();
+    await expect(continueBtn).toBeVisible({ timeout: 10000 });
+    console.log('Clicking to proceed from Knowledge Sources...');
+    await continueBtn.click();
+
+    // Wait for tone generation
+    await waitForAIGeneration(this.page, 'tone options');
+    await this.screenshot('step6-tone', 'Tone & Style step');
+  }
+
+  // ===== STEP 6: Tone & Style + Additional Context (Combined) =====
   // Note: The wizard UI was updated to combine Tone and Context into one step.
   // The "Generate Outline" button is now on the Tone step.
 
@@ -188,21 +220,23 @@ export class WizardPage {
   /**
    * Run the complete wizard flow from start to finish.
    *
-   * Flow (Updated - Wizard now navigates directly to outline page):
+   * Flow (Updated - Now includes Knowledge Sources step):
    * 1. Enter course name → Click "Generate Title" (AI: ~20s)
    * 2. Review title → Click "Generate Personas" (AI: ~20s)
    * 3. Review SMEs → Click "Generate Audiences" (AI: ~20s)
-   * 4. Review audiences → Click "Generate Tones" (AI: ~20s)
-   * 5. Review tones + Enter context → Click "Generate Outline"
-   * 6. Redirect to outline page → Wait for outline generation
+   * 4. Review audiences → Proceed to Knowledge Sources
+   * 5. Knowledge Sources → Skip or upload files → Generate Tones (AI: ~20s)
+   * 6. Review tones + Enter context → Click "Generate Outline"
+   * 7. Redirect to outline page → Wait for outline generation
    *
    * Returns the course ID on success, or empty string on failure.
    */
   async completeWizard(options: {
     courseName: string;
     additionalContext?: string;
+    knowledgeSourceFiles?: string[];
   }): Promise<string> {
-    const { courseName, additionalContext } = options;
+    const { courseName, additionalContext, knowledgeSourceFiles } = options;
 
     // Step 1: Course Name
     await this.enterCourseName(courseName);
@@ -214,13 +248,16 @@ export class WizardPage {
     // Step 3: SME Personas → Generate Audiences
     await this.clickGenerateAudiences();
 
-    // Step 4: Target Audience → Generate Tones
-    await this.clickGenerateTones();
+    // Step 4: Target Audience → Knowledge Sources
+    await this.clickContinueToKnowledgeSources();
 
-    // Step 5: Tone & Style + Additional Context → Generate Outline
+    // Step 5: Knowledge Sources → Generate Tones
+    await this.handleKnowledgeSourcesStep(knowledgeSourceFiles);
+
+    // Step 6: Tone & Style + Additional Context → Generate Outline
     await this.handleToneAndContextStep(additionalContext);
 
-    // Step 6: Wait for Outline Generation
+    // Step 7: Wait for Outline Generation
     return this.waitForOutlineGeneration();
   }
 
