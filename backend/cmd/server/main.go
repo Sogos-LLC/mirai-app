@@ -343,11 +343,13 @@ func main() {
 	}
 
 	// Create HTTP server
+	// ReadTimeout increased to 120s for file upload endpoints (UploadAndProcess)
+	// WriteTimeout disabled for streaming support (SubscribeNotifications, SubscribeJobs)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      finalHandler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 0, // Disabled for streaming support (SubscribeNotifications)
+		ReadTimeout:  120 * time.Second,
+		WriteTimeout: 0,
 		IdleTimeout:  60 * time.Second,
 	}
 

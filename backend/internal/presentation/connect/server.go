@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -210,15 +211,21 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 // CORSMiddleware wraps an http.Handler with CORS support.
 func CORSMiddleware(allowedOrigin string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Log incoming request at middleware level (before any handler processing)
+		contentLength := r.Header.Get("Content-Length")
+		log.Printf("[CORS] Request: %s %s (Content-Length: %s, Origin: %s)",
+			r.Method, r.URL.Path, contentLength, r.Header.Get("Origin"))
+
 		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Connect-Protocol-Version")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Connect-Protocol-Version, Connect-Timeout-Ms")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 
 		// Handle preflight
 		if r.Method == http.MethodOptions {
+			log.Printf("[CORS] Preflight handled for: %s", r.URL.Path)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
