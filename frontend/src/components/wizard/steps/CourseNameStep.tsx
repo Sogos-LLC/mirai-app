@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Wand2, Loader2, Paperclip } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, Paperclip, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import WizardNavigation from '../WizardNavigation';
@@ -18,6 +18,7 @@ interface CourseNameStepProps {
   isGeneratingOutcomes?: boolean;
   // Knowledge sources
   knowledgeFileCount?: number;
+  processedSourcesCount?: number;
   onOpenKnowledgeModal?: () => void;
 }
 
@@ -32,8 +33,11 @@ export default function CourseNameStep({
   isLoading = false,
   isGeneratingOutcomes = false,
   knowledgeFileCount = 0,
+  processedSourcesCount = 0,
   onOpenKnowledgeModal,
 }: CourseNameStepProps) {
+  const hasProcessedSources = processedSourcesCount > 0;
+  const hasPendingFiles = knowledgeFileCount > 0;
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (courseName.trim().length > 0) {
@@ -81,17 +85,27 @@ export default function CourseNameStep({
                     <button
                       type="button"
                       onClick={onOpenKnowledgeModal}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
-                        bg-surface border border-gray-300 dark:border-gray-600
-                        text-secondary hover:bg-hover hover:text-primary
-                        transition-colors"
-                      title="Add knowledge sources to improve generation"
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
+                        transition-colors ${
+                          hasProcessedSources
+                            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30'
+                            : 'bg-surface border border-gray-300 dark:border-gray-600 text-secondary hover:bg-hover hover:text-primary'
+                        }`}
+                      title={hasProcessedSources ? 'View or add more knowledge sources' : 'Add knowledge sources to improve generation'}
                     >
-                      <Paperclip className="w-3.5 h-3.5" />
-                      Add Knowledge
-                      {knowledgeFileCount > 0 && (
-                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-primary-600 text-white">
-                          {knowledgeFileCount}
+                      {hasProcessedSources ? (
+                        <CheckCircle className="w-3.5 h-3.5" />
+                      ) : (
+                        <Paperclip className="w-3.5 h-3.5" />
+                      )}
+                      {hasProcessedSources ? 'Knowledge Added' : 'Add Knowledge'}
+                      {(hasProcessedSources || hasPendingFiles) && (
+                        <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${
+                          hasProcessedSources
+                            ? 'bg-green-600 text-white'
+                            : 'bg-primary-600 text-white'
+                        }`}>
+                          {hasProcessedSources ? processedSourcesCount : knowledgeFileCount}
                         </span>
                       )}
                     </button>

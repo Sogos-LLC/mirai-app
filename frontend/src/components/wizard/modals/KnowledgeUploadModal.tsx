@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Upload, FileText, X, Check, AlertCircle, Paperclip } from 'lucide-react';
+import { Upload, FileText, X, Check, AlertCircle, Paperclip, CheckCircle } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
+import type { ProcessedSource } from './KnowledgeVerificationModal';
 
 export interface PendingFile {
   id: string;
@@ -20,6 +21,7 @@ interface KnowledgeUploadModalProps {
   pendingFiles: PendingFile[];
   onAddFiles: (files: PendingFile[]) => void;
   onRemoveFile: (fileId: string) => void;
+  processedSources?: ProcessedSource[];
 }
 
 const SUPPORTED_TYPES = [
@@ -50,6 +52,7 @@ export function KnowledgeUploadModal({
   pendingFiles,
   onAddFiles,
   onRemoveFile,
+  processedSources = [],
 }: KnowledgeUploadModalProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -190,11 +193,41 @@ export function KnowledgeUploadModal({
           <p className="text-sm text-muted">Supported: PDF, DOCX, TXT, Markdown</p>
         </div>
 
+        {/* Already processed sources (read-only) */}
+        {processedSources.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-primary mb-3">
+              Already Indexed ({processedSources.length})
+            </h3>
+            <div className="space-y-2 max-h-32 overflow-y-auto mb-4">
+              {processedSources.map((source) => (
+                <div
+                  key={source.id}
+                  className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-primary truncate">{source.name}</p>
+                      <p className="text-xs text-muted">
+                        {source.chunkCount.toLocaleString()} chunks • {source.tokenCount.toLocaleString()} tokens
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-green-600 dark:text-green-400 flex-shrink-0">
+                    Indexed
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Pending files list */}
         {pendingFiles.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-primary mb-3">
-              Selected Files ({pendingFiles.length})
+              {processedSources.length > 0 ? 'New Files to Add' : 'Selected Files'} ({pendingFiles.length})
             </h3>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {pendingFiles.map((pf) => (

@@ -365,6 +365,13 @@ export default function CourseWizard() {
     setKnowledgeModalState('closed');
   }, []);
 
+  const handleAddMoreFiles = useCallback(() => {
+    // Clear pending files so user can add fresh batch
+    setPendingFiles([]);
+    // Transition back to upload modal
+    setKnowledgeModalState('upload');
+  }, []);
+
   // Loading state while checking for saved state
   if (state.matches('checkingSavedState') || getSavedState.isLoading) {
     return (
@@ -548,6 +555,7 @@ export default function CourseWizard() {
           isLoading={isLoading}
           isGeneratingOutcomes={state.matches('generatingOutcomes')}
           knowledgeFileCount={pendingFiles.length}
+          processedSourcesCount={processedSources.length}
           onOpenKnowledgeModal={handleOpenKnowledgeModal}
         />
       )}
@@ -621,6 +629,7 @@ export default function CourseWizard() {
         pendingFiles={pendingFiles}
         onAddFiles={handleAddFiles}
         onRemoveFile={handleRemoveFile}
+        processedSources={processedSources}
       />
 
       <KnowledgeProcessingModal
@@ -633,6 +642,7 @@ export default function CourseWizard() {
       <KnowledgeVerificationModal
         isOpen={knowledgeModalState === 'verification'}
         onClose={handleVerificationClose}
+        onAddMore={handleAddMoreFiles}
         sources={processedSources}
       />
     </>
