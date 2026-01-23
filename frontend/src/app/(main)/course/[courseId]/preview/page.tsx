@@ -265,7 +265,14 @@ export default function CoursePreviewPage() {
             {progressPercent}% complete
           </span>
           <button
-            onClick={() => router.push(`/course/${courseId}/editor`)}
+            onClick={() => {
+              // Navigate to editor with current lesson selected
+              const lessonId = currentLesson?.outlineLessonId;
+              const url = lessonId
+                ? `/course/${courseId}/editor?lessonId=${lessonId}`
+                : `/course/${courseId}/editor`;
+              router.push(url);
+            }}
             className="flex items-center gap-2 px-3 py-2 min-h-[44px] text-secondary hover:text-primary hover:bg-hover rounded-lg transition-colors"
             aria-label="Back to Editor"
           >

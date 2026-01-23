@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   Eye,
@@ -295,10 +295,12 @@ type ExportModalState = 'idle' | 'starting' | 'processing' | 'completed' | 'fail
 export default function CourseEditorPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const courseId = params.courseId as string;
+  const lessonIdFromUrl = searchParams.get('lessonId');
   const isMobile = useIsMobile();
 
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(lessonIdFromUrl);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [localComponents, setLocalComponents] = useState<LessonComponent[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -397,6 +399,19 @@ export default function CourseEditorPage() {
     });
     return items;
   }, [outline, generatedLessons]);
+
+  // Auto-select first lesson with generated content when none selected
+  useEffect(() => {
+    if (!selectedLessonId && lessonsList.length > 0) {
+      // Find first lesson with generated content
+      const firstWithContent = lessonsList.find((l) => !!l.generated);
+      if (firstWithContent) {
+        setSelectedLessonId(firstWithContent.id);
+        // Expand the section containing this lesson
+        setExpandedSections((prev) => new Set(prev).add(firstWithContent.sectionIndex));
+      }
+    }
+  }, [selectedLessonId, lessonsList]);
 
   // Get current lesson
   const currentLesson = useMemo(() => {

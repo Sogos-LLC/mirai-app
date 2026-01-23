@@ -264,9 +264,22 @@ export const outlineReviewMachine = createMachine({
             input: ({ context }) => ({ jobId: context.outlineJobId! }),
             onDone: [
               {
+                // Handle missing job - go to error
+                target: '#outlineReview.error',
+                guard: ({ event }) => !event.output.job,
+                actions: assign({
+                  error: () =>
+                    createAuthError(
+                      'NOT_FOUND',
+                      'Job not found. It may have been deleted.',
+                      true
+                    ),
+                }),
+              },
+              {
                 // Job completed - fetch outline
                 target: 'fetchingOutline',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.COMPLETED,
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.COMPLETED,
                 actions: assign({
                   progressPercent: 90,
                   progressMessage: 'Outline generated, loading...',
@@ -275,12 +288,25 @@ export const outlineReviewMachine = createMachine({
               {
                 // Job failed
                 target: '#outlineReview.error',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.FAILED,
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.FAILED,
                 actions: assign({
                   error: ({ event }) =>
                     createAuthError(
                       'GENERATION_FAILED',
-                      event.output.job.errorMessage || 'Outline generation failed',
+                      event.output.job?.errorMessage || 'Outline generation failed',
+                      true
+                    ),
+                }),
+              },
+              {
+                // Job cancelled
+                target: '#outlineReview.error',
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.CANCELLED,
+                actions: assign({
+                  error: () =>
+                    createAuthError(
+                      'GENERATION_FAILED',
+                      'Outline generation was cancelled',
                       true
                     ),
                 }),
@@ -290,9 +316,9 @@ export const outlineReviewMachine = createMachine({
                 target: 'waiting',
                 actions: assign({
                   progressPercent: ({ event }) =>
-                    Math.min(85, 10 + (event.output.job.progressPercent || 0) * 0.75),
+                    Math.min(85, 10 + (event.output.job?.progressPercent || 0) * 0.75),
                   progressMessage: ({ event }) =>
-                    event.output.job.progressMessage || 'Generating outline...',
+                    event.output.job?.progressMessage || 'Generating outline...',
                 }),
               },
             ],
@@ -443,9 +469,22 @@ export const outlineReviewMachine = createMachine({
             input: ({ context }) => ({ jobId: context.lessonJobId! }),
             onDone: [
               {
+                // Handle missing job - go to error
+                target: '#outlineReview.error',
+                guard: ({ event }) => !event.output.job,
+                actions: assign({
+                  error: () =>
+                    createAuthError(
+                      'NOT_FOUND',
+                      'Job not found. It may have been deleted.',
+                      true
+                    ),
+                }),
+              },
+              {
                 // Job completed - go to complete state
                 target: '#outlineReview.complete',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.COMPLETED,
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.COMPLETED,
                 actions: assign({
                   progressPercent: 100,
                   progressMessage: 'All lessons generated!',
@@ -454,12 +493,25 @@ export const outlineReviewMachine = createMachine({
               {
                 // Job failed
                 target: '#outlineReview.error',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.FAILED,
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.FAILED,
                 actions: assign({
                   error: ({ event }) =>
                     createAuthError(
                       'GENERATION_FAILED',
-                      event.output.job.errorMessage || 'Lesson generation failed',
+                      event.output.job?.errorMessage || 'Lesson generation failed',
+                      true
+                    ),
+                }),
+              },
+              {
+                // Job cancelled
+                target: '#outlineReview.error',
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.CANCELLED,
+                actions: assign({
+                  error: () =>
+                    createAuthError(
+                      'GENERATION_FAILED',
+                      'Lesson generation was cancelled',
                       true
                     ),
                 }),
@@ -469,9 +521,9 @@ export const outlineReviewMachine = createMachine({
                 target: 'waiting',
                 actions: assign({
                   progressPercent: ({ event }) =>
-                    Math.min(95, 5 + (event.output.job.progressPercent || 0) * 0.9),
+                    Math.min(95, 5 + (event.output.job?.progressPercent || 0) * 0.9),
                   progressMessage: ({ event }) =>
-                    event.output.job.progressMessage || 'Generating lessons...',
+                    event.output.job?.progressMessage || 'Generating lessons...',
                 }),
               },
             ],
