@@ -45,6 +45,7 @@ export function ViewerLayout({
         courseTitle={preview.courseTitle}
         sectionTitle={currentLesson.sectionTitle}
         lessonTitle={currentLesson.title}
+        lessonId={currentLesson.id}
         progressPercent={progressPercent}
         onMenuClick={() => setShowMobileSidebar(true)}
         showMenu

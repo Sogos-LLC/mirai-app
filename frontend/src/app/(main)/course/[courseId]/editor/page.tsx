@@ -5,7 +5,6 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   Eye,
-  Save,
   Plus,
   GripVertical,
   Loader2,
@@ -26,6 +25,8 @@ import {
   MoreVertical,
   Pencil,
   Target,
+  Cloud,
+  CloudOff,
 } from 'lucide-react';
 import {
   DndContext,
@@ -319,6 +320,11 @@ export default function CourseEditorPage() {
   const [realignmentComponent, setRealignmentComponent] = useState<LessonComponent | null>(null);
   const [isRealigning, setIsRealigning] = useState(false);
 
+  // Auto-save state
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveStatusTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
 
@@ -508,6 +514,67 @@ export default function CourseEditorPage() {
     }
   }, [currentLesson?.generated?.components, selectedLessonId]);
 
+  // Auto-save effect - debounced save when changes occur
+  useEffect(() => {
+    if (!hasChanges || isSaving) return;
+
+    const generatedLessonId = currentLessonRef.current?.generated?.id;
+    if (!generatedLessonId || localComponentsRef.current.length === 0) return;
+
+    // Clear any existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Debounce save by 1.5 seconds
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setSaveStatus('saving');
+
+      try {
+        await saveComponents({
+          courseId,
+          generatedLessonId,
+          components: localComponentsRef.current.map((c) => ({
+            id: c.id,
+            type: c.type as LessonComponentType,
+            order: c.order,
+            contentJson: c.contentJson,
+            alignment: c.alignment
+              ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
+              : undefined,
+          })),
+        });
+        setHasChanges(false);
+        setSaveStatus('saved');
+
+        // Clear "saved" status after 2 seconds
+        if (saveStatusTimerRef.current) {
+          clearTimeout(saveStatusTimerRef.current);
+        }
+        saveStatusTimerRef.current = setTimeout(() => {
+          setSaveStatus('idle');
+        }, 2000);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        setSaveStatus('error');
+      }
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [hasChanges, isSaving, courseId, saveComponents]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
+    };
+  }, []);
+
   const toggleSection = (sectionIndex: number) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -601,32 +668,6 @@ export default function CourseEditorPage() {
     });
     setHasChanges(true);
   }, []);
-
-  const handleSave = async () => {
-    // Need the generated lesson ID, not the outline lesson ID
-    const generatedLessonId = currentLesson?.generated?.id;
-    if (!generatedLessonId || localComponents.length === 0) return;
-
-    try {
-      await saveComponents({
-        courseId,
-        generatedLessonId,
-        components: localComponents.map((c) => ({
-          id: c.id,
-          type: c.type as LessonComponentType,
-          order: c.order,
-          contentJson: c.contentJson,
-          alignment: c.alignment
-            ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
-            : undefined,
-        })),
-      });
-      setHasChanges(false);
-    } catch (error) {
-      console.error('Failed to save components:', error);
-      // Error handling - could show a toast notification here
-    }
-  };
 
   // Export handlers
   const handleExport = async () => {
@@ -746,8 +787,24 @@ export default function CourseEditorPage() {
           </button>
           <div className="h-6 w-px bg-surface border-l" />
           <h1 className="text-lg md:text-xl font-semibold text-primary">Course Editor</h1>
-          {hasChanges && (
-            <span className="text-xs text-warning bg-yellow-100 px-2 py-1 rounded">Unsaved</span>
+          {/* Auto-save status indicator */}
+          {saveStatus === 'saving' && (
+            <span className="flex items-center gap-1.5 text-xs text-secondary">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="hidden sm:inline">Saving...</span>
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+              <Cloud className="w-3 h-3" />
+              <span className="hidden sm:inline">Saved</span>
+            </span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+              <CloudOff className="w-3 h-3" />
+              <span className="hidden sm:inline">Save failed</span>
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -766,19 +823,6 @@ export default function CourseEditorPage() {
           >
             <Download className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Export</span>
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSave}
-            disabled={!hasChanges || isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 sm:mr-2" />
-            )}
-            <span className="hidden sm:inline">{isSaving ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
       </div>

@@ -7,19 +7,24 @@ import { ExportButton } from './ExportButton';
 
 interface PreviewActionsProps {
   courseId: string;
+  lessonId?: string;
   variant?: 'icon' | 'full';
   className?: string;
 }
 
 export function PreviewActions({
   courseId,
+  lessonId,
   variant = 'full',
   className = '',
 }: PreviewActionsProps) {
   const router = useRouter();
 
   const handleEdit = () => {
-    router.push(`/course/${courseId}/editor`);
+    const url = lessonId
+      ? `/course/${courseId}/editor?lessonId=${lessonId}`
+      : `/course/${courseId}/editor`;
+    router.push(url);
   };
 
   if (variant === 'icon') {

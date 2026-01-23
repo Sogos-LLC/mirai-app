@@ -10,6 +10,7 @@ interface ViewerHeaderProps {
   courseTitle: string;
   sectionTitle: string;
   lessonTitle: string;
+  lessonId: string;
   progressPercent: number;
   onMenuClick?: () => void;
   showMenu?: boolean;
@@ -20,6 +21,7 @@ export function ViewerHeader({
   courseTitle,
   sectionTitle,
   lessonTitle,
+  lessonId,
   progressPercent,
   onMenuClick,
   showMenu = false,
@@ -61,7 +63,7 @@ export function ViewerHeader({
         </div>
 
         {/* Right: Actions */}
-        <PreviewActions courseId={courseId} variant="icon" />
+        <PreviewActions courseId={courseId} lessonId={lessonId} variant="icon" />
       </div>
 
       {/* Mobile progress bar */}
