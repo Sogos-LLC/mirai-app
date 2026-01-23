@@ -22,20 +22,20 @@ export function ViewerContent({ lesson }: ViewerContentProps) {
   return (
     <main
       ref={containerRef}
-      className="flex-1 overflow-y-auto"
+      className="flex-1 overflow-y-auto text-lg leading-relaxed"
     >
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-6 sm:px-10 lg:px-16 py-12">
         {/* Lesson header */}
         <FadeInView delay={0}>
-          <div className="mb-8">
-            <p className="text-sm text-muted mb-1">
+          <div className="mb-12">
+            <p className="text-lg text-muted mb-2">
               {lesson.sectionTitle} • Lesson {lesson.lessonIndex + 1}
             </p>
-            <h1 className="text-3xl md:text-4xl font-bold text-primary">
+            <h1 className="text-4xl md:text-5xl font-bold text-primary">
               {lesson.title}
             </h1>
             {lesson.description && (
-              <p className="text-lg text-secondary mt-3">
+              <p className="text-xl text-secondary mt-4">
                 {lesson.description}
               </p>
             )}
@@ -44,9 +44,9 @@ export function ViewerContent({ lesson }: ViewerContentProps) {
 
         {/* Components */}
         {components.length > 0 ? (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {components.map((component, index) => (
-              <FadeInView key={component.id || index} delay={(index + 1) * 100}>
+              <FadeInView key={component.id || index} delay={(index + 1) * 50}>
                 <ComponentRenderer component={component} />
               </FadeInView>
             ))}

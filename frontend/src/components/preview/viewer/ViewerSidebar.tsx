@@ -52,10 +52,10 @@ export function ViewerSidebar({
   let globalIndex = 0;
 
   return (
-    <aside className="w-72 bg-surface border-r flex flex-col h-full overflow-hidden">
+    <aside className="w-80 bg-surface border-r flex flex-col h-full overflow-hidden">
       {/* Progress header */}
-      <div className="p-4 border-b">
-        <p className="text-sm font-medium text-primary mb-2">Course Progress</p>
+      <div className="p-5 border-b">
+        <p className="text-base font-medium text-primary mb-3">Course Progress</p>
         <ProgressBar percent={progressPercent} showLabel size="md" />
       </div>
 
@@ -70,19 +70,19 @@ export function ViewerSidebar({
               {/* Section header */}
               <button
                 onClick={() => toggleSection(sectionIndex)}
-                className="w-full flex items-center gap-2 px-4 py-3 hover:bg-hover transition-colors text-left"
+                className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-hover transition-colors text-left"
               >
                 <span className="text-muted">
-                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                 </span>
-                <span className="text-sm font-medium text-primary truncate flex-1">
+                <span className="text-base font-medium text-primary truncate flex-1">
                   {section.title}
                 </span>
               </button>
 
               {/* Lessons */}
               {isExpanded && section.lessons && (
-                <div className="pb-2">
+                <div className="pb-3">
                   {section.lessons.map((lesson, lessonIndex) => {
                     const idx = startIndex + lessonIndex;
                     const isCurrent = idx === currentLessonIndex;
@@ -93,20 +93,20 @@ export function ViewerSidebar({
                       <button
                         key={lesson.id || lessonIndex}
                         onClick={() => onLessonClick(idx)}
-                        className={`w-full flex items-center gap-2 px-4 py-2 pl-10 text-left transition-colors ${
+                        className={`w-full flex items-center gap-3 px-5 py-2.5 pl-12 text-left transition-colors ${
                           isCurrent
                             ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
                             : 'hover:bg-hover text-secondary hover:text-primary'
                         }`}
                       >
                         {isCompleted ? (
-                          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                         ) : isCurrent ? (
-                          <Circle className="w-4 h-4 text-primary-600 fill-primary-600 flex-shrink-0" />
+                          <Circle className="w-5 h-5 text-primary-600 fill-primary-600 flex-shrink-0" />
                         ) : (
-                          <Circle className="w-4 h-4 text-muted flex-shrink-0" />
+                          <Circle className="w-5 h-5 text-muted flex-shrink-0" />
                         )}
-                        <span className="text-sm truncate">{lesson.title}</span>
+                        <span className="text-base truncate">{lesson.title}</span>
                       </button>
                     );
                   })}
