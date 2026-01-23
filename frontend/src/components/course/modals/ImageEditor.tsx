@@ -63,7 +63,7 @@ export function ImageEditor({
 
       // Update the URL with the generated image
       // Do NOT auto-save here - let the user review the image first
-      // and explicitly click "Save Changes" to persist and close the modal
+      // and explicitly click "Done" to persist and close the modal
       if (result.imageUrl) {
         setUrl(result.imageUrl);
         setImageError(false);
@@ -258,7 +258,7 @@ export function ImageEditor({
       {/* Save Button */}
       <div className="flex justify-end gap-3 pt-4 border-t border-subtle">
         <Button onClick={handleSave} variant="primary" disabled={isGenerating}>
-          Save Changes
+          Done
         </Button>
       </div>
     </div>

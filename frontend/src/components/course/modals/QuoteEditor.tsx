@@ -123,7 +123,7 @@ export function QuoteEditor({ contentJson, onSave }: QuoteEditorProps) {
           className="px-6 py-2 bg-purple-600 text-white font-medium rounded-lg
             hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Save Changes
+          Done
         </button>
       </div>
     </div>

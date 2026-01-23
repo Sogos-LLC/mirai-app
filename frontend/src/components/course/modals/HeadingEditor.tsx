@@ -79,7 +79,7 @@ export function HeadingEditor({ contentJson, onSave }: HeadingEditorProps) {
           className="px-6 py-2 bg-purple-600 text-white font-medium rounded-lg
             hover:bg-purple-700 transition-colors"
         >
-          Save Changes
+          Done
         </button>
       </div>
     </div>
