@@ -4,6 +4,7 @@ package mirai.v1;
 
 import "google/protobuf/timestamp.proto";
 import "mirai/v1/component_enums.proto";
+import "mirai/v1/course_wizard.proto";
 
 // =============================================================================
 // AI GENERATION TYPES - Jobs, Outlines, and Generated Lessons
@@ -110,6 +111,8 @@ message OutlineLesson {
   bool is_last_in_section = 8;
   bool is_first_in_course = 9;
   bool is_last_in_course = 10;
+  // Citations from knowledge sources used to inform this lesson
+  repeated KnowledgeCitation citations = 11;
 }
 
 // GeneratedLesson contains full lesson content.

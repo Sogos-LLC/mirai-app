@@ -651,8 +651,10 @@ type OutlineLesson struct {
 	IsLastInSection          bool                   `protobuf:"varint,8,opt,name=is_last_in_section,json=isLastInSection,proto3" json:"is_last_in_section,omitempty"`
 	IsFirstInCourse          bool                   `protobuf:"varint,9,opt,name=is_first_in_course,json=isFirstInCourse,proto3" json:"is_first_in_course,omitempty"`
 	IsLastInCourse           bool                   `protobuf:"varint,10,opt,name=is_last_in_course,json=isLastInCourse,proto3" json:"is_last_in_course,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Citations from knowledge sources used to inform this lesson
+	Citations     []*KnowledgeCitation `protobuf:"bytes,11,rep,name=citations,proto3" json:"citations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *OutlineLesson) Reset() {
@@ -753,6 +755,13 @@ func (x *OutlineLesson) GetIsLastInCourse() bool {
 		return x.IsLastInCourse
 	}
 	return false
+}
+
+func (x *OutlineLesson) GetCitations() []*KnowledgeCitation {
+	if x != nil {
+		return x.Citations
+	}
+	return nil
 }
 
 // GeneratedLesson contains full lesson content.
@@ -1096,7 +1105,7 @@ var File_mirai_v1_ai_generation_types_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\n" +
-	"\"mirai/v1/ai_generation_types.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1emirai/v1/component_enums.proto\"\x90\a\n" +
+	"\"mirai/v1/ai_generation_types.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1emirai/v1/component_enums.proto\x1a\x1cmirai/v1/course_wizard.proto\"\x90\a\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12/\n" +
@@ -1154,7 +1163,7 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x05order\x18\x04 \x01(\x05R\x05order\x121\n" +
 	"\alessons\x18\x05 \x03(\v2\x17.mirai.v1.OutlineLessonR\alessons\x12(\n" +
 	"\x10is_first_section\x18\x06 \x01(\bR\x0eisFirstSection\x12&\n" +
-	"\x0fis_last_section\x18\a \x01(\bR\risLastSection\"\x90\x03\n" +
+	"\x0fis_last_section\x18\a \x01(\bR\risLastSection\"\xcb\x03\n" +
 	"\rOutlineLesson\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -1166,7 +1175,8 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x12is_last_in_section\x18\b \x01(\bR\x0fisLastInSection\x12+\n" +
 	"\x12is_first_in_course\x18\t \x01(\bR\x0fisFirstInCourse\x12)\n" +
 	"\x11is_last_in_course\x18\n" +
-	" \x01(\bR\x0eisLastInCourse\"\xcc\x02\n" +
+	" \x01(\bR\x0eisLastInCourse\x129\n" +
+	"\tcitations\x18\v \x03(\v2\x1b.mirai.v1.KnowledgeCitationR\tcitations\"\xcc\x02\n" +
 	"\x0fGeneratedLesson\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12\x1d\n" +
@@ -1258,7 +1268,8 @@ var file_mirai_v1_ai_generation_types_proto_goTypes = []any{
 	(*ComponentAlignmentTargets)(nil), // 11: mirai.v1.ComponentAlignmentTargets
 	(*CourseGenerationInput)(nil),     // 12: mirai.v1.CourseGenerationInput
 	(*timestamppb.Timestamp)(nil),     // 13: google.protobuf.Timestamp
-	(LessonComponentType)(0),          // 14: mirai.v1.LessonComponentType
+	(*KnowledgeCitation)(nil),         // 14: mirai.v1.KnowledgeCitation
+	(LessonComponentType)(0),          // 15: mirai.v1.LessonComponentType
 }
 var file_mirai_v1_ai_generation_types_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.GenerationJob.type:type_name -> mirai.v1.GenerationJobType
@@ -1271,15 +1282,16 @@ var file_mirai_v1_ai_generation_types_proto_depIdxs = []int32{
 	13, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
 	13, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
 	7,  // 9: mirai.v1.OutlineSection.lessons:type_name -> mirai.v1.OutlineLesson
-	9,  // 10: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
-	13, // 11: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
-	14, // 12: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
-	10, // 13: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	14, // 10: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
+	9,  // 11: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
+	13, // 12: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
+	15, // 13: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
+	10, // 14: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_ai_generation_types_proto_init() }
@@ -1288,6 +1300,7 @@ func file_mirai_v1_ai_generation_types_proto_init() {
 		return
 	}
 	file_mirai_v1_component_enums_proto_init()
+	file_mirai_v1_course_wizard_proto_init()
 	file_mirai_v1_ai_generation_types_proto_msgTypes[0].OneofWrappers = []any{}
 	file_mirai_v1_ai_generation_types_proto_msgTypes[1].OneofWrappers = []any{}
 	file_mirai_v1_ai_generation_types_proto_msgTypes[4].OneofWrappers = []any{}

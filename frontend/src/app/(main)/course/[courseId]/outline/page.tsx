@@ -18,6 +18,7 @@ import {
   X,
   Copy,
   CheckCheck,
+  FileText,
 } from 'lucide-react';
 import {
   outlineReviewMachine,
@@ -704,6 +705,18 @@ export default function OutlineReviewPage() {
                                             {lesson.title || `Lesson ${lessonIndex + 1}`}
                                           </p>
                                           <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
+                                          {/* Citation indicator */}
+                                          {lesson.citations && lesson.citations.length > 0 && (
+                                            <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                              <button
+                                                className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                                                title={`${lesson.citations.length} knowledge source${lesson.citations.length > 1 ? 's' : ''}`}
+                                              >
+                                                <FileText className="w-3 h-3" />
+                                                <span>{lesson.citations.length}</span>
+                                              </button>
+                                            </div>
+                                          )}
                                         </div>
                                         {lesson.description && (
                                           <p className="text-xs text-secondary line-clamp-2">

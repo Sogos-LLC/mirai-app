@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { GenerationJobStatus, GenerationJobType, JobEventType, OutlineApprovalStatus } from "./ai_generation_types_pb";
+import { KnowledgeCitationSchema } from "./course_wizard_zod";
 import { LessonComponentType } from "./component_enums_pb";
 
 /**
@@ -76,6 +77,7 @@ export const OutlineLessonSchema = z.object({
   isLastInSection: z.boolean(),
   isFirstInCourse: z.boolean(),
   isLastInCourse: z.boolean(),
+  citations: z.array(KnowledgeCitationSchema),
 });
 
 export type OutlineLesson = z.infer<typeof OutlineLessonSchema>;
