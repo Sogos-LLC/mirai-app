@@ -22,6 +22,8 @@ spec:
         app: qdrant
         environment: uat
     spec:
+      securityContext:
+        fsGroup: 1000
       tolerations:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
