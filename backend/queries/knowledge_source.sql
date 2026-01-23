@@ -17,6 +17,23 @@ INSERT INTO knowledge_sources (
 )
 RETURNING *;
 
+-- name: CreateKnowledgeSourceWithSession :one
+-- Create a knowledge source with session_id (for pre-course wizard flow)
+INSERT INTO knowledge_sources (
+    id,
+    tenant_id,
+    session_id,
+    type,
+    status,
+    name,
+    file_path,
+    mime_type,
+    file_size_bytes
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
+)
+RETURNING *;
+
 -- name: GetKnowledgeSourceByID :one
 SELECT * FROM knowledge_sources WHERE id = $1;
 
@@ -33,6 +50,19 @@ UPDATE knowledge_sources SET
     processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $4
+RETURNING *;
+
+-- name: UpdateKnowledgeSourceWithSummary :one
+-- Update status with RAG-generated summary and token count
+UPDATE knowledge_sources SET
+    status = $1,
+    error_message = $2,
+    chunk_count = $3,
+    summary = $4,
+    token_count = $5,
+    processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
+    updated_at = NOW()
+WHERE id = $6
 RETURNING *;
 
 -- name: UpdateKnowledgeSourceVideoURLs :one
@@ -61,3 +91,25 @@ LIMIT $1;
 SELECT * FROM knowledge_sources
 WHERE course_id = $1 AND status = 'ready'
 ORDER BY created_at ASC;
+
+-- name: ListKnowledgeSourcesBySession :many
+-- List all sources for a session (pre-course wizard flow)
+SELECT * FROM knowledge_sources
+WHERE session_id = $1
+ORDER BY created_at DESC;
+
+-- name: GetReadySourcesBySession :many
+-- Get only ready sources for a session
+SELECT * FROM knowledge_sources
+WHERE session_id = $1 AND status = 'ready'
+ORDER BY created_at ASC;
+
+-- name: LinkSessionToCourse :execrows
+-- Link all sources from a session to a course
+UPDATE knowledge_sources SET
+    course_id = $2,
+    updated_at = NOW()
+WHERE session_id = $1 AND course_id IS NULL;
+
+-- name: CountKnowledgeSourcesBySession :one
+SELECT COUNT(*)::int as count FROM knowledge_sources WHERE session_id = $1;

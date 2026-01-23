@@ -44,14 +44,15 @@ func (c *Client) GenerateImprovedTitle(ctx context.Context, courseName string) (
 }
 
 // GenerateCourseOutcomes generates desired course outcomes from a course name.
-func (c *Client) GenerateCourseOutcomes(ctx context.Context, courseName string) (*service.GenerateOutcomesResult, error) {
+// If RAG context is provided, it will be used to enhance the outcomes.
+func (c *Client) GenerateCourseOutcomes(ctx context.Context, req service.GenerateOutcomesRequest) (*service.GenerateOutcomesResult, error) {
 	select {
 	case <-ctx.Done():
 		return nil, fmt.Errorf("outcomes generation cancelled: %w", ctx.Err())
 	default:
 	}
 
-	prompt := buildCourseOutcomesPrompt(courseName)
+	prompt := buildCourseOutcomesPromptWithRAG(req.CourseName, req.RAGContext)
 	config := &genai.GenerateContentConfig{
 		ResponseMIMEType:   "application/json",
 		ResponseJsonSchema: courseOutcomesSchema(),
@@ -69,10 +70,33 @@ func (c *Client) GenerateCourseOutcomes(ctx context.Context, courseName string) 
 		return nil, fmt.Errorf("failed to parse course outcomes response: %w", err)
 	}
 
+	// Build citations from RAG context (if provided)
+	var citations []service.KnowledgeCitation
+	for _, chunk := range req.RAGContext {
+		// Only include chunks with good relevance
+		if chunk.RelevanceScore >= 0.5 {
+			citations = append(citations, service.KnowledgeCitation{
+				SourceID:       chunk.SourceID,
+				SourceName:     chunk.SourceName,
+				Excerpt:        truncateExcerpt(chunk.Content, 200),
+				RelevanceScore: chunk.RelevanceScore,
+			})
+		}
+	}
+
 	return &service.GenerateOutcomesResult{
 		Outcomes:   resp.Outcomes,
+		Citations:  citations,
 		TokensUsed: extractTokensUsed(result),
 	}, nil
+}
+
+// truncateExcerpt truncates text to a maximum length, adding ellipsis if needed.
+func truncateExcerpt(text string, maxLen int) string {
+	if len(text) <= maxLen {
+		return text
+	}
+	return text[:maxLen-3] + "..."
 }
 
 // GenerateSMEPersonas generates 3 diverse SME personas based on course topic.

@@ -7,7 +7,6 @@
 package miraiv1
 
 import (
-	_ "github.com/sogos/mirai-backend/gen/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -159,10 +158,17 @@ type KnowledgeSource struct {
 	ChunkCount    int32                  `protobuf:"varint,10,opt,name=chunk_count,json=chunkCount,proto3" json:"chunk_count,omitempty"`            // Number of chunks created
 	ErrorMessage  *string                `protobuf:"bytes,11,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"` // Error message if failed
 	// Detected video URLs in the content (for multimedia component generation)
-	VideoUrls     []string               `protobuf:"bytes,12,rep,name=video_urls,json=videoUrls,proto3" json:"video_urls,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	ProcessedAt   *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=processed_at,json=processedAt,proto3,oneof" json:"processed_at,omitempty"`
+	VideoUrls   []string               `protobuf:"bytes,12,rep,name=video_urls,json=videoUrls,proto3" json:"video_urls,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ProcessedAt *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=processed_at,json=processedAt,proto3,oneof" json:"processed_at,omitempty"`
+	// Session ID for pre-course knowledge sources (wizard flow)
+	// Sources can be created before a course exists, then linked when course is created
+	SessionId *string `protobuf:"bytes,16,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
+	// RAG-generated summary proving the document was successfully indexed
+	Summary *string `protobuf:"bytes,17,opt,name=summary,proto3,oneof" json:"summary,omitempty"`
+	// Total token count of the document
+	TokenCount    *int32 `protobuf:"varint,18,opt,name=token_count,json=tokenCount,proto3,oneof" json:"token_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -302,6 +308,27 @@ func (x *KnowledgeSource) GetProcessedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *KnowledgeSource) GetSessionId() string {
+	if x != nil && x.SessionId != nil {
+		return *x.SessionId
+	}
+	return ""
+}
+
+func (x *KnowledgeSource) GetSummary() string {
+	if x != nil && x.Summary != nil {
+		return *x.Summary
+	}
+	return ""
+}
+
+func (x *KnowledgeSource) GetTokenCount() int32 {
+	if x != nil && x.TokenCount != nil {
+		return *x.TokenCount
+	}
+	return 0
+}
+
 // RetrievedChunk represents a chunk retrieved from vector search.
 type RetrievedChunk struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -391,7 +418,7 @@ var File_mirai_v1_knowledge_source_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"\n" +
-	"\x1fmirai/v1/knowledge_source.proto\x12\bmirai.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x84\x05\n" +
+	"\x1fmirai/v1/knowledge_source.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x98\x06\n" +
 	"\x0fKnowledgeSource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1b\n" +
@@ -412,9 +439,18 @@ const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12B\n" +
-	"\fprocessed_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampH\x01R\vprocessedAt\x88\x01\x01B\x10\n" +
+	"\fprocessed_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampH\x01R\vprocessedAt\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"session_id\x18\x10 \x01(\tH\x02R\tsessionId\x88\x01\x01\x12\x1d\n" +
+	"\asummary\x18\x11 \x01(\tH\x03R\asummary\x88\x01\x01\x12$\n" +
+	"\vtoken_count\x18\x12 \x01(\x05H\x04R\n" +
+	"tokenCount\x88\x01\x01B\x10\n" +
 	"\x0e_error_messageB\x0f\n" +
-	"\r_processed_at\"\xd9\x01\n" +
+	"\r_processed_atB\r\n" +
+	"\v_session_idB\n" +
+	"\n" +
+	"\b_summaryB\x0e\n" +
+	"\f_token_count\"\xd9\x01\n" +
 	"\x0eRetrievedChunk\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x1f\n" +

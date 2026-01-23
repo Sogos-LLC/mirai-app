@@ -124,11 +124,23 @@ message GenerateTitleResponse {
 // GenerateOutcomesRequest contains the course name for outcome generation.
 message GenerateOutcomesRequest {
   string course_name = 1 [(buf.validate.field).string.min_len = 1];
+  // Optional session ID for RAG context from uploaded knowledge sources
+  optional string session_id = 2;
 }
 
 // GenerateOutcomesResponse contains AI-generated course outcomes.
 message GenerateOutcomesResponse {
   string outcomes = 1; // Freeform text with bullet points describing what learners will achieve
+  // Citations from knowledge sources used to generate outcomes
+  repeated KnowledgeCitation citations = 2;
+}
+
+// KnowledgeCitation represents a reference to a knowledge source used in generation.
+message KnowledgeCitation {
+  string source_id = 1;
+  string source_name = 2;
+  string excerpt = 3; // Relevant excerpt from the source
+  float relevance_score = 4;
 }
 
 // GenerateSMEPersonasRequest contains context for SME generation.

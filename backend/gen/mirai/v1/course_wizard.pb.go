@@ -620,8 +620,10 @@ func (x *GenerateTitleResponse) GetDescription() string {
 
 // GenerateOutcomesRequest contains the course name for outcome generation.
 type GenerateOutcomesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CourseName    string                 `protobuf:"bytes,1,opt,name=course_name,json=courseName,proto3" json:"course_name,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CourseName string                 `protobuf:"bytes,1,opt,name=course_name,json=courseName,proto3" json:"course_name,omitempty"`
+	// Optional session ID for RAG context from uploaded knowledge sources
+	SessionId     *string `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -663,10 +665,19 @@ func (x *GenerateOutcomesRequest) GetCourseName() string {
 	return ""
 }
 
+func (x *GenerateOutcomesRequest) GetSessionId() string {
+	if x != nil && x.SessionId != nil {
+		return *x.SessionId
+	}
+	return ""
+}
+
 // GenerateOutcomesResponse contains AI-generated course outcomes.
 type GenerateOutcomesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Outcomes      string                 `protobuf:"bytes,1,opt,name=outcomes,proto3" json:"outcomes,omitempty"` // Freeform text with bullet points describing what learners will achieve
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Outcomes string                 `protobuf:"bytes,1,opt,name=outcomes,proto3" json:"outcomes,omitempty"` // Freeform text with bullet points describing what learners will achieve
+	// Citations from knowledge sources used to generate outcomes
+	Citations     []*KnowledgeCitation `protobuf:"bytes,2,rep,name=citations,proto3" json:"citations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -708,6 +719,82 @@ func (x *GenerateOutcomesResponse) GetOutcomes() string {
 	return ""
 }
 
+func (x *GenerateOutcomesResponse) GetCitations() []*KnowledgeCitation {
+	if x != nil {
+		return x.Citations
+	}
+	return nil
+}
+
+// KnowledgeCitation represents a reference to a knowledge source used in generation.
+type KnowledgeCitation struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	SourceId       string                 `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	SourceName     string                 `protobuf:"bytes,2,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	Excerpt        string                 `protobuf:"bytes,3,opt,name=excerpt,proto3" json:"excerpt,omitempty"` // Relevant excerpt from the source
+	RelevanceScore float32                `protobuf:"fixed32,4,opt,name=relevance_score,json=relevanceScore,proto3" json:"relevance_score,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *KnowledgeCitation) Reset() {
+	*x = KnowledgeCitation{}
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *KnowledgeCitation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*KnowledgeCitation) ProtoMessage() {}
+
+func (x *KnowledgeCitation) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use KnowledgeCitation.ProtoReflect.Descriptor instead.
+func (*KnowledgeCitation) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *KnowledgeCitation) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *KnowledgeCitation) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+func (x *KnowledgeCitation) GetExcerpt() string {
+	if x != nil {
+		return x.Excerpt
+	}
+	return ""
+}
+
+func (x *KnowledgeCitation) GetRelevanceScore() float32 {
+	if x != nil {
+		return x.RelevanceScore
+	}
+	return 0
+}
+
 // GenerateSMEPersonasRequest contains context for SME generation.
 type GenerateSMEPersonasRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -719,7 +806,7 @@ type GenerateSMEPersonasRequest struct {
 
 func (x *GenerateSMEPersonasRequest) Reset() {
 	*x = GenerateSMEPersonasRequest{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[9]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -731,7 +818,7 @@ func (x *GenerateSMEPersonasRequest) String() string {
 func (*GenerateSMEPersonasRequest) ProtoMessage() {}
 
 func (x *GenerateSMEPersonasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[9]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -744,7 +831,7 @@ func (x *GenerateSMEPersonasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateSMEPersonasRequest.ProtoReflect.Descriptor instead.
 func (*GenerateSMEPersonasRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{9}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GenerateSMEPersonasRequest) GetTitle() string {
@@ -771,7 +858,7 @@ type GenerateSMEPersonasResponse struct {
 
 func (x *GenerateSMEPersonasResponse) Reset() {
 	*x = GenerateSMEPersonasResponse{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[10]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -783,7 +870,7 @@ func (x *GenerateSMEPersonasResponse) String() string {
 func (*GenerateSMEPersonasResponse) ProtoMessage() {}
 
 func (x *GenerateSMEPersonasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[10]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -796,7 +883,7 @@ func (x *GenerateSMEPersonasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateSMEPersonasResponse.ProtoReflect.Descriptor instead.
 func (*GenerateSMEPersonasResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{10}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GenerateSMEPersonasResponse) GetPersonas() []*SMEPersona {
@@ -818,7 +905,7 @@ type GenerateAudiencePersonasRequest struct {
 
 func (x *GenerateAudiencePersonasRequest) Reset() {
 	*x = GenerateAudiencePersonasRequest{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[11]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -830,7 +917,7 @@ func (x *GenerateAudiencePersonasRequest) String() string {
 func (*GenerateAudiencePersonasRequest) ProtoMessage() {}
 
 func (x *GenerateAudiencePersonasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[11]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -843,7 +930,7 @@ func (x *GenerateAudiencePersonasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateAudiencePersonasRequest.ProtoReflect.Descriptor instead.
 func (*GenerateAudiencePersonasRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{11}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GenerateAudiencePersonasRequest) GetTitle() string {
@@ -877,7 +964,7 @@ type GenerateAudiencePersonasResponse struct {
 
 func (x *GenerateAudiencePersonasResponse) Reset() {
 	*x = GenerateAudiencePersonasResponse{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[12]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -889,7 +976,7 @@ func (x *GenerateAudiencePersonasResponse) String() string {
 func (*GenerateAudiencePersonasResponse) ProtoMessage() {}
 
 func (x *GenerateAudiencePersonasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[12]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -902,7 +989,7 @@ func (x *GenerateAudiencePersonasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateAudiencePersonasResponse.ProtoReflect.Descriptor instead.
 func (*GenerateAudiencePersonasResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{12}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GenerateAudiencePersonasResponse) GetPersonas() []*AudiencePersona {
@@ -924,7 +1011,7 @@ type GenerateToneOptionsRequest struct {
 
 func (x *GenerateToneOptionsRequest) Reset() {
 	*x = GenerateToneOptionsRequest{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[13]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +1023,7 @@ func (x *GenerateToneOptionsRequest) String() string {
 func (*GenerateToneOptionsRequest) ProtoMessage() {}
 
 func (x *GenerateToneOptionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[13]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +1036,7 @@ func (x *GenerateToneOptionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateToneOptionsRequest.ProtoReflect.Descriptor instead.
 func (*GenerateToneOptionsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{13}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GenerateToneOptionsRequest) GetTitle() string {
@@ -983,7 +1070,7 @@ type GenerateToneOptionsResponse struct {
 
 func (x *GenerateToneOptionsResponse) Reset() {
 	*x = GenerateToneOptionsResponse{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[14]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -995,7 +1082,7 @@ func (x *GenerateToneOptionsResponse) String() string {
 func (*GenerateToneOptionsResponse) ProtoMessage() {}
 
 func (x *GenerateToneOptionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[14]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1008,7 +1095,7 @@ func (x *GenerateToneOptionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateToneOptionsResponse.ProtoReflect.Descriptor instead.
 func (*GenerateToneOptionsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{14}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GenerateToneOptionsResponse) GetOptions() []*ToneOption {
@@ -1029,7 +1116,7 @@ type SaveWizardStateRequest struct {
 
 func (x *SaveWizardStateRequest) Reset() {
 	*x = SaveWizardStateRequest{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[15]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1041,7 +1128,7 @@ func (x *SaveWizardStateRequest) String() string {
 func (*SaveWizardStateRequest) ProtoMessage() {}
 
 func (x *SaveWizardStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[15]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1054,7 +1141,7 @@ func (x *SaveWizardStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveWizardStateRequest.ProtoReflect.Descriptor instead.
 func (*SaveWizardStateRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{15}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *SaveWizardStateRequest) GetCurrentStep() string {
@@ -1081,7 +1168,7 @@ type SaveWizardStateResponse struct {
 
 func (x *SaveWizardStateResponse) Reset() {
 	*x = SaveWizardStateResponse{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[16]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1093,7 +1180,7 @@ func (x *SaveWizardStateResponse) String() string {
 func (*SaveWizardStateResponse) ProtoMessage() {}
 
 func (x *SaveWizardStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[16]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1106,7 +1193,7 @@ func (x *SaveWizardStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveWizardStateResponse.ProtoReflect.Descriptor instead.
 func (*SaveWizardStateResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{16}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SaveWizardStateResponse) GetState() *WizardState {
@@ -1125,7 +1212,7 @@ type GetWizardStateRequest struct {
 
 func (x *GetWizardStateRequest) Reset() {
 	*x = GetWizardStateRequest{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[17]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1137,7 +1224,7 @@ func (x *GetWizardStateRequest) String() string {
 func (*GetWizardStateRequest) ProtoMessage() {}
 
 func (x *GetWizardStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[17]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1150,7 +1237,7 @@ func (x *GetWizardStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWizardStateRequest.ProtoReflect.Descriptor instead.
 func (*GetWizardStateRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{17}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{18}
 }
 
 // GetWizardStateResponse contains the saved wizard state.
@@ -1163,7 +1250,7 @@ type GetWizardStateResponse struct {
 
 func (x *GetWizardStateResponse) Reset() {
 	*x = GetWizardStateResponse{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[18]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1175,7 +1262,7 @@ func (x *GetWizardStateResponse) String() string {
 func (*GetWizardStateResponse) ProtoMessage() {}
 
 func (x *GetWizardStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[18]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1188,7 +1275,7 @@ func (x *GetWizardStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWizardStateResponse.ProtoReflect.Descriptor instead.
 func (*GetWizardStateResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{18}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetWizardStateResponse) GetState() *WizardState {
@@ -1207,7 +1294,7 @@ type DeleteWizardStateRequest struct {
 
 func (x *DeleteWizardStateRequest) Reset() {
 	*x = DeleteWizardStateRequest{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[19]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1219,7 +1306,7 @@ func (x *DeleteWizardStateRequest) String() string {
 func (*DeleteWizardStateRequest) ProtoMessage() {}
 
 func (x *DeleteWizardStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[19]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1232,7 +1319,7 @@ func (x *DeleteWizardStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWizardStateRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWizardStateRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{19}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{20}
 }
 
 // DeleteWizardStateResponse confirms deletion.
@@ -1245,7 +1332,7 @@ type DeleteWizardStateResponse struct {
 
 func (x *DeleteWizardStateResponse) Reset() {
 	*x = DeleteWizardStateResponse{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[20]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1257,7 +1344,7 @@ func (x *DeleteWizardStateResponse) String() string {
 func (*DeleteWizardStateResponse) ProtoMessage() {}
 
 func (x *DeleteWizardStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[20]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1270,7 +1357,7 @@ func (x *DeleteWizardStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWizardStateResponse.ProtoReflect.Descriptor instead.
 func (*DeleteWizardStateResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{20}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *DeleteWizardStateResponse) GetSuccess() bool {
@@ -1292,7 +1379,7 @@ type CreateCourseFromOutlineRequest struct {
 
 func (x *CreateCourseFromOutlineRequest) Reset() {
 	*x = CreateCourseFromOutlineRequest{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[21]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1304,7 +1391,7 @@ func (x *CreateCourseFromOutlineRequest) String() string {
 func (*CreateCourseFromOutlineRequest) ProtoMessage() {}
 
 func (x *CreateCourseFromOutlineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[21]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1317,7 +1404,7 @@ func (x *CreateCourseFromOutlineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCourseFromOutlineRequest.ProtoReflect.Descriptor instead.
 func (*CreateCourseFromOutlineRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{21}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CreateCourseFromOutlineRequest) GetOutlineId() string {
@@ -1345,7 +1432,7 @@ type CreateCourseFromOutlineResponse struct {
 
 func (x *CreateCourseFromOutlineResponse) Reset() {
 	*x = CreateCourseFromOutlineResponse{}
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[22]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1357,7 +1444,7 @@ func (x *CreateCourseFromOutlineResponse) String() string {
 func (*CreateCourseFromOutlineResponse) ProtoMessage() {}
 
 func (x *CreateCourseFromOutlineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_course_wizard_proto_msgTypes[22]
+	mi := &file_mirai_v1_course_wizard_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1370,7 +1457,7 @@ func (x *CreateCourseFromOutlineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCourseFromOutlineResponse.ProtoReflect.Descriptor instead.
 func (*CreateCourseFromOutlineResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{22}
+	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CreateCourseFromOutlineResponse) GetCourseId() string {
@@ -1444,12 +1531,22 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"courseName\"`\n" +
 	"\x15GenerateTitleResponse\x12%\n" +
 	"\x0eimproved_title\x18\x01 \x01(\tR\rimprovedTitle\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\"C\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\"v\n" +
 	"\x17GenerateOutcomesRequest\x12(\n" +
 	"\vcourse_name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\n" +
-	"courseName\"6\n" +
+	"courseName\x12\"\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tH\x00R\tsessionId\x88\x01\x01B\r\n" +
+	"\v_session_id\"q\n" +
 	"\x18GenerateOutcomesResponse\x12\x1a\n" +
-	"\boutcomes\x18\x01 \x01(\tR\boutcomes\"f\n" +
+	"\boutcomes\x18\x01 \x01(\tR\boutcomes\x129\n" +
+	"\tcitations\x18\x02 \x03(\v2\x1b.mirai.v1.KnowledgeCitationR\tcitations\"\x94\x01\n" +
+	"\x11KnowledgeCitation\x12\x1b\n" +
+	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12\x1f\n" +
+	"\vsource_name\x18\x02 \x01(\tR\n" +
+	"sourceName\x12\x18\n" +
+	"\aexcerpt\x18\x03 \x01(\tR\aexcerpt\x12'\n" +
+	"\x0frelevance_score\x18\x04 \x01(\x02R\x0erelevanceScore\"f\n" +
 	"\x1aGenerateSMEPersonasRequest\x12\x1d\n" +
 	"\x05title\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12)\n" +
 	"\vdescription\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\"O\n" +
@@ -1517,7 +1614,7 @@ func file_mirai_v1_course_wizard_proto_rawDescGZIP() []byte {
 }
 
 var file_mirai_v1_course_wizard_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_mirai_v1_course_wizard_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_mirai_v1_course_wizard_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_mirai_v1_course_wizard_proto_goTypes = []any{
 	(ToneDetailLevel)(0),                     // 0: mirai.v1.ToneDetailLevel
 	(*SMEPersona)(nil),                       // 1: mirai.v1.SMEPersona
@@ -1529,21 +1626,22 @@ var file_mirai_v1_course_wizard_proto_goTypes = []any{
 	(*GenerateTitleResponse)(nil),            // 7: mirai.v1.GenerateTitleResponse
 	(*GenerateOutcomesRequest)(nil),          // 8: mirai.v1.GenerateOutcomesRequest
 	(*GenerateOutcomesResponse)(nil),         // 9: mirai.v1.GenerateOutcomesResponse
-	(*GenerateSMEPersonasRequest)(nil),       // 10: mirai.v1.GenerateSMEPersonasRequest
-	(*GenerateSMEPersonasResponse)(nil),      // 11: mirai.v1.GenerateSMEPersonasResponse
-	(*GenerateAudiencePersonasRequest)(nil),  // 12: mirai.v1.GenerateAudiencePersonasRequest
-	(*GenerateAudiencePersonasResponse)(nil), // 13: mirai.v1.GenerateAudiencePersonasResponse
-	(*GenerateToneOptionsRequest)(nil),       // 14: mirai.v1.GenerateToneOptionsRequest
-	(*GenerateToneOptionsResponse)(nil),      // 15: mirai.v1.GenerateToneOptionsResponse
-	(*SaveWizardStateRequest)(nil),           // 16: mirai.v1.SaveWizardStateRequest
-	(*SaveWizardStateResponse)(nil),          // 17: mirai.v1.SaveWizardStateResponse
-	(*GetWizardStateRequest)(nil),            // 18: mirai.v1.GetWizardStateRequest
-	(*GetWizardStateResponse)(nil),           // 19: mirai.v1.GetWizardStateResponse
-	(*DeleteWizardStateRequest)(nil),         // 20: mirai.v1.DeleteWizardStateRequest
-	(*DeleteWizardStateResponse)(nil),        // 21: mirai.v1.DeleteWizardStateResponse
-	(*CreateCourseFromOutlineRequest)(nil),   // 22: mirai.v1.CreateCourseFromOutlineRequest
-	(*CreateCourseFromOutlineResponse)(nil),  // 23: mirai.v1.CreateCourseFromOutlineResponse
-	(*timestamppb.Timestamp)(nil),            // 24: google.protobuf.Timestamp
+	(*KnowledgeCitation)(nil),                // 10: mirai.v1.KnowledgeCitation
+	(*GenerateSMEPersonasRequest)(nil),       // 11: mirai.v1.GenerateSMEPersonasRequest
+	(*GenerateSMEPersonasResponse)(nil),      // 12: mirai.v1.GenerateSMEPersonasResponse
+	(*GenerateAudiencePersonasRequest)(nil),  // 13: mirai.v1.GenerateAudiencePersonasRequest
+	(*GenerateAudiencePersonasResponse)(nil), // 14: mirai.v1.GenerateAudiencePersonasResponse
+	(*GenerateToneOptionsRequest)(nil),       // 15: mirai.v1.GenerateToneOptionsRequest
+	(*GenerateToneOptionsResponse)(nil),      // 16: mirai.v1.GenerateToneOptionsResponse
+	(*SaveWizardStateRequest)(nil),           // 17: mirai.v1.SaveWizardStateRequest
+	(*SaveWizardStateResponse)(nil),          // 18: mirai.v1.SaveWizardStateResponse
+	(*GetWizardStateRequest)(nil),            // 19: mirai.v1.GetWizardStateRequest
+	(*GetWizardStateResponse)(nil),           // 20: mirai.v1.GetWizardStateResponse
+	(*DeleteWizardStateRequest)(nil),         // 21: mirai.v1.DeleteWizardStateRequest
+	(*DeleteWizardStateResponse)(nil),        // 22: mirai.v1.DeleteWizardStateResponse
+	(*CreateCourseFromOutlineRequest)(nil),   // 23: mirai.v1.CreateCourseFromOutlineRequest
+	(*CreateCourseFromOutlineResponse)(nil),  // 24: mirai.v1.CreateCourseFromOutlineResponse
+	(*timestamppb.Timestamp)(nil),            // 25: google.protobuf.Timestamp
 }
 var file_mirai_v1_course_wizard_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.ToneOption.level_of_detail:type_name -> mirai.v1.ToneDetailLevel
@@ -1551,40 +1649,41 @@ var file_mirai_v1_course_wizard_proto_depIdxs = []int32{
 	2,  // 2: mirai.v1.WizardStepData.audience_personas:type_name -> mirai.v1.AudiencePersona
 	3,  // 3: mirai.v1.WizardStepData.tone_options:type_name -> mirai.v1.ToneOption
 	4,  // 4: mirai.v1.WizardState.data:type_name -> mirai.v1.WizardStepData
-	24, // 5: mirai.v1.WizardState.created_at:type_name -> google.protobuf.Timestamp
-	24, // 6: mirai.v1.WizardState.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 7: mirai.v1.GenerateSMEPersonasResponse.personas:type_name -> mirai.v1.SMEPersona
-	1,  // 8: mirai.v1.GenerateAudiencePersonasRequest.selected_smes:type_name -> mirai.v1.SMEPersona
-	2,  // 9: mirai.v1.GenerateAudiencePersonasResponse.personas:type_name -> mirai.v1.AudiencePersona
-	2,  // 10: mirai.v1.GenerateToneOptionsRequest.selected_audiences:type_name -> mirai.v1.AudiencePersona
-	3,  // 11: mirai.v1.GenerateToneOptionsResponse.options:type_name -> mirai.v1.ToneOption
-	4,  // 12: mirai.v1.SaveWizardStateRequest.data:type_name -> mirai.v1.WizardStepData
-	5,  // 13: mirai.v1.SaveWizardStateResponse.state:type_name -> mirai.v1.WizardState
-	5,  // 14: mirai.v1.GetWizardStateResponse.state:type_name -> mirai.v1.WizardState
-	4,  // 15: mirai.v1.CreateCourseFromOutlineRequest.wizard_data:type_name -> mirai.v1.WizardStepData
-	6,  // 16: mirai.v1.CourseWizardService.GenerateTitle:input_type -> mirai.v1.GenerateTitleRequest
-	8,  // 17: mirai.v1.CourseWizardService.GenerateOutcomes:input_type -> mirai.v1.GenerateOutcomesRequest
-	10, // 18: mirai.v1.CourseWizardService.GenerateSMEPersonas:input_type -> mirai.v1.GenerateSMEPersonasRequest
-	12, // 19: mirai.v1.CourseWizardService.GenerateAudiencePersonas:input_type -> mirai.v1.GenerateAudiencePersonasRequest
-	14, // 20: mirai.v1.CourseWizardService.GenerateToneOptions:input_type -> mirai.v1.GenerateToneOptionsRequest
-	16, // 21: mirai.v1.CourseWizardService.SaveWizardState:input_type -> mirai.v1.SaveWizardStateRequest
-	18, // 22: mirai.v1.CourseWizardService.GetWizardState:input_type -> mirai.v1.GetWizardStateRequest
-	20, // 23: mirai.v1.CourseWizardService.DeleteWizardState:input_type -> mirai.v1.DeleteWizardStateRequest
-	22, // 24: mirai.v1.CourseWizardService.CreateCourseFromOutline:input_type -> mirai.v1.CreateCourseFromOutlineRequest
-	7,  // 25: mirai.v1.CourseWizardService.GenerateTitle:output_type -> mirai.v1.GenerateTitleResponse
-	9,  // 26: mirai.v1.CourseWizardService.GenerateOutcomes:output_type -> mirai.v1.GenerateOutcomesResponse
-	11, // 27: mirai.v1.CourseWizardService.GenerateSMEPersonas:output_type -> mirai.v1.GenerateSMEPersonasResponse
-	13, // 28: mirai.v1.CourseWizardService.GenerateAudiencePersonas:output_type -> mirai.v1.GenerateAudiencePersonasResponse
-	15, // 29: mirai.v1.CourseWizardService.GenerateToneOptions:output_type -> mirai.v1.GenerateToneOptionsResponse
-	17, // 30: mirai.v1.CourseWizardService.SaveWizardState:output_type -> mirai.v1.SaveWizardStateResponse
-	19, // 31: mirai.v1.CourseWizardService.GetWizardState:output_type -> mirai.v1.GetWizardStateResponse
-	21, // 32: mirai.v1.CourseWizardService.DeleteWizardState:output_type -> mirai.v1.DeleteWizardStateResponse
-	23, // 33: mirai.v1.CourseWizardService.CreateCourseFromOutline:output_type -> mirai.v1.CreateCourseFromOutlineResponse
-	25, // [25:34] is the sub-list for method output_type
-	16, // [16:25] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	25, // 5: mirai.v1.WizardState.created_at:type_name -> google.protobuf.Timestamp
+	25, // 6: mirai.v1.WizardState.updated_at:type_name -> google.protobuf.Timestamp
+	10, // 7: mirai.v1.GenerateOutcomesResponse.citations:type_name -> mirai.v1.KnowledgeCitation
+	1,  // 8: mirai.v1.GenerateSMEPersonasResponse.personas:type_name -> mirai.v1.SMEPersona
+	1,  // 9: mirai.v1.GenerateAudiencePersonasRequest.selected_smes:type_name -> mirai.v1.SMEPersona
+	2,  // 10: mirai.v1.GenerateAudiencePersonasResponse.personas:type_name -> mirai.v1.AudiencePersona
+	2,  // 11: mirai.v1.GenerateToneOptionsRequest.selected_audiences:type_name -> mirai.v1.AudiencePersona
+	3,  // 12: mirai.v1.GenerateToneOptionsResponse.options:type_name -> mirai.v1.ToneOption
+	4,  // 13: mirai.v1.SaveWizardStateRequest.data:type_name -> mirai.v1.WizardStepData
+	5,  // 14: mirai.v1.SaveWizardStateResponse.state:type_name -> mirai.v1.WizardState
+	5,  // 15: mirai.v1.GetWizardStateResponse.state:type_name -> mirai.v1.WizardState
+	4,  // 16: mirai.v1.CreateCourseFromOutlineRequest.wizard_data:type_name -> mirai.v1.WizardStepData
+	6,  // 17: mirai.v1.CourseWizardService.GenerateTitle:input_type -> mirai.v1.GenerateTitleRequest
+	8,  // 18: mirai.v1.CourseWizardService.GenerateOutcomes:input_type -> mirai.v1.GenerateOutcomesRequest
+	11, // 19: mirai.v1.CourseWizardService.GenerateSMEPersonas:input_type -> mirai.v1.GenerateSMEPersonasRequest
+	13, // 20: mirai.v1.CourseWizardService.GenerateAudiencePersonas:input_type -> mirai.v1.GenerateAudiencePersonasRequest
+	15, // 21: mirai.v1.CourseWizardService.GenerateToneOptions:input_type -> mirai.v1.GenerateToneOptionsRequest
+	17, // 22: mirai.v1.CourseWizardService.SaveWizardState:input_type -> mirai.v1.SaveWizardStateRequest
+	19, // 23: mirai.v1.CourseWizardService.GetWizardState:input_type -> mirai.v1.GetWizardStateRequest
+	21, // 24: mirai.v1.CourseWizardService.DeleteWizardState:input_type -> mirai.v1.DeleteWizardStateRequest
+	23, // 25: mirai.v1.CourseWizardService.CreateCourseFromOutline:input_type -> mirai.v1.CreateCourseFromOutlineRequest
+	7,  // 26: mirai.v1.CourseWizardService.GenerateTitle:output_type -> mirai.v1.GenerateTitleResponse
+	9,  // 27: mirai.v1.CourseWizardService.GenerateOutcomes:output_type -> mirai.v1.GenerateOutcomesResponse
+	12, // 28: mirai.v1.CourseWizardService.GenerateSMEPersonas:output_type -> mirai.v1.GenerateSMEPersonasResponse
+	14, // 29: mirai.v1.CourseWizardService.GenerateAudiencePersonas:output_type -> mirai.v1.GenerateAudiencePersonasResponse
+	16, // 30: mirai.v1.CourseWizardService.GenerateToneOptions:output_type -> mirai.v1.GenerateToneOptionsResponse
+	18, // 31: mirai.v1.CourseWizardService.SaveWizardState:output_type -> mirai.v1.SaveWizardStateResponse
+	20, // 32: mirai.v1.CourseWizardService.GetWizardState:output_type -> mirai.v1.GetWizardStateResponse
+	22, // 33: mirai.v1.CourseWizardService.DeleteWizardState:output_type -> mirai.v1.DeleteWizardStateResponse
+	24, // 34: mirai.v1.CourseWizardService.CreateCourseFromOutline:output_type -> mirai.v1.CreateCourseFromOutlineResponse
+	26, // [26:35] is the sub-list for method output_type
+	17, // [17:26] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_course_wizard_proto_init() }
@@ -1592,14 +1691,15 @@ func file_mirai_v1_course_wizard_proto_init() {
 	if File_mirai_v1_course_wizard_proto != nil {
 		return
 	}
-	file_mirai_v1_course_wizard_proto_msgTypes[18].OneofWrappers = []any{}
+	file_mirai_v1_course_wizard_proto_msgTypes[7].OneofWrappers = []any{}
+	file_mirai_v1_course_wizard_proto_msgTypes[19].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_course_wizard_proto_rawDesc), len(file_mirai_v1_course_wizard_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   23,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

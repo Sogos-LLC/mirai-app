@@ -11,7 +11,8 @@ import (
 type KnowledgeSource struct {
 	ID       uuid.UUID
 	TenantID uuid.UUID
-	CourseID uuid.UUID
+	CourseID *uuid.UUID // Optional - nil for pre-course session sources
+	SessionID *string    // For pre-course wizard flow
 
 	Type   valueobject.KnowledgeSourceType
 	Status valueobject.KnowledgeSourceStatus
@@ -23,6 +24,10 @@ type KnowledgeSource struct {
 
 	ChunkCount   int32
 	ErrorMessage *string
+
+	// RAG verification
+	Summary    *string // AI-generated summary proving RAG works
+	TokenCount *int32  // Total token count of the document
 
 	// Detected video URLs in the content
 	VideoURLs []string

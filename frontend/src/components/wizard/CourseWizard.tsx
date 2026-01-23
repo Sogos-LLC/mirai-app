@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import { useMachine } from '@xstate/react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, X } from 'lucide-react';
@@ -24,6 +24,7 @@ import {
   useGenerateCourseOutline,
 } from '@/hooks/useAIGeneration';
 import { useCreateCourse } from '@/hooks/useCourses';
+import { useUploadAndProcess, useLinkSessionToCourse } from '@/hooks/useKnowledgeSources';
 import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
@@ -31,15 +32,35 @@ import CourseNameStep from './steps/CourseNameStep';
 import TitleDescriptionStep from './steps/TitleDescriptionStep';
 import SMEPersonasStep from './steps/SMEPersonasStep';
 import AudiencePersonasStep from './steps/AudiencePersonasStep';
-import KnowledgeSourcesStep from './steps/KnowledgeSourcesStep';
 import ToneSelectionStep from './steps/ToneSelectionStep';
 import GeneratingStep from './steps/GeneratingStep';
 import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import type { PendingFile } from '@/machines/courseWizardMachine';
+import {
+  KnowledgeUploadModal,
+  KnowledgeProcessingModal,
+  KnowledgeVerificationModal,
+  type PendingFile,
+  type ProcessedSource,
+} from './modals';
+
+// Modal state types
+type KnowledgeModalState = 'closed' | 'upload' | 'processing' | 'verification';
+
+// Generate session ID for pre-course knowledge sources
+function generateSessionId(): string {
+  return `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
 
 export default function CourseWizard() {
   const router = useRouter();
+
+  // Knowledge modal state
+  const [knowledgeModalState, setKnowledgeModalState] = useState<KnowledgeModalState>('closed');
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [processedSources, setProcessedSources] = useState<ProcessedSource[]>([]);
+  const [processingStatus, setProcessingStatus] = useState<'processing' | 'success'>('processing');
+  const [sessionId] = useState(() => generateSessionId());
 
   // API hooks - wizard generation
   const generateTitle = useGenerateTitle();
@@ -55,6 +76,10 @@ export default function CourseWizard() {
   const createCourse = useCreateCourse();
   const generateCourseOutline = useGenerateCourseOutline();
 
+  // API hooks - knowledge sources
+  const uploadAndProcess = useUploadAndProcess();
+  const linkSessionToCourse = useLinkSessionToCourse();
+
   // Create machine with provided actors
   const machineWithActors = useMemo(() => {
     return courseWizardMachine.provide({
@@ -67,7 +92,11 @@ export default function CourseWizard() {
           };
         }),
         generateOutcomesActor: fromPromise(async ({ input }: { input: { courseName: string } }) => {
-          const result = await generateOutcomes.mutate(input.courseName);
+          // Pass sessionId for RAG context if knowledge sources were uploaded
+          const result = await generateOutcomes.mutate({
+            courseName: input.courseName,
+            sessionId: processedSources.length > 0 ? sessionId : undefined,
+          });
           return {
             outcomes: result.outcomes,
           };
@@ -156,6 +185,20 @@ export default function CourseWizard() {
 
             const courseId = courseResult.course.id;
 
+            // Link any knowledge sources from the wizard session to the course
+            if (processedSources.length > 0) {
+              try {
+                const linkResult = await linkSessionToCourse.mutate({
+                  sessionId,
+                  courseId,
+                });
+                console.log('[Knowledge] Linked session sources to course:', linkResult.linkedCount);
+              } catch (linkError) {
+                console.error('[Knowledge] Failed to link session sources:', linkError);
+                // Continue anyway - outline generation should still work
+              }
+            }
+
             // DEBUG: Track courseID through the system
             console.log('[DEBUG-COURSEID] Wizard: calling generateCourseOutline with courseId:', courseId);
 
@@ -208,6 +251,9 @@ export default function CourseWizard() {
     generateCourseOutline,
     saveWizardState,
     deleteWizardState,
+    sessionId,
+    processedSources,
+    linkSessionToCourse,
   ]);
 
   const [state, send] = useMachine(machineWithActors);
@@ -247,6 +293,77 @@ export default function CourseWizard() {
   const handleCancel = useCallback(() => {
     send({ type: 'CANCEL' });
   }, [send]);
+
+  // Knowledge modal handlers
+  const handleOpenKnowledgeModal = useCallback(() => {
+    setKnowledgeModalState('upload');
+  }, []);
+
+  const handleCloseKnowledgeModal = useCallback(() => {
+    setKnowledgeModalState('closed');
+  }, []);
+
+  const handleAddFiles = useCallback((files: PendingFile[]) => {
+    setPendingFiles((prev) => [...prev, ...files]);
+    // Also send to state machine for persistence
+    send({ type: 'ADD_FILES', files });
+  }, [send]);
+
+  const handleRemoveFile = useCallback((fileId: string) => {
+    setPendingFiles((prev) => prev.filter((f) => f.id !== fileId));
+    // Also send to state machine for persistence
+    send({ type: 'REMOVE_FILE', fileId });
+  }, [send]);
+
+  const handleUploadKnowledge = useCallback(async () => {
+    if (pendingFiles.length === 0) return;
+
+    // Transition to processing modal
+    setKnowledgeModalState('processing');
+    setProcessingStatus('processing');
+
+    try {
+      // Process each file through the backend
+      const results: ProcessedSource[] = [];
+
+      for (const file of pendingFiles) {
+        // Read file content as Uint8Array
+        const arrayBuffer = await file.file.arrayBuffer();
+        const fileContent = new Uint8Array(arrayBuffer);
+
+        const result = await uploadAndProcess.mutate({
+          sessionId,
+          filename: file.name,
+          contentType: file.mimeType,
+          fileContent,
+        });
+
+        results.push({
+          id: result.sourceId,
+          name: result.name,
+          summary: result.summary,
+          chunkCount: result.chunkCount,
+          tokenCount: result.tokenCount,
+        });
+      }
+
+      setProcessedSources(results);
+      setProcessingStatus('success');
+    } catch (error) {
+      console.error('Failed to process knowledge sources:', error);
+      // Return to upload modal on error
+      setKnowledgeModalState('upload');
+    }
+  }, [pendingFiles, sessionId, uploadAndProcess]);
+
+  const handleProcessingComplete = useCallback(() => {
+    // Transition from success checkmark to verification modal
+    setKnowledgeModalState('verification');
+  }, []);
+
+  const handleVerificationClose = useCallback(() => {
+    setKnowledgeModalState('closed');
+  }, []);
 
   // Loading state while checking for saved state
   if (state.matches('checkingSavedState') || getSavedState.isLoading) {
@@ -430,6 +547,8 @@ export default function CourseWizard() {
           onCancel={handleCancel}
           isLoading={isLoading}
           isGeneratingOutcomes={state.matches('generatingOutcomes')}
+          knowledgeFileCount={pendingFiles.length}
+          onOpenKnowledgeModal={handleOpenKnowledgeModal}
         />
       )}
 
@@ -478,19 +597,6 @@ export default function CourseWizard() {
         />
       )}
 
-      {state.matches('knowledgeSources') && (
-        <KnowledgeSourcesStep
-          pendingFiles={context.pendingFiles}
-          onAddFiles={(files: PendingFile[]) => send({ type: 'ADD_FILES', files })}
-          onRemoveFile={(fileId) => send({ type: 'REMOVE_FILE', fileId })}
-          onNext={() => send({ type: 'APPROVE_KNOWLEDGE_SOURCES' })}
-          onSkip={() => send({ type: 'SKIP_KNOWLEDGE_SOURCES' })}
-          onBack={() => send({ type: 'GO_BACK' })}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-        />
-      )}
-
       {state.matches('toneSelection') && (
         <ToneSelectionStep
           options={context.toneOptions}
@@ -506,6 +612,29 @@ export default function CourseWizard() {
           isLoading={isLoading}
         />
       )}
+
+      {/* Knowledge Source Modals */}
+      <KnowledgeUploadModal
+        isOpen={knowledgeModalState === 'upload'}
+        onClose={handleCloseKnowledgeModal}
+        onUpload={handleUploadKnowledge}
+        pendingFiles={pendingFiles}
+        onAddFiles={handleAddFiles}
+        onRemoveFile={handleRemoveFile}
+      />
+
+      <KnowledgeProcessingModal
+        isOpen={knowledgeModalState === 'processing'}
+        status={processingStatus}
+        fileCount={pendingFiles.length}
+        onSuccessComplete={handleProcessingComplete}
+      />
+
+      <KnowledgeVerificationModal
+        isOpen={knowledgeModalState === 'verification'}
+        onClose={handleVerificationClose}
+        sources={processedSources}
+      />
     </>
   );
 }

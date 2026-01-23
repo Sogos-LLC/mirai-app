@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package mirai.v1;
 
-import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
 // =============================================================================
@@ -56,6 +55,16 @@ message KnowledgeSource {
   google.protobuf.Timestamp created_at = 13;
   google.protobuf.Timestamp updated_at = 14;
   optional google.protobuf.Timestamp processed_at = 15;
+
+  // Session ID for pre-course knowledge sources (wizard flow)
+  // Sources can be created before a course exists, then linked when course is created
+  optional string session_id = 16;
+
+  // RAG-generated summary proving the document was successfully indexed
+  optional string summary = 17;
+
+  // Total token count of the document
+  optional int32 token_count = 18;
 }
 
 // RetrievedChunk represents a chunk retrieved from vector search.

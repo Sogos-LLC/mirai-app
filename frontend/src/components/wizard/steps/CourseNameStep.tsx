@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Wand2, Loader2 } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, Paperclip } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import WizardNavigation from '../WizardNavigation';
@@ -16,6 +16,9 @@ interface CourseNameStepProps {
   onCancel: () => void;
   isLoading?: boolean;
   isGeneratingOutcomes?: boolean;
+  // Knowledge sources
+  knowledgeFileCount?: number;
+  onOpenKnowledgeModal?: () => void;
 }
 
 export default function CourseNameStep({
@@ -28,6 +31,8 @@ export default function CourseNameStep({
   onCancel,
   isLoading = false,
   isGeneratingOutcomes = false,
+  knowledgeFileCount = 0,
+  onOpenKnowledgeModal,
 }: CourseNameStepProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,24 +76,45 @@ export default function CourseNameStep({
                 <label className="block text-sm font-medium text-primary">
                   Desired Course Outcomes
                 </label>
-                <button
-                  type="button"
-                  onClick={onGenerateOutcomes}
-                  disabled={!courseName.trim() || isGeneratingOutcomes}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
-                    bg-primary-50 text-primary-700 hover:bg-primary-100
-                    dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    transition-colors"
-                  title="Generate outcomes from course name"
-                >
-                  {isGeneratingOutcomes ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Wand2 className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2">
+                  {onOpenKnowledgeModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenKnowledgeModal}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
+                        bg-surface border border-gray-300 dark:border-gray-600
+                        text-secondary hover:bg-hover hover:text-primary
+                        transition-colors"
+                      title="Add knowledge sources to improve generation"
+                    >
+                      <Paperclip className="w-3.5 h-3.5" />
+                      Add Knowledge
+                      {knowledgeFileCount > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-primary-600 text-white">
+                          {knowledgeFileCount}
+                        </span>
+                      )}
+                    </button>
                   )}
-                  {isGeneratingOutcomes ? 'Generating...' : 'Generate'}
-                </button>
+                  <button
+                    type="button"
+                    onClick={onGenerateOutcomes}
+                    disabled={!courseName.trim() || isGeneratingOutcomes}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
+                      bg-primary-50 text-primary-700 hover:bg-primary-100
+                      dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      transition-colors"
+                    title="Generate outcomes from course name"
+                  >
+                    {isGeneratingOutcomes ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3.5 h-3.5" />
+                    )}
+                    {isGeneratingOutcomes ? 'Generating...' : 'Generate'}
+                  </button>
+                </div>
               </div>
               <textarea
                 value={desiredOutcomes}

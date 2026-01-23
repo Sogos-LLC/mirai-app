@@ -619,7 +619,7 @@ type Invitation struct {
 type KnowledgeSource struct {
 	ID       uuid.UUID             `db:"id" json:"id"`
 	TenantID uuid.UUID             `db:"tenant_id" json:"tenant_id"`
-	CourseID uuid.UUID             `db:"course_id" json:"course_id"`
+	CourseID uuid.NullUUID         `db:"course_id" json:"course_id"`
 	Type     KnowledgeSourceType   `db:"type" json:"type"`
 	Status   KnowledgeSourceStatus `db:"status" json:"status"`
 	Name     string                `db:"name" json:"name"`
@@ -635,6 +635,9 @@ type KnowledgeSource struct {
 	CreatedAt   time.Time             `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time             `db:"updated_at" json:"updated_at"`
 	ProcessedAt **time.Time           `db:"processed_at" json:"processed_at"`
+	SessionID   sql.NullString        `db:"session_id" json:"session_id"`
+	Summary     sql.NullString        `db:"summary" json:"summary"`
+	TokenCount  sql.NullInt32         `db:"token_count" json:"token_count"`
 }
 
 type Lesson struct {

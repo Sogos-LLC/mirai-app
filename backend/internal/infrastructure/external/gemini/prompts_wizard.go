@@ -33,18 +33,45 @@ Keep the improved title close to the original intent, but make it more professio
 }
 
 func buildCourseOutcomesPrompt(courseName string) string {
-	return fmt.Sprintf(`You are an expert instructional designer who creates measurable learning outcomes for professional courses.
+	return buildCourseOutcomesPromptWithRAG(courseName, nil)
+}
 
-## Course Topic
-%s
+func buildCourseOutcomesPromptWithRAG(courseName string, ragContext []service.RAGChunk) string {
+	var sb strings.Builder
 
-## Instructions
+	sb.WriteString("You are an expert instructional designer who creates measurable learning outcomes for professional courses.\n\n")
+
+	sb.WriteString("## Course Topic\n")
+	sb.WriteString(courseName)
+	sb.WriteString("\n\n")
+
+	// Add RAG context if provided
+	if len(ragContext) > 0 {
+		sb.WriteString("## Reference Materials\n")
+		sb.WriteString("The following content has been provided as reference material for this course. Use it to inform your learning outcomes:\n\n")
+		for i, chunk := range ragContext {
+			sb.WriteString(fmt.Sprintf("### Source %d: %s\n", i+1, chunk.SourceName))
+			sb.WriteString(chunk.Content)
+			sb.WriteString("\n\n")
+		}
+		sb.WriteString("---\n\n")
+	}
+
+	sb.WriteString(`## Instructions
 Generate 3-5 clear, measurable learning outcomes for this course. Each outcome should:
 
 1. Start with an action verb from Bloom's Taxonomy (e.g., Understand, Apply, Analyze, Create, Evaluate)
 2. Be specific and measurable
 3. Describe what the learner will be able to DO after completing the course
-4. Be achievable within a typical course duration
+4. Be achievable within a typical course duration`)
+
+	if len(ragContext) > 0 {
+		sb.WriteString(`
+5. Be informed by the reference materials provided above
+6. Reflect the specific topics, concepts, and skills covered in the source materials`)
+	}
+
+	sb.WriteString(`
 
 Format your response as bullet points, with each outcome on a new line starting with "• ".
 
@@ -55,7 +82,9 @@ Example format:
 • Create effective [deliverable] using industry best practices
 • Evaluate [outcomes] and make data-driven decisions
 
-Generate outcomes that are relevant, practical, and aligned with professional development goals.`, courseName)
+Generate outcomes that are relevant, practical, and aligned with professional development goals.`)
+
+	return sb.String()
 }
 
 func buildSMEPersonasPrompt(title, description string) string {

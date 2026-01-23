@@ -39,6 +39,9 @@ export const KnowledgeSourceSchema = z.object({
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
   processedAt: z.string().datetime().optional(),
+  sessionId: z.string().optional(),
+  summary: z.string().optional(),
+  tokenCount: z.number().int().optional(),
 });
 
 export type KnowledgeSource = z.infer<typeof KnowledgeSourceSchema>;

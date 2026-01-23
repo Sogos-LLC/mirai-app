@@ -39,9 +39,18 @@ const (
 	// KnowledgeSourceServiceCreateKnowledgeSourceProcedure is the fully-qualified name of the
 	// KnowledgeSourceService's CreateKnowledgeSource RPC.
 	KnowledgeSourceServiceCreateKnowledgeSourceProcedure = "/mirai.v1.KnowledgeSourceService/CreateKnowledgeSource"
+	// KnowledgeSourceServiceUploadAndProcessProcedure is the fully-qualified name of the
+	// KnowledgeSourceService's UploadAndProcess RPC.
+	KnowledgeSourceServiceUploadAndProcessProcedure = "/mirai.v1.KnowledgeSourceService/UploadAndProcess"
 	// KnowledgeSourceServiceListKnowledgeSourcesProcedure is the fully-qualified name of the
 	// KnowledgeSourceService's ListKnowledgeSources RPC.
 	KnowledgeSourceServiceListKnowledgeSourcesProcedure = "/mirai.v1.KnowledgeSourceService/ListKnowledgeSources"
+	// KnowledgeSourceServiceListKnowledgeSourcesBySessionProcedure is the fully-qualified name of the
+	// KnowledgeSourceService's ListKnowledgeSourcesBySession RPC.
+	KnowledgeSourceServiceListKnowledgeSourcesBySessionProcedure = "/mirai.v1.KnowledgeSourceService/ListKnowledgeSourcesBySession"
+	// KnowledgeSourceServiceLinkSessionToCourseProcedure is the fully-qualified name of the
+	// KnowledgeSourceService's LinkSessionToCourse RPC.
+	KnowledgeSourceServiceLinkSessionToCourseProcedure = "/mirai.v1.KnowledgeSourceService/LinkSessionToCourse"
 	// KnowledgeSourceServiceGetKnowledgeSourceProcedure is the fully-qualified name of the
 	// KnowledgeSourceService's GetKnowledgeSource RPC.
 	KnowledgeSourceServiceGetKnowledgeSourceProcedure = "/mirai.v1.KnowledgeSourceService/GetKnowledgeSource"
@@ -51,6 +60,9 @@ const (
 	// KnowledgeSourceServiceSearchKnowledgeProcedure is the fully-qualified name of the
 	// KnowledgeSourceService's SearchKnowledge RPC.
 	KnowledgeSourceServiceSearchKnowledgeProcedure = "/mirai.v1.KnowledgeSourceService/SearchKnowledge"
+	// KnowledgeSourceServiceSearchKnowledgeBySessionProcedure is the fully-qualified name of the
+	// KnowledgeSourceService's SearchKnowledgeBySession RPC.
+	KnowledgeSourceServiceSearchKnowledgeBySessionProcedure = "/mirai.v1.KnowledgeSourceService/SearchKnowledgeBySession"
 )
 
 // KnowledgeSourceServiceClient is a client for the mirai.v1.KnowledgeSourceService service.
@@ -59,14 +71,24 @@ type KnowledgeSourceServiceClient interface {
 	GetUploadURL(context.Context, *connect.Request[v1.GetUploadURLRequest]) (*connect.Response[v1.GetUploadURLResponse], error)
 	// CreateKnowledgeSource registers a new source and initiates ingestion.
 	CreateKnowledgeSource(context.Context, *connect.Request[v1.CreateKnowledgeSourceRequest]) (*connect.Response[v1.CreateKnowledgeSourceResponse], error)
+	// UploadAndProcess handles file upload + synchronous ingestion with RAG verification.
+	// Use this for wizard flow where immediate feedback is needed.
+	// Returns the source with an AI-generated summary proving RAG works.
+	UploadAndProcess(context.Context, *connect.Request[v1.UploadAndProcessRequest]) (*connect.Response[v1.UploadAndProcessResponse], error)
 	// ListKnowledgeSources returns all sources for a course.
 	ListKnowledgeSources(context.Context, *connect.Request[v1.ListKnowledgeSourcesRequest]) (*connect.Response[v1.ListKnowledgeSourcesResponse], error)
+	// ListKnowledgeSourcesBySession returns sources created in a wizard session.
+	ListKnowledgeSourcesBySession(context.Context, *connect.Request[v1.ListKnowledgeSourcesBySessionRequest]) (*connect.Response[v1.ListKnowledgeSourcesBySessionResponse], error)
+	// LinkSessionToCourse links all sources from a session to a course.
+	LinkSessionToCourse(context.Context, *connect.Request[v1.LinkSessionToCourseRequest]) (*connect.Response[v1.LinkSessionToCourseResponse], error)
 	// GetKnowledgeSource returns a single source by ID.
 	GetKnowledgeSource(context.Context, *connect.Request[v1.GetKnowledgeSourceRequest]) (*connect.Response[v1.GetKnowledgeSourceResponse], error)
 	// DeleteKnowledgeSource removes a source and its chunks from vector store.
 	DeleteKnowledgeSource(context.Context, *connect.Request[v1.DeleteKnowledgeSourceRequest]) (*connect.Response[v1.DeleteKnowledgeSourceResponse], error)
 	// SearchKnowledge performs semantic search across course knowledge.
 	SearchKnowledge(context.Context, *connect.Request[v1.SearchKnowledgeRequest]) (*connect.Response[v1.SearchKnowledgeResponse], error)
+	// SearchKnowledgeBySession performs semantic search across session knowledge.
+	SearchKnowledgeBySession(context.Context, *connect.Request[v1.SearchKnowledgeBySessionRequest]) (*connect.Response[v1.SearchKnowledgeBySessionResponse], error)
 }
 
 // NewKnowledgeSourceServiceClient constructs a client for the mirai.v1.KnowledgeSourceService
@@ -92,10 +114,28 @@ func NewKnowledgeSourceServiceClient(httpClient connect.HTTPClient, baseURL stri
 			connect.WithSchema(knowledgeSourceServiceMethods.ByName("CreateKnowledgeSource")),
 			connect.WithClientOptions(opts...),
 		),
+		uploadAndProcess: connect.NewClient[v1.UploadAndProcessRequest, v1.UploadAndProcessResponse](
+			httpClient,
+			baseURL+KnowledgeSourceServiceUploadAndProcessProcedure,
+			connect.WithSchema(knowledgeSourceServiceMethods.ByName("UploadAndProcess")),
+			connect.WithClientOptions(opts...),
+		),
 		listKnowledgeSources: connect.NewClient[v1.ListKnowledgeSourcesRequest, v1.ListKnowledgeSourcesResponse](
 			httpClient,
 			baseURL+KnowledgeSourceServiceListKnowledgeSourcesProcedure,
 			connect.WithSchema(knowledgeSourceServiceMethods.ByName("ListKnowledgeSources")),
+			connect.WithClientOptions(opts...),
+		),
+		listKnowledgeSourcesBySession: connect.NewClient[v1.ListKnowledgeSourcesBySessionRequest, v1.ListKnowledgeSourcesBySessionResponse](
+			httpClient,
+			baseURL+KnowledgeSourceServiceListKnowledgeSourcesBySessionProcedure,
+			connect.WithSchema(knowledgeSourceServiceMethods.ByName("ListKnowledgeSourcesBySession")),
+			connect.WithClientOptions(opts...),
+		),
+		linkSessionToCourse: connect.NewClient[v1.LinkSessionToCourseRequest, v1.LinkSessionToCourseResponse](
+			httpClient,
+			baseURL+KnowledgeSourceServiceLinkSessionToCourseProcedure,
+			connect.WithSchema(knowledgeSourceServiceMethods.ByName("LinkSessionToCourse")),
 			connect.WithClientOptions(opts...),
 		),
 		getKnowledgeSource: connect.NewClient[v1.GetKnowledgeSourceRequest, v1.GetKnowledgeSourceResponse](
@@ -116,17 +156,27 @@ func NewKnowledgeSourceServiceClient(httpClient connect.HTTPClient, baseURL stri
 			connect.WithSchema(knowledgeSourceServiceMethods.ByName("SearchKnowledge")),
 			connect.WithClientOptions(opts...),
 		),
+		searchKnowledgeBySession: connect.NewClient[v1.SearchKnowledgeBySessionRequest, v1.SearchKnowledgeBySessionResponse](
+			httpClient,
+			baseURL+KnowledgeSourceServiceSearchKnowledgeBySessionProcedure,
+			connect.WithSchema(knowledgeSourceServiceMethods.ByName("SearchKnowledgeBySession")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // knowledgeSourceServiceClient implements KnowledgeSourceServiceClient.
 type knowledgeSourceServiceClient struct {
-	getUploadURL          *connect.Client[v1.GetUploadURLRequest, v1.GetUploadURLResponse]
-	createKnowledgeSource *connect.Client[v1.CreateKnowledgeSourceRequest, v1.CreateKnowledgeSourceResponse]
-	listKnowledgeSources  *connect.Client[v1.ListKnowledgeSourcesRequest, v1.ListKnowledgeSourcesResponse]
-	getKnowledgeSource    *connect.Client[v1.GetKnowledgeSourceRequest, v1.GetKnowledgeSourceResponse]
-	deleteKnowledgeSource *connect.Client[v1.DeleteKnowledgeSourceRequest, v1.DeleteKnowledgeSourceResponse]
-	searchKnowledge       *connect.Client[v1.SearchKnowledgeRequest, v1.SearchKnowledgeResponse]
+	getUploadURL                  *connect.Client[v1.GetUploadURLRequest, v1.GetUploadURLResponse]
+	createKnowledgeSource         *connect.Client[v1.CreateKnowledgeSourceRequest, v1.CreateKnowledgeSourceResponse]
+	uploadAndProcess              *connect.Client[v1.UploadAndProcessRequest, v1.UploadAndProcessResponse]
+	listKnowledgeSources          *connect.Client[v1.ListKnowledgeSourcesRequest, v1.ListKnowledgeSourcesResponse]
+	listKnowledgeSourcesBySession *connect.Client[v1.ListKnowledgeSourcesBySessionRequest, v1.ListKnowledgeSourcesBySessionResponse]
+	linkSessionToCourse           *connect.Client[v1.LinkSessionToCourseRequest, v1.LinkSessionToCourseResponse]
+	getKnowledgeSource            *connect.Client[v1.GetKnowledgeSourceRequest, v1.GetKnowledgeSourceResponse]
+	deleteKnowledgeSource         *connect.Client[v1.DeleteKnowledgeSourceRequest, v1.DeleteKnowledgeSourceResponse]
+	searchKnowledge               *connect.Client[v1.SearchKnowledgeRequest, v1.SearchKnowledgeResponse]
+	searchKnowledgeBySession      *connect.Client[v1.SearchKnowledgeBySessionRequest, v1.SearchKnowledgeBySessionResponse]
 }
 
 // GetUploadURL calls mirai.v1.KnowledgeSourceService.GetUploadURL.
@@ -139,9 +189,25 @@ func (c *knowledgeSourceServiceClient) CreateKnowledgeSource(ctx context.Context
 	return c.createKnowledgeSource.CallUnary(ctx, req)
 }
 
+// UploadAndProcess calls mirai.v1.KnowledgeSourceService.UploadAndProcess.
+func (c *knowledgeSourceServiceClient) UploadAndProcess(ctx context.Context, req *connect.Request[v1.UploadAndProcessRequest]) (*connect.Response[v1.UploadAndProcessResponse], error) {
+	return c.uploadAndProcess.CallUnary(ctx, req)
+}
+
 // ListKnowledgeSources calls mirai.v1.KnowledgeSourceService.ListKnowledgeSources.
 func (c *knowledgeSourceServiceClient) ListKnowledgeSources(ctx context.Context, req *connect.Request[v1.ListKnowledgeSourcesRequest]) (*connect.Response[v1.ListKnowledgeSourcesResponse], error) {
 	return c.listKnowledgeSources.CallUnary(ctx, req)
+}
+
+// ListKnowledgeSourcesBySession calls
+// mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession.
+func (c *knowledgeSourceServiceClient) ListKnowledgeSourcesBySession(ctx context.Context, req *connect.Request[v1.ListKnowledgeSourcesBySessionRequest]) (*connect.Response[v1.ListKnowledgeSourcesBySessionResponse], error) {
+	return c.listKnowledgeSourcesBySession.CallUnary(ctx, req)
+}
+
+// LinkSessionToCourse calls mirai.v1.KnowledgeSourceService.LinkSessionToCourse.
+func (c *knowledgeSourceServiceClient) LinkSessionToCourse(ctx context.Context, req *connect.Request[v1.LinkSessionToCourseRequest]) (*connect.Response[v1.LinkSessionToCourseResponse], error) {
+	return c.linkSessionToCourse.CallUnary(ctx, req)
 }
 
 // GetKnowledgeSource calls mirai.v1.KnowledgeSourceService.GetKnowledgeSource.
@@ -159,6 +225,11 @@ func (c *knowledgeSourceServiceClient) SearchKnowledge(ctx context.Context, req 
 	return c.searchKnowledge.CallUnary(ctx, req)
 }
 
+// SearchKnowledgeBySession calls mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession.
+func (c *knowledgeSourceServiceClient) SearchKnowledgeBySession(ctx context.Context, req *connect.Request[v1.SearchKnowledgeBySessionRequest]) (*connect.Response[v1.SearchKnowledgeBySessionResponse], error) {
+	return c.searchKnowledgeBySession.CallUnary(ctx, req)
+}
+
 // KnowledgeSourceServiceHandler is an implementation of the mirai.v1.KnowledgeSourceService
 // service.
 type KnowledgeSourceServiceHandler interface {
@@ -166,14 +237,24 @@ type KnowledgeSourceServiceHandler interface {
 	GetUploadURL(context.Context, *connect.Request[v1.GetUploadURLRequest]) (*connect.Response[v1.GetUploadURLResponse], error)
 	// CreateKnowledgeSource registers a new source and initiates ingestion.
 	CreateKnowledgeSource(context.Context, *connect.Request[v1.CreateKnowledgeSourceRequest]) (*connect.Response[v1.CreateKnowledgeSourceResponse], error)
+	// UploadAndProcess handles file upload + synchronous ingestion with RAG verification.
+	// Use this for wizard flow where immediate feedback is needed.
+	// Returns the source with an AI-generated summary proving RAG works.
+	UploadAndProcess(context.Context, *connect.Request[v1.UploadAndProcessRequest]) (*connect.Response[v1.UploadAndProcessResponse], error)
 	// ListKnowledgeSources returns all sources for a course.
 	ListKnowledgeSources(context.Context, *connect.Request[v1.ListKnowledgeSourcesRequest]) (*connect.Response[v1.ListKnowledgeSourcesResponse], error)
+	// ListKnowledgeSourcesBySession returns sources created in a wizard session.
+	ListKnowledgeSourcesBySession(context.Context, *connect.Request[v1.ListKnowledgeSourcesBySessionRequest]) (*connect.Response[v1.ListKnowledgeSourcesBySessionResponse], error)
+	// LinkSessionToCourse links all sources from a session to a course.
+	LinkSessionToCourse(context.Context, *connect.Request[v1.LinkSessionToCourseRequest]) (*connect.Response[v1.LinkSessionToCourseResponse], error)
 	// GetKnowledgeSource returns a single source by ID.
 	GetKnowledgeSource(context.Context, *connect.Request[v1.GetKnowledgeSourceRequest]) (*connect.Response[v1.GetKnowledgeSourceResponse], error)
 	// DeleteKnowledgeSource removes a source and its chunks from vector store.
 	DeleteKnowledgeSource(context.Context, *connect.Request[v1.DeleteKnowledgeSourceRequest]) (*connect.Response[v1.DeleteKnowledgeSourceResponse], error)
 	// SearchKnowledge performs semantic search across course knowledge.
 	SearchKnowledge(context.Context, *connect.Request[v1.SearchKnowledgeRequest]) (*connect.Response[v1.SearchKnowledgeResponse], error)
+	// SearchKnowledgeBySession performs semantic search across session knowledge.
+	SearchKnowledgeBySession(context.Context, *connect.Request[v1.SearchKnowledgeBySessionRequest]) (*connect.Response[v1.SearchKnowledgeBySessionResponse], error)
 }
 
 // NewKnowledgeSourceServiceHandler builds an HTTP handler from the service implementation. It
@@ -195,10 +276,28 @@ func NewKnowledgeSourceServiceHandler(svc KnowledgeSourceServiceHandler, opts ..
 		connect.WithSchema(knowledgeSourceServiceMethods.ByName("CreateKnowledgeSource")),
 		connect.WithHandlerOptions(opts...),
 	)
+	knowledgeSourceServiceUploadAndProcessHandler := connect.NewUnaryHandler(
+		KnowledgeSourceServiceUploadAndProcessProcedure,
+		svc.UploadAndProcess,
+		connect.WithSchema(knowledgeSourceServiceMethods.ByName("UploadAndProcess")),
+		connect.WithHandlerOptions(opts...),
+	)
 	knowledgeSourceServiceListKnowledgeSourcesHandler := connect.NewUnaryHandler(
 		KnowledgeSourceServiceListKnowledgeSourcesProcedure,
 		svc.ListKnowledgeSources,
 		connect.WithSchema(knowledgeSourceServiceMethods.ByName("ListKnowledgeSources")),
+		connect.WithHandlerOptions(opts...),
+	)
+	knowledgeSourceServiceListKnowledgeSourcesBySessionHandler := connect.NewUnaryHandler(
+		KnowledgeSourceServiceListKnowledgeSourcesBySessionProcedure,
+		svc.ListKnowledgeSourcesBySession,
+		connect.WithSchema(knowledgeSourceServiceMethods.ByName("ListKnowledgeSourcesBySession")),
+		connect.WithHandlerOptions(opts...),
+	)
+	knowledgeSourceServiceLinkSessionToCourseHandler := connect.NewUnaryHandler(
+		KnowledgeSourceServiceLinkSessionToCourseProcedure,
+		svc.LinkSessionToCourse,
+		connect.WithSchema(knowledgeSourceServiceMethods.ByName("LinkSessionToCourse")),
 		connect.WithHandlerOptions(opts...),
 	)
 	knowledgeSourceServiceGetKnowledgeSourceHandler := connect.NewUnaryHandler(
@@ -219,20 +318,34 @@ func NewKnowledgeSourceServiceHandler(svc KnowledgeSourceServiceHandler, opts ..
 		connect.WithSchema(knowledgeSourceServiceMethods.ByName("SearchKnowledge")),
 		connect.WithHandlerOptions(opts...),
 	)
+	knowledgeSourceServiceSearchKnowledgeBySessionHandler := connect.NewUnaryHandler(
+		KnowledgeSourceServiceSearchKnowledgeBySessionProcedure,
+		svc.SearchKnowledgeBySession,
+		connect.WithSchema(knowledgeSourceServiceMethods.ByName("SearchKnowledgeBySession")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.KnowledgeSourceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KnowledgeSourceServiceGetUploadURLProcedure:
 			knowledgeSourceServiceGetUploadURLHandler.ServeHTTP(w, r)
 		case KnowledgeSourceServiceCreateKnowledgeSourceProcedure:
 			knowledgeSourceServiceCreateKnowledgeSourceHandler.ServeHTTP(w, r)
+		case KnowledgeSourceServiceUploadAndProcessProcedure:
+			knowledgeSourceServiceUploadAndProcessHandler.ServeHTTP(w, r)
 		case KnowledgeSourceServiceListKnowledgeSourcesProcedure:
 			knowledgeSourceServiceListKnowledgeSourcesHandler.ServeHTTP(w, r)
+		case KnowledgeSourceServiceListKnowledgeSourcesBySessionProcedure:
+			knowledgeSourceServiceListKnowledgeSourcesBySessionHandler.ServeHTTP(w, r)
+		case KnowledgeSourceServiceLinkSessionToCourseProcedure:
+			knowledgeSourceServiceLinkSessionToCourseHandler.ServeHTTP(w, r)
 		case KnowledgeSourceServiceGetKnowledgeSourceProcedure:
 			knowledgeSourceServiceGetKnowledgeSourceHandler.ServeHTTP(w, r)
 		case KnowledgeSourceServiceDeleteKnowledgeSourceProcedure:
 			knowledgeSourceServiceDeleteKnowledgeSourceHandler.ServeHTTP(w, r)
 		case KnowledgeSourceServiceSearchKnowledgeProcedure:
 			knowledgeSourceServiceSearchKnowledgeHandler.ServeHTTP(w, r)
+		case KnowledgeSourceServiceSearchKnowledgeBySessionProcedure:
+			knowledgeSourceServiceSearchKnowledgeBySessionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -250,8 +363,20 @@ func (UnimplementedKnowledgeSourceServiceHandler) CreateKnowledgeSource(context.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeSourceService.CreateKnowledgeSource is not implemented"))
 }
 
+func (UnimplementedKnowledgeSourceServiceHandler) UploadAndProcess(context.Context, *connect.Request[v1.UploadAndProcessRequest]) (*connect.Response[v1.UploadAndProcessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeSourceService.UploadAndProcess is not implemented"))
+}
+
 func (UnimplementedKnowledgeSourceServiceHandler) ListKnowledgeSources(context.Context, *connect.Request[v1.ListKnowledgeSourcesRequest]) (*connect.Response[v1.ListKnowledgeSourcesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeSourceService.ListKnowledgeSources is not implemented"))
+}
+
+func (UnimplementedKnowledgeSourceServiceHandler) ListKnowledgeSourcesBySession(context.Context, *connect.Request[v1.ListKnowledgeSourcesBySessionRequest]) (*connect.Response[v1.ListKnowledgeSourcesBySessionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession is not implemented"))
+}
+
+func (UnimplementedKnowledgeSourceServiceHandler) LinkSessionToCourse(context.Context, *connect.Request[v1.LinkSessionToCourseRequest]) (*connect.Response[v1.LinkSessionToCourseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeSourceService.LinkSessionToCourse is not implemented"))
 }
 
 func (UnimplementedKnowledgeSourceServiceHandler) GetKnowledgeSource(context.Context, *connect.Request[v1.GetKnowledgeSourceRequest]) (*connect.Response[v1.GetKnowledgeSourceResponse], error) {
@@ -264,4 +389,8 @@ func (UnimplementedKnowledgeSourceServiceHandler) DeleteKnowledgeSource(context.
 
 func (UnimplementedKnowledgeSourceServiceHandler) SearchKnowledge(context.Context, *connect.Request[v1.SearchKnowledgeRequest]) (*connect.Response[v1.SearchKnowledgeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeSourceService.SearchKnowledge is not implemented"))
+}
+
+func (UnimplementedKnowledgeSourceServiceHandler) SearchKnowledgeBySession(context.Context, *connect.Request[v1.SearchKnowledgeBySessionRequest]) (*connect.Response[v1.SearchKnowledgeBySessionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession is not implemented"))
 }

@@ -249,6 +249,10 @@ func main() {
 	)
 	logger.Info("course export service initialized")
 
+	// Knowledge Source service (for RAG - needed before AI services for RAG integration)
+	knowledgeSourceService := service.NewKnowledgeSourceService(knowledgeRepo, embeddingClient, vectorClient)
+	logger.Info("knowledge source service initialized")
+
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
@@ -278,12 +282,13 @@ func main() {
 		jobEventAdapter := service.NewJobEventAdapter(notificationPubSub, logger)
 		aiGenerationService.SetJobEventPublisher(jobEventAdapter)
 
-		// Course Wizard service (AI-guided course creation)
+		// Course Wizard service (AI-guided course creation with RAG support)
 		courseWizardService = service.NewCourseWizardService(
 			userRepo,
 			wizardStateRepo,
 			geminiProviderFactory,
 			aiSettingsRepo,
+			knowledgeSourceService, // For RAG context in outcome generation
 			logger,
 		)
 
@@ -291,10 +296,6 @@ func main() {
 	} else {
 		logger.Warn("AI services not initialized (encryption key required)")
 	}
-
-	// Knowledge Source service (for RAG)
-	knowledgeSourceService := service.NewKnowledgeSourceService(knowledgeRepo, embeddingClient, vectorClient)
-	logger.Info("knowledge source service initialized")
 
 	// Background services for deferred account provisioning
 	provisioningService := service.NewProvisioningService(pendingRegRepo, tenantRepo, userRepo, companyRepo, kratosClient, emailClient, encryptor, logger, cfg.FrontendURL)

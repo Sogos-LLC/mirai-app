@@ -61,6 +61,7 @@ func (s *CourseWizardServiceServer) GenerateTitle(
 
 // GenerateOutcomes generates desired course outcomes from a course name.
 // Used by the "magic wand" button in wizard step 1.
+// If session_id is provided, RAG context from uploaded knowledge sources will be used.
 func (s *CourseWizardServiceServer) GenerateOutcomes(
 	ctx context.Context,
 	req *connect.Request[v1.GenerateOutcomesRequest],
@@ -75,13 +76,33 @@ func (s *CourseWizardServiceServer) GenerateOutcomes(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	result, err := s.wizardService.GenerateOutcomes(ctx, kratosID, req.Msg.CourseName)
+	// Build input with optional session ID for RAG context
+	input := service.GenerateOutcomesInput{
+		CourseName: req.Msg.CourseName,
+	}
+	if req.Msg.SessionId != nil {
+		input.SessionID = *req.Msg.SessionId
+	}
+
+	result, err := s.wizardService.GenerateOutcomes(ctx, kratosID, input)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
+	// Convert citations to proto
+	citations := make([]*v1.KnowledgeCitation, len(result.Citations))
+	for i, c := range result.Citations {
+		citations[i] = &v1.KnowledgeCitation{
+			SourceId:       c.SourceID,
+			SourceName:     c.SourceName,
+			Excerpt:        c.Excerpt,
+			RelevanceScore: c.RelevanceScore,
+		}
+	}
+
 	return connect.NewResponse(&v1.GenerateOutcomesResponse{
-		Outcomes: result.Outcomes,
+		Outcomes:  result.Outcomes,
+		Citations: citations,
 	}), nil
 }
 

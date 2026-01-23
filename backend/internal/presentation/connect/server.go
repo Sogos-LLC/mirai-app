@@ -15,9 +15,10 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 )
 
-// StorageAdapter interface for generating presigned URLs.
+// StorageAdapter interface for storage operations.
 type StorageAdapter interface {
 	GenerateUploadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
+	PutContent(ctx context.Context, path string, content []byte, contentType string) error
 }
 
 // ServerConfig contains all dependencies needed for the Connect server.

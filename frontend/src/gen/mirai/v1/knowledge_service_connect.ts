@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateKnowledgeSourceRequest, CreateKnowledgeSourceResponse, DeleteKnowledgeSourceRequest, DeleteKnowledgeSourceResponse, GetKnowledgeSourceRequest, GetKnowledgeSourceResponse, GetUploadURLRequest, GetUploadURLResponse, ListKnowledgeSourcesRequest, ListKnowledgeSourcesResponse, SearchKnowledgeRequest, SearchKnowledgeResponse } from "./knowledge_service_pb.js";
+import { CreateKnowledgeSourceRequest, CreateKnowledgeSourceResponse, DeleteKnowledgeSourceRequest, DeleteKnowledgeSourceResponse, GetKnowledgeSourceRequest, GetKnowledgeSourceResponse, GetUploadURLRequest, GetUploadURLResponse, LinkSessionToCourseRequest, LinkSessionToCourseResponse, ListKnowledgeSourcesBySessionRequest, ListKnowledgeSourcesBySessionResponse, ListKnowledgeSourcesRequest, ListKnowledgeSourcesResponse, SearchKnowledgeBySessionRequest, SearchKnowledgeBySessionResponse, SearchKnowledgeRequest, SearchKnowledgeResponse, UploadAndProcessRequest, UploadAndProcessResponse } from "./knowledge_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -37,6 +37,19 @@ export const KnowledgeSourceService = {
       kind: MethodKind.Unary,
     },
     /**
+     * UploadAndProcess handles file upload + synchronous ingestion with RAG verification.
+     * Use this for wizard flow where immediate feedback is needed.
+     * Returns the source with an AI-generated summary proving RAG works.
+     *
+     * @generated from rpc mirai.v1.KnowledgeSourceService.UploadAndProcess
+     */
+    uploadAndProcess: {
+      name: "UploadAndProcess",
+      I: UploadAndProcessRequest,
+      O: UploadAndProcessResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
      * ListKnowledgeSources returns all sources for a course.
      *
      * @generated from rpc mirai.v1.KnowledgeSourceService.ListKnowledgeSources
@@ -45,6 +58,28 @@ export const KnowledgeSourceService = {
       name: "ListKnowledgeSources",
       I: ListKnowledgeSourcesRequest,
       O: ListKnowledgeSourcesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ListKnowledgeSourcesBySession returns sources created in a wizard session.
+     *
+     * @generated from rpc mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession
+     */
+    listKnowledgeSourcesBySession: {
+      name: "ListKnowledgeSourcesBySession",
+      I: ListKnowledgeSourcesBySessionRequest,
+      O: ListKnowledgeSourcesBySessionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * LinkSessionToCourse links all sources from a session to a course.
+     *
+     * @generated from rpc mirai.v1.KnowledgeSourceService.LinkSessionToCourse
+     */
+    linkSessionToCourse: {
+      name: "LinkSessionToCourse",
+      I: LinkSessionToCourseRequest,
+      O: LinkSessionToCourseResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -78,6 +113,17 @@ export const KnowledgeSourceService = {
       name: "SearchKnowledge",
       I: SearchKnowledgeRequest,
       O: SearchKnowledgeResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * SearchKnowledgeBySession performs semantic search across session knowledge.
+     *
+     * @generated from rpc mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession
+     */
+    searchKnowledgeBySession: {
+      name: "SearchKnowledgeBySession",
+      I: SearchKnowledgeBySessionRequest,
+      O: SearchKnowledgeBySessionResponse,
       kind: MethodKind.Unary,
     },
   }

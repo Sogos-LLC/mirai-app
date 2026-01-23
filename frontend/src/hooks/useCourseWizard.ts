@@ -69,13 +69,17 @@ export function useGenerateTitle() {
 
 /**
  * Generate desired course outcomes from course name (magic wand feature)
+ * If sessionId is provided, RAG context from uploaded knowledge sources will be used.
  */
 export function useGenerateOutcomes() {
   const mutation = useMutation(generateOutcomes);
 
   return {
-    mutate: async (courseName: string) => {
-      const request = create(GenerateOutcomesRequestSchema, { courseName });
+    mutate: async (params: { courseName: string; sessionId?: string }) => {
+      const request = create(GenerateOutcomesRequestSchema, {
+        courseName: params.courseName,
+        sessionId: params.sessionId,
+      });
       return mutation.mutateAsync(request);
     },
     isPending: mutation.isPending,

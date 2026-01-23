@@ -74,3 +74,49 @@ export const SearchKnowledgeRequestSchema = z.object({
 
 export type SearchKnowledgeRequest = z.infer<typeof SearchKnowledgeRequestSchema>;
 
+/**
+ * Zod schema for UploadAndProcessRequest
+ * @generated from message mirai.v1.UploadAndProcessRequest
+ */
+export const UploadAndProcessRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  filename: z.string().min(1),
+  contentType: z.string().min(1),
+  fileContent: z.instanceof(Uint8Array),
+});
+
+export type UploadAndProcessRequest = z.infer<typeof UploadAndProcessRequestSchema>;
+
+/**
+ * Zod schema for ListKnowledgeSourcesBySessionRequest
+ * @generated from message mirai.v1.ListKnowledgeSourcesBySessionRequest
+ */
+export const ListKnowledgeSourcesBySessionRequestSchema = z.object({
+  sessionId: z.string().min(1),
+});
+
+export type ListKnowledgeSourcesBySessionRequest = z.infer<typeof ListKnowledgeSourcesBySessionRequestSchema>;
+
+/**
+ * Zod schema for LinkSessionToCourseRequest
+ * @generated from message mirai.v1.LinkSessionToCourseRequest
+ */
+export const LinkSessionToCourseRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  courseId: z.string().uuid(),
+});
+
+export type LinkSessionToCourseRequest = z.infer<typeof LinkSessionToCourseRequestSchema>;
+
+/**
+ * Zod schema for SearchKnowledgeBySessionRequest
+ * @generated from message mirai.v1.SearchKnowledgeBySessionRequest
+ */
+export const SearchKnowledgeBySessionRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  query: z.string().min(1),
+  topK: z.number().int(),
+});
+
+export type SearchKnowledgeBySessionRequest = z.infer<typeof SearchKnowledgeBySessionRequestSchema>;
+

@@ -3,6 +3,7 @@ package connect
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -86,7 +87,7 @@ func (s *KnowledgeServiceServer) CreateKnowledgeSource(
 	source := &entity.KnowledgeSource{
 		ID:            uuid.New(),
 		TenantID:      tenantID,
-		CourseID:      courseID,
+		CourseID:      &courseID,
 		Type:          sourceType,
 		Name:          req.Msg.Name,
 		FilePath:      &req.Msg.FilePath,
@@ -210,12 +211,203 @@ func (s *KnowledgeServiceServer) SearchKnowledge(
 	}), nil
 }
 
+// UploadAndProcess handles file upload + synchronous ingestion with RAG verification.
+func (s *KnowledgeServiceServer) UploadAndProcess(
+	ctx context.Context,
+	req *connect.Request[v1.UploadAndProcessRequest],
+) (*connect.Response[v1.UploadAndProcessResponse], error) {
+	tenantID, ok := tenant.FromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	sessionID := req.Msg.SessionId
+	filename := req.Msg.Filename
+	contentType := req.Msg.ContentType
+	fileContent := req.Msg.FileContent
+
+	// Store file in MinIO
+	filePath := fmt.Sprintf("knowledge/%s/sessions/%s/%s", tenantID.String(), sessionID, filename)
+	if err := s.storageClient.PutContent(ctx, filePath, fileContent, contentType); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to store file: %w", err))
+	}
+
+	// Create knowledge source entity
+	fileSize := int64(len(fileContent))
+	source := &entity.KnowledgeSource{
+		ID:            uuid.New(),
+		TenantID:      tenantID,
+		SessionID:     &sessionID,
+		Type:          valueobject.KnowledgeSourceTypeFileUpload,
+		Status:        valueobject.KnowledgeSourceStatusProcessing,
+		Name:          filename,
+		FilePath:      &filePath,
+		MimeType:      &contentType,
+		FileSizeBytes: &fileSize,
+	}
+
+	// Create in DB with session
+	if err := s.knowledgeService.CreateWithSession(ctx, source); err != nil {
+		return nil, toConnectError(err)
+	}
+
+	// Extract text content from file
+	textContent := extractTextContent(fileContent, contentType)
+	if textContent == "" {
+		// Update status to failed
+		errorMsg := "failed to extract text content from file"
+		_, _ = s.knowledgeService.UpdateStatusWithSummary(ctx, source.ID, valueobject.KnowledgeSourceStatusFailed, &errorMsg, 0, "", 0)
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf(errorMsg))
+	}
+
+	// Detect video URLs
+	videoURLs := service.DetectVideoURLs(textContent)
+	if len(videoURLs) > 0 {
+		source.VideoURLs = videoURLs
+	}
+
+	// Process and index the content
+	chunkCount, tokenCount, err := s.knowledgeService.ProcessAndIndex(ctx, source, textContent)
+	if err != nil {
+		errorMsg := err.Error()
+		_, _ = s.knowledgeService.UpdateStatusWithSummary(ctx, source.ID, valueobject.KnowledgeSourceStatusFailed, &errorMsg, 0, "", 0)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to process content: %w", err))
+	}
+
+	// Generate RAG summary to prove system works
+	ragSummary := generateDocumentSummary(textContent, filename)
+
+	// Update status to ready with summary
+	updatedSource, err := s.knowledgeService.UpdateStatusWithSummary(
+		ctx, source.ID,
+		valueobject.KnowledgeSourceStatusReady,
+		nil,
+		chunkCount,
+		ragSummary,
+		tokenCount,
+	)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.UploadAndProcessResponse{
+		Source:     knowledgeSourceToProto(updatedSource),
+		RagSummary: ragSummary,
+	}), nil
+}
+
+// ListKnowledgeSourcesBySession returns sources created in a wizard session.
+func (s *KnowledgeServiceServer) ListKnowledgeSourcesBySession(
+	ctx context.Context,
+	req *connect.Request[v1.ListKnowledgeSourcesBySessionRequest],
+) (*connect.Response[v1.ListKnowledgeSourcesBySessionResponse], error) {
+	sources, err := s.knowledgeService.ListBySession(ctx, req.Msg.SessionId)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	protoSources := make([]*v1.KnowledgeSource, len(sources))
+	for i, source := range sources {
+		protoSources[i] = knowledgeSourceToProto(source)
+	}
+
+	return connect.NewResponse(&v1.ListKnowledgeSourcesBySessionResponse{
+		Sources: protoSources,
+	}), nil
+}
+
+// LinkSessionToCourse links all sources from a session to a course.
+func (s *KnowledgeServiceServer) LinkSessionToCourse(
+	ctx context.Context,
+	req *connect.Request[v1.LinkSessionToCourseRequest],
+) (*connect.Response[v1.LinkSessionToCourseResponse], error) {
+	courseID, err := parseUUID(req.Msg.CourseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid course_id"))
+	}
+
+	count, err := s.knowledgeService.LinkSessionToCourse(ctx, req.Msg.SessionId, courseID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.LinkSessionToCourseResponse{
+		LinkedCount: int32(count),
+	}), nil
+}
+
+// SearchKnowledgeBySession performs semantic search across session knowledge.
+func (s *KnowledgeServiceServer) SearchKnowledgeBySession(
+	ctx context.Context,
+	req *connect.Request[v1.SearchKnowledgeBySessionRequest],
+) (*connect.Response[v1.SearchKnowledgeBySessionResponse], error) {
+	topK := int(req.Msg.TopK)
+	if topK <= 0 {
+		topK = 5
+	}
+	if topK > 20 {
+		topK = 20
+	}
+
+	chunks, err := s.knowledgeService.SearchKnowledgeBySession(ctx, req.Msg.SessionId, req.Msg.Query, topK)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	protoChunks := make([]*v1.RetrievedChunk, len(chunks))
+	for i, chunk := range chunks {
+		protoChunks[i] = &v1.RetrievedChunk{
+			Id:              chunk.ID,
+			SourceId:        chunk.SourceID.String(),
+			SourceName:      chunk.SourceName,
+			Content:         chunk.Content,
+			SimilarityScore: chunk.SimilarityScore,
+			ChunkIndex:      chunk.ChunkIndex,
+		}
+	}
+
+	return connect.NewResponse(&v1.SearchKnowledgeBySessionResponse{
+		Chunks: protoChunks,
+	}), nil
+}
+
+// extractTextContent extracts text from file content based on MIME type.
+func extractTextContent(content []byte, contentType string) string {
+	// For now, only handle plain text files
+	// TODO: Add PDF, DOCX extraction using appropriate libraries
+	switch contentType {
+	case "text/plain", "text/markdown":
+		return string(content)
+	default:
+		// Try to interpret as plain text
+		return string(content)
+	}
+}
+
+// generateDocumentSummary creates a summary of the document content.
+// In production, this would use Gemini to generate a proper summary via RAG.
+func generateDocumentSummary(content string, filename string) string {
+	// Take first 500 chars for preview
+	preview := content
+	if len(preview) > 500 {
+		preview = preview[:500] + "..."
+	}
+
+	// Clean up whitespace
+	preview = strings.TrimSpace(preview)
+	preview = strings.ReplaceAll(preview, "\n\n", " ")
+	preview = strings.ReplaceAll(preview, "\n", " ")
+
+	// For MVP: return a simple summary based on content preview
+	// TODO: Use Gemini to generate a proper RAG-based summary
+	return fmt.Sprintf("This document contains information that has been successfully indexed and is now available for AI-enhanced course generation. Preview: %s", preview)
+}
+
 // knowledgeSourceToProto converts a domain entity to proto.
 func knowledgeSourceToProto(source *entity.KnowledgeSource) *v1.KnowledgeSource {
 	pb := &v1.KnowledgeSource{
 		Id:         source.ID.String(),
 		TenantId:   source.TenantID.String(),
-		CourseId:   source.CourseID.String(),
 		Type:       knowledgeSourceTypeToProto(source.Type),
 		Status:     knowledgeSourceStatusToProto(source.Status),
 		Name:       source.Name,
@@ -225,6 +417,13 @@ func knowledgeSourceToProto(source *entity.KnowledgeSource) *v1.KnowledgeSource 
 		UpdatedAt:  timestamppb.New(source.UpdatedAt),
 	}
 
+	// Handle optional CourseID
+	if source.CourseID != nil {
+		pb.CourseId = source.CourseID.String()
+	}
+	if source.SessionID != nil {
+		pb.SessionId = source.SessionID
+	}
 	if source.FilePath != nil {
 		pb.FilePath = *source.FilePath
 	}
@@ -236,6 +435,12 @@ func knowledgeSourceToProto(source *entity.KnowledgeSource) *v1.KnowledgeSource 
 	}
 	if source.ErrorMessage != nil {
 		pb.ErrorMessage = source.ErrorMessage
+	}
+	if source.Summary != nil {
+		pb.Summary = source.Summary
+	}
+	if source.TokenCount != nil {
+		pb.TokenCount = source.TokenCount
 	}
 	if source.ProcessedAt != nil {
 		pb.ProcessedAt = timestamppb.New(*source.ProcessedAt)

@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/knowledge_service.proto.
  */
 export const file_mirai_v1_knowledge_service: GenFile = /*@__PURE__*/
-  fileDesc("CiBtaXJhaS92MS9rbm93bGVkZ2Vfc2VydmljZS5wcm90bxIIbWlyYWkudjEibAoTR2V0VXBsb2FkVVJMUmVxdWVzdBIbCgljb3Vyc2VfaWQYASABKAlCCLpIBXIDsAEBEhkKCGZpbGVuYW1lGAIgASgJQge6SARyAhABEh0KDGNvbnRlbnRfdHlwZRgDIAEoCUIHukgEcgIQASI9ChRHZXRVcGxvYWRVUkxSZXNwb25zZRISCgp1cGxvYWRfdXJsGAEgASgJEhEKCWZpbGVfcGF0aBgCIAEoCSLHAQocQ3JlYXRlS25vd2xlZGdlU291cmNlUmVxdWVzdBIbCgljb3Vyc2VfaWQYASABKAlCCLpIBXIDsAEBEisKBHR5cGUYAiABKA4yHS5taXJhaS52MS5Lbm93bGVkZ2VTb3VyY2VUeXBlEhUKBG5hbWUYAyABKAlCB7pIBHICEAESGgoJZmlsZV9wYXRoGAQgASgJQge6SARyAhABEhEKCW1pbWVfdHlwZRgFIAEoCRIXCg9maWxlX3NpemVfYnl0ZXMYBiABKAMiSgodQ3JlYXRlS25vd2xlZGdlU291cmNlUmVzcG9uc2USKQoGc291cmNlGAEgASgLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlIjoKG0xpc3RLbm93bGVkZ2VTb3VyY2VzUmVxdWVzdBIbCgljb3Vyc2VfaWQYASABKAlCCLpIBXIDsAEBIkoKHExpc3RLbm93bGVkZ2VTb3VyY2VzUmVzcG9uc2USKgoHc291cmNlcxgBIAMoCzIZLm1pcmFpLnYxLktub3dsZWRnZVNvdXJjZSIxChlHZXRLbm93bGVkZ2VTb3VyY2VSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASJHChpHZXRLbm93bGVkZ2VTb3VyY2VSZXNwb25zZRIpCgZzb3VyY2UYASABKAsyGS5taXJhaS52MS5Lbm93bGVkZ2VTb3VyY2UiNAocRGVsZXRlS25vd2xlZGdlU291cmNlUmVxdWVzdBIUCgJpZBgBIAEoCUIIukgFcgOwAQEiMAodRGVsZXRlS25vd2xlZGdlU291cmNlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJcChZTZWFyY2hLbm93bGVkZ2VSZXF1ZXN0EhsKCWNvdXJzZV9pZBgBIAEoCUIIukgFcgOwAQESFgoFcXVlcnkYAiABKAlCB7pIBHICEAESDQoFdG9wX2sYAyABKAUiQwoXU2VhcmNoS25vd2xlZGdlUmVzcG9uc2USKAoGY2h1bmtzGAEgAygLMhgubWlyYWkudjEuUmV0cmlldmVkQ2h1bmsy2wQKFktub3dsZWRnZVNvdXJjZVNlcnZpY2USTQoMR2V0VXBsb2FkVVJMEh0ubWlyYWkudjEuR2V0VXBsb2FkVVJMUmVxdWVzdBoeLm1pcmFpLnYxLkdldFVwbG9hZFVSTFJlc3BvbnNlEmgKFUNyZWF0ZUtub3dsZWRnZVNvdXJjZRImLm1pcmFpLnYxLkNyZWF0ZUtub3dsZWRnZVNvdXJjZVJlcXVlc3QaJy5taXJhaS52MS5DcmVhdGVLbm93bGVkZ2VTb3VyY2VSZXNwb25zZRJlChRMaXN0S25vd2xlZGdlU291cmNlcxIlLm1pcmFpLnYxLkxpc3RLbm93bGVkZ2VTb3VyY2VzUmVxdWVzdBomLm1pcmFpLnYxLkxpc3RLbm93bGVkZ2VTb3VyY2VzUmVzcG9uc2USXwoSR2V0S25vd2xlZGdlU291cmNlEiMubWlyYWkudjEuR2V0S25vd2xlZGdlU291cmNlUmVxdWVzdBokLm1pcmFpLnYxLkdldEtub3dsZWRnZVNvdXJjZVJlc3BvbnNlEmgKFURlbGV0ZUtub3dsZWRnZVNvdXJjZRImLm1pcmFpLnYxLkRlbGV0ZUtub3dsZWRnZVNvdXJjZVJlcXVlc3QaJy5taXJhaS52MS5EZWxldGVLbm93bGVkZ2VTb3VyY2VSZXNwb25zZRJWCg9TZWFyY2hLbm93bGVkZ2USIC5taXJhaS52MS5TZWFyY2hLbm93bGVkZ2VSZXF1ZXN0GiEubWlyYWkudjEuU2VhcmNoS25vd2xlZGdlUmVzcG9uc2VCmwEKDGNvbS5taXJhaS52MUIVS25vd2xlZGdlU2VydmljZVByb3RvUAFaM2dpdGh1Yi5jb20vc29nb3MvbWlyYWktYmFja2VuZC9nZW4vbWlyYWkvdjE7bWlyYWl2MaICA01YWKoCCE1pcmFpLlYxygIITWlyYWlcVjHiAhRNaXJhaVxWMVxHUEJNZXRhZGF0YeoCCU1pcmFpOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_mirai_v1_knowledge_source]);
+  fileDesc("CiBtaXJhaS92MS9rbm93bGVkZ2Vfc2VydmljZS5wcm90bxIIbWlyYWkudjEibAoTR2V0VXBsb2FkVVJMUmVxdWVzdBIbCgljb3Vyc2VfaWQYASABKAlCCLpIBXIDsAEBEhkKCGZpbGVuYW1lGAIgASgJQge6SARyAhABEh0KDGNvbnRlbnRfdHlwZRgDIAEoCUIHukgEcgIQASI9ChRHZXRVcGxvYWRVUkxSZXNwb25zZRISCgp1cGxvYWRfdXJsGAEgASgJEhEKCWZpbGVfcGF0aBgCIAEoCSLHAQocQ3JlYXRlS25vd2xlZGdlU291cmNlUmVxdWVzdBIbCgljb3Vyc2VfaWQYASABKAlCCLpIBXIDsAEBEisKBHR5cGUYAiABKA4yHS5taXJhaS52MS5Lbm93bGVkZ2VTb3VyY2VUeXBlEhUKBG5hbWUYAyABKAlCB7pIBHICEAESGgoJZmlsZV9wYXRoGAQgASgJQge6SARyAhABEhEKCW1pbWVfdHlwZRgFIAEoCRIXCg9maWxlX3NpemVfYnl0ZXMYBiABKAMiSgodQ3JlYXRlS25vd2xlZGdlU291cmNlUmVzcG9uc2USKQoGc291cmNlGAEgASgLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlIjoKG0xpc3RLbm93bGVkZ2VTb3VyY2VzUmVxdWVzdBIbCgljb3Vyc2VfaWQYASABKAlCCLpIBXIDsAEBIkoKHExpc3RLbm93bGVkZ2VTb3VyY2VzUmVzcG9uc2USKgoHc291cmNlcxgBIAMoCzIZLm1pcmFpLnYxLktub3dsZWRnZVNvdXJjZSIxChlHZXRLbm93bGVkZ2VTb3VyY2VSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASJHChpHZXRLbm93bGVkZ2VTb3VyY2VSZXNwb25zZRIpCgZzb3VyY2UYASABKAsyGS5taXJhaS52MS5Lbm93bGVkZ2VTb3VyY2UiNAocRGVsZXRlS25vd2xlZGdlU291cmNlUmVxdWVzdBIUCgJpZBgBIAEoCUIIukgFcgOwAQEiMAodRGVsZXRlS25vd2xlZGdlU291cmNlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJcChZTZWFyY2hLbm93bGVkZ2VSZXF1ZXN0EhsKCWNvdXJzZV9pZBgBIAEoCUIIukgFcgOwAQESFgoFcXVlcnkYAiABKAlCB7pIBHICEAESDQoFdG9wX2sYAyABKAUiQwoXU2VhcmNoS25vd2xlZGdlUmVzcG9uc2USKAoGY2h1bmtzGAEgAygLMhgubWlyYWkudjEuUmV0cmlldmVkQ2h1bmsijwEKF1VwbG9hZEFuZFByb2Nlc3NSZXF1ZXN0EhsKCnNlc3Npb25faWQYASABKAlCB7pIBHICEAESGQoIZmlsZW5hbWUYAiABKAlCB7pIBHICEAESHQoMY29udGVudF90eXBlGAMgASgJQge6SARyAhABEh0KDGZpbGVfY29udGVudBgEIAEoDEIHukgEegIQASJaChhVcGxvYWRBbmRQcm9jZXNzUmVzcG9uc2USKQoGc291cmNlGAEgASgLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlEhMKC3JhZ19zdW1tYXJ5GAIgASgJIkMKJExpc3RLbm93bGVkZ2VTb3VyY2VzQnlTZXNzaW9uUmVxdWVzdBIbCgpzZXNzaW9uX2lkGAEgASgJQge6SARyAhABIlMKJUxpc3RLbm93bGVkZ2VTb3VyY2VzQnlTZXNzaW9uUmVzcG9uc2USKgoHc291cmNlcxgBIAMoCzIZLm1pcmFpLnYxLktub3dsZWRnZVNvdXJjZSJWChpMaW5rU2Vzc2lvblRvQ291cnNlUmVxdWVzdBIbCgpzZXNzaW9uX2lkGAEgASgJQge6SARyAhABEhsKCWNvdXJzZV9pZBgCIAEoCUIIukgFcgOwAQEiMwobTGlua1Nlc3Npb25Ub0NvdXJzZVJlc3BvbnNlEhQKDGxpbmtlZF9jb3VudBgBIAEoBSJlCh9TZWFyY2hLbm93bGVkZ2VCeVNlc3Npb25SZXF1ZXN0EhsKCnNlc3Npb25faWQYASABKAlCB7pIBHICEAESFgoFcXVlcnkYAiABKAlCB7pIBHICEAESDQoFdG9wX2sYAyABKAUiTAogU2VhcmNoS25vd2xlZGdlQnlTZXNzaW9uUmVzcG9uc2USKAoGY2h1bmtzGAEgAygLMhgubWlyYWkudjEuUmV0cmlldmVkQ2h1bmsykAgKFktub3dsZWRnZVNvdXJjZVNlcnZpY2USTQoMR2V0VXBsb2FkVVJMEh0ubWlyYWkudjEuR2V0VXBsb2FkVVJMUmVxdWVzdBoeLm1pcmFpLnYxLkdldFVwbG9hZFVSTFJlc3BvbnNlEmgKFUNyZWF0ZUtub3dsZWRnZVNvdXJjZRImLm1pcmFpLnYxLkNyZWF0ZUtub3dsZWRnZVNvdXJjZVJlcXVlc3QaJy5taXJhaS52MS5DcmVhdGVLbm93bGVkZ2VTb3VyY2VSZXNwb25zZRJZChBVcGxvYWRBbmRQcm9jZXNzEiEubWlyYWkudjEuVXBsb2FkQW5kUHJvY2Vzc1JlcXVlc3QaIi5taXJhaS52MS5VcGxvYWRBbmRQcm9jZXNzUmVzcG9uc2USZQoUTGlzdEtub3dsZWRnZVNvdXJjZXMSJS5taXJhaS52MS5MaXN0S25vd2xlZGdlU291cmNlc1JlcXVlc3QaJi5taXJhaS52MS5MaXN0S25vd2xlZGdlU291cmNlc1Jlc3BvbnNlEoABCh1MaXN0S25vd2xlZGdlU291cmNlc0J5U2Vzc2lvbhIuLm1pcmFpLnYxLkxpc3RLbm93bGVkZ2VTb3VyY2VzQnlTZXNzaW9uUmVxdWVzdBovLm1pcmFpLnYxLkxpc3RLbm93bGVkZ2VTb3VyY2VzQnlTZXNzaW9uUmVzcG9uc2USYgoTTGlua1Nlc3Npb25Ub0NvdXJzZRIkLm1pcmFpLnYxLkxpbmtTZXNzaW9uVG9Db3Vyc2VSZXF1ZXN0GiUubWlyYWkudjEuTGlua1Nlc3Npb25Ub0NvdXJzZVJlc3BvbnNlEl8KEkdldEtub3dsZWRnZVNvdXJjZRIjLm1pcmFpLnYxLkdldEtub3dsZWRnZVNvdXJjZVJlcXVlc3QaJC5taXJhaS52MS5HZXRLbm93bGVkZ2VTb3VyY2VSZXNwb25zZRJoChVEZWxldGVLbm93bGVkZ2VTb3VyY2USJi5taXJhaS52MS5EZWxldGVLbm93bGVkZ2VTb3VyY2VSZXF1ZXN0GicubWlyYWkudjEuRGVsZXRlS25vd2xlZGdlU291cmNlUmVzcG9uc2USVgoPU2VhcmNoS25vd2xlZGdlEiAubWlyYWkudjEuU2VhcmNoS25vd2xlZGdlUmVxdWVzdBohLm1pcmFpLnYxLlNlYXJjaEtub3dsZWRnZVJlc3BvbnNlEnEKGFNlYXJjaEtub3dsZWRnZUJ5U2Vzc2lvbhIpLm1pcmFpLnYxLlNlYXJjaEtub3dsZWRnZUJ5U2Vzc2lvblJlcXVlc3QaKi5taXJhaS52MS5TZWFyY2hLbm93bGVkZ2VCeVNlc3Npb25SZXNwb25zZUKbAQoMY29tLm1pcmFpLnYxQhVLbm93bGVkZ2VTZXJ2aWNlUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_buf_validate_validate, file_mirai_v1_knowledge_source]);
 
 /**
  * GetUploadURLRequest for presigned upload URL.
@@ -288,6 +288,191 @@ export const SearchKnowledgeResponseSchema: GenMessage<SearchKnowledgeResponse> 
   messageDesc(file_mirai_v1_knowledge_service, 11);
 
 /**
+ * UploadAndProcessRequest for wizard flow - upload + immediate ingestion.
+ *
+ * @generated from message mirai.v1.UploadAndProcessRequest
+ */
+export type UploadAndProcessRequest = Message<"mirai.v1.UploadAndProcessRequest"> & {
+  /**
+   * Session ID for pre-course knowledge (wizard flow)
+   *
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: string filename = 2;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: string content_type = 3;
+   */
+  contentType: string;
+
+  /**
+   * @generated from field: bytes file_content = 4;
+   */
+  fileContent: Uint8Array;
+};
+
+/**
+ * Describes the message mirai.v1.UploadAndProcessRequest.
+ * Use `create(UploadAndProcessRequestSchema)` to create a new message.
+ */
+export const UploadAndProcessRequestSchema: GenMessage<UploadAndProcessRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_service, 12);
+
+/**
+ * @generated from message mirai.v1.UploadAndProcessResponse
+ */
+export type UploadAndProcessResponse = Message<"mirai.v1.UploadAndProcessResponse"> & {
+  /**
+   * @generated from field: mirai.v1.KnowledgeSource source = 1;
+   */
+  source?: KnowledgeSource;
+
+  /**
+   * AI-generated summary proving RAG works
+   *
+   * @generated from field: string rag_summary = 2;
+   */
+  ragSummary: string;
+};
+
+/**
+ * Describes the message mirai.v1.UploadAndProcessResponse.
+ * Use `create(UploadAndProcessResponseSchema)` to create a new message.
+ */
+export const UploadAndProcessResponseSchema: GenMessage<UploadAndProcessResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_service, 13);
+
+/**
+ * ListKnowledgeSourcesBySessionRequest for listing session sources.
+ *
+ * @generated from message mirai.v1.ListKnowledgeSourcesBySessionRequest
+ */
+export type ListKnowledgeSourcesBySessionRequest = Message<"mirai.v1.ListKnowledgeSourcesBySessionRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+};
+
+/**
+ * Describes the message mirai.v1.ListKnowledgeSourcesBySessionRequest.
+ * Use `create(ListKnowledgeSourcesBySessionRequestSchema)` to create a new message.
+ */
+export const ListKnowledgeSourcesBySessionRequestSchema: GenMessage<ListKnowledgeSourcesBySessionRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_service, 14);
+
+/**
+ * @generated from message mirai.v1.ListKnowledgeSourcesBySessionResponse
+ */
+export type ListKnowledgeSourcesBySessionResponse = Message<"mirai.v1.ListKnowledgeSourcesBySessionResponse"> & {
+  /**
+   * @generated from field: repeated mirai.v1.KnowledgeSource sources = 1;
+   */
+  sources: KnowledgeSource[];
+};
+
+/**
+ * Describes the message mirai.v1.ListKnowledgeSourcesBySessionResponse.
+ * Use `create(ListKnowledgeSourcesBySessionResponseSchema)` to create a new message.
+ */
+export const ListKnowledgeSourcesBySessionResponseSchema: GenMessage<ListKnowledgeSourcesBySessionResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_service, 15);
+
+/**
+ * LinkSessionToCourseRequest to link session sources to a course.
+ *
+ * @generated from message mirai.v1.LinkSessionToCourseRequest
+ */
+export type LinkSessionToCourseRequest = Message<"mirai.v1.LinkSessionToCourseRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: string course_id = 2;
+   */
+  courseId: string;
+};
+
+/**
+ * Describes the message mirai.v1.LinkSessionToCourseRequest.
+ * Use `create(LinkSessionToCourseRequestSchema)` to create a new message.
+ */
+export const LinkSessionToCourseRequestSchema: GenMessage<LinkSessionToCourseRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_service, 16);
+
+/**
+ * @generated from message mirai.v1.LinkSessionToCourseResponse
+ */
+export type LinkSessionToCourseResponse = Message<"mirai.v1.LinkSessionToCourseResponse"> & {
+  /**
+   * @generated from field: int32 linked_count = 1;
+   */
+  linkedCount: number;
+};
+
+/**
+ * Describes the message mirai.v1.LinkSessionToCourseResponse.
+ * Use `create(LinkSessionToCourseResponseSchema)` to create a new message.
+ */
+export const LinkSessionToCourseResponseSchema: GenMessage<LinkSessionToCourseResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_service, 17);
+
+/**
+ * SearchKnowledgeBySessionRequest for semantic search across session knowledge.
+ *
+ * @generated from message mirai.v1.SearchKnowledgeBySessionRequest
+ */
+export type SearchKnowledgeBySessionRequest = Message<"mirai.v1.SearchKnowledgeBySessionRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: string query = 2;
+   */
+  query: string;
+
+  /**
+   * Number of results (default 5, max 20)
+   *
+   * @generated from field: int32 top_k = 3;
+   */
+  topK: number;
+};
+
+/**
+ * Describes the message mirai.v1.SearchKnowledgeBySessionRequest.
+ * Use `create(SearchKnowledgeBySessionRequestSchema)` to create a new message.
+ */
+export const SearchKnowledgeBySessionRequestSchema: GenMessage<SearchKnowledgeBySessionRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_service, 18);
+
+/**
+ * @generated from message mirai.v1.SearchKnowledgeBySessionResponse
+ */
+export type SearchKnowledgeBySessionResponse = Message<"mirai.v1.SearchKnowledgeBySessionResponse"> & {
+  /**
+   * @generated from field: repeated mirai.v1.RetrievedChunk chunks = 1;
+   */
+  chunks: RetrievedChunk[];
+};
+
+/**
+ * Describes the message mirai.v1.SearchKnowledgeBySessionResponse.
+ * Use `create(SearchKnowledgeBySessionResponseSchema)` to create a new message.
+ */
+export const SearchKnowledgeBySessionResponseSchema: GenMessage<SearchKnowledgeBySessionResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_knowledge_service, 19);
+
+/**
  * KnowledgeSourceService handles knowledge source operations for RAG.
  *
  * @generated from service mirai.v1.KnowledgeSourceService
@@ -314,6 +499,18 @@ export const KnowledgeSourceService: GenService<{
     output: typeof CreateKnowledgeSourceResponseSchema;
   },
   /**
+   * UploadAndProcess handles file upload + synchronous ingestion with RAG verification.
+   * Use this for wizard flow where immediate feedback is needed.
+   * Returns the source with an AI-generated summary proving RAG works.
+   *
+   * @generated from rpc mirai.v1.KnowledgeSourceService.UploadAndProcess
+   */
+  uploadAndProcess: {
+    methodKind: "unary";
+    input: typeof UploadAndProcessRequestSchema;
+    output: typeof UploadAndProcessResponseSchema;
+  },
+  /**
    * ListKnowledgeSources returns all sources for a course.
    *
    * @generated from rpc mirai.v1.KnowledgeSourceService.ListKnowledgeSources
@@ -322,6 +519,26 @@ export const KnowledgeSourceService: GenService<{
     methodKind: "unary";
     input: typeof ListKnowledgeSourcesRequestSchema;
     output: typeof ListKnowledgeSourcesResponseSchema;
+  },
+  /**
+   * ListKnowledgeSourcesBySession returns sources created in a wizard session.
+   *
+   * @generated from rpc mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession
+   */
+  listKnowledgeSourcesBySession: {
+    methodKind: "unary";
+    input: typeof ListKnowledgeSourcesBySessionRequestSchema;
+    output: typeof ListKnowledgeSourcesBySessionResponseSchema;
+  },
+  /**
+   * LinkSessionToCourse links all sources from a session to a course.
+   *
+   * @generated from rpc mirai.v1.KnowledgeSourceService.LinkSessionToCourse
+   */
+  linkSessionToCourse: {
+    methodKind: "unary";
+    input: typeof LinkSessionToCourseRequestSchema;
+    output: typeof LinkSessionToCourseResponseSchema;
   },
   /**
    * GetKnowledgeSource returns a single source by ID.
@@ -352,6 +569,16 @@ export const KnowledgeSourceService: GenService<{
     methodKind: "unary";
     input: typeof SearchKnowledgeRequestSchema;
     output: typeof SearchKnowledgeResponseSchema;
+  },
+  /**
+   * SearchKnowledgeBySession performs semantic search across session knowledge.
+   *
+   * @generated from rpc mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession
+   */
+  searchKnowledgeBySession: {
+    methodKind: "unary";
+    input: typeof SearchKnowledgeBySessionRequestSchema;
+    output: typeof SearchKnowledgeBySessionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_mirai_v1_knowledge_service, 0);

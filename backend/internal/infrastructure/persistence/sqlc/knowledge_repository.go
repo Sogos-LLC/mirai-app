@@ -31,11 +31,17 @@ func (r *KnowledgeSourceRepository) Create(ctx context.Context, source *entity.K
 		source.ID = uuid.New()
 	}
 
+	// Convert CourseID pointer to NullUUID
+	var courseID uuid.NullUUID
+	if source.CourseID != nil {
+		courseID = uuid.NullUUID{UUID: *source.CourseID, Valid: true}
+	}
+
 	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.KnowledgeSource, error) {
 		return q.CreateKnowledgeSource(ctx, gen.CreateKnowledgeSourceParams{
 			ID:            source.ID,
 			TenantID:      source.TenantID,
-			CourseID:      source.CourseID,
+			CourseID:      courseID,
 			Type:          toKnowledgeSourceType(source.Type.String()),
 			Status:        toKnowledgeSourceStatus(source.Status.String()),
 			Name:          source.Name,
@@ -46,6 +52,34 @@ func (r *KnowledgeSourceRepository) Create(ctx context.Context, source *entity.K
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create knowledge source: %w", err)
+	}
+
+	source.CreatedAt = result.CreatedAt
+	source.UpdatedAt = result.UpdatedAt
+	return nil
+}
+
+// CreateWithSession creates a knowledge source with session_id (pre-course wizard flow).
+func (r *KnowledgeSourceRepository) CreateWithSession(ctx context.Context, source *entity.KnowledgeSource) error {
+	if source.ID == uuid.Nil {
+		source.ID = uuid.New()
+	}
+
+	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.KnowledgeSource, error) {
+		return q.CreateKnowledgeSourceWithSession(ctx, gen.CreateKnowledgeSourceWithSessionParams{
+			ID:            source.ID,
+			TenantID:      source.TenantID,
+			SessionID:     toNullString(source.SessionID),
+			Type:          toKnowledgeSourceType(source.Type.String()),
+			Status:        toKnowledgeSourceStatus(source.Status.String()),
+			Name:          source.Name,
+			FilePath:      toNullString(source.FilePath),
+			MimeType:      toNullString(source.MimeType),
+			FileSizeBytes: toNullInt64(source.FileSizeBytes),
+		})
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create knowledge source with session: %w", err)
 	}
 
 	source.CreatedAt = result.CreatedAt
@@ -70,7 +104,7 @@ func (r *KnowledgeSourceRepository) GetByID(ctx context.Context, id uuid.UUID) (
 // ListByCourse retrieves all knowledge sources for a course.
 func (r *KnowledgeSourceRepository) ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeSource, error) {
 	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.KnowledgeSource, error) {
-		return q.ListKnowledgeSourcesByCourse(ctx, courseID)
+		return q.ListKnowledgeSourcesByCourse(ctx, uuid.NullUUID{UUID: courseID, Valid: true})
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list knowledge sources: %w", err)
@@ -83,13 +117,45 @@ func (r *KnowledgeSourceRepository) ListByCourse(ctx context.Context, courseID u
 	return sources, nil
 }
 
+// ListBySession retrieves all knowledge sources for a session.
+func (r *KnowledgeSourceRepository) ListBySession(ctx context.Context, sessionID string) ([]*entity.KnowledgeSource, error) {
+	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.KnowledgeSource, error) {
+		return q.ListKnowledgeSourcesBySession(ctx, sql.NullString{String: sessionID, Valid: true})
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list knowledge sources by session: %w", err)
+	}
+
+	sources := make([]*entity.KnowledgeSource, len(results))
+	for i := range results {
+		sources[i] = toKnowledgeSourceEntity(&results[i])
+	}
+	return sources, nil
+}
+
 // GetReadyByCourse retrieves ready sources for a course.
 func (r *KnowledgeSourceRepository) GetReadyByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeSource, error) {
 	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.KnowledgeSource, error) {
-		return q.GetReadySourcesByCourse(ctx, courseID)
+		return q.GetReadySourcesByCourse(ctx, uuid.NullUUID{UUID: courseID, Valid: true})
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ready sources: %w", err)
+	}
+
+	sources := make([]*entity.KnowledgeSource, len(results))
+	for i := range results {
+		sources[i] = toKnowledgeSourceEntity(&results[i])
+	}
+	return sources, nil
+}
+
+// GetReadyBySession retrieves ready sources for a session.
+func (r *KnowledgeSourceRepository) GetReadyBySession(ctx context.Context, sessionID string) ([]*entity.KnowledgeSource, error) {
+	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.KnowledgeSource, error) {
+		return q.GetReadySourcesBySession(ctx, sql.NullString{String: sessionID, Valid: true})
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ready sources by session: %w", err)
 	}
 
 	sources := make([]*entity.KnowledgeSource, len(results))
@@ -137,6 +203,32 @@ func (r *KnowledgeSourceRepository) UpdateStatus(
 	return toKnowledgeSourceEntity(&result), nil
 }
 
+// UpdateStatusWithSummary updates status with RAG-generated summary.
+func (r *KnowledgeSourceRepository) UpdateStatusWithSummary(
+	ctx context.Context,
+	id uuid.UUID,
+	status valueobject.KnowledgeSourceStatus,
+	errorMsg *string,
+	chunkCount int32,
+	summary string,
+	tokenCount int32,
+) (*entity.KnowledgeSource, error) {
+	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.KnowledgeSource, error) {
+		return q.UpdateKnowledgeSourceWithSummary(ctx, gen.UpdateKnowledgeSourceWithSummaryParams{
+			ID:           id,
+			Status:       toKnowledgeSourceStatus(status.String()),
+			ErrorMessage: toNullString(errorMsg),
+			ChunkCount:   sql.NullInt32{Int32: chunkCount, Valid: true},
+			Summary:      sql.NullString{String: summary, Valid: summary != ""},
+			TokenCount:   sql.NullInt32{Int32: tokenCount, Valid: true},
+		})
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update status with summary: %w", err)
+	}
+	return toKnowledgeSourceEntity(&result), nil
+}
+
 // UpdateVideoURLs updates the detected video URLs.
 func (r *KnowledgeSourceRepository) UpdateVideoURLs(ctx context.Context, id uuid.UUID, urls []string) (*entity.KnowledgeSource, error) {
 	jsonBytes, err := json.Marshal(urls)
@@ -170,7 +262,7 @@ func (r *KnowledgeSourceRepository) Delete(ctx context.Context, id uuid.UUID) er
 // DeleteByCourse deletes all knowledge sources for a course.
 func (r *KnowledgeSourceRepository) DeleteByCourse(ctx context.Context, courseID uuid.UUID) error {
 	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
-		return q.DeleteKnowledgeSourcesByCourse(ctx, courseID)
+		return q.DeleteKnowledgeSourcesByCourse(ctx, uuid.NullUUID{UUID: courseID, Valid: true})
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete knowledge sources: %w", err)
@@ -181,10 +273,35 @@ func (r *KnowledgeSourceRepository) DeleteByCourse(ctx context.Context, courseID
 // CountByCourse returns the count of sources for a course.
 func (r *KnowledgeSourceRepository) CountByCourse(ctx context.Context, courseID uuid.UUID) (int32, error) {
 	count, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (int32, error) {
-		return q.CountKnowledgeSourcesByCourse(ctx, courseID)
+		return q.CountKnowledgeSourcesByCourse(ctx, uuid.NullUUID{UUID: courseID, Valid: true})
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to count knowledge sources: %w", err)
+	}
+	return count, nil
+}
+
+// CountBySession returns the count of sources for a session.
+func (r *KnowledgeSourceRepository) CountBySession(ctx context.Context, sessionID string) (int32, error) {
+	count, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (int32, error) {
+		return q.CountKnowledgeSourcesBySession(ctx, sql.NullString{String: sessionID, Valid: true})
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to count knowledge sources by session: %w", err)
+	}
+	return count, nil
+}
+
+// LinkSessionToCourse links all sources from a session to a course.
+func (r *KnowledgeSourceRepository) LinkSessionToCourse(ctx context.Context, sessionID string, courseID uuid.UUID) (int64, error) {
+	count, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (int64, error) {
+		return q.LinkSessionToCourse(ctx, gen.LinkSessionToCourseParams{
+			SessionID: sql.NullString{String: sessionID, Valid: true},
+			CourseID:  uuid.NullUUID{UUID: courseID, Valid: true},
+		})
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to link session to course: %w", err)
 	}
 	return count, nil
 }
@@ -199,10 +316,17 @@ func toKnowledgeSourceEntity(ks *gen.KnowledgeSource) *entity.KnowledgeSource {
 		_ = json.Unmarshal(ks.VideoUrls.RawMessage, &videoURLs)
 	}
 
+	// Handle optional CourseID (nil for pre-course session sources)
+	var courseID *uuid.UUID
+	if ks.CourseID.Valid {
+		courseID = &ks.CourseID.UUID
+	}
+
 	return &entity.KnowledgeSource{
 		ID:            ks.ID,
 		TenantID:      ks.TenantID,
-		CourseID:      ks.CourseID,
+		CourseID:      courseID,
+		SessionID:     fromNullStringPtr(ks.SessionID),
 		Type:          sourceType,
 		Status:        status,
 		Name:          ks.Name,
@@ -211,9 +335,12 @@ func toKnowledgeSourceEntity(ks *gen.KnowledgeSource) *entity.KnowledgeSource {
 		FileSizeBytes: fromNullInt64Ptr(ks.FileSizeBytes),
 		ChunkCount:    fromNullInt32(ks.ChunkCount),
 		ErrorMessage:  fromNullStringPtr(ks.ErrorMessage),
+		Summary:       fromNullStringPtr(ks.Summary),
+		TokenCount:    fromNullInt32Ptr(ks.TokenCount),
 		VideoURLs:     videoURLs,
 		CreatedAt:     ks.CreatedAt,
 		UpdatedAt:     ks.UpdatedAt,
 		ProcessedAt:   fromDoublePointerTime(ks.ProcessedAt),
 	}
 }
+

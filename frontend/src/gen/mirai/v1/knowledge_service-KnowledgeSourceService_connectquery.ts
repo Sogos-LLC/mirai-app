@@ -19,11 +19,34 @@ export const getUploadURL = KnowledgeSourceService.method.getUploadURL;
 export const createKnowledgeSource = KnowledgeSourceService.method.createKnowledgeSource;
 
 /**
+ * UploadAndProcess handles file upload + synchronous ingestion with RAG verification.
+ * Use this for wizard flow where immediate feedback is needed.
+ * Returns the source with an AI-generated summary proving RAG works.
+ *
+ * @generated from rpc mirai.v1.KnowledgeSourceService.UploadAndProcess
+ */
+export const uploadAndProcess = KnowledgeSourceService.method.uploadAndProcess;
+
+/**
  * ListKnowledgeSources returns all sources for a course.
  *
  * @generated from rpc mirai.v1.KnowledgeSourceService.ListKnowledgeSources
  */
 export const listKnowledgeSources = KnowledgeSourceService.method.listKnowledgeSources;
+
+/**
+ * ListKnowledgeSourcesBySession returns sources created in a wizard session.
+ *
+ * @generated from rpc mirai.v1.KnowledgeSourceService.ListKnowledgeSourcesBySession
+ */
+export const listKnowledgeSourcesBySession = KnowledgeSourceService.method.listKnowledgeSourcesBySession;
+
+/**
+ * LinkSessionToCourse links all sources from a session to a course.
+ *
+ * @generated from rpc mirai.v1.KnowledgeSourceService.LinkSessionToCourse
+ */
+export const linkSessionToCourse = KnowledgeSourceService.method.linkSessionToCourse;
 
 /**
  * GetKnowledgeSource returns a single source by ID.
@@ -45,3 +68,10 @@ export const deleteKnowledgeSource = KnowledgeSourceService.method.deleteKnowled
  * @generated from rpc mirai.v1.KnowledgeSourceService.SearchKnowledge
  */
 export const searchKnowledge = KnowledgeSourceService.method.searchKnowledge;
+
+/**
+ * SearchKnowledgeBySession performs semantic search across session knowledge.
+ *
+ * @generated from rpc mirai.v1.KnowledgeSourceService.SearchKnowledgeBySession
+ */
+export const searchKnowledgeBySession = KnowledgeSourceService.method.searchKnowledgeBySession;
