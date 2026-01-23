@@ -346,6 +346,25 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
+	// Check for existing active full_course job for this course
+	fullCourseType := valueobject.GenerationJobTypeFullCourse
+	existingJobs, err := s.jobRepo.List(ctx, entity.GenerationJobListOptions{
+		CourseID: &courseID,
+		Type:     &fullCourseType,
+	})
+	if err == nil {
+		for _, job := range existingJobs {
+			if job.Status == valueobject.GenerationJobStatusQueued || job.Status == valueobject.GenerationJobStatusProcessing {
+				log.Warn("DUPLICATE_GENERATION_REQUEST: existing active job found",
+					"existingJobID", job.ID,
+					"existingJobStatus", job.Status,
+				)
+				// Return the existing job instead of creating a new one
+				return &GenerateAllLessonsResult{Job: job}, nil
+			}
+		}
+	}
+
 	// Read course content from MinIO
 	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
 	if err != nil {
@@ -718,11 +737,28 @@ func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, par
 		parentJob.ProgressMessage = &progressMsg
 		parentJob.TokensUsed = result.TotalTokens
 		_ = s.jobRepo.Update(ctx, parentJob)
+		log.Info("parent job progress update", "completed", result.CompletedCount, "failed", result.FailedCount, "total", result.TotalCount, "pending", result.TotalCount-doneCount)
 		return nil
 	}
 
 	// Finalized - send notification
-	log.Info("parent job finalized", "completed", result.CompletedCount, "failed", result.FailedCount)
+	log.Info("parent job finalized", "completed", result.CompletedCount, "failed", result.FailedCount, "total", result.TotalCount, "wasFinalized", result.WasFinalized)
+
+	// If there are failed jobs, log which ones failed for debugging
+	if result.FailedCount > 0 {
+		failedJobs, err := s.jobRepo.ListByParentID(ctx, parentJobID)
+		if err == nil {
+			for _, job := range failedJobs {
+				if job.Status == valueobject.GenerationJobStatusFailed {
+					errMsg := ""
+					if job.ErrorMessage != nil {
+						errMsg = *job.ErrorMessage
+					}
+					log.Error("FAILED CHILD JOB", "childJobID", job.ID, "errorMessage", errMsg, "resultPath", job.ResultPath)
+				}
+			}
+		}
+	}
 
 	parentJob, err := s.jobRepo.GetByID(ctx, parentJobID)
 	if err != nil || parentJob == nil || parentJob.CourseID == nil {
@@ -1123,6 +1159,16 @@ func (s *AIGenerationService) processNextJob(ctx context.Context) error {
 }
 
 func (s *AIGenerationService) failJob(ctx context.Context, job *entity.GenerationJob, errMsg string) error {
+	// Log detailed info about the failing job for debugging
+	s.logger.Error("JOB FAILED",
+		"jobID", job.ID,
+		"jobType", job.Type,
+		"courseID", job.CourseID,
+		"parentJobID", job.ParentJobID,
+		"resultPath", job.ResultPath,
+		"errorMessage", errMsg,
+	)
+
 	job.Status = valueobject.GenerationJobStatusFailed
 	job.ErrorMessage = &errMsg
 	now := time.Now()

@@ -86,6 +86,32 @@ func ValidateComponentPlan(plan []plannedComponent) error {
 		}
 	}
 
+	// Rule 7: No consecutive headings (2 or more in a row)
+	if consecutiveHeadings := findMaxConsecutiveHeadings(plan); consecutiveHeadings >= 2 {
+		return &PlanValidationError{
+			Rule:    "consecutive_headings",
+			Message: fmt.Sprintf("plan has %d consecutive heading components (max 1 allowed - add content between headings)", consecutiveHeadings),
+		}
+	}
+
+	// Rule 8: Minimum component variety (at least 4 different types)
+	uniqueTypes := countUniqueTypes(counts)
+	if uniqueTypes < 4 {
+		return &PlanValidationError{
+			Rule:    "min_variety",
+			Message: fmt.Sprintf("plan has only %d component types (need at least 4 for engaging content)", uniqueTypes),
+		}
+	}
+
+	// Rule 9: Must have at least 1 emphasis component (STATEMENT or CALLOUT)
+	emphasisCount := counts["statement"] + counts["callout"]
+	if emphasisCount < 1 {
+		return &PlanValidationError{
+			Rule:    "min_emphasis",
+			Message: "plan must have at least 1 STATEMENT or CALLOUT component for emphasis",
+		}
+	}
+
 	return nil
 }
 
@@ -115,4 +141,34 @@ func findMaxConsecutiveImages(plan []plannedComponent) int {
 	}
 
 	return maxConsecutive
+}
+
+// findMaxConsecutiveHeadings returns the maximum number of consecutive heading components
+func findMaxConsecutiveHeadings(plan []plannedComponent) int {
+	maxConsecutive := 0
+	currentConsecutive := 0
+
+	for _, comp := range plan {
+		if comp.ComponentType == "heading" {
+			currentConsecutive++
+			if currentConsecutive > maxConsecutive {
+				maxConsecutive = currentConsecutive
+			}
+		} else {
+			currentConsecutive = 0
+		}
+	}
+
+	return maxConsecutive
+}
+
+// countUniqueTypes returns the number of unique component types in the counts map
+func countUniqueTypes(counts map[string]int) int {
+	unique := 0
+	for _, count := range counts {
+		if count > 0 {
+			unique++
+		}
+	}
+	return unique
 }

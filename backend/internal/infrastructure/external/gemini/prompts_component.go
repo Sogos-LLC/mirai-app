@@ -181,6 +181,22 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 	sb.WriteString("- 'bulleted' - AVOID. Only use for truly simple unordered items with no explanations\n\n")
 	sb.WriteString("**ALWAYS DEFAULT TO 'accordion'** unless the content is purely sequential steps.\n\n")
 
+	// Strict content limits section
+	sb.WriteString("## STRICT CONTENT LIMITS (ENFORCED)\n")
+	sb.WriteString("These limits are validated after generation - violations will cause regeneration:\n\n")
+	sb.WriteString("| Component | Limit | Description |\n")
+	sb.WriteString("|-----------|-------|-------------|\n")
+	sb.WriteString("| TEXT | Max 500 chars | 2-3 short sentences per text block |\n")
+	sb.WriteString("| LIST | Max 7 items | Keep lists focused and scannable |\n")
+	sb.WriteString("| STATEMENT | Max 200 chars | One memorable key takeaway |\n")
+	sb.WriteString("| CALLOUT | Max 300 chars | Brief important info or tip |\n")
+	sb.WriteString("| QUIZ | 2-5 options | Multiple choice only |\n\n")
+	sb.WriteString("**Structural Requirements:**\n")
+	sb.WriteString("- Minimum 4 different component types per lesson (variety)\n")
+	sb.WriteString("- At least 1 STATEMENT or CALLOUT per lesson (emphasis)\n")
+	sb.WriteString("- No consecutive HEADING components (add content between)\n")
+	sb.WriteString("- No consecutive IMAGE components\n\n")
+
 	// Anti-patterns section - critical rules to prevent poor lesson structure
 	sb.WriteString("## CRITICAL RULES (MUST FOLLOW)\n")
 	sb.WriteString("1. QUIZ must be the LAST component - exactly ONE quiz per lesson as a knowledge check\n")
