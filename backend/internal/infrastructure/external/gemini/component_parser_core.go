@@ -57,7 +57,7 @@ func parseTextComponent(responseText string, comp *flatLessonComponent) (string,
 	}
 	comp.TextHTML = resp.TextHTML
 	content := map[string]any{
-		"html":      resp.TextHTML,
+		"textHtml":  resp.TextHTML,
 		"plaintext": stripHTML(resp.TextHTML),
 	}
 	jsonBytes, _ := json.Marshal(content)
@@ -78,8 +78,8 @@ func parseHeadingComponent(responseText string, comp *flatLessonComponent) (stri
 	comp.HeadingLevel = resp.HeadingLevel
 	comp.HeadingText = resp.HeadingText
 	content := map[string]any{
-		"level": resp.HeadingLevel,
-		"text":  resp.HeadingText,
+		"headingLevel": resp.HeadingLevel,
+		"headingText":  resp.HeadingText,
 	}
 	jsonBytes, _ := json.Marshal(content)
 	summary := fmt.Sprintf("H%d: %s", resp.HeadingLevel, resp.HeadingText)
