@@ -59,6 +59,13 @@ export function useUploadAndProcess() {
 
   return {
     mutate: async (params: UploadAndProcessParams): Promise<UploadAndProcessResult> => {
+      console.log('[useUploadAndProcess] Creating request:', {
+        sessionId: params.sessionId,
+        filename: params.filename,
+        contentType: params.contentType,
+        fileContentLength: params.fileContent.length,
+      });
+
       const request = create(UploadAndProcessRequestSchema, {
         sessionId: params.sessionId,
         filename: params.filename,
@@ -66,7 +73,9 @@ export function useUploadAndProcess() {
         fileContent: params.fileContent,
       });
 
+      console.log('[useUploadAndProcess] Sending request to backend...');
       const result = await mutation.mutateAsync(request);
+      console.log('[useUploadAndProcess] Received response:', result);
 
       // Invalidate session sources list
       await queryClient.invalidateQueries({

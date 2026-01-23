@@ -3,6 +3,7 @@ package connect
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -216,10 +217,15 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 	ctx context.Context,
 	req *connect.Request[v1.UploadAndProcessRequest],
 ) (*connect.Response[v1.UploadAndProcessResponse], error) {
+	log.Printf("[UploadAndProcess] Request received - filename: %s, contentType: %s, contentLength: %d",
+		req.Msg.Filename, req.Msg.ContentType, len(req.Msg.FileContent))
+
 	tenantID, ok := tenant.FromContext(ctx)
 	if !ok {
+		log.Printf("[UploadAndProcess] ERROR: No tenant in context")
 		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
 	}
+	log.Printf("[UploadAndProcess] TenantID: %s", tenantID.String())
 
 	sessionID := req.Msg.SessionId
 	filename := req.Msg.Filename
@@ -228,9 +234,12 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 
 	// Store file in MinIO
 	filePath := fmt.Sprintf("knowledge/%s/sessions/%s/%s", tenantID.String(), sessionID, filename)
+	log.Printf("[UploadAndProcess] Storing file to MinIO: %s", filePath)
 	if err := s.storageClient.PutContent(ctx, filePath, fileContent, contentType); err != nil {
+		log.Printf("[UploadAndProcess] ERROR storing file: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to store file: %w", err))
 	}
+	log.Printf("[UploadAndProcess] File stored successfully")
 
 	// Create knowledge source entity
 	fileSize := int64(len(fileContent))
@@ -252,13 +261,15 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 	}
 
 	// Extract text content from file
+	log.Printf("[UploadAndProcess] Extracting text content...")
 	textContent := extractTextContent(fileContent, contentType)
 	if textContent == "" {
-		// Update status to failed
+		log.Printf("[UploadAndProcess] ERROR: Failed to extract text content")
 		errorMsg := "failed to extract text content from file"
 		_, _ = s.knowledgeService.UpdateStatusWithSummary(ctx, source.ID, valueobject.KnowledgeSourceStatusFailed, &errorMsg, 0, "", 0)
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf(errorMsg))
 	}
+	log.Printf("[UploadAndProcess] Extracted %d chars of text", len(textContent))
 
 	// Detect video URLs
 	videoURLs := service.DetectVideoURLs(textContent)
@@ -267,12 +278,15 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 	}
 
 	// Process and index the content
+	log.Printf("[UploadAndProcess] Processing and indexing content...")
 	chunkCount, tokenCount, err := s.knowledgeService.ProcessAndIndex(ctx, source, textContent)
 	if err != nil {
+		log.Printf("[UploadAndProcess] ERROR processing content: %v", err)
 		errorMsg := err.Error()
 		_, _ = s.knowledgeService.UpdateStatusWithSummary(ctx, source.ID, valueobject.KnowledgeSourceStatusFailed, &errorMsg, 0, "", 0)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to process content: %w", err))
 	}
+	log.Printf("[UploadAndProcess] Indexed %d chunks, %d tokens", chunkCount, tokenCount)
 
 	// Generate RAG summary to prove system works
 	ragSummary := generateDocumentSummary(textContent, filename)
@@ -281,6 +295,7 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 	documentIndex := generateDocumentIndex(textContent, filename)
 
 	// Update status to ready with summary
+	log.Printf("[UploadAndProcess] Updating status to ready...")
 	updatedSource, err := s.knowledgeService.UpdateStatusWithSummary(
 		ctx, source.ID,
 		valueobject.KnowledgeSourceStatusReady,
@@ -290,9 +305,11 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 		tokenCount,
 	)
 	if err != nil {
+		log.Printf("[UploadAndProcess] ERROR updating status: %v", err)
 		return nil, toConnectError(err)
 	}
 
+	log.Printf("[UploadAndProcess] SUCCESS - sourceID: %s, chunks: %d, tokens: %d", updatedSource.ID, chunkCount, tokenCount)
 	return connect.NewResponse(&v1.UploadAndProcessResponse{
 		Source:        knowledgeSourceToProto(updatedSource),
 		RagSummary:    ragSummary,

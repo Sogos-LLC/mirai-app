@@ -43,7 +43,19 @@ test.describe('Knowledge Upload', () => {
 
     // Monitor network requests/responses for debugging
     const networkErrors: string[] = [];
+    const networkRequests: string[] = [];
+    page.on('request', (request) => {
+      const url = request.url();
+      if (url.includes('UploadAndProcess') || url.includes('KnowledgeSource')) {
+        console.log(`[NETWORK_REQUEST] ${request.method()} ${url}`);
+        networkRequests.push(`${request.method()} ${url}`);
+      }
+    });
     page.on('response', (response) => {
+      const url = response.url();
+      if (url.includes('UploadAndProcess') || url.includes('KnowledgeSource')) {
+        console.log(`[NETWORK_RESPONSE] ${response.status()} ${url}`);
+      }
       if (response.status() >= 400) {
         networkErrors.push(`${response.status()} ${response.url()}`);
         console.log(`[NETWORK_ERROR] ${response.status()} ${response.url()}`);
@@ -140,11 +152,25 @@ test.describe('Knowledge Upload', () => {
           console.log(`Screenshot: 05-processing-${i}.png (${(i + 1) * 3}s)`);
         }
 
-        // Check for success indicators
-        const successIndicator = page.locator('[class*="green"], [class*="success"], :has-text("Indexed"), :has-text("Done")');
-        if (await successIndicator.count() > 0) {
-          console.log('Success indicator found!');
+        // Check for success indicators - look for green checkmark icon next to the file
+        // The file card changes from "Processing..." to "Indexed" with a green checkmark
+        const fileCard = page.locator('text=moon-flowers-test.txt').locator('..');
+        const hasIndexedStatus = await fileCard.locator('text=/^Indexed$/').count() > 0;
+        const hasGreenCheck = await fileCard.locator('svg.text-green-600, svg.text-green-400').count() > 0;
+
+        if (hasIndexedStatus || hasGreenCheck) {
+          console.log('Success: File indexed with green checkmark!');
           break;
+        }
+
+        // Check if file is still processing
+        const processingText = await fileCard.locator('text=/Processing/').count();
+        if (processingText > 0) {
+          console.log(`Still processing... (${(i + 1) * 3}s elapsed)`);
+        } else {
+          // Log what we see for debugging
+          const fileCardText = await fileCard.textContent();
+          console.log(`File card content: ${fileCardText?.substring(0, 100)}`);
         }
 
         // Check for error indicators

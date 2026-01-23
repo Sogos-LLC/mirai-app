@@ -66,14 +66,18 @@ export function KnowledgeUploadModal({
     const pendingToUpload = pendingFiles.filter(f => f.status === 'pending');
 
     pendingToUpload.forEach(async (file) => {
+      console.log('[KnowledgeUpload] Starting upload for file:', file.name, 'size:', file.size);
       // Mark as uploading
       onUpdateFileStatus(file.id, 'uploading');
 
       try {
-        await onUploadFile(file);
+        console.log('[KnowledgeUpload] Calling onUploadFile...');
+        const result = await onUploadFile(file);
+        console.log('[KnowledgeUpload] Upload successful:', result);
         onUpdateFileStatus(file.id, 'done');
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+        console.error('[KnowledgeUpload] Upload failed:', errorMsg, err);
         onUpdateFileStatus(file.id, 'error', errorMsg);
       }
     });
