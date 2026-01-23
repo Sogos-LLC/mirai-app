@@ -148,11 +148,11 @@ spec:
               key: encryption-key
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "100m"
+            memory: "4Gi"
+            cpu: "1000m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "6Gi"
+            cpu: "2000m"
         securityContext:
           runAsNonRoot: true
           runAsUser: 10000
