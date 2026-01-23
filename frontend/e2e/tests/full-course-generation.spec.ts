@@ -101,13 +101,13 @@ test.describe('Full Course Generation with ILD Quality Review', () => {
 
     // Use a realistic course topic - this tests that the system can generate
     // professionally designed content for any subject matter
-    const courseName = `Getting Started with Home Gardening`;
+    const courseName = `Sales Enablement Fundamentals`;
     console.log(`Creating course: "${courseName}"`);
 
     // Complete wizard - returns course ID after outline generation
     const courseId = await wizard.completeWizard({
       courseName,
-      additionalContext: 'Target audience is complete beginners. Include practical tips, seasonal considerations, and common mistakes to avoid. Use visual examples where helpful.',
+      additionalContext: 'Target audience is new sales representatives at B2B software companies. Cover prospecting, discovery calls, objection handling, and closing techniques. Include real-world scenarios and practice exercises.',
     });
 
     expect(courseId).toBeTruthy();

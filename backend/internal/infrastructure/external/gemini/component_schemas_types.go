@@ -23,8 +23,8 @@ type ComponentSchemaDefinition struct {
 var componentSchemas = map[string]ComponentSchemaDefinition{
 	"text": {
 		Type:        "text",
-		Description: "Rich text content with HTML formatting for explanations and narratives",
-		Schema:      `{text_html: string (HTML with <p>, <strong>, <em>, <ul>, <li>)}`,
+		Description: "SHORT text (2-3 sentences MAX). For brief context only - NOT for definitions (use STATEMENT) or comparisons (use LIST). Avoid long paragraphs.",
+		Schema:      `{text_html: string (HTML with <p>, <strong>, <em> - keep SHORT)}`,
 		Categories:  []ComponentCategory{CategoryContent},
 	},
 	"heading": {
@@ -41,7 +41,7 @@ var componentSchemas = map[string]ComponentSchemaDefinition{
 	},
 	"quiz": {
 		Type:        "quiz",
-		Description: "Multiple choice knowledge check to test understanding",
+		Description: "Knowledge check - MUST be the LAST component of every lesson. Exactly ONE quiz per lesson. Tests understanding of key concepts.",
 		Schema:      `{quiz_question: string, quiz_options: [{id: "a"|"b"|"c"|"d", text: string}], quiz_correct_answer_id: string, quiz_explanation: string}`,
 		Categories:  []ComponentCategory{CategoryAssessment},
 	},
@@ -59,7 +59,7 @@ var componentSchemas = map[string]ComponentSchemaDefinition{
 	},
 	"statement": {
 		Type:        "statement",
-		Description: "Key takeaway or memorable principle to emphasize",
+		Description: "DEFINITIONS and key takeaways belong here. Short, memorable, quotable. Use instead of burying definitions in TEXT paragraphs.",
 		Schema:      `{statement_text: string (1-2 sentences, quotable), statement_subtext?: string (1 sentence context)}`,
 		Categories:  []ComponentCategory{CategoryEmphasis},
 	},
@@ -71,8 +71,8 @@ var componentSchemas = map[string]ComponentSchemaDefinition{
 	},
 	"list": {
 		Type:        "list",
-		Description: "Structured list for steps, features, or related items. Use 'accordion' style for expandable Q&A or detailed explanations - great for learning UX",
-		Schema:      `{style: "bulleted"|"numbered"|"icon"|"process"|"accordion", items: [{text: string, description?: string}], title?: string}`,
+		Description: "Structured list - PREFER THIS over long text. Styles: 'bulleted' (unordered points), 'numbered' (sequential steps), 'icon' (features with checkmarks), 'process' (workflows/pipelines), 'accordion' (expandable Q&A - GREAT for learning)",
+		Schema:      `{style: "bulleted"|"numbered"|"icon"|"process"|"accordion", items: [{text: string, description?: string (required for accordion)}], title?: string}`,
 		Categories:  []ComponentCategory{CategoryFormatting, CategoryContent},
 	},
 	"gallery": {

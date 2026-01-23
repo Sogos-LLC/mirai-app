@@ -40,11 +40,25 @@ func ValidateComponentPlan(plan []plannedComponent) error {
 		}
 	}
 
-	// Rule 3: At least 1 quiz
+	// Rule 3: Exactly 1 quiz
 	if counts["quiz"] < 1 {
 		return &PlanValidationError{
 			Rule:    "min_quiz",
-			Message: "plan must have at least 1 quiz component",
+			Message: "plan must have exactly 1 quiz component as knowledge check",
+		}
+	}
+	if counts["quiz"] > 1 {
+		return &PlanValidationError{
+			Rule:    "max_quiz",
+			Message: fmt.Sprintf("plan has %d quiz components (must have exactly 1 at the end)", counts["quiz"]),
+		}
+	}
+
+	// Rule 3b: Quiz must be the last component
+	if plan[len(plan)-1].ComponentType != "quiz" {
+		return &PlanValidationError{
+			Rule:    "quiz_position",
+			Message: "quiz must be the LAST component of the lesson (knowledge check)",
 		}
 	}
 
