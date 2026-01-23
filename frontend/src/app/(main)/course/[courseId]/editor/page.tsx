@@ -754,7 +754,7 @@ export default function CourseEditorPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => router.push(`/course/${courseId}/preview`)}
+            onClick={() => router.push(`/preview/${courseId}`)}
           >
             <Eye className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Preview</span>
