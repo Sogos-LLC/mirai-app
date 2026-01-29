@@ -119,6 +119,13 @@ patches:
               key: encryption-key
         - name: REDIS_URL
           value: "redis://redis.redis-uat.svc.cluster.local:6379"
+        - name: TWENTY_API_URL
+          value: "https://crm.sogos.io"
+        - name: TWENTY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: twenty-credentials
+              key: api-key
   target:
     kind: Deployment
     name: mirai-backend
