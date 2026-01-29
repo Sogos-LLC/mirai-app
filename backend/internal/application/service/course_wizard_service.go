@@ -17,11 +17,12 @@ import (
 // This provides a "spoon-fed" experience for creating courses with AI-generated
 // personas, audience profiles, and tone options.
 type CourseWizardService struct {
-	userRepo          repository.UserRepository
-	wizardRepo        repository.WizardStateRepository
-	aiProviderFactory AIProviderFactory
-	aiSettingsRepo    repository.TenantAISettingsRepository
-	logger            service.Logger
+	userRepo               repository.UserRepository
+	wizardRepo             repository.WizardStateRepository
+	aiProviderFactory      AIProviderFactory
+	aiSettingsRepo         repository.TenantAISettingsRepository
+	knowledgeSourceService *KnowledgeSourceService
+	logger                 service.Logger
 }
 
 // NewCourseWizardService creates a new course wizard service.
@@ -30,14 +31,16 @@ func NewCourseWizardService(
 	wizardRepo repository.WizardStateRepository,
 	aiProviderFactory AIProviderFactory,
 	aiSettingsRepo repository.TenantAISettingsRepository,
+	knowledgeSourceService *KnowledgeSourceService,
 	logger service.Logger,
 ) *CourseWizardService {
 	return &CourseWizardService{
-		userRepo:          userRepo,
-		wizardRepo:        wizardRepo,
-		aiProviderFactory: aiProviderFactory,
-		aiSettingsRepo:    aiSettingsRepo,
-		logger:            logger,
+		userRepo:               userRepo,
+		wizardRepo:             wizardRepo,
+		aiProviderFactory:      aiProviderFactory,
+		aiSettingsRepo:         aiSettingsRepo,
+		knowledgeSourceService: knowledgeSourceService,
+		logger:                 logger,
 	}
 }
 
@@ -94,16 +97,32 @@ func (s *CourseWizardService) GenerateTitle(ctx context.Context, kratosID uuid.U
 	}, nil
 }
 
+// GenerateOutcomesInput contains inputs for course outcome generation.
+type GenerateOutcomesInput struct {
+	CourseName string
+	SessionID  string // Optional - for RAG context from uploaded knowledge sources
+}
+
 // GenerateOutcomesResult contains AI-generated course outcomes.
 type GenerateOutcomesResult struct {
 	Outcomes   string
+	Citations  []KnowledgeCitation
 	TokensUsed int64
+}
+
+// KnowledgeCitation represents a reference to a knowledge source used in generation.
+type KnowledgeCitation struct {
+	SourceID       string
+	SourceName     string
+	Excerpt        string
+	RelevanceScore float32
 }
 
 // GenerateOutcomes generates desired course outcomes from a course name.
 // Used by the "magic wand" button in wizard step 1.
-func (s *CourseWizardService) GenerateOutcomes(ctx context.Context, kratosID uuid.UUID, courseName string) (*GenerateOutcomesResult, error) {
-	log := s.logger.With("kratosID", kratosID, "courseName", courseName)
+// If sessionID is provided, knowledge sources from that session will be used for RAG.
+func (s *CourseWizardService) GenerateOutcomes(ctx context.Context, kratosID uuid.UUID, input GenerateOutcomesInput) (*GenerateOutcomesResult, error) {
+	log := s.logger.With("kratosID", kratosID, "courseName", input.CourseName, "sessionID", input.SessionID)
 
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
@@ -124,8 +143,32 @@ func (s *CourseWizardService) GenerateOutcomes(ctx context.Context, kratosID uui
 		return nil, err
 	}
 
-	// Generate course outcomes
-	result, err := aiProvider.GenerateCourseOutcomes(tenantCtx, courseName)
+	// Build RAG context if sessionID provided and knowledge service is available
+	var ragContext []service.RAGChunk
+	if input.SessionID != "" && s.knowledgeSourceService != nil {
+		chunks, err := s.knowledgeSourceService.SearchKnowledgeBySession(tenantCtx, input.SessionID, input.CourseName, 5)
+		if err != nil {
+			log.Warn("failed to search knowledge by session", "error", err)
+			// Continue without RAG context
+		} else if len(chunks) > 0 {
+			ragContext = make([]service.RAGChunk, len(chunks))
+			for i, chunk := range chunks {
+				ragContext[i] = service.RAGChunk{
+					SourceID:       chunk.SourceID.String(),
+					SourceName:     chunk.SourceName,
+					Content:        chunk.Content,
+					RelevanceScore: chunk.SimilarityScore,
+				}
+			}
+			log.Info("added RAG context from knowledge sources", "chunkCount", len(ragContext))
+		}
+	}
+
+	// Generate course outcomes with optional RAG context
+	result, err := aiProvider.GenerateCourseOutcomes(tenantCtx, service.GenerateOutcomesRequest{
+		CourseName: input.CourseName,
+		RAGContext: ragContext,
+	})
 	if err != nil {
 		log.Error("failed to generate course outcomes", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("AI generation failed")
@@ -134,10 +177,22 @@ func (s *CourseWizardService) GenerateOutcomes(ctx context.Context, kratosID uui
 	// Update token usage
 	_ = s.aiSettingsRepo.IncrementTokenUsage(tenantCtx, *user.TenantID, result.TokensUsed)
 
-	log.Info("generated course outcomes", "tokensUsed", result.TokensUsed)
+	log.Info("generated course outcomes", "tokensUsed", result.TokensUsed, "citationCount", len(result.Citations))
+
+	// Convert citations
+	citations := make([]KnowledgeCitation, len(result.Citations))
+	for i, c := range result.Citations {
+		citations[i] = KnowledgeCitation{
+			SourceID:       c.SourceID,
+			SourceName:     c.SourceName,
+			Excerpt:        c.Excerpt,
+			RelevanceScore: c.RelevanceScore,
+		}
+	}
 
 	return &GenerateOutcomesResult{
 		Outcomes:   result.Outcomes,
+		Citations:  citations,
 		TokensUsed: result.TokensUsed,
 	}, nil
 }

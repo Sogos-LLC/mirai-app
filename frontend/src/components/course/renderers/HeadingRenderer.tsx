@@ -1,9 +1,6 @@
 'use client';
 
-interface HeadingContent {
-  level: number;
-  text: string;
-}
+import type { HeadingContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface HeadingRendererProps {
   content: HeadingContent;
@@ -27,7 +24,7 @@ const LEVEL_OPTIONS = [
 
 export function HeadingRenderer({ content, isEditing = false, onEdit }: HeadingRendererProps) {
   // Ensure valid heading level (1-4)
-  const level = Math.min(Math.max(content.level || 2, 1), 4);
+  const level = Math.min(Math.max(content.headingLevel || 2, 1), 4);
   const style = HEADING_STYLES[level];
 
   if (isEditing && onEdit) {
@@ -36,11 +33,11 @@ export function HeadingRenderer({ content, isEditing = false, onEdit }: HeadingR
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Heading Level</label>
           <select
-            value={content.level}
+            value={content.headingLevel}
             onChange={(e) =>
               onEdit({
                 ...content,
-                level: parseInt(e.target.value, 10),
+                headingLevel: parseInt(e.target.value, 10),
               })
             }
             className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -56,11 +53,11 @@ export function HeadingRenderer({ content, isEditing = false, onEdit }: HeadingR
           <label className="block text-xs font-medium text-gray-500 mb-1">Heading Text</label>
           <input
             type="text"
-            value={content.text}
+            value={content.headingText}
             onChange={(e) =>
               onEdit({
                 ...content,
-                text: e.target.value,
+                headingText: e.target.value,
               })
             }
             className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -69,7 +66,7 @@ export function HeadingRenderer({ content, isEditing = false, onEdit }: HeadingR
         </div>
         <div className="pt-2 border-t">
           <p className="text-xs text-gray-500 mb-2">Preview:</p>
-          <p className={HEADING_STYLES[content.level] || HEADING_STYLES[1]}>{content.text || 'Heading text...'}</p>
+          <p className={HEADING_STYLES[content.headingLevel] || HEADING_STYLES[1]}>{content.headingText || 'Heading text...'}</p>
         </div>
       </div>
     );
@@ -78,5 +75,5 @@ export function HeadingRenderer({ content, isEditing = false, onEdit }: HeadingR
   // Render appropriate heading tag based on level
   const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
 
-  return <HeadingTag className={style}>{content.text}</HeadingTag>;
+  return <HeadingTag className={style}>{content.headingText}</HeadingTag>;
 }

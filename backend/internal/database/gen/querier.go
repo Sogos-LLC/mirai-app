@@ -31,6 +31,8 @@ type Querier interface {
 	CountCourses(ctx context.Context, arg CountCoursesParams) (int32, error)
 	CountCoursesByFolderID(ctx context.Context, folderID uuid.NullUUID) (int32, error)
 	CountExportsByStatus(ctx context.Context, courseID uuid.UUID) (CountExportsByStatusRow, error)
+	CountKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) (int32, error)
+	CountKnowledgeSourcesBySession(ctx context.Context, sessionID sql.NullString) (int32, error)
 	CountNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
 	CountPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) (int32, error)
 	CountUnreadNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
@@ -54,6 +56,11 @@ type Querier interface {
 	// Invitation CRUD operations
 	// Schema: invitations table with RLS isolation by tenant_id
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error)
+	// Knowledge source CRUD operations
+	// Schema: knowledge_sources table with RLS isolation by tenant_id
+	CreateKnowledgeSource(ctx context.Context, arg CreateKnowledgeSourceParams) (KnowledgeSource, error)
+	// Create a knowledge source with session_id (for pre-course wizard flow)
+	CreateKnowledgeSourceWithSession(ctx context.Context, arg CreateKnowledgeSourceWithSessionParams) (KnowledgeSource, error)
 	// Notification CRUD operations
 	// Schema: notifications table with RLS isolation by tenant_id
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
@@ -74,6 +81,8 @@ type Querier interface {
 	DeleteCourse(ctx context.Context, id uuid.UUID) error
 	DeleteExpiredPendingRegistrations(ctx context.Context) (int64, error)
 	DeleteFolder(ctx context.Context, id uuid.UUID) error
+	DeleteKnowledgeSource(ctx context.Context, id uuid.UUID) error
+	DeleteKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) error
 	DeleteNotification(ctx context.Context, id uuid.UUID) error
 	DeletePendingRegistration(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
@@ -101,6 +110,7 @@ type Querier interface {
 	GetGenerationJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error)
 	GetInvitationByID(ctx context.Context, id uuid.UUID) (Invitation, error)
 	GetInvitationByToken(ctx context.Context, token string) (Invitation, error)
+	GetKnowledgeSourceByID(ctx context.Context, id uuid.UUID) (KnowledgeSource, error)
 	GetNotificationByID(ctx context.Context, id uuid.UUID) (Notification, error)
 	// Note: This looks for 'admin' role instead of deprecated 'owner'
 	GetOwnerByCompanyID(ctx context.Context, companyID uuid.NullUUID) (User, error)
@@ -109,6 +119,9 @@ type Querier interface {
 	GetPendingRegistrationByCheckoutSessionID(ctx context.Context, checkoutSessionID string) (PendingRegistration, error)
 	GetPendingRegistrationByEmail(ctx context.Context, email string) (PendingRegistration, error)
 	GetPendingRegistrationByID(ctx context.Context, id uuid.UUID) (PendingRegistration, error)
+	GetReadySourcesByCourse(ctx context.Context, courseID uuid.NullUUID) ([]KnowledgeSource, error)
+	// Get only ready sources for a session
+	GetReadySourcesBySession(ctx context.Context, sessionID sql.NullString) ([]KnowledgeSource, error)
 	GetSharedFolder(ctx context.Context, tenantID uuid.UUID) (Folder, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
 	GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamMember, error)
@@ -119,12 +132,15 @@ type Querier interface {
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByKratosID(ctx context.Context, kratosID uuid.UUID) (User, error)
+	GetUserCRMContactID(ctx context.Context, id uuid.UUID) (sql.NullString, error)
 	// Wizard state CRUD operations
 	// Schema: wizard_states table with RLS isolation by tenant_id
 	// Each user can have only one active wizard state at a time
 	// Retrieves the wizard state for a specific user
 	GetWizardStateByUserID(ctx context.Context, userID uuid.UUID) (WizardState, error)
 	IncrementTenantAITokenUsage(ctx context.Context, arg IncrementTenantAITokenUsageParams) error
+	// Link all sources from a session to a course
+	LinkSessionToCourse(ctx context.Context, arg LinkSessionToCourseParams) (int64, error)
 	ListCourseExportsByCourseID(ctx context.Context, courseID uuid.UUID) ([]CourseExport, error)
 	// Dynamic filtering using nullable parameters
 	// NULL param = skip filter, non-NULL = apply filter
@@ -136,8 +152,12 @@ type Querier interface {
 	ListGenerationJobs(ctx context.Context, arg ListGenerationJobsParams) ([]GenerationJob, error)
 	ListGenerationJobsByParentID(ctx context.Context, parentJobID uuid.NullUUID) ([]GenerationJob, error)
 	ListInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
+	ListKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) ([]KnowledgeSource, error)
+	// List all sources for a session (pre-course wizard flow)
+	ListKnowledgeSourcesBySession(ctx context.Context, sessionID sql.NullString) ([]KnowledgeSource, error)
 	ListNotificationsByUserID(ctx context.Context, arg ListNotificationsByUserIDParams) ([]Notification, error)
 	ListPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
+	ListPendingKnowledgeSources(ctx context.Context, limit int32) ([]KnowledgeSource, error)
 	ListPendingRegistrationsByStatus(ctx context.Context, status string) ([]PendingRegistration, error)
 	// Defense-in-depth: explicit tenant_id filter in addition to RLS
 	ListRootFolders(ctx context.Context, tenantID uuid.UUID) ([]Folder, error)
@@ -160,11 +180,18 @@ type Querier interface {
 	UpdateFolder(ctx context.Context, arg UpdateFolderParams) (Folder, error)
 	UpdateGenerationJob(ctx context.Context, arg UpdateGenerationJobParams) error
 	UpdateInvitation(ctx context.Context, arg UpdateInvitationParams) (Invitation, error)
+	UpdateKnowledgeSourceStatus(ctx context.Context, arg UpdateKnowledgeSourceStatusParams) (KnowledgeSource, error)
+	UpdateKnowledgeSourceVideoURLs(ctx context.Context, arg UpdateKnowledgeSourceVideoURLsParams) (KnowledgeSource, error)
+	// Update knowledge source with document index for Internal Data Only mode
+	UpdateKnowledgeSourceWithDocumentIndex(ctx context.Context, arg UpdateKnowledgeSourceWithDocumentIndexParams) (KnowledgeSource, error)
+	// Update status with RAG-generated summary and token count
+	UpdateKnowledgeSourceWithSummary(ctx context.Context, arg UpdateKnowledgeSourceWithSummaryParams) (KnowledgeSource, error)
 	UpdatePendingRegistration(ctx context.Context, arg UpdatePendingRegistrationParams) (PendingRegistration, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateTenantAISettings(ctx context.Context, arg UpdateTenantAISettingsParams) (TenantAiSetting, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserCRMContactID(ctx context.Context, arg UpdateUserCRMContactIDParams) error
 	// Updates an existing wizard state
 	UpdateWizardState(ctx context.Context, arg UpdateWizardStateParams) (WizardState, error)
 	// Creates or updates wizard state for a user

@@ -108,6 +108,10 @@ patches:
           value: "https://minio.sogos.io"
         - name: GIN_MODE
           value: "release"
+        - name: QDRANT_URL
+          value: "http://qdrant.mirai-uat.svc.cluster.local:6333"
+        - name: EMBEDDING_URL
+          value: "http://embedding.mirai-uat.svc.cluster.local:8080"
         - name: ENCRYPTION_KEY
           valueFrom:
             secretKeyRef:
@@ -115,6 +119,13 @@ patches:
               key: encryption-key
         - name: REDIS_URL
           value: "redis://redis.redis-uat.svc.cluster.local:6379"
+        - name: TWENTY_API_URL
+          value: "https://crm.sogos.io"
+        - name: TWENTY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: twenty-credentials
+              key: api-key
   target:
     kind: Deployment
     name: mirai-backend
@@ -163,4 +174,4 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-backend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-backend
-  newTag: uat-327d862
+  newTag: uat-6365ca2

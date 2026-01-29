@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { LessonComponent, LessonComponentType } from '@/gen/mirai/v1/ai_generation_pb';
+import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_types_pb';
+import type { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
 import { getComponentTypeName, getComponentTypeIcon } from '@/components/course/renderers';
 
 interface ComponentRegenerationPanelProps {

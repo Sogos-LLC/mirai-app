@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   Eye,
-  Save,
   Plus,
   GripVertical,
   Loader2,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   BookOpen,
   FileText,
   Image,
@@ -22,6 +22,11 @@ import {
   Menu,
   Download,
   Check,
+  MoreVertical,
+  Pencil,
+  Target,
+  Cloud,
+  CloudOff,
 } from 'lucide-react';
 import {
   DndContext,
@@ -47,9 +52,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, LessonComponentType } from '@/hooks/useAIGeneration';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 import { EditModal } from '@/components/course/modals/EditModal';
+import { AddComponentModal } from '@/components/course/modals/AddComponentModal';
 import { RealignmentModal, type RealignParams, type RealignResult, type LearningObjective } from '@/components/course/modals/RealignmentModal';
 import { useCourseEditorStore, setOnSaveCallback, setOnPersistCallback, setOnPersistSuccessCallback } from '@/store/zustand/courseEditorStore';
-import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_pb';
+import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
@@ -60,16 +66,33 @@ import {
   ExportFormat,
   ExportStatus,
 } from '@/hooks/useExport';
-import { v4 as uuidv4 } from 'uuid';
 
 interface SortableComponentProps {
   component: LessonComponent;
+  index: number;
+  totalCount: number;
   onClick: () => void;
   isDragging: boolean;
   onOpenRealignment?: (component: LessonComponent) => void;
+  onDelete: (id: string) => void;
+  onMoveUp: (index: number) => void;
+  onMoveDown: (index: number) => void;
 }
 
-function SortableComponent({ component, onClick, isDragging, onOpenRealignment }: SortableComponentProps) {
+function SortableComponent({
+  component,
+  index,
+  totalCount,
+  onClick,
+  isDragging,
+  onOpenRealignment,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+}: SortableComponentProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const {
     attributes,
     listeners,
@@ -83,30 +106,170 @@ function SortableComponent({ component, onClick, isDragging, onOpenRealignment }
     transition,
   };
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
+
+  // Check if this component type supports realignment
+  const supportsRealignment = [
+    LessonComponentType.TEXT,
+    LessonComponentType.STATEMENT,
+    LessonComponentType.QUOTE,
+    LessonComponentType.LIST,
+    LessonComponentType.CALLOUT,
+  ].includes(component.type);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative cursor-pointer ${isDragging ? 'opacity-0' : ''}`}
-      onClick={onClick}
+      className={`group relative ${isDragging ? 'opacity-0' : ''}`}
     >
-      {/* Drag handle - visible on hover (desktop) or always visible (mobile) */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing -translate-x-full z-10 min-h-[44px] min-w-[44px]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripVertical className="w-5 h-5 text-muted" />
-      </button>
+      {/* Main content area with actions */}
+      <div className="flex items-stretch">
+        {/* Drag handle - left gutter */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="flex-shrink-0 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-4 h-4 text-muted" />
+        </button>
 
-      {/* Component content */}
-      <div className="hover:ring-2 hover:ring-purple-300 hover:ring-offset-2 rounded-lg transition-all">
-        <ComponentRenderer
-          component={component}
-          isEditing={false}
-          onOpenRealignment={onOpenRealignment}
-        />
+        {/* Component content - clickable to edit */}
+        <div
+          className="flex-1 min-w-0 cursor-pointer rounded-lg transition-all group-hover:bg-purple-50/50 dark:group-hover:bg-purple-900/10"
+          onClick={onClick}
+        >
+          <ComponentRenderer
+            component={component}
+            isEditing={false}
+          />
+        </div>
+
+        {/* Actions menu - right edge */}
+        <div className="flex-shrink-0 w-10 flex items-start justify-center pt-2 relative" ref={menuRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
+            className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            aria-label="Component actions"
+          >
+            <MoreVertical className="w-4 h-4 text-muted" />
+          </button>
+
+          {/* Dropdown menu */}
+          {menuOpen && (
+            <div className="absolute right-0 top-10 z-50 w-48 bg-white dark:bg-dark-surface-elevated rounded-lg shadow-lg border border-default py-1 animate-fadeIn">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onClick();
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Pencil className="w-4 h-4 text-muted" />
+                <span className="text-primary">Edit</span>
+              </button>
+
+              {supportsRealignment && onOpenRealignment && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onOpenRealignment(component);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <Target className="w-4 h-4 text-muted" />
+                  <span className="text-primary">Realign to objectives</span>
+                </button>
+              )}
+
+              <div className="h-px bg-gray-100 dark:bg-gray-800 my-1" />
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onMoveUp(index);
+                }}
+                disabled={index === 0}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronUp className="w-4 h-4 text-muted" />
+                <span className="text-primary">Move up</span>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onMoveDown(index);
+                }}
+                disabled={index === totalCount - 1}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronDown className="w-4 h-4 text-muted" />
+                <span className="text-primary">Move down</span>
+              </button>
+
+              <div className="h-px bg-gray-100 dark:bg-gray-800 my-1" />
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onDelete(component.id);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// "Add between" divider component
+interface AddBetweenProps {
+  onAdd: () => void;
+}
+
+function AddBetween({ onAdd }: AddBetweenProps) {
+  return (
+    <div className="group/add relative h-4 -my-1">
+      {/* Hover area - larger than visual */}
+      <div className="absolute inset-x-0 -inset-y-2 flex items-center justify-center">
+        {/* Line that appears on hover */}
+        <div className="absolute inset-x-8 h-px bg-purple-300 dark:bg-purple-700 opacity-0 group-hover/add:opacity-100 transition-opacity" />
+
+        {/* Add button */}
+        <button
+          onClick={onAdd}
+          className="relative z-10 flex items-center gap-2 px-3 py-1 text-xs font-medium text-purple-600 dark:text-purple-400 bg-white dark:bg-dark-surface rounded-full border border-purple-200 dark:border-purple-800 opacity-0 group-hover/add:opacity-100 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all shadow-sm"
+        >
+          <Plus className="w-3 h-3" />
+          Add
+        </button>
       </div>
     </div>
   );
@@ -127,29 +290,22 @@ function DragPreview({ component }: { component: LessonComponent }) {
   );
 }
 
-const COMPONENT_TYPES = [
-  { type: 1, name: 'Text', icon: FileText },
-  { type: 2, name: 'Heading', icon: Heading },
-  { type: 3, name: 'Image', icon: Image },
-  { type: 4, name: 'Quiz', icon: HelpCircle },
-  { type: 5, name: 'Code', icon: Code },
-  { type: 6, name: 'Callout', icon: AlertCircle },
-];
-
 // Export modal states
 type ExportModalState = 'idle' | 'starting' | 'processing' | 'completed' | 'failed';
 
 export default function CourseEditorPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const courseId = params.courseId as string;
+  const lessonIdFromUrl = searchParams.get('lessonId');
   const isMobile = useIsMobile();
 
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(lessonIdFromUrl);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [localComponents, setLocalComponents] = useState<LessonComponent[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
-  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [addComponentAfterIndex, setAddComponentAfterIndex] = useState<number | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [deletingComponentId, setDeletingComponentId] = useState<string | null>(null);
@@ -163,6 +319,11 @@ export default function CourseEditorPage() {
   // Realignment state
   const [realignmentComponent, setRealignmentComponent] = useState<LessonComponent | null>(null);
   const [isRealigning, setIsRealigning] = useState(false);
+
+  // Auto-save state
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveStatusTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
@@ -244,6 +405,19 @@ export default function CourseEditorPage() {
     });
     return items;
   }, [outline, generatedLessons]);
+
+  // Auto-select first lesson with generated content when none selected
+  useEffect(() => {
+    if (!selectedLessonId && lessonsList.length > 0) {
+      // Find first lesson with generated content
+      const firstWithContent = lessonsList.find((l) => !!l.generated);
+      if (firstWithContent) {
+        setSelectedLessonId(firstWithContent.id);
+        // Expand the section containing this lesson
+        setExpandedSections((prev) => new Set(prev).add(firstWithContent.sectionIndex));
+      }
+    }
+  }, [selectedLessonId, lessonsList]);
 
   // Get current lesson
   const currentLesson = useMemo(() => {
@@ -340,6 +514,67 @@ export default function CourseEditorPage() {
     }
   }, [currentLesson?.generated?.components, selectedLessonId]);
 
+  // Auto-save effect - debounced save when changes occur
+  useEffect(() => {
+    if (!hasChanges || isSaving) return;
+
+    const generatedLessonId = currentLessonRef.current?.generated?.id;
+    if (!generatedLessonId || localComponentsRef.current.length === 0) return;
+
+    // Clear any existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Debounce save by 1.5 seconds
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setSaveStatus('saving');
+
+      try {
+        await saveComponents({
+          courseId,
+          generatedLessonId,
+          components: localComponentsRef.current.map((c) => ({
+            id: c.id,
+            type: c.type as LessonComponentType,
+            order: c.order,
+            contentJson: c.contentJson,
+            alignment: c.alignment
+              ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
+              : undefined,
+          })),
+        });
+        setHasChanges(false);
+        setSaveStatus('saved');
+
+        // Clear "saved" status after 2 seconds
+        if (saveStatusTimerRef.current) {
+          clearTimeout(saveStatusTimerRef.current);
+        }
+        saveStatusTimerRef.current = setTimeout(() => {
+          setSaveStatus('idle');
+        }, 2000);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        setSaveStatus('error');
+      }
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [hasChanges, isSaving, courseId, saveComponents]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
+    };
+  }, []);
+
   const toggleSection = (sectionIndex: number) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -384,23 +619,23 @@ export default function CourseEditorPage() {
     }
   }, [courseId, selectedLessonId, openEditModal]);
 
-  const handleAddComponent = (type: number) => {
-    const newComponent: LessonComponent = {
-      id: uuidv4(),
-      type,
-      contentJson: getDefaultContentForType(type),
-      order: localComponents.length,
-      $typeName: 'mirai.v1.LessonComponent',
-    };
-    setLocalComponents([...localComponents, newComponent]);
-    setShowAddMenu(false);
-    setHasChanges(true);
+  // Called by AddComponentModal after user finishes editing the new component
+  const handleAddComponent = useCallback((component: LessonComponent, contentJson: string) => {
+    // Update component with the final content
+    const finalComponent = { ...component, contentJson };
 
-    // Open edit modal for the new component
-    if (selectedLessonId) {
-      openEditModal(courseId, selectedLessonId, newComponent);
-    }
-  };
+    // Insert at the specified position and reorder
+    const insertIndex = addComponentAfterIndex ?? localComponents.length - 1;
+    const newComponents = [...localComponents];
+    newComponents.splice(insertIndex + 1, 0, finalComponent);
+    // Update order for all components
+    const reorderedComponents = newComponents.map((c, idx) => ({ ...c, order: idx }));
+
+    setLocalComponents(reorderedComponents);
+    // Sync ref immediately so persist callback can access the new component
+    localComponentsRef.current = reorderedComponents;
+    setHasChanges(true);
+  }, [addComponentAfterIndex, localComponents]);
 
   const handleDeleteComponent = (componentId: string) => {
     setLocalComponents((items) => items.filter((item) => item.id !== componentId));
@@ -414,31 +649,25 @@ export default function CourseEditorPage() {
     }
   };
 
-  const handleSave = async () => {
-    // Need the generated lesson ID, not the outline lesson ID
-    const generatedLessonId = currentLesson?.generated?.id;
-    if (!generatedLessonId || localComponents.length === 0) return;
+  // Move component up in the list
+  const handleMoveUp = useCallback((index: number) => {
+    if (index === 0) return;
+    setLocalComponents((items) => {
+      const newItems = arrayMove(items, index, index - 1);
+      return newItems.map((item, idx) => ({ ...item, order: idx }));
+    });
+    setHasChanges(true);
+  }, []);
 
-    try {
-      await saveComponents({
-        courseId,
-        generatedLessonId,
-        components: localComponents.map((c) => ({
-          id: c.id,
-          type: c.type as LessonComponentType,
-          order: c.order,
-          contentJson: c.contentJson,
-          alignment: c.alignment
-            ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
-            : undefined,
-        })),
-      });
-      setHasChanges(false);
-    } catch (error) {
-      console.error('Failed to save components:', error);
-      // Error handling - could show a toast notification here
-    }
-  };
+  // Move component down in the list
+  const handleMoveDown = useCallback((index: number) => {
+    setLocalComponents((items) => {
+      if (index >= items.length - 1) return items;
+      const newItems = arrayMove(items, index, index + 1);
+      return newItems.map((item, idx) => ({ ...item, order: idx }));
+    });
+    setHasChanges(true);
+  }, []);
 
   // Export handlers
   const handleExport = async () => {
@@ -558,15 +787,31 @@ export default function CourseEditorPage() {
           </button>
           <div className="h-6 w-px bg-surface border-l" />
           <h1 className="text-lg md:text-xl font-semibold text-primary">Course Editor</h1>
-          {hasChanges && (
-            <span className="text-xs text-warning bg-yellow-100 px-2 py-1 rounded">Unsaved</span>
+          {/* Auto-save status indicator */}
+          {saveStatus === 'saving' && (
+            <span className="flex items-center gap-1.5 text-xs text-secondary">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="hidden sm:inline">Saving...</span>
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+              <Cloud className="w-3 h-3" />
+              <span className="hidden sm:inline">Saved</span>
+            </span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+              <CloudOff className="w-3 h-3" />
+              <span className="hidden sm:inline">Save failed</span>
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => router.push(`/course/${courseId}/preview`)}
+            onClick={() => router.push(`/preview/${courseId}`)}
           >
             <Eye className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Preview</span>
@@ -578,19 +823,6 @@ export default function CourseEditorPage() {
           >
             <Download className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Export</span>
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSave}
-            disabled={!hasChanges || isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 sm:mr-2" />
-            )}
-            <span className="hidden sm:inline">{isSaving ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
       </div>
@@ -733,60 +965,7 @@ export default function CourseEditorPage() {
           {selectedLessonId && currentLesson ? (
             <Card>
               <CardHeader className="py-4 border-b">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <CardTitle as="h2">{currentLesson.title}</CardTitle>
-                  <div className="relative w-full sm:w-auto">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowAddMenu(!showAddMenu)}
-                      className="w-full sm:w-auto min-h-[44px]"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Component
-                    </Button>
-                    {showAddMenu && (
-                      <>
-                        {/* Mobile: Bottom sheet for add menu */}
-                        {isMobile ? (
-                          <BottomSheet
-                            isOpen={showAddMenu}
-                            onClose={() => setShowAddMenu(false)}
-                            title="Add Component"
-                            height="auto"
-                          >
-                            <div className="space-y-2">
-                              {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                                <button
-                                  key={type}
-                                  onClick={() => handleAddComponent(type)}
-                                  className="w-full flex items-center gap-3 px-4 py-4 text-base text-secondary hover:bg-hover transition-colors rounded-lg min-h-[44px]"
-                                >
-                                  <Icon className="w-5 h-5" />
-                                  {name}
-                                </button>
-                              ))}
-                            </div>
-                          </BottomSheet>
-                        ) : (
-                          /* Desktop: Dropdown menu */
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-default rounded-lg shadow-lg z-20">
-                            {COMPONENT_TYPES.map(({ type, name, icon: Icon }) => (
-                              <button
-                                key={type}
-                                onClick={() => handleAddComponent(type)}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-secondary hover:bg-hover transition-colors first:rounded-t-lg last:rounded-b-lg"
-                              >
-                                <Icon className="w-4 h-4" />
-                                {name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
+                <CardTitle as="h2">{currentLesson.title}</CardTitle>
               </CardHeader>
               <CardContent className="py-6">
                 {localComponents.length > 0 ? (
@@ -802,27 +981,25 @@ export default function CourseEditorPage() {
                       strategy={verticalListSortingStrategy}
                     >
                       <div className="space-y-4 pl-4 md:pl-10">
-                        {localComponents.map((component) => (
-                          <div key={component.id} className="group/item relative">
+                        {/* Add at top */}
+                        <AddBetween onAdd={() => setAddComponentAfterIndex(-1)} />
+
+                        {localComponents.map((component, index) => (
+                          <React.Fragment key={component.id}>
                             <SortableComponent
                               component={component}
+                              index={index}
+                              totalCount={localComponents.length}
                               onClick={() => handleComponentClick(component)}
                               isDragging={activeId === component.id}
                               onOpenRealignment={handleOpenRealignment}
+                              onDelete={(id) => setDeletingComponentId(id)}
+                              onMoveUp={handleMoveUp}
+                              onMoveDown={handleMoveDown}
                             />
-                            {/* Delete button - bottom right, visible on mobile, hover on desktop */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeletingComponentId(component.id);
-                              }}
-                              className="absolute -right-2 -bottom-2 p-1.5 bg-red-500 text-white rounded-full lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity hover:bg-red-600 z-20 min-h-[36px] min-w-[36px] flex items-center justify-center"
-                              title="Delete component"
-                              aria-label="Delete component"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                            {/* Add between components */}
+                            <AddBetween onAdd={() => setAddComponentAfterIndex(index)} />
+                          </React.Fragment>
                         ))}
                       </div>
                     </SortableContext>
@@ -840,7 +1017,7 @@ export default function CourseEditorPage() {
                     <p className="text-secondary mb-4">No components yet. Add one to get started.</p>
                     <Button
                       variant="secondary"
-                      onClick={() => setShowAddMenu(true)}
+                      onClick={() => setAddComponentAfterIndex(-1)}
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Add Component
@@ -876,15 +1053,17 @@ export default function CourseEditorPage() {
         </main>
       </div>
 
-      {/* Click outside to close add menu (desktop only) */}
-      {showAddMenu && !isMobile && (
-        <div
-          className="fixed inset-0 z-10"
-          onClick={() => setShowAddMenu(false)}
-        />
-      )}
+      {/* Add Component Modal - unified selection and editing */}
+      <AddComponentModal
+        isOpen={addComponentAfterIndex !== null}
+        onClose={() => setAddComponentAfterIndex(null)}
+        onAdd={handleAddComponent}
+        insertAfterIndex={addComponentAfterIndex ?? 0}
+        courseId={courseId}
+        lessonId={selectedLessonId ?? ''}
+      />
 
-      {/* Edit Modal */}
+      {/* Edit Modal - for editing existing components */}
       <EditModal />
 
       {/* Delete Confirmation Modal */}
@@ -1057,31 +1236,3 @@ export default function CourseEditorPage() {
   );
 }
 
-function getDefaultContentForType(type: number): string {
-  switch (type) {
-    case 1: // Text
-      return JSON.stringify({ html: '<p>New text content</p>', plaintext: 'New text content' });
-    case 2: // Heading
-      return JSON.stringify({ level: 2, text: 'New Heading' });
-    case 3: // Image
-      return JSON.stringify({ imageDescription: 'Image description', altText: 'Image alt text' });
-    case 4: // Quiz
-      return JSON.stringify({
-        question: 'Your question here?',
-        questionType: 'multiple_choice',
-        options: [
-          { id: 'a', text: 'Option A' },
-          { id: 'b', text: 'Option B' },
-          { id: 'c', text: 'Option C' },
-        ],
-        correctAnswerId: 'a',
-        explanation: 'Explanation here',
-      });
-    case 5: // Code
-      return JSON.stringify({ code: '// Your code here', language: 'javascript' });
-    case 6: // Callout
-      return JSON.stringify({ style: 1, title: 'Note', content: 'Your callout content here' });
-    default:
-      return '{}';
-  }
-}

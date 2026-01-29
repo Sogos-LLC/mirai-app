@@ -16,10 +16,13 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/cache"
 	"github.com/sogos/mirai-backend/internal/infrastructure/config"
 	"github.com/sogos/mirai-backend/internal/infrastructure/crypto"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/embedding"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/gemini"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/kratos"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/smtp"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/stripe"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/twenty"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/vectordb"
 	"github.com/sogos/mirai-backend/internal/infrastructure/logging"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/postgres"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/sqlc"
@@ -84,6 +87,7 @@ func main() {
 	notificationRepo := sqlc.NewNotificationRepository(db.DB)
 	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
 	wizardStateRepo := sqlc.NewWizardStateRepository(db.DB)
+	knowledgeRepo := sqlc.NewKnowledgeSourceRepository(db.DB)
 
 	// Initialize shared HTTP client
 	httpClient := httputil.NewClient()
@@ -199,6 +203,26 @@ func main() {
 		logger.Warn("ENCRYPTION_KEY not configured, AI features requiring API keys will not work")
 	}
 
+	// Initialize RAG infrastructure (embedding + vector DB)
+	var embeddingClient *embedding.Client
+	var vectorClient *vectordb.QdrantClient
+	if cfg.EmbeddingURL != "" && cfg.QdrantURL != "" {
+		embeddingClient = embedding.NewClient(cfg.EmbeddingURL)
+		vectorClient = vectordb.NewQdrantClient(cfg.QdrantURL)
+		logger.Info("RAG infrastructure initialized", "embeddingURL", cfg.EmbeddingURL, "qdrantURL", cfg.QdrantURL)
+	} else {
+		logger.Warn("RAG infrastructure not configured (EMBEDDING_URL and/or QDRANT_URL not set)")
+	}
+
+	// Initialize Twenty CRM client (optional for feedback sync)
+	var crmProvider domainservice.CRMProvider
+	if cfg.TwentyAPIURL != "" && cfg.TwentyAPIKey != "" {
+		crmProvider = twenty.NewClient(cfg.TwentyAPIURL, cfg.TwentyAPIKey)
+		logger.Info("Twenty CRM client initialized", "url", cfg.TwentyAPIURL)
+	} else {
+		logger.Warn("Twenty CRM not configured (TWENTY_API_URL and/or TWENTY_API_KEY not set), feedback will not sync to CRM")
+	}
+
 	// Initialize application services
 	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, pendingRegRepo, kratosClient, stripeClient, encryptor, logger, cfg.FrontendURL, cfg.MarketingURL, cfg.BackendURL)
 	billingService := service.NewBillingService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
@@ -235,6 +259,10 @@ func main() {
 	)
 	logger.Info("course export service initialized")
 
+	// Knowledge Source service (for RAG - needed before AI services for RAG integration)
+	knowledgeSourceService := service.NewKnowledgeSourceService(knowledgeRepo, embeddingClient, vectorClient)
+	logger.Info("knowledge source service initialized")
+
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
@@ -264,12 +292,16 @@ func main() {
 		jobEventAdapter := service.NewJobEventAdapter(notificationPubSub, logger)
 		aiGenerationService.SetJobEventPublisher(jobEventAdapter)
 
-		// Course Wizard service (AI-guided course creation)
+		// Set up knowledge searcher for Internal Data Only mode (RAG-grounded generation)
+		aiGenerationService.SetKnowledgeSearcher(knowledgeSourceService)
+
+		// Course Wizard service (AI-guided course creation with RAG support)
 		courseWizardService = service.NewCourseWizardService(
 			userRepo,
 			wizardStateRepo,
 			geminiProviderFactory,
 			aiSettingsRepo,
+			knowledgeSourceService, // For RAG context in outcome generation
 			logger,
 		)
 
@@ -294,8 +326,10 @@ func main() {
 		CourseExportService:   courseExportService,
 		TenantSettingsService: tenantSettingsService,
 		NotificationService:   notificationService,
-		AIGenerationService:   aiGenerationService,
-		CourseWizardService:   courseWizardService,
+		AIGenerationService:    aiGenerationService,
+		CourseWizardService:    courseWizardService,
+		KnowledgeSourceService: knowledgeSourceService,
+		BaseStorage:            baseStorage,
 		PendingRegRepo:         pendingRegRepo,
 		UserRepo:               userRepo,               // For tenant context in auth interceptor
 		Cache:                  globalCache,            // For caching user tenant mappings (not tenant-scoped)
@@ -319,11 +353,13 @@ func main() {
 	}
 
 	// Create HTTP server
+	// ReadTimeout increased to 120s for file upload endpoints (UploadAndProcess)
+	// WriteTimeout disabled for streaming support (SubscribeNotifications, SubscribeJobs)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      finalHandler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 0, // Disabled for streaming support (SubscribeNotifications)
+		ReadTimeout:  120 * time.Second,
+		WriteTimeout: 0,
 		IdleTimeout:  60 * time.Second,
 	}
 
@@ -336,6 +372,8 @@ func main() {
 		courseExportService,
 		workerClient,
 		logger,
+		crmProvider,
+		userRepo,
 	)
 
 	// Start Asynq worker server in goroutine

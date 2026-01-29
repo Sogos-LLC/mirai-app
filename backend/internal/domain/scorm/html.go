@@ -327,6 +327,79 @@ func RenderComponent(comp ComponentData, quizIndex int) (RenderedComponent, erro
 			))
 		}
 
+	case ComponentTypeStatement:
+		var stmt StatementContent
+		if err := json.Unmarshal([]byte(comp.ContentJSON), &stmt); err != nil {
+			// Fallback: render as simple statement
+			rendered.HTML = template.HTML(fmt.Sprintf(`<div class="statement"><p class="statement-text">%s</p></div>`, html.EscapeString(comp.ContentJSON)))
+		} else {
+			subtext := ""
+			if stmt.Subtext != "" {
+				subtext = fmt.Sprintf(`<p class="statement-subtext">%s</p>`, html.EscapeString(stmt.Subtext))
+			}
+			rendered.HTML = template.HTML(fmt.Sprintf(
+				`<div class="statement"><p class="statement-text">%s</p>%s</div>`,
+				html.EscapeString(stmt.Text),
+				subtext,
+			))
+		}
+
+	case ComponentTypeQuote:
+		var quote QuoteContent
+		if err := json.Unmarshal([]byte(comp.ContentJSON), &quote); err != nil {
+			rendered.HTML = template.HTML(fmt.Sprintf(`<blockquote class="quote"><p>%s</p></blockquote>`, html.EscapeString(comp.ContentJSON)))
+		} else {
+			attribution := html.EscapeString(quote.Author)
+			if quote.Title != "" {
+				attribution += fmt.Sprintf(`, <span class="quote-title">%s</span>`, html.EscapeString(quote.Title))
+			}
+			source := ""
+			if quote.Source != "" {
+				source = fmt.Sprintf(`<cite class="quote-source">%s</cite>`, html.EscapeString(quote.Source))
+			}
+			rendered.HTML = template.HTML(fmt.Sprintf(
+				`<blockquote class="quote"><p class="quote-text">"%s"</p><footer class="quote-attribution">— %s%s</footer></blockquote>`,
+				html.EscapeString(quote.Text),
+				attribution,
+				source,
+			))
+		}
+
+	case ComponentTypeList:
+		var list ListContent
+		if err := json.Unmarshal([]byte(comp.ContentJSON), &list); err != nil {
+			rendered.HTML = template.HTML(fmt.Sprintf(`<div class="list">%s</div>`, html.EscapeString(comp.ContentJSON)))
+		} else {
+			rendered.HTML = template.HTML(renderList(list))
+		}
+
+	case ComponentTypeGallery:
+		var gallery GalleryContent
+		if err := json.Unmarshal([]byte(comp.ContentJSON), &gallery); err != nil {
+			rendered.HTML = template.HTML(`<div class="gallery">Gallery content unavailable</div>`)
+		} else {
+			rendered.HTML = template.HTML(renderGallery(gallery))
+		}
+
+	case ComponentTypeMultimedia:
+		var media MultimediaContent
+		if err := json.Unmarshal([]byte(comp.ContentJSON), &media); err != nil {
+			rendered.HTML = template.HTML(`<div class="multimedia">Media content unavailable</div>`)
+		} else {
+			rendered.HTML = template.HTML(renderMultimedia(media))
+		}
+
+	case ComponentTypeChart:
+		var chart ChartContent
+		if err := json.Unmarshal([]byte(comp.ContentJSON), &chart); err != nil {
+			rendered.HTML = template.HTML(`<div class="chart">Chart content unavailable</div>`)
+		} else {
+			rendered.HTML = template.HTML(renderChart(chart))
+		}
+
+	case ComponentTypeDivider:
+		rendered.HTML = template.HTML(`<hr class="divider">`)
+
 	default:
 		// Unknown type - render as text
 		rendered.HTML = template.HTML(fmt.Sprintf(`<div class="unknown-content">%s</div>`, formatTextContent(comp.ContentJSON)))
@@ -407,4 +480,246 @@ func escapeJSString(s string) string {
 	s = strings.ReplaceAll(s, "\n", "\\n")
 	s = strings.ReplaceAll(s, "\r", "\\r")
 	return s
+}
+
+// renderList generates HTML for a list component.
+func renderList(list ListContent) string {
+	var items strings.Builder
+
+	// Determine list tag based on style
+	listTag := "ul"
+	listClass := "list list-" + list.Style
+	if list.Style == "numbered" {
+		listTag = "ol"
+	}
+
+	for _, item := range list.Items {
+		itemClass := "list-item"
+		icon := ""
+		description := ""
+
+		if list.Style == "icon" && item.Icon != "" {
+			icon = fmt.Sprintf(`<span class="list-icon">%s</span>`, html.EscapeString(item.Icon))
+		}
+
+		if (list.Style == "process" || list.Style == "accordion") && item.Description != "" {
+			description = fmt.Sprintf(`<div class="list-item-description">%s</div>`, html.EscapeString(item.Description))
+		}
+
+		items.WriteString(fmt.Sprintf(
+			`<li class="%s">%s<span class="list-item-text">%s</span>%s</li>`,
+			itemClass,
+			icon,
+			html.EscapeString(item.Text),
+			description,
+		))
+	}
+
+	title := ""
+	if list.Title != "" {
+		title = fmt.Sprintf(`<h4 class="list-title">%s</h4>`, html.EscapeString(list.Title))
+	}
+
+	return fmt.Sprintf(`<div class="%s">%s<%s>%s</%s></div>`,
+		listClass, title, listTag, items.String(), listTag)
+}
+
+// renderGallery generates HTML for a gallery component.
+func renderGallery(gallery GalleryContent) string {
+	var items strings.Builder
+
+	for i, item := range gallery.Items {
+		caption := ""
+		if item.Caption != "" {
+			caption = fmt.Sprintf(`<figcaption>%s</figcaption>`, html.EscapeString(item.Caption))
+		}
+
+		imgSrc := item.URL
+		if imgSrc == "" {
+			imgSrc = fmt.Sprintf("data:image/svg+xml,%%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%%3E%%3Crect fill='%%23ddd' width='400' height='300'/%%3E%%3Ctext x='50%%25' y='50%%25' text-anchor='middle' dy='.3em' fill='%%23999'%%3E%s%%3C/text%%3E%%3C/svg%%3E",
+				html.EscapeString(item.ImageDescription))
+		}
+
+		// Render hotspots for labeled graphics
+		hotspots := ""
+		if gallery.Style == "labeled_graphic" && len(item.Hotspots) > 0 {
+			var hs strings.Builder
+			for _, h := range item.Hotspots {
+				hs.WriteString(fmt.Sprintf(
+					`<button class="gallery-hotspot" style="left: %.1f%%; top: %.1f%%;" data-label="%s" title="%s">%s</button>`,
+					h.X, h.Y,
+					html.EscapeString(h.Label),
+					html.EscapeString(h.Description),
+					html.EscapeString(h.Label),
+				))
+			}
+			hotspots = fmt.Sprintf(`<div class="gallery-hotspots">%s</div>`, hs.String())
+		}
+
+		items.WriteString(fmt.Sprintf(
+			`<figure class="gallery-item" data-index="%d"><img src="%s" alt="%s">%s%s</figure>`,
+			i,
+			html.EscapeString(imgSrc),
+			html.EscapeString(item.AltText),
+			caption,
+			hotspots,
+		))
+	}
+
+	galleryClass := "gallery gallery-" + gallery.Style
+	if gallery.Style == "carousel" && len(gallery.Items) > 1 {
+		return fmt.Sprintf(`<div class="%s"><div class="gallery-items">%s</div><div class="gallery-nav"><button class="gallery-prev" onclick="prevGalleryItem(this)">‹</button><button class="gallery-next" onclick="nextGalleryItem(this)">›</button></div></div>`,
+			galleryClass, items.String())
+	}
+
+	return fmt.Sprintf(`<div class="%s"><div class="gallery-items">%s</div></div>`,
+		galleryClass, items.String())
+}
+
+// renderMultimedia generates HTML for a multimedia component.
+func renderMultimedia(media MultimediaContent) string {
+	title := html.EscapeString(media.Title)
+	description := ""
+	if media.Description != "" {
+		description = fmt.Sprintf(`<p class="multimedia-description">%s</p>`, html.EscapeString(media.Description))
+	}
+
+	if media.IsPlaceholder {
+		return fmt.Sprintf(
+			`<div class="multimedia multimedia-placeholder"><div class="multimedia-icon">▶</div><h4 class="multimedia-title">%s</h4>%s<p class="multimedia-note">Media placeholder - content to be added</p></div>`,
+			title, description)
+	}
+
+	switch media.Type {
+	case "video":
+		// Handle YouTube/Vimeo embeds
+		if strings.Contains(media.URL, "youtube.com") || strings.Contains(media.URL, "youtu.be") {
+			videoID := extractYouTubeID(media.URL)
+			return fmt.Sprintf(
+				`<div class="multimedia multimedia-video"><iframe src="https://www.youtube.com/embed/%s" frameborder="0" allowfullscreen title="%s"></iframe>%s</div>`,
+				html.EscapeString(videoID), title, description)
+		}
+		if strings.Contains(media.URL, "vimeo.com") {
+			videoID := extractVimeoID(media.URL)
+			return fmt.Sprintf(
+				`<div class="multimedia multimedia-video"><iframe src="https://player.vimeo.com/video/%s" frameborder="0" allowfullscreen title="%s"></iframe>%s</div>`,
+				html.EscapeString(videoID), title, description)
+		}
+		// Fallback to video tag
+		return fmt.Sprintf(
+			`<div class="multimedia multimedia-video"><video controls><source src="%s" type="video/mp4">Your browser does not support video.</video>%s</div>`,
+			html.EscapeString(media.URL), description)
+
+	case "audio":
+		return fmt.Sprintf(
+			`<div class="multimedia multimedia-audio"><h4 class="multimedia-title">%s</h4><audio controls><source src="%s" type="audio/mpeg">Your browser does not support audio.</audio>%s</div>`,
+			title, html.EscapeString(media.URL), description)
+
+	case "interactive":
+		return fmt.Sprintf(
+			`<div class="multimedia multimedia-interactive"><iframe src="%s" frameborder="0" title="%s"></iframe>%s</div>`,
+			html.EscapeString(media.URL), title, description)
+
+	default:
+		return fmt.Sprintf(
+			`<div class="multimedia"><a href="%s" target="_blank">%s</a>%s</div>`,
+			html.EscapeString(media.URL), title, description)
+	}
+}
+
+// extractYouTubeID extracts the video ID from a YouTube URL.
+func extractYouTubeID(url string) string {
+	// Handle youtu.be/ID format
+	if strings.Contains(url, "youtu.be/") {
+		parts := strings.Split(url, "youtu.be/")
+		if len(parts) > 1 {
+			id := strings.Split(parts[1], "?")[0]
+			return strings.TrimSpace(id)
+		}
+	}
+	// Handle youtube.com/watch?v=ID format
+	if strings.Contains(url, "v=") {
+		parts := strings.Split(url, "v=")
+		if len(parts) > 1 {
+			id := strings.Split(parts[1], "&")[0]
+			return strings.TrimSpace(id)
+		}
+	}
+	return url
+}
+
+// extractVimeoID extracts the video ID from a Vimeo URL.
+func extractVimeoID(url string) string {
+	parts := strings.Split(url, "vimeo.com/")
+	if len(parts) > 1 {
+		id := strings.Split(parts[1], "?")[0]
+		return strings.TrimSpace(id)
+	}
+	return url
+}
+
+// renderChart generates HTML for a chart component.
+func renderChart(chart ChartContent) string {
+	title := html.EscapeString(chart.Title)
+	description := ""
+	if chart.Description != "" {
+		description = fmt.Sprintf(`<p class="chart-description sr-only">%s</p>`, html.EscapeString(chart.Description))
+	}
+
+	// For table type, render as HTML table
+	if chart.Type == "table" {
+		return renderChartAsTable(chart)
+	}
+
+	// For other chart types, render a simplified static version
+	// (Full chart rendering would require Chart.js in the SCORM player)
+	var data strings.Builder
+	for _, series := range chart.Series {
+		data.WriteString(fmt.Sprintf(`<div class="chart-series"><h5>%s</h5><ul>`, html.EscapeString(series.Name)))
+		for _, point := range series.Data {
+			data.WriteString(fmt.Sprintf(`<li>%s: %.2f</li>`, html.EscapeString(point.Label), point.Value))
+		}
+		data.WriteString(`</ul></div>`)
+	}
+
+	return fmt.Sprintf(
+		`<div class="chart chart-%s"><h4 class="chart-title">%s</h4>%s<div class="chart-data">%s</div></div>`,
+		html.EscapeString(chart.Type), title, description, data.String())
+}
+
+// renderChartAsTable renders chart data as an HTML table.
+func renderChartAsTable(chart ChartContent) string {
+	title := html.EscapeString(chart.Title)
+	description := ""
+	if chart.Description != "" {
+		description = fmt.Sprintf(`<caption class="sr-only">%s</caption>`, html.EscapeString(chart.Description))
+	}
+
+	// Build table header from first series labels
+	var headers strings.Builder
+	headers.WriteString(`<tr><th scope="col">Category</th>`)
+	for _, series := range chart.Series {
+		headers.WriteString(fmt.Sprintf(`<th scope="col">%s</th>`, html.EscapeString(series.Name)))
+	}
+	headers.WriteString(`</tr>`)
+
+	// Build table rows
+	var rows strings.Builder
+	if len(chart.Series) > 0 && len(chart.Series[0].Data) > 0 {
+		for i, point := range chart.Series[0].Data {
+			rows.WriteString(fmt.Sprintf(`<tr><th scope="row">%s</th>`, html.EscapeString(point.Label)))
+			for _, series := range chart.Series {
+				if i < len(series.Data) {
+					rows.WriteString(fmt.Sprintf(`<td>%.2f</td>`, series.Data[i].Value))
+				} else {
+					rows.WriteString(`<td>-</td>`)
+				}
+			}
+			rows.WriteString(`</tr>`)
+		}
+	}
+
+	return fmt.Sprintf(
+		`<div class="chart chart-table"><h4 class="chart-title">%s</h4><table class="chart-table-data">%s<thead>%s</thead><tbody>%s</tbody></table></div>`,
+		title, description, headers.String(), rows.String())
 }

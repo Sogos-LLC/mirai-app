@@ -1,9 +1,6 @@
 'use client';
 
-interface TextContent {
-  html: string;
-  plaintext: string;
-}
+import type { TextContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface TextRendererProps {
   content: TextContent;
@@ -17,18 +14,17 @@ export function TextRenderer({ content, isEditing = false, onEdit }: TextRendere
       <div className="border rounded-lg p-4 bg-white">
         <textarea
           className="w-full min-h-[100px] p-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
-          value={content.html}
+          value={content.textHtml}
           onChange={(e) =>
             onEdit({
               ...content,
-              html: e.target.value,
-              plaintext: e.target.value.replace(/<[^>]*>/g, ''),
+              textHtml: e.target.value,
             })
           }
           placeholder="Enter text content..."
         />
         <p className="mt-2 text-xs text-gray-500">
-          Supports HTML formatting. Plain text will be extracted automatically.
+          Supports HTML formatting.
         </p>
       </div>
     );
@@ -37,7 +33,7 @@ export function TextRenderer({ content, isEditing = false, onEdit }: TextRendere
   return (
     <div
       className="prose prose-sm sm:prose lg:prose-lg max-w-none text-gray-700"
-      dangerouslySetInnerHTML={{ __html: content.html || content.plaintext }}
+      dangerouslySetInnerHTML={{ __html: content.textHtml }}
     />
   );
 }

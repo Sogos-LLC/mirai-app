@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
-import { CalloutStyle } from '@/gen/mirai/v1/ai_generation_pb';
+import { CalloutStyle } from '@/gen/mirai/v1/component_enums_pb';
 
 interface CalloutContent {
   style: number;
@@ -118,7 +118,7 @@ export function CalloutEditor({ contentJson, onSave }: CalloutEditorProps) {
           className="px-6 py-2 bg-purple-600 text-white font-medium rounded-lg
             hover:bg-purple-700 transition-colors"
         >
-          Save Changes
+          Done
         </button>
       </div>
     </div>

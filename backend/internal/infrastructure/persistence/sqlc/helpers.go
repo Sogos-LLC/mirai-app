@@ -189,3 +189,13 @@ func toNullGenerationJobStatus(s *string) gen.NullGenerationJobStatus {
 	}
 	return gen.NullGenerationJobStatus{GenerationJobStatus: gen.GenerationJobStatus(*s), Valid: true}
 }
+
+// toKnowledgeSourceType converts a string to gen.KnowledgeSourceType.
+func toKnowledgeSourceType(s string) gen.KnowledgeSourceType {
+	return gen.KnowledgeSourceType(s)
+}
+
+// toKnowledgeSourceStatus converts a string to gen.KnowledgeSourceStatus.
+func toKnowledgeSourceStatus(s string) gen.KnowledgeSourceStatus {
+	return gen.KnowledgeSourceStatus(s)
+}

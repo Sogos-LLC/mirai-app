@@ -3,8 +3,8 @@ import type {
   LessonComponent,
   GeneratedLesson,
   GenerationJob,
-  LessonComponentType,
-} from '@/gen/mirai/v1/ai_generation_pb';
+} from '@/gen/mirai/v1/ai_generation_types_pb';
+import type { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
 import { componentEditingTelemetry } from './shared/telemetry';
 import { NetworkError, createAuthError, type AuthError } from './shared/types';
 

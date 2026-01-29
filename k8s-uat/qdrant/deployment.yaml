@@ -1,0 +1,114 @@
+# Qdrant Vector Database for RAG
+# Persists to disk with in-memory HNSW index for fast retrieval
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qdrant
+  namespace: mirai-uat
+  labels:
+    app: qdrant
+    environment: uat
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # PVC requires single writer
+  selector:
+    matchLabels:
+      app: qdrant
+  template:
+    metadata:
+      labels:
+        app: qdrant
+        environment: uat
+    spec:
+      securityContext:
+        fsGroup: 1000
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: qdrant
+        image: qdrant/qdrant:v1.12.1
+        ports:
+        - containerPort: 6333
+          name: http
+        - containerPort: 6334
+          name: grpc
+        env:
+        - name: QDRANT__STORAGE__ON_DISK_PAYLOAD
+          value: "true"
+        volumeMounts:
+        - name: data
+          mountPath: /qdrant/storage
+        - name: config
+          mountPath: /qdrant/config/config.yaml
+          subPath: config.yaml
+        resources:
+          requests:
+            memory: "6Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "3000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 6333
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 6333
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # Qdrant needs to write to storage
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: qdrant-data
+      - name: config
+        configMap:
+          name: qdrant-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qdrant-config
+  namespace: mirai-uat
+  labels:
+    app: qdrant
+    environment: uat
+data:
+  config.yaml: |
+    # Qdrant configuration for RAG
+    storage:
+      storage_path: /qdrant/storage
+      snapshots_path: /qdrant/storage/snapshots
+      on_disk_payload: true
+
+    service:
+      host: 0.0.0.0
+      http_port: 6333
+      grpc_port: 6334
+
+    # HNSW index configuration for fast retrieval
+    hnsw_index:
+      m: 16
+      ef_construct: 100
+      full_scan_threshold: 10000
+
+    # Optimizer settings
+    optimizers:
+      indexing_threshold: 20000

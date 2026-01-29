@@ -56,6 +56,12 @@ type JobEventPublisher interface {
 	PublishJobEvent(ctx context.Context, userID uuid.UUID, eventType string, job *entity.GenerationJob) error
 }
 
+// KnowledgeSearcher provides RAG search capabilities for internal data only mode.
+type KnowledgeSearcher interface {
+	SearchKnowledge(ctx context.Context, courseID uuid.UUID, query string, topK int) ([]*entity.RetrievedChunk, error)
+	ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeSource, error)
+}
+
 // AIGenerationService handles AI-powered content generation.
 // All course content is stored in MinIO - no PostgreSQL tables for outlines/lessons.
 type AIGenerationService struct {
@@ -70,6 +76,7 @@ type AIGenerationService struct {
 	imageStorage       ImageStorage
 	contentStorage     *storage.TenantAwareStorage
 	jobEventPublisher  JobEventPublisher
+	knowledgeSearcher  KnowledgeSearcher // For Internal Data Only RAG queries
 	logger             service.Logger
 }
 
@@ -100,6 +107,11 @@ func NewAIGenerationService(
 		contentStorage:     contentStorage,
 		logger:             logger,
 	}
+}
+
+// SetKnowledgeSearcher sets the knowledge searcher for Internal Data Only mode.
+func (s *AIGenerationService) SetKnowledgeSearcher(searcher KnowledgeSearcher) {
+	s.knowledgeSearcher = searcher
 }
 
 // SetJobEventPublisher sets the optional job event publisher for real-time streaming.
@@ -238,18 +250,90 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 			}
 		}
 
-		// Use desired outcomes as additional context
-		additionalContext = content.WizardData.DesiredOutcomes
+		// Use user's additional context if provided, otherwise fall back to desired outcomes
+		if content.WizardData.AdditionalContext != "" {
+			additionalContext = content.WizardData.AdditionalContext
+		} else {
+			additionalContext = content.WizardData.DesiredOutcomes
+		}
 	}
 
-	// Generate outline with AI
-	outlineResult, err := aiProvider.GenerateCourseOutline(ctx, service.GenerateOutlineRequest{
+	// Build outline request
+	outlineRequest := service.GenerateOutlineRequest{
 		CourseTitle:       content.Settings.Title,
 		DesiredOutcome:    content.Settings.DesiredOutcome,
 		SMEKnowledge:      smeKnowledge,
 		TargetAudience:    targetAudience,
 		AdditionalContext: additionalContext,
-	})
+	}
+
+	// Handle Internal Data Only mode - fetch RAG context
+	if content.WizardData != nil && content.WizardData.InternalDataOnly {
+		outlineRequest.InternalDataOnly = true
+		log.Info("Internal Data Only mode enabled, fetching RAG context")
+
+		if s.knowledgeSearcher != nil {
+			// Fetch knowledge sources for the course to get document indices
+			sources, err := s.knowledgeSearcher.ListByCourse(ctx, *job.CourseID)
+			if err != nil {
+				log.Warn("failed to list knowledge sources", "error", err)
+			} else {
+				// Build document indices from sources
+				for _, src := range sources {
+					if src.DocumentIndex != nil {
+						outlineRequest.DocumentIndices = append(outlineRequest.DocumentIndices, service.DocumentIndexInput{
+							SourceID:             src.ID.String(),
+							SourceName:           src.Name,
+							Title:                src.DocumentIndex.Title,
+							MainTopics:           src.DocumentIndex.MainTopics,
+							KeyConcepts:          src.DocumentIndex.KeyConcepts,
+							EstimatedLessonCount: src.DocumentIndex.EstimatedLessonCount,
+							ContentDepth:         src.DocumentIndex.ContentDepth,
+						})
+					}
+				}
+
+				// Perform RAG search for course content
+				// Use course title and desired outcomes as initial queries
+				queries := []string{
+					content.Settings.Title,
+					content.Settings.DesiredOutcome,
+				}
+				if additionalContext != "" {
+					queries = append(queries, additionalContext)
+				}
+
+				seenChunks := make(map[string]bool)
+				for _, query := range queries {
+					chunks, err := s.knowledgeSearcher.SearchKnowledge(ctx, *job.CourseID, query, 10)
+					if err != nil {
+						log.Warn("RAG search failed", "query", query, "error", err)
+						continue
+					}
+					for _, chunk := range chunks {
+						// Deduplicate chunks
+						if seenChunks[chunk.ID] {
+							continue
+						}
+						seenChunks[chunk.ID] = true
+						outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
+							SourceID:        chunk.SourceID.String(),
+							SourceName:      chunk.SourceName,
+							Content:         chunk.Content,
+							ChunkIndex:      int(*chunk.ChunkIndex),
+							SimilarityScore: chunk.SimilarityScore,
+						})
+					}
+				}
+				log.Info("RAG context retrieved", "documentIndices", len(outlineRequest.DocumentIndices), "chunks", len(outlineRequest.RAGContext))
+			}
+		} else {
+			log.Warn("Internal Data Only mode enabled but no knowledge searcher configured")
+		}
+	}
+
+	// Generate outline with AI
+	outlineResult, err := aiProvider.GenerateCourseOutline(ctx, outlineRequest)
 	if err != nil {
 		log.Error("AI outline generation failed", "error", err)
 		return s.failJob(ctx, job, fmt.Sprintf("AI generation failed: %v", err))
@@ -340,6 +424,25 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 
 	if user.TenantID == nil {
 		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	// Check for existing active full_course job for this course
+	fullCourseType := valueobject.GenerationJobTypeFullCourse
+	existingJobs, err := s.jobRepo.List(ctx, entity.GenerationJobListOptions{
+		CourseID: &courseID,
+		Type:     &fullCourseType,
+	})
+	if err == nil {
+		for _, job := range existingJobs {
+			if job.Status == valueobject.GenerationJobStatusQueued || job.Status == valueobject.GenerationJobStatusProcessing {
+				log.Warn("DUPLICATE_GENERATION_REQUEST: existing active job found",
+					"existingJobID", job.ID,
+					"existingJobStatus", job.Status,
+				)
+				// Return the existing job instead of creating a new one
+				return &GenerateAllLessonsResult{Job: job}, nil
+			}
+		}
 	}
 
 	// Read course content from MinIO
@@ -570,6 +673,64 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		}
 	}
 
+	// Get additional context from wizard data
+	var lessonAdditionalContext string
+	if content.WizardData != nil && content.WizardData.AdditionalContext != "" {
+		lessonAdditionalContext = content.WizardData.AdditionalContext
+	}
+
+	// Check if Internal Data Only mode is enabled
+	var internalDataOnly bool
+	var ragContext []service.RAGChunkInput
+	if content.WizardData != nil && content.WizardData.InternalDataOnly {
+		internalDataOnly = true
+		log.Info("Internal Data Only mode enabled, fetching RAG context for lesson",
+			"lessonTitle", lessonTitle)
+
+		// Fetch RAG context for the lesson using learning objectives as queries
+		if s.knowledgeSearcher != nil && job.CourseID != nil {
+			// Build search query from lesson title and learning objectives
+			searchQueries := []string{lessonTitle + " " + lessonDesc}
+			for _, obj := range learningObjectives {
+				searchQueries = append(searchQueries, obj)
+			}
+
+			// Execute RAG queries and collect chunks
+			seenChunks := make(map[string]bool) // Deduplicate by content hash
+			for _, query := range searchQueries {
+				chunks, err := s.knowledgeSearcher.SearchKnowledge(ctx, *job.CourseID, query, 5)
+				if err != nil {
+					log.Warn("RAG search failed for lesson", "query", query, "error", err)
+					continue
+				}
+				for _, chunk := range chunks {
+					// Simple deduplication by first 100 chars of content
+					hashKey := chunk.Content
+					if len(hashKey) > 100 {
+						hashKey = hashKey[:100]
+					}
+					if !seenChunks[hashKey] {
+						seenChunks[hashKey] = true
+						chunkIndex := 0
+						if chunk.ChunkIndex != nil {
+							chunkIndex = int(*chunk.ChunkIndex)
+						}
+						ragContext = append(ragContext, service.RAGChunkInput{
+							SourceID:        chunk.SourceID.String(),
+							SourceName:      chunk.SourceName,
+							Content:         chunk.Content,
+							ChunkIndex:      chunkIndex,
+							SimilarityScore: chunk.SimilarityScore,
+						})
+					}
+				}
+			}
+			log.Info("Fetched RAG context for lesson",
+				"lessonTitle", lessonTitle,
+				"chunkCount", len(ragContext))
+		}
+	}
+
 	// Generate lesson content
 	lessonResult, err := aiProvider.GenerateLessonContent(ctx, service.GenerateLessonRequest{
 		CourseTitle:        content.Settings.Title,
@@ -581,6 +742,9 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		TargetAudience:     targetAudience,
 		IsLastInSection:    isLastInSection,
 		IsLastInCourse:     isLastInCourse,
+		AdditionalContext:  lessonAdditionalContext,
+		InternalDataOnly:   internalDataOnly,
+		RAGContext:         ragContext,
 	})
 	if err != nil {
 		log.Error("AI lesson generation failed", "error", err)
@@ -707,15 +871,40 @@ func (s *AIGenerationService) checkAndCompleteParentJob(ctx context.Context, par
 		parentJob.ProgressMessage = &progressMsg
 		parentJob.TokensUsed = result.TotalTokens
 		_ = s.jobRepo.Update(ctx, parentJob)
+		log.Info("parent job progress update", "completed", result.CompletedCount, "failed", result.FailedCount, "total", result.TotalCount, "pending", result.TotalCount-doneCount)
 		return nil
 	}
 
 	// Finalized - send notification
-	log.Info("parent job finalized", "completed", result.CompletedCount, "failed", result.FailedCount)
+	log.Info("parent job finalized", "completed", result.CompletedCount, "failed", result.FailedCount, "total", result.TotalCount, "wasFinalized", result.WasFinalized)
+
+	// If there are failed jobs, log which ones failed for debugging
+	if result.FailedCount > 0 {
+		failedJobs, err := s.jobRepo.ListByParentID(ctx, parentJobID)
+		if err == nil {
+			for _, job := range failedJobs {
+				if job.Status == valueobject.GenerationJobStatusFailed {
+					errMsg := ""
+					if job.ErrorMessage != nil {
+						errMsg = *job.ErrorMessage
+					}
+					log.Error("FAILED CHILD JOB", "childJobID", job.ID, "errorMessage", errMsg, "resultPath", job.ResultPath)
+				}
+			}
+		}
+	}
 
 	parentJob, err := s.jobRepo.GetByID(ctx, parentJobID)
 	if err != nil || parentJob == nil || parentJob.CourseID == nil {
 		return nil
+	}
+
+	// Publish job completion event to frontend via SSE
+	// This is critical - without this, the frontend will show the job as "processing" forever
+	if result.FailedCount > 0 {
+		s.publishJobEvent(ctx, "failed", parentJob)
+	} else {
+		s.publishJobEvent(ctx, "completed", parentJob)
 	}
 
 	courseTitle := "Your Course"
@@ -1112,6 +1301,16 @@ func (s *AIGenerationService) processNextJob(ctx context.Context) error {
 }
 
 func (s *AIGenerationService) failJob(ctx context.Context, job *entity.GenerationJob, errMsg string) error {
+	// Log detailed info about the failing job for debugging
+	s.logger.Error("JOB FAILED",
+		"jobID", job.ID,
+		"jobType", job.Type,
+		"courseID", job.CourseID,
+		"parentJobID", job.ParentJobID,
+		"resultPath", job.ResultPath,
+		"errorMessage", errMsg,
+	)
+
 	job.Status = valueobject.GenerationJobStatusFailed
 	job.ErrorMessage = &errMsg
 	now := time.Now()

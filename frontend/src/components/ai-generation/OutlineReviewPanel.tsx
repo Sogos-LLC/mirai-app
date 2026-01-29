@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { CourseOutline, OutlineSection, OutlineLesson } from '@/gen/mirai/v1/ai_generation_pb';
+import type { CourseOutline, OutlineSection, OutlineLesson } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { OutlineEditor } from './OutlineEditor';
 
 // Approval status constants from proto

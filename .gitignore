@@ -41,6 +41,9 @@ yarn-error.log*
 
 # Testing
 coverage/
+test-results/
+playwright-report/
+.playwright/
 
 # TypeScript
 *.tsbuildinfo
@@ -70,3 +73,6 @@ CLAUDE.md
 # Experiments
 experiments/
 experiments/.env.experiments
+
+# Internal documentation (not for repo)
+Tritanium Internal Technical Overview.txt

@@ -137,6 +137,10 @@ spec:
           value: "redis://redis.redis.svc.cluster.local:6379"
         - name: GIN_MODE
           value: "release"
+        - name: QDRANT_URL
+          value: "http://qdrant.mirai.svc.cluster.local:6333"
+        - name: EMBEDDING_URL
+          value: "http://embedding-service.mirai.svc.cluster.local:8080"
         - name: ENCRYPTION_KEY
           valueFrom:
             secretKeyRef:
@@ -144,11 +148,11 @@ spec:
               key: encryption-key
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "4Gi"
+            cpu: "1000m"
           limits:
-            memory: "256Mi"
-            cpu: "500m"
+            memory: "6Gi"
+            cpu: "2000m"
         securityContext:
           runAsNonRoot: true
           runAsUser: 10000

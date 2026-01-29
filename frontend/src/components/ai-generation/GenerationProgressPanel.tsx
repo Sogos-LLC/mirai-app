@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { GenerationJob, GenerationJobStatus } from '@/gen/mirai/v1/ai_generation_pb';
+import type { GenerationJob, GenerationJobStatus } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { getStepLabel, type CourseGenerationContext } from '@/machines/courseGenerationMachine';
 
 // Job status constants from proto

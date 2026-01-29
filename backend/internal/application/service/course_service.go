@@ -137,7 +137,11 @@ type S3WizardData struct {
 	AudiencePersonas    []S3AudiencePersona `json:"audiencePersonas"`
 	SelectedAudienceIDs []string            `json:"selectedAudienceIds"`
 	SelectedTone        *S3ToneOption       `json:"selectedTone,omitempty"`
+	AdditionalContext   string              `json:"additionalContext"`
 	DesiredOutcomes     string              `json:"desiredOutcomes"`
+	// InternalDataOnly: When true, course content is generated exclusively from
+	// uploaded knowledge sources. AI will not add external information.
+	InternalDataOnly bool `json:"internalDataOnly"`
 }
 
 // S3SMEPersona represents an SME (Subject Matter Expert) persona stored in wizard data.

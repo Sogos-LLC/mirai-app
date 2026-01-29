@@ -1,21 +1,20 @@
 'use client';
 
 import React from 'react';
-import { Edit2, RefreshCw } from 'lucide-react';
+import { Edit2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
 import WizardNavigation from '../WizardNavigation';
 
 interface TitleDescriptionStepProps {
   title: string;
   description: string;
   originalCourseName: string;
+  desiredOutcomes: string;
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onNext: () => void;
   onBack: () => void;
-  onRegenerate: () => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -24,11 +23,11 @@ export default function TitleDescriptionStep({
   title,
   description,
   originalCourseName,
+  desiredOutcomes,
   onTitleChange,
   onDescriptionChange,
   onNext,
   onBack,
-  onRegenerate,
   onCancel,
   isLoading = false,
 }: TitleDescriptionStepProps) {
@@ -38,30 +37,26 @@ export default function TitleDescriptionStep({
     <Card>
       <CardContent className="py-8">
         <div className="max-w-2xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-primary mb-2">
-                Review Your Course Title
-              </h2>
-              <p className="text-sm sm:text-base text-secondary">
-                We&apos;ve improved your course name. Feel free to edit or regenerate.
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRegenerate}
-              disabled={isLoading}
-              className="self-start sm:self-auto"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Regenerate
-            </Button>
+          <div className="mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-primary mb-2">
+              Review Your Course Title
+            </h2>
+            <p className="text-sm sm:text-base text-secondary">
+              We&apos;ve improved your course name. Feel free to edit the title and description.
+            </p>
           </div>
 
-          <div className="mb-4 p-3 bg-surface rounded-lg border">
-            <p className="text-sm text-muted">Your original input:</p>
-            <p className="text-secondary font-medium">{originalCourseName}</p>
+          <div className="mb-4 p-3 bg-surface rounded-lg border space-y-2">
+            <div>
+              <p className="text-sm text-muted">Your original input:</p>
+              <p className="text-secondary font-medium">{originalCourseName}</p>
+            </div>
+            {desiredOutcomes && (
+              <div>
+                <p className="text-sm text-muted">Desired outcomes:</p>
+                <p className="text-secondary text-sm whitespace-pre-wrap">{desiredOutcomes}</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">

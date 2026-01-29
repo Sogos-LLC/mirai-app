@@ -1,7 +1,10 @@
 package connect
 
 import (
+	"context"
+	"log"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/sogos/mirai-backend/gen/mirai/v1/miraiv1connect"
@@ -12,6 +15,12 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 )
+
+// StorageAdapter interface for storage operations.
+type StorageAdapter interface {
+	GenerateUploadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
+	PutContent(ctx context.Context, path string, content []byte, contentType string) error
+}
 
 // ServerConfig contains all dependencies needed for the Connect server.
 type ServerConfig struct {
@@ -26,7 +35,9 @@ type ServerConfig struct {
 	TenantSettingsService *service.TenantSettingsService
 	NotificationService   *service.NotificationService
 	AIGenerationService   *service.AIGenerationService
-	CourseWizardService   *service.CourseWizardService
+	CourseWizardService    *service.CourseWizardService
+	KnowledgeSourceService *service.KnowledgeSourceService
+	BaseStorage            StorageAdapter // For knowledge source presigned URLs
 
 	PendingRegRepo         repository.PendingRegistrationRepository
 	UserRepo               repository.UserRepository // For tenant context in auth interceptor
@@ -141,6 +152,24 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 		mux.Handle(path, handler)
 	}
 
+	// KnowledgeSourceService - RAG knowledge management
+	if cfg.KnowledgeSourceService != nil && cfg.BaseStorage != nil {
+		path, handler = miraiv1connect.NewKnowledgeSourceServiceHandler(
+			NewKnowledgeServiceServer(cfg.KnowledgeSourceService, cfg.BaseStorage),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// FeedbackService - user feedback collection
+	if cfg.UserService != nil && cfg.WorkerClient != nil {
+		path, handler = miraiv1connect.NewFeedbackServiceHandler(
+			NewFeedbackServiceServer(cfg.UserService, cfg.WorkerClient),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
 	// Add webhook handler (no interceptors - Stripe handles its own auth)
 	webhookHandler := NewWebhookHandler(cfg.BillingService, cfg.PendingRegRepo, cfg.Payments, cfg.WorkerClient, cfg.Logger)
 	mux.HandleFunc("/api/v1/billing/webhook", webhookHandler.HandleStripeWebhook)
@@ -191,15 +220,21 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 // CORSMiddleware wraps an http.Handler with CORS support.
 func CORSMiddleware(allowedOrigin string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Log incoming request at middleware level (before any handler processing)
+		contentLength := r.Header.Get("Content-Length")
+		log.Printf("[CORS] Request: %s %s (Content-Length: %s, Origin: %s)",
+			r.Method, r.URL.Path, contentLength, r.Header.Get("Origin"))
+
 		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Connect-Protocol-Version")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Connect-Protocol-Version, Connect-Timeout-Ms")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 
 		// Handle preflight
 		if r.Method == http.MethodOptions {
+			log.Printf("[CORS] Preflight handled for: %s", r.URL.Path)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}

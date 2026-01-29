@@ -3,7 +3,7 @@ import type {
   GenerationJob,
   CourseOutline,
   OutlineSection,
-} from '@/gen/mirai/v1/ai_generation_pb';
+} from '@/gen/mirai/v1/ai_generation_types_pb';
 import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 // ============================================================
@@ -12,6 +12,8 @@ import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 export interface OutlineReviewContext {
   courseId: string;
+  // Initial job ID from wizard (used to avoid race condition in job discovery)
+  initialJobId: string | null;
   outline: CourseOutline | null;
   outlineJobId: string | null;
   lessonJobId: string | null;
@@ -30,8 +32,8 @@ export type OutlineReviewEvent =
   | { type: 'REGENERATE_OUTLINE' }
   | { type: 'UPDATE_SECTION_TITLE'; sectionIndex: number; title: string }
   | { type: 'UPDATE_LESSON'; sectionIndex: number; lessonIndex: number; title: string; description: string }
-  // Success
-  | { type: 'DISMISS_SUCCESS' }
+  // Lesson generation
+  | { type: 'DISMISS_LESSON_GENERATION' }
   // Common
   | { type: 'RETRY' }
   | { type: 'DISMISS_ERROR' };
@@ -78,8 +80,10 @@ const JOB_STATUS = {
 
 /**
  * Load outline - checks if outline exists or if generation is in progress
+ * @param courseId - The course ID to load outline for
+ * @param initialJobId - Optional job ID from wizard to avoid race condition
  */
-export const loadOutlineActor = fromPromise<LoadOutlineResponse, { courseId: string }>(
+export const loadOutlineActor = fromPromise<LoadOutlineResponse, { courseId: string; initialJobId?: string }>(
   async () => {
     throw new NetworkError('loadOutlineActor must be provided by the component');
   }
@@ -130,12 +134,23 @@ export const generateLessonsActor = fromPromise<GenerateLessonsResponse, { cours
   }
 );
 
+/**
+ * Poll lesson job status
+ */
+export const pollLessonJobActor = fromPromise<GetJobResponse, { jobId: string }>(
+  async () => {
+    throw new NetworkError('pollLessonJobActor must be provided by the component');
+  }
+);
+
 // ============================================================
 // Input Type
 // ============================================================
 
 export interface OutlineReviewInput {
   courseId: string;
+  // Optional job ID passed from wizard to avoid race condition in job discovery
+  initialJobId?: string;
 }
 
 // ============================================================
@@ -147,6 +162,7 @@ export const outlineReviewMachine = createMachine({
   initial: 'loading',
   context: ({ input }: { input: OutlineReviewInput }): OutlineReviewContext => ({
     courseId: input.courseId,
+    initialJobId: input.initialJobId ?? null,
     outline: null,
     outlineJobId: null,
     lessonJobId: null,
@@ -171,7 +187,7 @@ export const outlineReviewMachine = createMachine({
       invoke: {
         id: 'loadOutline',
         src: 'loadOutlineActor',
-        input: ({ context }) => ({ courseId: context.courseId }),
+        input: ({ context }) => ({ courseId: context.courseId, initialJobId: context.initialJobId ?? undefined }),
         onDone: [
           {
             // Outline exists and is ready
@@ -188,7 +204,7 @@ export const outlineReviewMachine = createMachine({
             }),
           },
           {
-            // Outline is still generating
+            // Outline is still generating - go directly to polling with progress bar
             target: 'pollingOutline',
             guard: ({ event }) =>
               event.output.job !== null &&
@@ -196,7 +212,8 @@ export const outlineReviewMachine = createMachine({
                 event.output.job.status === JOB_STATUS.PROCESSING),
             actions: assign({
               outlineJobId: ({ event }) => event.output.job?.id || null,
-              progressMessage: 'Outline is being generated...',
+              progressPercent: 10,
+              progressMessage: 'Generating outline...',
             }),
           },
           {
@@ -235,9 +252,22 @@ export const outlineReviewMachine = createMachine({
             input: ({ context }) => ({ jobId: context.outlineJobId! }),
             onDone: [
               {
+                // Handle missing job - go to error
+                target: '#outlineReview.error',
+                guard: ({ event }) => !event.output.job,
+                actions: assign({
+                  error: () =>
+                    createAuthError(
+                      'NOT_FOUND',
+                      'Job not found. It may have been deleted.',
+                      true
+                    ),
+                }),
+              },
+              {
                 // Job completed - fetch outline
                 target: 'fetchingOutline',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.COMPLETED,
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.COMPLETED,
                 actions: assign({
                   progressPercent: 90,
                   progressMessage: 'Outline generated, loading...',
@@ -246,12 +276,25 @@ export const outlineReviewMachine = createMachine({
               {
                 // Job failed
                 target: '#outlineReview.error',
-                guard: ({ event }) => event.output.job.status === JOB_STATUS.FAILED,
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.FAILED,
                 actions: assign({
                   error: ({ event }) =>
                     createAuthError(
                       'GENERATION_FAILED',
-                      event.output.job.errorMessage || 'Outline generation failed',
+                      event.output.job?.errorMessage || 'Outline generation failed',
+                      true
+                    ),
+                }),
+              },
+              {
+                // Job cancelled
+                target: '#outlineReview.error',
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.CANCELLED,
+                actions: assign({
+                  error: () =>
+                    createAuthError(
+                      'GENERATION_FAILED',
+                      'Outline generation was cancelled',
                       true
                     ),
                 }),
@@ -261,9 +304,9 @@ export const outlineReviewMachine = createMachine({
                 target: 'waiting',
                 actions: assign({
                   progressPercent: ({ event }) =>
-                    Math.min(85, 10 + (event.output.job.progressPercent || 0) * 0.75),
+                    Math.min(85, 10 + (event.output.job?.progressPercent || 0) * 0.75),
                   progressMessage: ({ event }) =>
-                    event.output.job.progressMessage || 'Generating outline...',
+                    event.output.job?.progressMessage || 'Generating outline...',
                 }),
               },
             ],
@@ -375,10 +418,11 @@ export const outlineReviewMachine = createMachine({
         src: 'generateLessonsActor',
         input: ({ context }) => ({ courseId: context.courseId }),
         onDone: {
-          target: 'success',
+          target: 'pollingLessons',
           actions: assign({
             lessonJobId: ({ event }) => event.output.job.id,
-            progressMessage: 'Lessons queued for generation',
+            progressPercent: 5,
+            progressMessage: 'Starting lesson generation...',
           }),
         },
         onError: {
@@ -398,11 +442,97 @@ export const outlineReviewMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Success - Show celebration, user clicks OK to redirect
+    // Polling Lessons - Wait for lesson generation to complete
     // --------------------------------------------------------
-    success: {
+    pollingLessons: {
+      initial: 'polling',
       on: {
-        DISMISS_SUCCESS: 'backgroundGeneration',
+        DISMISS_LESSON_GENERATION: 'backgroundGeneration',
+      },
+      states: {
+        polling: {
+          invoke: {
+            id: 'pollLessonJob',
+            src: 'pollLessonJobActor',
+            input: ({ context }) => ({ jobId: context.lessonJobId! }),
+            onDone: [
+              {
+                // Handle missing job - go to error
+                target: '#outlineReview.error',
+                guard: ({ event }) => !event.output.job,
+                actions: assign({
+                  error: () =>
+                    createAuthError(
+                      'NOT_FOUND',
+                      'Job not found. It may have been deleted.',
+                      true
+                    ),
+                }),
+              },
+              {
+                // Job completed - go to complete state
+                target: '#outlineReview.complete',
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.COMPLETED,
+                actions: assign({
+                  progressPercent: 100,
+                  progressMessage: 'All lessons generated!',
+                }),
+              },
+              {
+                // Job failed
+                target: '#outlineReview.error',
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.FAILED,
+                actions: assign({
+                  error: ({ event }) =>
+                    createAuthError(
+                      'GENERATION_FAILED',
+                      event.output.job?.errorMessage || 'Lesson generation failed',
+                      true
+                    ),
+                }),
+              },
+              {
+                // Job cancelled
+                target: '#outlineReview.error',
+                guard: ({ event }) => event.output.job?.status === JOB_STATUS.CANCELLED,
+                actions: assign({
+                  error: () =>
+                    createAuthError(
+                      'GENERATION_FAILED',
+                      'Lesson generation was cancelled',
+                      true
+                    ),
+                }),
+              },
+              {
+                // Still processing - continue polling
+                target: 'waiting',
+                actions: assign({
+                  progressPercent: ({ event }) =>
+                    Math.min(95, 5 + (event.output.job?.progressPercent || 0) * 0.9),
+                  progressMessage: ({ event }) =>
+                    event.output.job?.progressMessage || 'Generating lessons...',
+                }),
+              },
+            ],
+            onError: {
+              target: '#outlineReview.error',
+              actions: assign({
+                error: ({ event }) =>
+                  createAuthError(
+                    'NETWORK_ERROR',
+                    event.error instanceof Error ? event.error.message : 'Failed to poll job status',
+                    true
+                  ),
+              }),
+            },
+          },
+        },
+        waiting: {
+          after: {
+            5000: 'polling', // Poll every 5 seconds for lessons (longer than outline)
+          },
+        },
       },
     },
 
@@ -502,6 +632,16 @@ export function isSuccess(stateValue: unknown): boolean {
 export function isPollingOutline(stateValue: unknown): boolean {
   if (typeof stateValue === 'object' && stateValue !== null) {
     return 'pollingOutline' in stateValue;
+  }
+  return false;
+}
+
+/**
+ * Check if polling for lessons
+ */
+export function isPollingLessons(stateValue: unknown): boolean {
+  if (typeof stateValue === 'object' && stateValue !== null) {
+    return 'pollingLessons' in stateValue;
   }
   return false;
 }

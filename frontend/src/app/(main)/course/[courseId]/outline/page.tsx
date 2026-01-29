@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useMachine } from '@xstate/react';
 import { fromPromise } from 'xstate';
 import {
@@ -13,29 +13,43 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
-  CheckCircle2,
   Pencil,
   Check,
   X,
+  Copy,
+  CheckCheck,
+  FileText,
 } from 'lucide-react';
 import {
   outlineReviewMachine,
   isLoading,
-  isSuccess,
   isPollingOutline,
+  isPollingLessons,
 } from '@/machines/outlineReviewMachine';
 import {
   useApproveCourseOutline,
   useGenerateAllLessons,
   useGenerateCourseOutline,
 } from '@/hooks/useAIGeneration';
+import { createClient } from '@connectrpc/connect';
+import { transport } from '@/lib/connect';
 import {
-  getJob as getJobClient,
-  getCourseOutline as getCourseOutlineClient,
-} from '@/lib/aiGenerationClient';
+  GenerationJobStatus,
+  GenerationJobType,
+  type CourseOutline,
+} from '@/gen/mirai/v1/ai_generation_types_pb';
+import {
+  AIGenerationService,
+  GetJobRequestSchema,
+  GetCourseOutlineRequestSchema,
+  ListJobsRequestSchema,
+} from '@/gen/mirai/v1/ai_generation_service_pb';
+import { create } from '@bufbuild/protobuf';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useIsTouchDevice } from '@/hooks/useBreakpoint';
+import { useGetCourse } from '@/hooks/useCourses';
+import type { Course } from '@/gen/mirai/v1/course_pb';
 
 // Inline edit state type
 interface EditState {
@@ -49,58 +63,154 @@ interface EditState {
 export default function OutlineReviewPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const courseId = params.courseId as string;
+  // Get jobId from URL params if provided (passed from wizard to avoid race condition)
+  const initialJobId = searchParams.get('jobId');
   const isTouch = useIsTouchDevice();
 
   // DEBUG: Track courseID through the system
-  console.log('[DEBUG-COURSEID] OutlinePage: courseId from URL params:', courseId);
+  console.log('[DEBUG-COURSEID] OutlinePage: courseId from URL params:', courseId, 'initialJobId:', initialJobId);
 
   // Inline editing state
   const [editState, setEditState] = useState<EditState | null>(null);
+  // Copy success state
+  const [copied, setCopied] = useState(false);
+
+  // Fetch course data for metadata header
+  const courseQuery = useGetCourse(courseId);
+  const course = courseQuery.data;
 
   // API hooks
   const approveCourseOutline = useApproveCourseOutline();
   const generateAllLessons = useGenerateAllLessons();
   const generateCourseOutline = useGenerateCourseOutline();
 
+  // Create connect client for direct API calls
+  const aiClient = useMemo(() => createClient(AIGenerationService, transport), []);
+
   // Create machine with provided actors
   const machineWithActors = useMemo(() => {
     return outlineReviewMachine.provide({
       actors: {
-        loadOutlineActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
+        loadOutlineActor: fromPromise(async ({ input }: { input: { courseId: string; initialJobId?: string } }) => {
           // DEBUG: Track courseID through the system
-          console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: loading outline for courseId:', input.courseId);
+          console.log('[OutlinePage] loadOutlineActor START', { courseId: input.courseId, initialJobId: input.initialJobId });
+
+          // Step 1: Try to get the outline
           try {
-            // Try to get the outline
-            const outline = await getCourseOutlineClient(input.courseId);
-            if (outline) {
-              // DEBUG: Track courseID through the system
-              console.log('[DEBUG-COURSEID] OutlinePage loadOutlineActor: outline loaded', {
-                outlineId: outline.id,
-                outlineCourseId: outline.courseId,
-                inputCourseId: input.courseId,
-                match: outline.courseId === input.courseId,
+            console.log('[OutlinePage] Attempting to fetch outline via connect client...');
+            const outlineRequest = create(GetCourseOutlineRequestSchema, { courseId: input.courseId });
+            const outlineResponse = await aiClient.getCourseOutline(outlineRequest);
+            if (outlineResponse.outline) {
+              console.log('[OutlinePage] Outline found!', {
+                outlineId: outlineResponse.outline.id,
+                sectionsCount: outlineResponse.outline.sections?.length,
               });
-              return { outline, job: null };
+              return { outline: outlineResponse.outline, job: null };
             }
-          } catch {
-            // Outline doesn't exist yet
+            console.log('[OutlinePage] getCourseOutline returned no outline');
+          } catch (err) {
+            console.log('[OutlinePage] getCourseOutline threw error (expected if outline not ready):', err instanceof Error ? err.message : err);
           }
 
-          // Check if there's an active job for this course
-          // For now, return null - the page will show error if no outline
+          // Step 2: If we have an initial job ID from the wizard, use it directly
+          if (input.initialJobId) {
+            console.log('[OutlinePage] Attempting to fetch job by initialJobId via connect client:', input.initialJobId);
+            try {
+              const jobRequest = create(GetJobRequestSchema, { jobId: input.initialJobId });
+              const jobResponse = await aiClient.getJob(jobRequest);
+              const job = jobResponse.job;
+              console.log('[OutlinePage] GetJob response:', {
+                jobId: job?.id,
+                status: job?.status,
+                statusName: job?.status !== undefined ? GenerationJobStatus[job.status] : 'undefined',
+                progress: job?.progressPercent,
+                errorMessage: job?.errorMessage,
+              });
+
+              if (job && (job.status === GenerationJobStatus.QUEUED || job.status === GenerationJobStatus.PROCESSING)) {
+                console.log('[OutlinePage] Job is active (QUEUED or PROCESSING), returning job for polling');
+                return {
+                  outline: null,
+                  job: {
+                    id: job.id,
+                    status: job.status,
+                    progressPercent: job.progressPercent ?? 0,
+                    progressMessage: job.progressMessage,
+                  },
+                };
+              } else {
+                console.log('[OutlinePage] Job exists but not in active state, status:', job?.status, GenerationJobStatus[job?.status ?? 0]);
+              }
+            } catch (err) {
+              console.error('[OutlinePage] Failed to get job by initialJobId:', err instanceof Error ? err.message : err);
+            }
+          } else {
+            console.log('[OutlinePage] No initialJobId provided');
+          }
+
+          // Step 3: Fallback - list jobs by courseId
+          console.log('[OutlinePage] Falling back to listJobs via connect client...');
+          try {
+            const listRequest = create(ListJobsRequestSchema, { courseId: input.courseId });
+            const listResponse = await aiClient.listJobs(listRequest);
+            const jobs = listResponse.jobs ?? [];
+            console.log('[OutlinePage] listJobs returned', jobs.length, 'jobs');
+            jobs.forEach((job, i) => {
+              console.log(`[OutlinePage] Job ${i}:`, {
+                id: job.id,
+                status: job.status,
+                statusName: GenerationJobStatus[job.status],
+                courseId: job.courseId,
+              });
+            });
+
+            const activeOutlineJob = jobs.find(
+              (job) =>
+                job.status === GenerationJobStatus.QUEUED ||
+                job.status === GenerationJobStatus.PROCESSING
+            );
+
+            if (activeOutlineJob) {
+              console.log('[OutlinePage] Found active job via list:', activeOutlineJob.id);
+              return {
+                outline: null,
+                job: {
+                  id: activeOutlineJob.id,
+                  status: activeOutlineJob.status,
+                  progressPercent: activeOutlineJob.progressPercent ?? 0,
+                  progressMessage: activeOutlineJob.progressMessage,
+                },
+              };
+            } else {
+              console.log('[OutlinePage] No active job found in list');
+            }
+          } catch (err) {
+            console.error('[OutlinePage] listJobs failed:', err instanceof Error ? err.message : err);
+          }
+
+          // No outline and no active job - will trigger error state
+          console.log('[OutlinePage] loadOutlineActor END - returning null outline and null job (will show error)');
           return { outline: null, job: null };
         }),
         pollJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
-          const job = await getJobClient(input.jobId);
-          return { job };
+          const jobRequest = create(GetJobRequestSchema, { jobId: input.jobId });
+          const jobResponse = await aiClient.getJob(jobRequest);
+          return { job: jobResponse.job };
+        }),
+        pollLessonJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
+          const jobRequest = create(GetJobRequestSchema, { jobId: input.jobId });
+          const jobResponse = await aiClient.getJob(jobRequest);
+          return { job: jobResponse.job };
         }),
         getOutlineActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
-          const outline = await getCourseOutlineClient(input.courseId);
-          if (!outline) {
+          const outlineRequest = create(GetCourseOutlineRequestSchema, { courseId: input.courseId });
+          const outlineResponse = await aiClient.getCourseOutline(outlineRequest);
+          if (!outlineResponse.outline) {
             throw new Error('Outline not found');
           }
-          return { outline };
+          return { outline: outlineResponse.outline };
         }),
         approveOutlineActor: fromPromise(
           async ({ input }: { input: { courseId: string; outlineId: string } }) => {
@@ -131,11 +241,11 @@ export default function OutlineReviewPage() {
         ),
       },
     });
-  }, [approveCourseOutline, generateAllLessons, generateCourseOutline]);
+  }, [aiClient, approveCourseOutline, generateAllLessons, generateCourseOutline]);
 
-  // Initialize machine with courseId
+  // Initialize machine with courseId and optional jobId from URL
   const [state, send] = useMachine(machineWithActors, {
-    input: { courseId },
+    input: { courseId, initialJobId: initialJobId ?? undefined },
   });
 
   const context = state.context;
@@ -155,7 +265,7 @@ export default function OutlineReviewPage() {
   // Handle completion states
   useEffect(() => {
     if (state.matches('complete')) {
-      router.push(`/course/${courseId}/preview`);
+      router.push(`/preview/${courseId}`);
     } else if (state.matches('backgroundGeneration')) {
       router.push('/dashboard');
     }
@@ -178,6 +288,77 @@ export default function OutlineReviewPage() {
     0
   ) ?? 0;
 
+  // Aggregate learning objectives from all lessons
+  const learningOutcomes = useMemo(() => {
+    if (!context.outline?.sections) return [];
+    const allObjectives = context.outline.sections.flatMap((section) =>
+      section.lessons?.flatMap((lesson) => lesson.learningObjectives || []) || []
+    );
+    // Deduplicate and limit to top 5
+    return [...new Set(allObjectives)].slice(0, 5);
+  }, [context.outline]);
+
+  // Build outline text for clipboard
+  const buildOutlineText = (
+    courseData: Course,
+    outline: CourseOutline
+  ): { plain: string; html: string } => {
+    const title = courseData.settings?.title || 'Course Outline';
+    const description = courseData.settings?.desiredOutcome || '';
+
+    let plain = `${title}\n${'='.repeat(title.length)}\n\n`;
+    if (description) plain += `${description}\n\n`;
+
+    let html = `<h1>${title}</h1>`;
+    if (description) html += `<p>${description}</p>`;
+
+    outline.sections?.forEach((section, i) => {
+      plain += `${i + 1}. ${section.title}\n`;
+      html += `<h2>${i + 1}. ${section.title}</h2>`;
+
+      if (section.description) {
+        plain += `   ${section.description}\n`;
+        html += `<p>${section.description}</p>`;
+      }
+
+      section.lessons?.forEach((lesson, j) => {
+        plain += `   ${i + 1}.${j + 1} ${lesson.title}\n`;
+        html += `<h3>${i + 1}.${j + 1} ${lesson.title}</h3>`;
+
+        if (lesson.description) {
+          plain += `      ${lesson.description}\n`;
+          html += `<p>${lesson.description}</p>`;
+        }
+      });
+      plain += '\n';
+    });
+
+    return { plain, html };
+  };
+
+  // Copy outline to clipboard
+  const handleCopyOutline = async () => {
+    if (!context.outline || !course) return;
+
+    const content = buildOutlineText(course, context.outline);
+
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([content.html], { type: 'text/html' }),
+          'text/plain': new Blob([content.plain], { type: 'text/plain' }),
+        }),
+      ]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback to plain text
+      await navigator.clipboard.writeText(content.plain);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   // Loading state
   if (state.matches('loading')) {
     return (
@@ -190,7 +371,7 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Polling outline state
+  // Polling outline state (user chose to wait)
   if (isPollingOutline(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -211,36 +392,35 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Success state - celebration with OK button
-  if (isSuccess(stateValue)) {
+  // Polling lessons state - show progress while generating lessons
+  if (isPollingLessons(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+            <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Loader2 className="w-10 h-10 text-indigo-600 dark:text-indigo-400 animate-spin" />
             </div>
             <h2 className="text-2xl font-bold text-primary mb-2">
-              Awesome! Your course is being created
+              Generating your lessons...
             </h2>
-            <p className="text-secondary mb-6">
-              We&apos;re generating {totalLessons} lessons based on your outline.
+            <p className="text-secondary mb-4">
+              Creating {totalLessons} lessons based on your outline.
               This typically takes 5-7 minutes.
             </p>
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>You&apos;ll be notified</strong> when your course is ready.
-                Check the bell icon or your email.
-              </p>
+            <p className="text-sm text-secondary mb-4">{context.progressMessage}</p>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-6">
+              <div
+                className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${context.progressPercent}%` }}
+              />
             </div>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => send({ type: 'DISMISS_SUCCESS' })}
-              className="min-w-[200px]"
+            <button
+              onClick={() => send({ type: 'DISMISS_LESSON_GENERATION' })}
+              className="text-sm text-muted hover:text-secondary transition-colors"
             >
-              Got it!
-            </Button>
+              Notify me instead
+            </button>
           </CardContent>
         </Card>
       </div>
@@ -294,6 +474,59 @@ export default function OutlineReviewPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-4 py-6 sm:py-8">
+        {/* Course Metadata Header */}
+        {course && (
+          <div className="mb-6 p-6 bg-surface rounded-lg border">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl font-bold text-primary mb-2">
+                  {course.settings?.title || 'Untitled Course'}
+                </h1>
+                {course.settings?.desiredOutcome && (
+                  <p className="text-secondary">
+                    {course.settings.desiredOutcome}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCopyOutline}
+                disabled={!context.outline}
+                className="w-full sm:w-auto min-h-[44px] flex-shrink-0"
+              >
+                {copied ? (
+                  <>
+                    <CheckCheck className="w-4 h-4 mr-2 text-green-600" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Outline
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {learningOutcomes.length > 0 && (
+              <div className="pt-4 border-t">
+                <h3 className="text-sm font-semibold text-primary mb-2">
+                  Learning Outcomes
+                </h3>
+                <ul className="text-sm text-secondary space-y-1">
+                  {learningOutcomes.map((outcome, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-indigo-600 dark:text-indigo-400">•</span>
+                      <span>{outcome}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         <Card>
           <CardContent className="py-8">
             {/* Header */}
@@ -303,9 +536,9 @@ export default function OutlineReviewPage() {
                   <ClipboardList className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-bold text-primary">
+                  <h2 className="text-xl sm:text-2xl font-bold text-primary">
                     Review Your Course Outline
-                  </h1>
+                  </h2>
                   <p className="text-sm sm:text-base text-secondary">
                     {context.outline?.sections?.length ?? 0} sections • {totalLessons} lessons
                   </p>
@@ -472,6 +705,18 @@ export default function OutlineReviewPage() {
                                             {lesson.title || `Lesson ${lessonIndex + 1}`}
                                           </p>
                                           <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
+                                          {/* Citation indicator */}
+                                          {lesson.citations && lesson.citations.length > 0 && (
+                                            <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                              <button
+                                                className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                                                title={`${lesson.citations.length} knowledge source${lesson.citations.length > 1 ? 's' : ''}`}
+                                              >
+                                                <FileText className="w-3 h-3" />
+                                                <span>{lesson.citations.length}</span>
+                                              </button>
+                                            </div>
+                                          )}
                                         </div>
                                         {lesson.description && (
                                           <p className="text-xs text-secondary line-clamp-2">

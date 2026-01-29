@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "buf/validate/validate.proto";
+
+// FeedbackType categorizes the type of feedback.
+enum FeedbackType {
+  FEEDBACK_TYPE_UNSPECIFIED = 0;
+  FEEDBACK_TYPE_BUG_REPORT = 1;
+  FEEDBACK_TYPE_FEATURE_REQUEST = 2;
+  FEEDBACK_TYPE_GENERAL = 3;
+}
+
+// FeedbackService handles user feedback submission.
+service FeedbackService {
+  // SubmitFeedback queues feedback for async sync to CRM.
+  rpc SubmitFeedback(SubmitFeedbackRequest) returns (SubmitFeedbackResponse);
+}
+
+// SubmitFeedbackRequest contains the feedback data.
+message SubmitFeedbackRequest {
+  FeedbackType type = 1 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string message = 2 [(buf.validate.field).string = {min_len: 10, max_len: 2000}];
+  string page_url = 3 [(buf.validate.field).string = {max_len: 500}];
+  string user_agent = 4 [(buf.validate.field).string = {max_len: 500}];
+}
+
+// SubmitFeedbackResponse confirms the feedback was queued.
+message SubmitFeedbackResponse {
+  string message = 1;
+}

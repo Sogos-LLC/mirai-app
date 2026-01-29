@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+// =============================================================================
+// COMPONENT ENUMS - Single Source of Truth for component type constants
+// =============================================================================
+//
+// To regenerate after changes: cd proto && buf generate
+// For help: buf generate --help
+//
+// Generated files:
+//   - Go:  backend/gen/mirai/v1/component_enums.pb.go
+//   - TS:  frontend/src/gen/mirai/v1/component_enums_pb.ts
+// =============================================================================
+
+// LessonComponentType enumerates all 13 component types for course content.
+enum LessonComponentType {
+  LESSON_COMPONENT_TYPE_UNSPECIFIED = 0;
+  LESSON_COMPONENT_TYPE_TEXT = 1;
+  LESSON_COMPONENT_TYPE_HEADING = 2;
+  LESSON_COMPONENT_TYPE_IMAGE = 3;
+  LESSON_COMPONENT_TYPE_QUIZ = 4;
+  LESSON_COMPONENT_TYPE_CODE = 5;
+  LESSON_COMPONENT_TYPE_CALLOUT = 6;
+  LESSON_COMPONENT_TYPE_STATEMENT = 7;
+  LESSON_COMPONENT_TYPE_QUOTE = 8;
+  LESSON_COMPONENT_TYPE_LIST = 9;
+  LESSON_COMPONENT_TYPE_GALLERY = 10;
+  LESSON_COMPONENT_TYPE_MULTIMEDIA = 11;
+  LESSON_COMPONENT_TYPE_CHART = 12;
+  LESSON_COMPONENT_TYPE_DIVIDER = 13;
+}
+
+// ListStyle defines display styles for list components.
+enum ListStyle {
+  LIST_STYLE_UNSPECIFIED = 0;
+  LIST_STYLE_BULLETED = 1;   // Simple bullet points
+  LIST_STYLE_NUMBERED = 2;   // Numbered sequence
+  LIST_STYLE_ICON = 3;       // Items with emoji/icon prefixes
+  LIST_STYLE_PROCESS = 4;    // Step-by-step with numbered circles
+  LIST_STYLE_ACCORDION = 5;  // Expandable items (great for learning UX)
+}
+
+// GalleryStyle defines layout styles for gallery components.
+enum GalleryStyle {
+  GALLERY_STYLE_UNSPECIFIED = 0;
+  GALLERY_STYLE_CAROUSEL = 1;        // Slideshow navigation
+  GALLERY_STYLE_LABELED_GRAPHIC = 2; // Annotated image with hotspots
+}
+
+// MultimediaType defines media types for multimedia components.
+enum MultimediaType {
+  MULTIMEDIA_TYPE_UNSPECIFIED = 0;
+  MULTIMEDIA_TYPE_VIDEO = 1;
+  MULTIMEDIA_TYPE_AUDIO = 2;
+  MULTIMEDIA_TYPE_INTERACTIVE = 3;
+}
+
+// ChartType defines visualization types for chart components.
+enum ChartType {
+  CHART_TYPE_UNSPECIFIED = 0;
+  CHART_TYPE_BAR = 1;
+  CHART_TYPE_LINE = 2;
+  CHART_TYPE_PIE = 3;
+  CHART_TYPE_DONUT = 4;
+  CHART_TYPE_TABLE = 5;
+}
+
+// CalloutStyle defines visual styles for callout components.
+enum CalloutStyle {
+  CALLOUT_STYLE_UNSPECIFIED = 0;
+  CALLOUT_STYLE_INFO = 1;
+  CALLOUT_STYLE_WARNING = 2;
+  CALLOUT_STYLE_SUCCESS = 3;
+  CALLOUT_STYLE_ERROR = 4;
+  CALLOUT_STYLE_TIP = 5;
+}
+
+// HeadingLevel defines heading levels for heading components.
+enum HeadingLevel {
+  HEADING_LEVEL_UNSPECIFIED = 0;
+  HEADING_LEVEL_H1 = 1;
+  HEADING_LEVEL_H2 = 2;
+  HEADING_LEVEL_H3 = 3;
+  HEADING_LEVEL_H4 = 4;
+  HEADING_LEVEL_H5 = 5;
+  HEADING_LEVEL_H6 = 6;
+}
+
+// DividerStyle defines visual styles for divider components.
+enum DividerStyle {
+  DIVIDER_STYLE_UNSPECIFIED = 0;
+  DIVIDER_STYLE_LINE = 1;
+  DIVIDER_STYLE_DOTS = 2;
+  DIVIDER_STYLE_SPACE = 3;
+}

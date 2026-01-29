@@ -1,0 +1,17 @@
+# Persistent Volume Claim for Qdrant vector storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qdrant-data
+  namespace: mirai-uat
+  labels:
+    app: qdrant
+    environment: uat
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: local-path

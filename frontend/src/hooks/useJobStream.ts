@@ -4,18 +4,20 @@ import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/lib/connect';
 import {
-  AIGenerationService,
   JobEventType,
-  SubscribeJobsRequestSchema,
   type GenerationJob,
-} from '@/gen/mirai/v1/ai_generation_pb';
+} from '@/gen/mirai/v1/ai_generation_types_pb';
+import {
+  AIGenerationService,
+  SubscribeJobsRequestSchema,
+} from '@/gen/mirai/v1/ai_generation_service_pb';
 import {
   listJobs,
   getJob,
   getCourseOutline,
   listGeneratedLessons,
   getGeneratedLesson,
-} from '@/gen/mirai/v1/ai_generation-AIGenerationService_connectquery';
+} from '@/gen/mirai/v1/ai_generation_service-AIGenerationService_connectquery';
 import {
   listNotifications,
   getUnreadCount,

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import { useMachine } from '@xstate/react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, X, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, X } from 'lucide-react';
 import { fromPromise } from 'xstate';
 import {
   courseWizardMachine,
@@ -24,6 +24,7 @@ import {
   useGenerateCourseOutline,
 } from '@/hooks/useAIGeneration';
 import { useCreateCourse } from '@/hooks/useCourses';
+import { useUploadAndProcess, useLinkSessionToCourse } from '@/hooks/useKnowledgeSources';
 import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
@@ -32,13 +33,32 @@ import TitleDescriptionStep from './steps/TitleDescriptionStep';
 import SMEPersonasStep from './steps/SMEPersonasStep';
 import AudiencePersonasStep from './steps/AudiencePersonasStep';
 import ToneSelectionStep from './steps/ToneSelectionStep';
-import AdditionalContextStep from './steps/AdditionalContextStep';
 import GeneratingStep from './steps/GeneratingStep';
 import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import {
+  KnowledgeUploadModal,
+  KnowledgeVerificationModal,
+  type PendingFile,
+  type ProcessedSource,
+} from './modals';
+
+// Modal state types
+type KnowledgeModalState = 'closed' | 'upload' | 'verification';
+
+// Generate session ID for pre-course knowledge sources
+function generateSessionId(): string {
+  return `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
 
 export default function CourseWizard() {
   const router = useRouter();
+
+  // Knowledge modal state
+  const [knowledgeModalState, setKnowledgeModalState] = useState<KnowledgeModalState>('closed');
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [processedSources, setProcessedSources] = useState<ProcessedSource[]>([]);
+  const [sessionId] = useState(() => generateSessionId());
 
   // API hooks - wizard generation
   const generateTitle = useGenerateTitle();
@@ -54,6 +74,10 @@ export default function CourseWizard() {
   const createCourse = useCreateCourse();
   const generateCourseOutline = useGenerateCourseOutline();
 
+  // API hooks - knowledge sources
+  const uploadAndProcess = useUploadAndProcess();
+  const linkSessionToCourse = useLinkSessionToCourse();
+
   // Create machine with provided actors
   const machineWithActors = useMemo(() => {
     return courseWizardMachine.provide({
@@ -66,7 +90,11 @@ export default function CourseWizard() {
           };
         }),
         generateOutcomesActor: fromPromise(async ({ input }: { input: { courseName: string } }) => {
-          const result = await generateOutcomes.mutate(input.courseName);
+          // Pass sessionId for RAG context if knowledge sources were uploaded
+          const result = await generateOutcomes.mutate({
+            courseName: input.courseName,
+            sessionId: processedSources.length > 0 ? sessionId : undefined,
+          });
           return {
             outcomes: result.outcomes,
           };
@@ -119,6 +147,7 @@ export default function CourseWizard() {
               audiencePersonas: AudiencePersona[];
               toneOption: ToneOption | undefined;
               additionalContext: string;
+              internalDataOnly: boolean;
             };
           }) => {
             // Step 1: Create a course with wizard data for AI generation context
@@ -139,6 +168,7 @@ export default function CourseWizard() {
                 toneOptions: input.toneOption ? [input.toneOption] : [],
                 selectedToneId: input.toneOption?.id ?? '',
                 additionalContext: input.additionalContext,
+                internalDataOnly: input.internalDataOnly,
               },
             });
 
@@ -154,6 +184,20 @@ export default function CourseWizard() {
             }
 
             const courseId = courseResult.course.id;
+
+            // Link any knowledge sources from the wizard session to the course
+            if (processedSources.length > 0) {
+              try {
+                const linkResult = await linkSessionToCourse.mutate({
+                  sessionId,
+                  courseId,
+                });
+                console.log('[Knowledge] Linked session sources to course:', linkResult.linkedCount);
+              } catch (linkError) {
+                console.error('[Knowledge] Failed to link session sources:', linkError);
+                // Continue anyway - outline generation should still work
+              }
+            }
 
             // DEBUG: Track courseID through the system
             console.log('[DEBUG-COURSEID] Wizard: calling generateCourseOutline with courseId:', courseId);
@@ -207,6 +251,9 @@ export default function CourseWizard() {
     generateCourseOutline,
     saveWizardState,
     deleteWizardState,
+    sessionId,
+    processedSources,
+    linkSessionToCourse,
   ]);
 
   const [state, send] = useMachine(machineWithActors);
@@ -224,7 +271,19 @@ export default function CourseWizard() {
     }
   }, [getSavedState.data, getSavedState.isLoading, send]);
 
-  // Handle redirect to dashboard (after success or cancellation)
+  // Handle redirect to outline page after job is queued
+  useEffect(() => {
+    if (state.matches('outlineJobQueued') && context.courseId) {
+      // Pass the jobId so the outline page can poll for it directly
+      // This avoids race conditions with job discovery via listJobsByCourse
+      const url = context.outlineJobId
+        ? `/course/${context.courseId}/outline?jobId=${context.outlineJobId}`
+        : `/course/${context.courseId}/outline`;
+      router.push(url);
+    }
+  }, [state, context.courseId, context.outlineJobId, router]);
+
+  // Handle redirect to dashboard (after cancellation)
   useEffect(() => {
     if (state.matches('redirectToDashboard') || state.matches('cancelled')) {
       router.push('/dashboard');
@@ -234,6 +293,77 @@ export default function CourseWizard() {
   const handleCancel = useCallback(() => {
     send({ type: 'CANCEL' });
   }, [send]);
+
+  // Knowledge modal handlers
+  const handleOpenKnowledgeModal = useCallback(() => {
+    setKnowledgeModalState('upload');
+  }, []);
+
+  const handleCloseKnowledgeModal = useCallback(() => {
+    // When closing, move successfully uploaded files to processedSources
+    const successfulFiles = pendingFiles.filter(f => f.status === 'done');
+    if (successfulFiles.length > 0) {
+      // Note: The actual processed source data was added via handleUploadFile
+      // We just clear the pending files that are done
+      setPendingFiles(prev => prev.filter(f => f.status !== 'done'));
+    }
+    setKnowledgeModalState('closed');
+  }, [pendingFiles]);
+
+  const handleAddFiles = useCallback((files: PendingFile[]) => {
+    setPendingFiles((prev) => [...prev, ...files]);
+    // Also send to state machine for persistence
+    send({ type: 'ADD_FILES', files });
+  }, [send]);
+
+  const handleRemoveFile = useCallback((fileId: string) => {
+    setPendingFiles((prev) => prev.filter((f) => f.id !== fileId));
+    // Also send to state machine for persistence
+    send({ type: 'REMOVE_FILE', fileId });
+  }, [send]);
+
+  const handleUpdateFileStatus = useCallback((fileId: string, status: PendingFile['status'], error?: string) => {
+    setPendingFiles((prev) =>
+      prev.map((f) =>
+        f.id === fileId ? { ...f, status, error } : f
+      )
+    );
+  }, []);
+
+  const handleUploadFile = useCallback(async (file: PendingFile): Promise<ProcessedSource> => {
+    // Read file content as Uint8Array
+    const arrayBuffer = await file.file.arrayBuffer();
+    const fileContent = new Uint8Array(arrayBuffer);
+
+    const result = await uploadAndProcess.mutate({
+      sessionId,
+      filename: file.name,
+      contentType: file.mimeType,
+      fileContent,
+    });
+
+    const processed: ProcessedSource = {
+      id: result.sourceId,
+      name: result.name,
+      summary: result.summary,
+      chunkCount: result.chunkCount,
+      tokenCount: result.tokenCount,
+    };
+
+    // Add to processed sources
+    setProcessedSources((prev) => [...prev, processed]);
+
+    return processed;
+  }, [sessionId, uploadAndProcess]);
+
+  const handleVerificationClose = useCallback(() => {
+    setKnowledgeModalState('closed');
+  }, []);
+
+  const handleAddMoreFiles = useCallback(() => {
+    // Transition back to upload modal
+    setKnowledgeModalState('upload');
+  }, []);
 
   // Loading state while checking for saved state
   if (state.matches('checkingSavedState') || getSavedState.isLoading) {
@@ -377,7 +507,7 @@ export default function CourseWizard() {
   if (state.matches('generatingOutline') || (typeof stateValue === 'object' && 'generatingOutline' in stateValue)) {
     return (
       <>
-        <WizardProgress currentStep="additionalContext" isGenerating={true} />
+        <WizardProgress currentStep="toneSelection" isGenerating={true} />
         <GeneratingStep
           title="Building Your Outline"
           description="Starting outline generation..."
@@ -387,49 +517,15 @@ export default function CourseWizard() {
     );
   }
 
-  // Outline job queued - show success modal with OK button
+  // Outline job queued - redirecting to outline page
   if (state.matches('outlineJobQueued') || (typeof stateValue === 'object' && 'outlineJobQueued' in stateValue)) {
     return (
       <>
-        <WizardProgress currentStep="outlineJobQueued" />
-        <Card>
-          <CardContent className="py-12">
-            <div className="flex flex-col items-center text-center max-w-md mx-auto">
-              {/* Success Icon */}
-              <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
-                <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
-              </div>
-
-              {/* Title */}
-              <h2 className="text-2xl font-bold text-primary mb-2">
-                Outline Generation Started!
-              </h2>
-
-              {/* Description */}
-              <p className="text-secondary mb-6">
-                Your course outline is being created. This typically takes 1-2 minutes.
-              </p>
-
-              {/* Info box */}
-              <div className="w-full p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>You&apos;ll be notified</strong> when your outline is ready for review.
-                  Check the bell icon or your email.
-                </p>
-              </div>
-
-              {/* OK Button */}
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => send({ type: 'DISMISS_SUCCESS' })}
-                className="min-w-[200px]"
-              >
-                Got it!
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <WizardProgress currentStep="toneSelection" isGenerating={true} />
+        <GeneratingStep
+          title="Redirecting to Outline"
+          description="Taking you to your course outline..."
+        />
       </>
     );
   }
@@ -451,6 +547,11 @@ export default function CourseWizard() {
           onCancel={handleCancel}
           isLoading={isLoading}
           isGeneratingOutcomes={state.matches('generatingOutcomes')}
+          knowledgeFileCount={pendingFiles.length}
+          processedSourcesCount={processedSources.length}
+          onOpenKnowledgeModal={handleOpenKnowledgeModal}
+          internalDataOnly={context.internalDataOnly}
+          onInternalDataOnlyChange={(enabled) => send({ type: 'SET_INTERNAL_DATA_ONLY', enabled })}
         />
       )}
 
@@ -459,11 +560,11 @@ export default function CourseWizard() {
           title={context.improvedTitle}
           description={context.description}
           originalCourseName={context.courseName}
+          desiredOutcomes={context.desiredOutcomes}
           onTitleChange={(title) => send({ type: 'SET_TITLE', title })}
           onDescriptionChange={(description) => send({ type: 'SET_DESCRIPTION', description })}
           onNext={() => send({ type: 'APPROVE_TITLE_DESCRIPTION' })}
           onBack={() => send({ type: 'GO_BACK' })}
-          onRegenerate={() => send({ type: 'REGENERATE_TITLE' })}
           onCancel={handleCancel}
           isLoading={isLoading}
         />
@@ -503,8 +604,11 @@ export default function CourseWizard() {
         <ToneSelectionStep
           options={context.toneOptions}
           selectedId={context.selectedToneId}
+          additionalContext={context.additionalContext}
           onSelectTone={(toneId) => send({ type: 'SELECT_TONE', toneId })}
-          onNext={() => send({ type: 'APPROVE_TONE' })}
+          onContextChange={(ctx) => send({ type: 'SET_ADDITIONAL_CONTEXT', context: ctx })}
+          onNext={() => send({ type: 'SUBMIT_CONTEXT' })}
+          onSkip={() => send({ type: 'SKIP_CONTEXT' })}
           onBack={() => send({ type: 'GO_BACK' })}
           onRegenerate={() => send({ type: 'REGENERATE_TONES' })}
           onCancel={handleCancel}
@@ -512,17 +616,24 @@ export default function CourseWizard() {
         />
       )}
 
-      {state.matches('additionalContext') && (
-        <AdditionalContextStep
-          context={context.additionalContext}
-          onContextChange={(ctx) => send({ type: 'SET_ADDITIONAL_CONTEXT', context: ctx })}
-          onNext={() => send({ type: 'SUBMIT_CONTEXT' })}
-          onSkip={() => send({ type: 'SKIP_CONTEXT' })}
-          onBack={() => send({ type: 'GO_BACK' })}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-        />
-      )}
+      {/* Knowledge Source Modals */}
+      <KnowledgeUploadModal
+        isOpen={knowledgeModalState === 'upload'}
+        onClose={handleCloseKnowledgeModal}
+        onUploadFile={handleUploadFile}
+        pendingFiles={pendingFiles}
+        onAddFiles={handleAddFiles}
+        onRemoveFile={handleRemoveFile}
+        onUpdateFileStatus={handleUpdateFileStatus}
+        processedSources={processedSources}
+      />
+
+      <KnowledgeVerificationModal
+        isOpen={knowledgeModalState === 'verification'}
+        onClose={handleVerificationClose}
+        onAddMore={handleAddMoreFiles}
+        sources={processedSources}
+      />
     </>
   );
 }

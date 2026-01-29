@@ -122,6 +122,34 @@ func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 	return nil
 }
 
+// GetCRMContactID retrieves the CRM contact ID for a user.
+func (r *UserRepository) GetCRMContactID(ctx context.Context, id uuid.UUID) (string, error) {
+	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (sql.NullString, error) {
+		return q.GetUserCRMContactID(ctx, id)
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get CRM contact ID: %w", err)
+	}
+	if !result.Valid {
+		return "", nil
+	}
+	return result.String, nil
+}
+
+// UpdateCRMContactID updates the CRM contact ID for a user.
+func (r *UserRepository) UpdateCRMContactID(ctx context.Context, id uuid.UUID, crmContactID string) error {
+	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
+		return q.UpdateUserCRMContactID(ctx, gen.UpdateUserCRMContactIDParams{
+			CrmContactID: sql.NullString{String: crmContactID, Valid: true},
+			ID:           id,
+		})
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update CRM contact ID: %w", err)
+	}
+	return nil
+}
+
 // =============================================================================
 // Type Conversion Helpers
 // =============================================================================

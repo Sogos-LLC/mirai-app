@@ -6,7 +6,7 @@
  * For React components, prefer using the hooks from @/hooks/useAIGeneration.
  */
 
-import { GenerationJobStatus, type GenerationJob, type CourseOutline } from '@/gen/mirai/v1/ai_generation_pb';
+import { GenerationJobStatus, type GenerationJob, type CourseOutline } from '@/gen/mirai/v1/ai_generation_types_pb';
 
 // Helper to call a Connect service method
 async function callMethod<I, O>(
@@ -15,6 +15,8 @@ async function callMethod<I, O>(
   request: I
 ): Promise<O> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/${service}/${method}`;
+
+  console.log(`[AIGenClient] ${method} request:`, JSON.stringify(request));
 
   const response = await fetch(url, {
     method: 'POST',
@@ -28,10 +30,13 @@ async function callMethod<I, O>(
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error(`[AIGenClient] ${method} failed:`, response.status, errorText);
     throw new Error(`Connect call failed: ${response.status} ${errorText}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log(`[AIGenClient] ${method} response:`, JSON.stringify(result));
+  return result;
 }
 
 /**
@@ -80,6 +85,32 @@ export async function approveCourseOutline(outlineId: string): Promise<{ outline
     { outlineId }
   );
   return response;
+}
+
+/**
+ * List jobs by course ID, optionally filtered by type and status
+ */
+export async function listJobsByCourse(
+  courseId: string,
+  options?: {
+    type?: number;
+    status?: number;
+  }
+): Promise<JobResult[]> {
+  const request: Record<string, unknown> = { courseId };
+  if (options?.type !== undefined) {
+    request.type = options.type;
+  }
+  if (options?.status !== undefined) {
+    request.status = options.status;
+  }
+
+  const response = await callMethod<Record<string, unknown>, { jobs: JobResult[] }>(
+    'mirai.v1.AIGenerationService',
+    'ListJobs',
+    request
+  );
+  return response.jobs ?? [];
 }
 
 // Re-export status enum for convenience

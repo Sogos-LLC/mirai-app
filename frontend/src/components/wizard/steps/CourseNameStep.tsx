@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Wand2, Loader2 } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, Paperclip, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import WizardNavigation from '../WizardNavigation';
@@ -16,6 +16,13 @@ interface CourseNameStepProps {
   onCancel: () => void;
   isLoading?: boolean;
   isGeneratingOutcomes?: boolean;
+  // Knowledge sources
+  knowledgeFileCount?: number;
+  processedSourcesCount?: number;
+  onOpenKnowledgeModal?: () => void;
+  // Internal Data Only mode
+  internalDataOnly?: boolean;
+  onInternalDataOnlyChange?: (enabled: boolean) => void;
 }
 
 export default function CourseNameStep({
@@ -28,7 +35,14 @@ export default function CourseNameStep({
   onCancel,
   isLoading = false,
   isGeneratingOutcomes = false,
+  knowledgeFileCount = 0,
+  processedSourcesCount = 0,
+  onOpenKnowledgeModal,
+  internalDataOnly = false,
+  onInternalDataOnlyChange,
 }: CourseNameStepProps) {
+  const hasProcessedSources = processedSourcesCount > 0;
+  const hasPendingFiles = knowledgeFileCount > 0;
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (courseName.trim().length > 0) {
@@ -71,24 +85,55 @@ export default function CourseNameStep({
                 <label className="block text-sm font-medium text-primary">
                   Desired Course Outcomes
                 </label>
-                <button
-                  type="button"
-                  onClick={onGenerateOutcomes}
-                  disabled={!courseName.trim() || isGeneratingOutcomes}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
-                    bg-primary-50 text-primary-700 hover:bg-primary-100
-                    dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    transition-colors"
-                  title="Generate outcomes from course name"
-                >
-                  {isGeneratingOutcomes ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Wand2 className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2">
+                  {onOpenKnowledgeModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenKnowledgeModal}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
+                        transition-colors ${
+                          hasProcessedSources
+                            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30'
+                            : 'bg-surface border border-gray-300 dark:border-gray-600 text-secondary hover:bg-hover hover:text-primary'
+                        }`}
+                      title={hasProcessedSources ? 'View or add more knowledge sources' : 'Add knowledge sources to improve generation'}
+                    >
+                      {hasProcessedSources ? (
+                        <CheckCircle className="w-3.5 h-3.5" />
+                      ) : (
+                        <Paperclip className="w-3.5 h-3.5" />
+                      )}
+                      {hasProcessedSources ? 'Knowledge Added' : 'Add Knowledge'}
+                      {(hasProcessedSources || hasPendingFiles) && (
+                        <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${
+                          hasProcessedSources
+                            ? 'bg-green-600 text-white'
+                            : 'bg-primary-600 text-white'
+                        }`}>
+                          {hasProcessedSources ? processedSourcesCount : knowledgeFileCount}
+                        </span>
+                      )}
+                    </button>
                   )}
-                  {isGeneratingOutcomes ? 'Generating...' : 'Generate'}
-                </button>
+                  <button
+                    type="button"
+                    onClick={onGenerateOutcomes}
+                    disabled={!courseName.trim() || isGeneratingOutcomes}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
+                      bg-primary-50 text-primary-700 hover:bg-primary-100
+                      dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      transition-colors"
+                    title="Generate outcomes from course name"
+                  >
+                    {isGeneratingOutcomes ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3.5 h-3.5" />
+                    )}
+                    {isGeneratingOutcomes ? 'Generating...' : 'Generate'}
+                  </button>
+                </div>
               </div>
               <textarea
                 value={desiredOutcomes}
@@ -109,6 +154,26 @@ export default function CourseNameStep({
                 These outcomes serve as the north star guiding all content generation.
               </p>
             </div>
+
+            {/* Internal Data Only mode - only show when knowledge sources are present */}
+            {hasProcessedSources && onInternalDataOnlyChange && (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-left">
+                <input
+                  type="checkbox"
+                  id="internalDataOnly"
+                  checked={internalDataOnly}
+                  onChange={(e) => onInternalDataOnlyChange(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                />
+                <label htmlFor="internalDataOnly" className="text-sm text-amber-800 dark:text-amber-200">
+                  <span className="font-semibold">Internal Data Only</span>
+                  <span className="block mt-1 text-amber-700 dark:text-amber-300">
+                    Generate course content exclusively from your uploaded documents.
+                    AI will not add external information or fill gaps — course size adapts to available content.
+                  </span>
+                </label>
+              </div>
+            )}
           </form>
         </div>
 

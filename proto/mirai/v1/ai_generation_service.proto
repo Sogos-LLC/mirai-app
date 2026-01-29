@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "mirai/v1/ai_generation_types.proto";
+import "mirai/v1/course_wizard.proto";
+
+// =============================================================================
+// AI GENERATION SERVICE - RPC definitions for AI generation operations
+// =============================================================================
+//
+// To regenerate after changes: cd proto && buf generate
+// For help: buf generate --help
+// =============================================================================
+
+// AIGenerationService handles AI generation operations.
+service AIGenerationService {
+  rpc GenerateCourseOutline(GenerateCourseOutlineRequest) returns (GenerateCourseOutlineResponse);
+  rpc GetCourseOutline(GetCourseOutlineRequest) returns (GetCourseOutlineResponse);
+  rpc ApproveCourseOutline(ApproveCourseOutlineRequest) returns (ApproveCourseOutlineResponse);
+  rpc RejectCourseOutline(RejectCourseOutlineRequest) returns (RejectCourseOutlineResponse);
+  rpc UpdateCourseOutline(UpdateCourseOutlineRequest) returns (UpdateCourseOutlineResponse);
+  rpc GenerateLessonContent(GenerateLessonContentRequest) returns (GenerateLessonContentResponse);
+  rpc GenerateAllLessons(GenerateAllLessonsRequest) returns (GenerateAllLessonsResponse);
+  rpc RegenerateComponent(RegenerateComponentRequest) returns (RegenerateComponentResponse);
+  rpc GetJob(GetJobRequest) returns (GetJobResponse);
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+  rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
+  rpc GetGeneratedLesson(GetGeneratedLessonRequest) returns (GetGeneratedLessonResponse);
+  rpc ListGeneratedLessons(ListGeneratedLessonsRequest) returns (ListGeneratedLessonsResponse);
+  rpc GenerateComponentImage(GenerateComponentImageRequest) returns (GenerateComponentImageResponse);
+  rpc UpdateLessonComponents(UpdateLessonComponentsRequest) returns (UpdateLessonComponentsResponse);
+  rpc SubscribeJobs(SubscribeJobsRequest) returns (stream SubscribeJobsResponse);
+}
+
+// StoredWizardData represents wizard selections persisted with the course.
+message StoredWizardData {
+  repeated SMEPersona sme_personas = 1;
+  repeated string selected_sme_ids = 2;
+  repeated AudiencePersona audience_personas = 3;
+  repeated string selected_audience_ids = 4;
+  ToneOption selected_tone = 5;
+  string desired_outcomes = 6;
+}
+
+message GenerateCourseOutlineRequest {
+  CourseGenerationInput input = 1;
+}
+
+message GenerateCourseOutlineResponse {
+  GenerationJob job = 1;
+}
+
+message GetCourseOutlineRequest {
+  string course_id = 1;
+  optional int32 version = 2;
+}
+
+message GetCourseOutlineResponse {
+  CourseOutline outline = 1;
+  StoredWizardData wizard_data = 2;
+}
+
+message ApproveCourseOutlineRequest {
+  string course_id = 1;
+  string outline_id = 2;
+}
+
+message ApproveCourseOutlineResponse {
+  CourseOutline outline = 1;
+}
+
+message RejectCourseOutlineRequest {
+  string course_id = 1;
+  string outline_id = 2;
+  string reason = 3;
+}
+
+message RejectCourseOutlineResponse {
+  CourseOutline outline = 1;
+}
+
+message UpdateCourseOutlineRequest {
+  string course_id = 1;
+  string outline_id = 2;
+  repeated OutlineSection sections = 3;
+}
+
+message UpdateCourseOutlineResponse {
+  CourseOutline outline = 1;
+}
+
+message GenerateLessonContentRequest {
+  string course_id = 1;
+  string outline_lesson_id = 2;
+}
+
+message GenerateLessonContentResponse {
+  GenerationJob job = 1;
+}
+
+message GenerateAllLessonsRequest {
+  string course_id = 1;
+}
+
+message GenerateAllLessonsResponse {
+  GenerationJob job = 1;
+}
+
+message RegenerateComponentRequest {
+  string course_id = 1;
+  string generated_lesson_id = 2;
+  string component_id = 3;
+  string modification_prompt = 4;
+  optional ComponentAlignmentTargets alignment_targets = 5;
+}
+
+message RegenerateComponentResponse {
+  GenerationJob job = 1;
+}
+
+message GetJobRequest {
+  string job_id = 1;
+}
+
+message GetJobResponse {
+  GenerationJob job = 1;
+}
+
+message ListJobsRequest {
+  optional GenerationJobType type = 1;
+  optional GenerationJobStatus status = 2;
+  optional string course_id = 3;
+}
+
+message ListJobsResponse {
+  repeated GenerationJob jobs = 1;
+}
+
+message CancelJobRequest {
+  string job_id = 1;
+}
+
+message CancelJobResponse {
+  GenerationJob job = 1;
+}
+
+message GetGeneratedLessonRequest {
+  string lesson_id = 1;
+}
+
+message GetGeneratedLessonResponse {
+  GeneratedLesson lesson = 1;
+}
+
+message ListGeneratedLessonsRequest {
+  string course_id = 1;
+}
+
+message ListGeneratedLessonsResponse {
+  repeated GeneratedLesson lessons = 1;
+}
+
+message GenerateComponentImageRequest {
+  string course_id = 1;
+  string generated_lesson_id = 2;
+  string component_id = 3;
+  string prompt = 4;
+  optional string aspect_ratio = 5;
+}
+
+message GenerateComponentImageResponse {
+  string image_url = 1;
+  LessonComponent component = 2;
+}
+
+message UpdateLessonComponentsRequest {
+  string course_id = 1;
+  string generated_lesson_id = 2;
+  repeated LessonComponent components = 3;
+}
+
+message UpdateLessonComponentsResponse {
+  GeneratedLesson lesson = 1;
+}
+
+message SubscribeJobsRequest {}
+
+message SubscribeJobsResponse {
+  JobEventType event_type = 1;
+  GenerationJob job = 2;
+}

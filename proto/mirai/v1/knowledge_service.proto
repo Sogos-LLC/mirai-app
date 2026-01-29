@@ -1,0 +1,160 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "buf/validate/validate.proto";
+import "mirai/v1/knowledge_source.proto";
+
+// =============================================================================
+// KNOWLEDGE SOURCE SERVICE - RPC definitions for knowledge source operations
+// =============================================================================
+//
+// To regenerate after changes: cd proto && buf generate
+// =============================================================================
+
+// KnowledgeSourceService handles knowledge source operations for RAG.
+service KnowledgeSourceService {
+  // GetUploadURL returns a presigned URL for file upload to MinIO.
+  rpc GetUploadURL(GetUploadURLRequest) returns (GetUploadURLResponse);
+
+  // CreateKnowledgeSource registers a new source and initiates ingestion.
+  rpc CreateKnowledgeSource(CreateKnowledgeSourceRequest) returns (CreateKnowledgeSourceResponse);
+
+  // UploadAndProcess handles file upload + synchronous ingestion with RAG verification.
+  // Use this for wizard flow where immediate feedback is needed.
+  // Returns the source with an AI-generated summary proving RAG works.
+  rpc UploadAndProcess(UploadAndProcessRequest) returns (UploadAndProcessResponse);
+
+  // ListKnowledgeSources returns all sources for a course.
+  rpc ListKnowledgeSources(ListKnowledgeSourcesRequest) returns (ListKnowledgeSourcesResponse);
+
+  // ListKnowledgeSourcesBySession returns sources created in a wizard session.
+  rpc ListKnowledgeSourcesBySession(ListKnowledgeSourcesBySessionRequest) returns (ListKnowledgeSourcesBySessionResponse);
+
+  // LinkSessionToCourse links all sources from a session to a course.
+  rpc LinkSessionToCourse(LinkSessionToCourseRequest) returns (LinkSessionToCourseResponse);
+
+  // GetKnowledgeSource returns a single source by ID.
+  rpc GetKnowledgeSource(GetKnowledgeSourceRequest) returns (GetKnowledgeSourceResponse);
+
+  // DeleteKnowledgeSource removes a source and its chunks from vector store.
+  rpc DeleteKnowledgeSource(DeleteKnowledgeSourceRequest) returns (DeleteKnowledgeSourceResponse);
+
+  // SearchKnowledge performs semantic search across course knowledge.
+  rpc SearchKnowledge(SearchKnowledgeRequest) returns (SearchKnowledgeResponse);
+
+  // SearchKnowledgeBySession performs semantic search across session knowledge.
+  rpc SearchKnowledgeBySession(SearchKnowledgeBySessionRequest) returns (SearchKnowledgeBySessionResponse);
+}
+
+// GetUploadURLRequest for presigned upload URL.
+message GetUploadURLRequest {
+  string course_id = 1 [(buf.validate.field).string.uuid = true];
+  string filename = 2 [(buf.validate.field).string.min_len = 1];
+  string content_type = 3 [(buf.validate.field).string.min_len = 1];
+}
+
+message GetUploadURLResponse {
+  string upload_url = 1;    // Presigned PUT URL
+  string file_path = 2;     // MinIO path to use when creating source
+}
+
+// CreateKnowledgeSourceRequest to register a new source after upload.
+message CreateKnowledgeSourceRequest {
+  string course_id = 1 [(buf.validate.field).string.uuid = true];
+  KnowledgeSourceType type = 2;
+  string name = 3 [(buf.validate.field).string.min_len = 1];
+  string file_path = 4 [(buf.validate.field).string.min_len = 1];
+  string mime_type = 5;
+  int64 file_size_bytes = 6;
+}
+
+message CreateKnowledgeSourceResponse {
+  KnowledgeSource source = 1;
+}
+
+// ListKnowledgeSourcesRequest for listing course sources.
+message ListKnowledgeSourcesRequest {
+  string course_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message ListKnowledgeSourcesResponse {
+  repeated KnowledgeSource sources = 1;
+}
+
+// GetKnowledgeSourceRequest for single source.
+message GetKnowledgeSourceRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message GetKnowledgeSourceResponse {
+  KnowledgeSource source = 1;
+}
+
+// DeleteKnowledgeSourceRequest to remove a source.
+message DeleteKnowledgeSourceRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message DeleteKnowledgeSourceResponse {
+  bool success = 1;
+}
+
+// SearchKnowledgeRequest for semantic search.
+message SearchKnowledgeRequest {
+  string course_id = 1 [(buf.validate.field).string.uuid = true];
+  string query = 2 [(buf.validate.field).string.min_len = 1];
+  int32 top_k = 3;  // Number of results (default 5, max 20)
+}
+
+message SearchKnowledgeResponse {
+  repeated RetrievedChunk chunks = 1;
+}
+
+// UploadAndProcessRequest for wizard flow - upload + immediate ingestion.
+message UploadAndProcessRequest {
+  // Session ID for pre-course knowledge (wizard flow)
+  string session_id = 1 [(buf.validate.field).string.min_len = 1];
+
+  string filename = 2 [(buf.validate.field).string.min_len = 1];
+  string content_type = 3 [(buf.validate.field).string.min_len = 1];
+  bytes file_content = 4 [(buf.validate.field).bytes.min_len = 1];
+}
+
+message UploadAndProcessResponse {
+  KnowledgeSource source = 1;
+  // AI-generated summary proving RAG works
+  string rag_summary = 2;
+  // Structured document index for AI navigation (topics, concepts, etc.)
+  DocumentIndex document_index = 3;
+}
+
+// ListKnowledgeSourcesBySessionRequest for listing session sources.
+message ListKnowledgeSourcesBySessionRequest {
+  string session_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message ListKnowledgeSourcesBySessionResponse {
+  repeated KnowledgeSource sources = 1;
+}
+
+// LinkSessionToCourseRequest to link session sources to a course.
+message LinkSessionToCourseRequest {
+  string session_id = 1 [(buf.validate.field).string.min_len = 1];
+  string course_id = 2 [(buf.validate.field).string.uuid = true];
+}
+
+message LinkSessionToCourseResponse {
+  int32 linked_count = 1;
+}
+
+// SearchKnowledgeBySessionRequest for semantic search across session knowledge.
+message SearchKnowledgeBySessionRequest {
+  string session_id = 1 [(buf.validate.field).string.min_len = 1];
+  string query = 2 [(buf.validate.field).string.min_len = 1];
+  int32 top_k = 3;  // Number of results (default 5, max 20)
+}
+
+message SearchKnowledgeBySessionResponse {
+  repeated RetrievedChunk chunks = 1;
+}

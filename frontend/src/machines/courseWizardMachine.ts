@@ -6,7 +6,18 @@ import type {
   WizardStepData,
   WizardState,
 } from '@/gen/mirai/v1/course_wizard_pb';
-import type { CourseOutline, GenerationJob } from '@/gen/mirai/v1/ai_generation_pb';
+import type { CourseOutline, GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
+
+/**
+ * Pending file to be uploaded after course creation
+ */
+export interface PendingFile {
+  id: string;
+  file: File;
+  name: string;
+  size: number;
+  mimeType: string;
+}
 import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 // ============================================================
@@ -15,6 +26,8 @@ import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 /**
  * Wizard step identifiers matching backend wizard state
+ * Note: 'additionalContext' was merged into 'toneSelection' (now a 5-step wizard)
+ * Knowledge sources are added via modal on step 1, not as a separate step.
  */
 export type WizardStep =
   | 'courseName'
@@ -22,7 +35,6 @@ export type WizardStep =
   | 'smeSelection'
   | 'audienceSelection'
   | 'toneSelection'
-  | 'additionalContext'
   | 'outlineJobQueued';
 
 /**
@@ -45,11 +57,16 @@ export interface CourseWizardContext {
   audiencePersonas: AudiencePersona[];
   selectedAudienceIds: string[];
 
-  // Step 5: Tone Options
+  // Knowledge Sources (added via modal on step 1, not a separate step)
+  pendingFiles: PendingFile[];
+
+  // Internal Data Only mode - when enabled, course content is generated
+  // exclusively from uploaded knowledge sources
+  internalDataOnly: boolean;
+
+  // Step 5: Tone Options + Additional Context
   toneOptions: ToneOption[];
   selectedToneId: string;
-
-  // Step 6: Additional Context
   additionalContext: string;
 
   // Step 7: Outline Generation & Review
@@ -92,6 +109,11 @@ export type CourseWizardEvent =
   | { type: 'ADD_TEMPLATE_AUDIENCE'; persona: AudiencePersona }
   | { type: 'APPROVE_AUDIENCES' }
   | { type: 'REGENERATE_AUDIENCES' }
+  // Knowledge Sources (available from Step 1 via modal)
+  | { type: 'ADD_FILES'; files: PendingFile[] }
+  | { type: 'REMOVE_FILE'; fileId: string }
+  // Internal Data Only mode
+  | { type: 'SET_INTERNAL_DATA_ONLY'; enabled: boolean }
   // Step 5: Tone Selection
   | { type: 'SELECT_TONE'; toneId: string }
   | { type: 'APPROVE_TONE' }
@@ -157,6 +179,8 @@ export const initialContext: CourseWizardContext = {
   selectedSMEIds: [],
   audiencePersonas: [],
   selectedAudienceIds: [],
+  pendingFiles: [],
+  internalDataOnly: false,
   toneOptions: [],
   selectedToneId: '',
   additionalContext: '',
@@ -234,6 +258,7 @@ export const generateOutlineActor = fromPromise<
     audiencePersonas: AudiencePersona[];
     toneOption: ToneOption | undefined;
     additionalContext: string;
+    internalDataOnly: boolean;
   }
 >(async () => {
   throw new NetworkError('generateOutlineActor must be provided by the component');
@@ -376,25 +401,6 @@ export const courseWizardMachine = createMachine({
           })),
         },
         {
-          target: 'additionalContext',
-          guard: ({ context }) => context.savedState?.currentStep === 'additionalContext',
-          actions: assign(({ context }) => ({
-            courseName: context.savedState?.data?.courseName ?? '',
-            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
-            improvedTitle: context.savedState?.data?.improvedTitle ?? '',
-            description: context.savedState?.data?.description ?? '',
-            smePersonas: context.savedState?.data?.smePersonas ?? [],
-            selectedSMEIds: context.savedState?.data?.selectedSmeIds ?? [],
-            audiencePersonas: context.savedState?.data?.audiencePersonas ?? [],
-            selectedAudienceIds: context.savedState?.data?.selectedAudienceIds ?? [],
-            toneOptions: context.savedState?.data?.toneOptions ?? [],
-            selectedToneId: context.savedState?.data?.selectedToneId ?? '',
-            additionalContext: context.savedState?.data?.additionalContext ?? '',
-            currentStep: 'additionalContext' as const,
-            flowStartedAt: Date.now(),
-          })),
-        },
-        {
           // Default: start from beginning
           target: 'courseName',
           actions: assign({
@@ -421,6 +427,23 @@ export const courseWizardMachine = createMachine({
         SET_DESIRED_OUTCOMES: {
           actions: assign({
             desiredOutcomes: ({ event }) => event.outcomes,
+          }),
+        },
+        // Knowledge sources (added via modal)
+        ADD_FILES: {
+          actions: assign({
+            pendingFiles: ({ context, event }) => [...context.pendingFiles, ...event.files],
+          }),
+        },
+        REMOVE_FILE: {
+          actions: assign({
+            pendingFiles: ({ context, event }) =>
+              context.pendingFiles.filter((f) => f.id !== event.fileId),
+          }),
+        },
+        SET_INTERNAL_DATA_ONLY: {
+          actions: assign({
+            internalDataOnly: ({ event }) => event.enabled,
           }),
         },
         GENERATE_OUTCOMES: {
@@ -734,7 +757,7 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 5: Tone Selection
+    // Step 5: Tone Selection + Additional Context (merged)
     // --------------------------------------------------------
     toneSelection: {
       entry: assign({
@@ -746,37 +769,28 @@ export const courseWizardMachine = createMachine({
             selectedToneId: ({ event }) => event.toneId,
           }),
         },
-        APPROVE_TONE: {
-          target: 'additionalContext',
-          guard: ({ context }) => context.selectedToneId.length > 0,
-        },
-        REGENERATE_TONES: 'generatingTones',
-        GO_BACK: 'audienceSelection',
-        CANCEL: 'cancelled',
-      },
-    },
-
-    // --------------------------------------------------------
-    // Step 6: Additional Context (Optional)
-    // --------------------------------------------------------
-    additionalContext: {
-      entry: assign({
-        currentStep: 'additionalContext' as const,
-      }),
-      on: {
         SET_ADDITIONAL_CONTEXT: {
           actions: assign({
             additionalContext: ({ event }) => event.context,
           }),
         },
-        SUBMIT_CONTEXT: 'generatingOutline',
+        APPROVE_TONE: {
+          target: 'generatingOutline',
+          guard: ({ context }) => context.selectedToneId.length > 0,
+        },
+        SUBMIT_CONTEXT: {
+          target: 'generatingOutline',
+          guard: ({ context }) => context.selectedToneId.length > 0,
+        },
         SKIP_CONTEXT: {
           target: 'generatingOutline',
+          guard: ({ context }) => context.selectedToneId.length > 0,
           actions: assign({
             additionalContext: '',
           }),
         },
-        GO_BACK: 'toneSelection',
+        REGENERATE_TONES: 'generatingTones',
+        GO_BACK: 'audienceSelection',
         CANCEL: 'cancelled',
       },
     },
@@ -797,6 +811,7 @@ export const courseWizardMachine = createMachine({
           ),
           toneOption: context.toneOptions.find((t) => t.id === context.selectedToneId),
           additionalContext: context.additionalContext,
+          internalDataOnly: context.internalDataOnly,
         }),
         onDone: {
           target: 'outlineJobQueued',
@@ -806,7 +821,7 @@ export const courseWizardMachine = createMachine({
           }),
         },
         onError: {
-          target: 'additionalContext',
+          target: 'toneSelection',
           actions: assign({
             error: ({ event }) =>
               createAuthError(
@@ -869,8 +884,9 @@ export const courseWizardMachine = createMachine({
 // ============================================================
 
 /**
- * Get step number (1-6) from step identifier
- * Note: Step 7 (outlineJobQueued) is a confirmation screen, not a wizard step
+ * Get step number (1-5) from step identifier
+ * Note: outlineJobQueued is a confirmation screen, not a wizard step
+ * Knowledge sources are added via modal on step 1, not as a separate step.
  */
 export function getStepNumber(step: WizardStep): number {
   const stepMap: Record<WizardStep, number> = {
@@ -879,8 +895,7 @@ export function getStepNumber(step: WizardStep): number {
     smeSelection: 3,
     audienceSelection: 4,
     toneSelection: 5,
-    additionalContext: 6,
-    outlineJobQueued: 6, // Same as additionalContext since it's a confirmation
+    outlineJobQueued: 5, // Same as toneSelection since it's a confirmation
   };
   return stepMap[step];
 }
@@ -894,8 +909,7 @@ export function getStepLabel(step: WizardStep): string {
     titleDescription: 'Title & Description',
     smeSelection: 'SME Personas',
     audienceSelection: 'Target Audience',
-    toneSelection: 'Tone & Style',
-    additionalContext: 'Additional Context',
+    toneSelection: 'Tone & Context',
     outlineJobQueued: 'Generation Started',
   };
   return labelMap[step];
@@ -903,6 +917,7 @@ export function getStepLabel(step: WizardStep): string {
 
 /**
  * Get all steps in order (excluding confirmation states)
+ * Knowledge sources are added via modal on step 1, not as a separate step.
  */
 export function getAllSteps(): WizardStep[] {
   return [
@@ -911,7 +926,6 @@ export function getAllSteps(): WizardStep[] {
     'smeSelection',
     'audienceSelection',
     'toneSelection',
-    'additionalContext',
   ];
 }
 
@@ -960,5 +974,6 @@ export function buildWizardStepData(context: CourseWizardContext): Partial<Wizar
     toneOptions: context.toneOptions,
     selectedToneId: context.selectedToneId,
     additionalContext: context.additionalContext,
+    internalDataOnly: context.internalDataOnly,
   };
 }

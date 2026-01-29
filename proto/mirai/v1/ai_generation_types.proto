@@ -1,0 +1,155 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+import "mirai/v1/component_enums.proto";
+import "mirai/v1/course_wizard.proto";
+
+// =============================================================================
+// AI GENERATION TYPES - Jobs, Outlines, and Generated Lessons
+// =============================================================================
+//
+// To regenerate after changes: cd proto && buf generate
+// For help: buf generate --help
+// =============================================================================
+
+// GenerationJobType represents the type of AI generation job.
+enum GenerationJobType {
+  GENERATION_JOB_TYPE_UNSPECIFIED = 0;
+  GENERATION_JOB_TYPE_COURSE_OUTLINE = 2;
+  GENERATION_JOB_TYPE_LESSON_CONTENT = 3;
+  GENERATION_JOB_TYPE_COMPONENT_REGEN = 4;
+  GENERATION_JOB_TYPE_FULL_COURSE = 5;
+}
+
+// GenerationJobStatus represents job state.
+enum GenerationJobStatus {
+  GENERATION_JOB_STATUS_UNSPECIFIED = 0;
+  GENERATION_JOB_STATUS_QUEUED = 1;
+  GENERATION_JOB_STATUS_PROCESSING = 2;
+  GENERATION_JOB_STATUS_COMPLETED = 3;
+  GENERATION_JOB_STATUS_FAILED = 4;
+  GENERATION_JOB_STATUS_CANCELLED = 5;
+}
+
+// OutlineApprovalStatus for generated content review.
+enum OutlineApprovalStatus {
+  OUTLINE_APPROVAL_STATUS_UNSPECIFIED = 0;
+  OUTLINE_APPROVAL_STATUS_PENDING_REVIEW = 1;
+  OUTLINE_APPROVAL_STATUS_APPROVED = 2;
+  OUTLINE_APPROVAL_STATUS_REJECTED = 3;
+  OUTLINE_APPROVAL_STATUS_REVISION_REQUESTED = 4;
+}
+
+// JobEventType for real-time streaming job events.
+enum JobEventType {
+  JOB_EVENT_TYPE_UNSPECIFIED = 0;
+  JOB_EVENT_TYPE_CREATED = 1;
+  JOB_EVENT_TYPE_UPDATED = 2;
+  JOB_EVENT_TYPE_COMPLETED = 3;
+  JOB_EVENT_TYPE_FAILED = 4;
+  JOB_EVENT_TYPE_CANCELLED = 5;
+  JOB_EVENT_TYPE_KEEPALIVE = 6;
+}
+
+// GenerationJob represents an AI generation job.
+message GenerationJob {
+  string id = 1;
+  string tenant_id = 2;
+  GenerationJobType type = 3;
+  GenerationJobStatus status = 4;
+  optional string course_id = 5;
+  optional string lesson_id = 6;
+  int32 progress_percent = 9;
+  optional string progress_message = 10;
+  optional string result_path = 11;
+  optional string error_message = 12;
+  int64 tokens_used = 13;
+  int32 retry_count = 14;
+  int32 max_retries = 15;
+  string created_by_user_id = 16;
+  google.protobuf.Timestamp created_at = 17;
+  optional google.protobuf.Timestamp started_at = 18;
+  optional google.protobuf.Timestamp completed_at = 19;
+  optional string parent_job_id = 20;
+}
+
+// CourseOutline represents the generated course structure.
+message CourseOutline {
+  string id = 1;
+  string course_id = 2;
+  int32 version = 3;
+  repeated OutlineSection sections = 4;
+  OutlineApprovalStatus approval_status = 5;
+  optional string rejection_reason = 6;
+  google.protobuf.Timestamp generated_at = 7;
+  optional google.protobuf.Timestamp approved_at = 8;
+  optional string approved_by_user_id = 9;
+}
+
+// OutlineSection represents a section in the outline.
+message OutlineSection {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  int32 order = 4;
+  repeated OutlineLesson lessons = 5;
+  bool is_first_section = 6;
+  bool is_last_section = 7;
+}
+
+// OutlineLesson represents a lesson in the outline.
+message OutlineLesson {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  int32 order = 4;
+  int32 estimated_duration_minutes = 5;
+  repeated string learning_objectives = 6;
+  bool is_first_in_section = 7;
+  bool is_last_in_section = 8;
+  bool is_first_in_course = 9;
+  bool is_last_in_course = 10;
+  // Citations from knowledge sources used to inform this lesson
+  repeated KnowledgeCitation citations = 11;
+}
+
+// GeneratedLesson contains full lesson content.
+message GeneratedLesson {
+  string id = 1;
+  string course_id = 2;
+  string section_id = 3;
+  string outline_lesson_id = 4;
+  string title = 5;
+  repeated LessonComponent components = 6;
+  optional string segue_text = 7;
+  google.protobuf.Timestamp generated_at = 8;
+}
+
+// LessonComponent represents a content component in a lesson.
+message LessonComponent {
+  string id = 1;
+  LessonComponentType type = 2;
+  int32 order = 3;
+  string content_json = 4;  // JSON string matching component_content.proto types
+  optional ComponentAlignment alignment = 5;
+}
+
+// ComponentAlignment tracks what knowledge/objectives a component addresses.
+message ComponentAlignment {
+  repeated string learning_objective_ids = 2;
+}
+
+// ComponentAlignmentTargets for content regeneration alignment.
+message ComponentAlignmentTargets {
+  repeated string persona_ids = 1;
+  repeated string learning_objective_ids = 2;
+}
+
+// CourseGenerationInput captures inputs for AI course generation.
+message CourseGenerationInput {
+  string course_id = 1;
+  string desired_outcome = 4;
+  optional string additional_context = 5;
+}

@@ -5,7 +5,7 @@ import { Check, Loader2, Target, BookOpen, MessageSquare, Plus, X, ChevronDown, 
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
 import type { SMEPersona, AudiencePersona } from '@/gen/mirai/v1/course_wizard_pb';
-import { JobEventType, type LessonComponent, type GenerationJob } from '@/gen/mirai/v1/ai_generation_pb';
+import { JobEventType, type LessonComponent, type GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { useJobStream } from '@/hooks/useJobStream';
 
 export interface LearningObjective {

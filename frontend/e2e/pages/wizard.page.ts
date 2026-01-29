@@ -9,8 +9,8 @@ import { takeScreenshot, waitForAIGeneration } from '../helpers';
  * 2. Title & Description - Review AI-generated title
  * 3. SME Personas - Select subject matter experts
  * 4. Target Audience - Select audience personas
- * 5. Tone & Style - Select communication style
- * 6. Additional Context - Add extra instructions (no AI)
+ * 5. Knowledge Sources - Upload documents (optional)
+ * 6. Tone & Style - Select communication style + Additional Context
  * 7. Generate Outline - Triggers background job
  */
 export class WizardPage {
@@ -83,38 +83,59 @@ export class WizardPage {
 
   // ===== STEP 4: Target Audience =====
 
-  /** Click "Generate Tones" to proceed to tone step and wait for AI */
-  async clickGenerateTones(): Promise<void> {
-    console.log('\n--- Wizard Step 4: Target Audience → Generate Tones ---');
-    const btn = this.page.getByRole('button', { name: /generate tones/i });
+  /** Click "Continue" or "Skip" to proceed to knowledge sources step */
+  async clickContinueToKnowledgeSources(): Promise<void> {
+    console.log('\n--- Wizard Step 4: Target Audience → Knowledge Sources ---');
+    // The button says "Generate Tones" but now goes to Knowledge Sources first
+    const btn = this.page.getByRole('button', { name: /generate audiences|continue/i }).last();
     await expect(btn).toBeVisible({ timeout: 10000 });
     await expect(btn).toBeEnabled({ timeout: 10000 });
-    console.log('Clicking Generate Tones...');
-    await btn.click();
-    await waitForAIGeneration(this.page, 'tone options');
-    await this.screenshot('step5-tone', 'Tone & Style step');
-  }
-
-  // ===== STEP 5: Tone & Style =====
-
-  /** Click "Add Context" to proceed to context step (no AI call) */
-  async clickAddContext(): Promise<void> {
-    console.log('\n--- Wizard Step 5: Tone & Style → Add Context ---');
-    const btn = this.page.getByRole('button', { name: /add context/i });
-    await expect(btn).toBeVisible({ timeout: 10000 });
-    await expect(btn).toBeEnabled({ timeout: 10000 });
-    console.log('Clicking Add Context...');
+    console.log('Clicking to proceed to Knowledge Sources...');
     await btn.click();
     await this.page.waitForTimeout(2000);
-    await this.screenshot('step6-context', 'Additional Context step');
+    await this.screenshot('step5-knowledge-sources', 'Knowledge Sources step');
   }
 
-  // ===== STEP 6: Additional Context =====
+  // ===== STEP 5: Knowledge Sources =====
 
-  /** Add additional context and click "Generate Outline" */
-  async handleContextStep(context?: string): Promise<void> {
-    console.log('\n--- Wizard Step 6: Additional Context ---');
+  /**
+   * Handle the knowledge sources step.
+   * This step is optional - can upload files or skip.
+   * @param files - Optional array of file paths to upload
+   */
+  async handleKnowledgeSourcesStep(files?: string[]): Promise<void> {
+    console.log('\n--- Wizard Step 5: Knowledge Sources ---');
 
+    // If files provided, upload them
+    if (files && files.length > 0) {
+      const fileInput = this.page.locator('input[type="file"]');
+      if (await fileInput.count() > 0) {
+        await fileInput.setInputFiles(files);
+        await this.page.waitForTimeout(1000);
+        await this.screenshot('files-uploaded', 'Files uploaded');
+      }
+    }
+
+    // Click Continue or Skip to proceed (button label changes based on files)
+    const continueBtn = this.page.getByRole('button', { name: /continue|skip/i }).last();
+    await expect(continueBtn).toBeVisible({ timeout: 10000 });
+    console.log('Clicking to proceed from Knowledge Sources...');
+    await continueBtn.click();
+
+    // Wait for tone generation
+    await waitForAIGeneration(this.page, 'tone options');
+    await this.screenshot('step6-tone', 'Tone & Style step');
+  }
+
+  // ===== STEP 6: Tone & Style + Additional Context (Combined) =====
+  // Note: The wizard UI was updated to combine Tone and Context into one step.
+  // The "Generate Outline" button is now on the Tone step.
+
+  /** Add additional context (optional) and click "Generate Outline" */
+  async handleToneAndContextStep(context?: string): Promise<void> {
+    console.log('\n--- Wizard Step 5: Tone & Style + Additional Context ---');
+
+    // Fill in additional context if provided (textarea is on the same page as tone selection)
     if (context) {
       const textarea = this.page.locator('textarea').first();
       if ((await textarea.count()) > 0 && (await textarea.isVisible())) {
@@ -123,7 +144,7 @@ export class WizardPage {
       }
     }
 
-    // Click "Generate Outline" (prefer this over "Skip & Generate")
+    // Click "Generate Outline" to proceed
     const generateBtn = this.page.getByRole('button', { name: 'Generate Outline' });
     await expect(generateBtn).toBeVisible({ timeout: 10000 });
     await expect(generateBtn).toBeEnabled({ timeout: 10000 });
@@ -131,43 +152,67 @@ export class WizardPage {
     await generateBtn.click();
   }
 
-  // ===== STEP 7: Success Modal (after background job is queued) =====
+  // ===== STEP 6: Wait for Outline Generation =====
+  // Note: The wizard now navigates directly to the outline page, no success modal.
 
   /**
-   * Wait for success modal to appear.
-   * Note: The modal appears immediately after the job is QUEUED (not completed).
-   * The actual outline generation happens in the background.
+   * Wait for outline generation to complete.
+   * The wizard navigates to /course/{id}/outline which shows:
+   * 1. "Loading outline..." (initial)
+   * 2. "Creating your outline..." with "Wait for outline" button
+   * 3. "Review Your Course Outline" (complete)
    */
-  async waitForSuccessModal(): Promise<void> {
-    console.log('\n--- Wizard Step 7: Waiting for Success Modal ---');
-    // Wait for the success modal which says "Outline Generation Started!"
-    await this.page.getByText(/outline generation started/i).waitFor({
-      state: 'visible',
-      timeout: 60000,
-    });
-    await this.screenshot('success-modal', 'Outline generation queued');
-  }
+  async waitForOutlineGeneration(): Promise<string> {
+    console.log('\n--- Wizard Step 6: Waiting for Outline Generation ---');
 
-  /** Click "Got it!" to dismiss modal and redirect to dashboard */
-  async dismissSuccessModal(): Promise<boolean> {
-    console.log('Dismissing success modal...');
+    // Wait for URL to change to outline page
+    await this.page.waitForURL(/\/course\/[^/]+\/outline/, { timeout: 30000 });
+    console.log('Navigated to outline page');
+
+    // Extract course ID from URL
+    const url = this.page.url();
+    const match = url.match(/\/course\/([^/]+)\/outline/);
+    const courseId = match ? match[1] : '';
+    console.log(`Course ID: ${courseId}`);
+
+    // Wait for page to stabilize (pass "Loading outline..." state)
+    await this.page.waitForTimeout(3000);
+    await this.screenshot('outline-page', 'Outline page');
+
+    // Wait for "Wait for outline" button to appear and click it
+    const waitButton = this.page.getByRole('button', { name: /wait for outline/i });
+    console.log('Looking for "Wait for outline" button...');
 
     try {
-      const gotItBtn = this.page.getByRole('button', { name: /got it/i });
-      await gotItBtn.waitFor({ state: 'visible', timeout: 10000 });
-      console.log('Clicking "Got it!" button...');
-      await gotItBtn.click();
-
-      // Wait for redirect to dashboard
-      await this.page.waitForURL(/\/dashboard/, { timeout: 10000 });
-      console.log('Redirected to dashboard');
-      await this.screenshot('dashboard', 'Redirected to dashboard');
-      return true;
-    } catch (error) {
-      console.log('Failed to dismiss modal:', error);
-      await this.screenshot('dismiss-failed', 'Failed to dismiss modal');
-      return false;
+      await waitButton.waitFor({ state: 'visible', timeout: 30000 });
+      console.log('Found "Wait for outline" button, clicking...');
+      await waitButton.click();
+      await this.screenshot('clicked-wait', 'Clicked Wait for outline');
+    } catch {
+      console.log('Wait button not found - outline may already be ready or loading');
     }
+
+    // Now wait for outline to complete (up to 5 minutes)
+    const reviewHeading = this.page.getByText(/Review Your Course Outline/i);
+    console.log('Waiting for outline to complete (up to 5 minutes)...');
+
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const outlineReady = await reviewHeading.isVisible().catch(() => false);
+      if (outlineReady) {
+        console.log(`Outline ready after ${(attempt + 1) * 5}s`);
+        await this.screenshot('outline-ready', 'Outline complete');
+        return courseId;
+      }
+
+      if (attempt % 12 === 0) {
+        console.log(`Poll ${attempt + 1}/60: Still waiting...`);
+      }
+      await this.page.waitForTimeout(5000);
+    }
+
+    console.log('Timeout waiting for outline - continuing anyway');
+    await this.screenshot('outline-timeout', 'Outline timeout');
+    return courseId;
   }
 
   // ===== Complete Flow =====
@@ -175,25 +220,23 @@ export class WizardPage {
   /**
    * Run the complete wizard flow from start to finish.
    *
-   * Flow:
+   * Flow (Updated - Now includes Knowledge Sources step):
    * 1. Enter course name → Click "Generate Title" (AI: ~20s)
    * 2. Review title → Click "Generate Personas" (AI: ~20s)
    * 3. Review SMEs → Click "Generate Audiences" (AI: ~20s)
-   * 4. Review audiences → Click "Generate Tones" (AI: ~20s)
-   * 5. Review tones → Click "Add Context" (no AI)
-   * 6. Enter context → Click "Generate Outline" (queues background job)
-   * 7. Success modal appears → Click "Got it!" → Redirect to dashboard
+   * 4. Review audiences → Proceed to Knowledge Sources
+   * 5. Knowledge Sources → Skip or upload files → Generate Tones (AI: ~20s)
+   * 6. Review tones + Enter context → Click "Generate Outline"
+   * 7. Redirect to outline page → Wait for outline generation
    *
-   * Note: The course won't appear in content library immediately.
-   * The outline generation is a background job that takes ~1-2 minutes.
-   *
-   * Returns true if wizard completed (job queued) successfully.
+   * Returns the course ID on success, or empty string on failure.
    */
   async completeWizard(options: {
     courseName: string;
     additionalContext?: string;
-  }): Promise<boolean> {
-    const { courseName, additionalContext } = options;
+    knowledgeSourceFiles?: string[];
+  }): Promise<string> {
+    const { courseName, additionalContext, knowledgeSourceFiles } = options;
 
     // Step 1: Course Name
     await this.enterCourseName(courseName);
@@ -205,18 +248,17 @@ export class WizardPage {
     // Step 3: SME Personas → Generate Audiences
     await this.clickGenerateAudiences();
 
-    // Step 4: Target Audience → Generate Tones
-    await this.clickGenerateTones();
+    // Step 4: Target Audience → Knowledge Sources
+    await this.clickContinueToKnowledgeSources();
 
-    // Step 5: Tone & Style → Add Context
-    await this.clickAddContext();
+    // Step 5: Knowledge Sources → Generate Tones
+    await this.handleKnowledgeSourcesStep(knowledgeSourceFiles);
 
-    // Step 6: Additional Context → Generate Outline
-    await this.handleContextStep(additionalContext);
+    // Step 6: Tone & Style + Additional Context → Generate Outline
+    await this.handleToneAndContextStep(additionalContext);
 
-    // Step 7: Success Modal
-    await this.waitForSuccessModal();
-    return this.dismissSuccessModal();
+    // Step 7: Wait for Outline Generation
+    return this.waitForOutlineGeneration();
   }
 
   // ===== Utilities =====

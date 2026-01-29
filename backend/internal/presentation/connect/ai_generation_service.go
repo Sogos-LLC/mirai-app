@@ -37,6 +37,8 @@ func (s *AIGenerationServiceServer) GenerateCourseOutline(
 	ctx context.Context,
 	req *connect.Request[v1.GenerateCourseOutlineRequest],
 ) (*connect.Response[v1.GenerateCourseOutlineResponse], error) {
+	slog.Info("[GenerateCourseOutline] Request received", "courseId", req.Msg.Input.GetCourseId())
+
 	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
@@ -72,8 +74,15 @@ func (s *AIGenerationServiceServer) GenerateCourseOutline(
 
 	result, err := s.aiService.GenerateCourseOutline(ctx, kratosID, serviceReq)
 	if err != nil {
+		slog.Error("[GenerateCourseOutline] Service error", "courseId", courseID.String(), "error", err)
 		return nil, toConnectError(err)
 	}
+
+	slog.Info("[GenerateCourseOutline] Job created",
+		"jobId", result.Job.ID.String(),
+		"courseId", result.Job.CourseID,
+		"status", result.Job.Status.String(),
+	)
 
 	return connect.NewResponse(&v1.GenerateCourseOutlineResponse{
 		Job: generationJobToProto(result.Job),
@@ -385,8 +394,11 @@ func (s *AIGenerationServiceServer) GetJob(
 	ctx context.Context,
 	req *connect.Request[v1.GetJobRequest],
 ) (*connect.Response[v1.GetJobResponse], error) {
+	slog.Info("[GetJob] Request received", "jobId", req.Msg.JobId)
+
 	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
 	if !ok {
+		slog.Warn("[GetJob] Unauthenticated request")
 		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
 	}
 
@@ -397,13 +409,22 @@ func (s *AIGenerationServiceServer) GetJob(
 
 	jobID, err := parseUUID(req.Msg.JobId)
 	if err != nil {
+		slog.Warn("[GetJob] Invalid job ID", "jobId", req.Msg.JobId, "error", err)
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	job, err := s.aiService.GetJob(ctx, kratosID, jobID)
 	if err != nil {
+		slog.Warn("[GetJob] Service error", "jobId", jobID.String(), "error", err)
 		return nil, toConnectError(err)
 	}
+
+	slog.Info("[GetJob] Returning job",
+		"jobId", job.ID.String(),
+		"status", job.Status.String(),
+		"courseId", job.CourseID,
+		"progress", job.ProgressPercent,
+	)
 
 	return connect.NewResponse(&v1.GetJobResponse{
 		Job: generationJobToProto(job),
@@ -415,8 +436,15 @@ func (s *AIGenerationServiceServer) ListJobs(
 	ctx context.Context,
 	req *connect.Request[v1.ListJobsRequest],
 ) (*connect.Response[v1.ListJobsResponse], error) {
+	slog.Info("[ListJobs] Request received",
+		"type", req.Msg.Type,
+		"status", req.Msg.Status,
+		"courseId", req.Msg.CourseId,
+	)
+
 	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
 	if !ok {
+		slog.Warn("[ListJobs] Unauthenticated request")
 		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
 	}
 
@@ -440,12 +468,26 @@ func (s *AIGenerationServiceServer) ListJobs(
 	if req.Msg.CourseId != nil {
 		if id, err := uuid.Parse(*req.Msg.CourseId); err == nil {
 			opts.CourseID = &id
+			slog.Info("[ListJobs] Filtering by courseId", "courseId", id.String())
+		} else {
+			slog.Warn("[ListJobs] Invalid courseId format", "courseId", *req.Msg.CourseId, "error", err)
 		}
 	}
 
 	jobs, err := s.aiService.ListJobs(ctx, kratosID, opts)
 	if err != nil {
+		slog.Error("[ListJobs] Service error", "error", err)
 		return nil, toConnectError(err)
+	}
+
+	slog.Info("[ListJobs] Returning jobs", "count", len(jobs))
+	for i, job := range jobs {
+		slog.Info("[ListJobs] Job",
+			"index", i,
+			"jobId", job.ID.String(),
+			"status", job.Status.String(),
+			"courseId", job.CourseID,
+		)
 	}
 
 	protoJobs := make([]*v1.GenerationJob, len(jobs))
@@ -1064,6 +1106,20 @@ func lessonComponentTypeToProto(t valueobject.LessonComponentType) v1.LessonComp
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CODE
 	case valueobject.LessonComponentTypeCallout:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CALLOUT
+	case valueobject.LessonComponentTypeStatement:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_STATEMENT
+	case valueobject.LessonComponentTypeQuote:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_QUOTE
+	case valueobject.LessonComponentTypeList:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_LIST
+	case valueobject.LessonComponentTypeGallery:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_GALLERY
+	case valueobject.LessonComponentTypeMultimedia:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_MULTIMEDIA
+	case valueobject.LessonComponentTypeChart:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CHART
+	case valueobject.LessonComponentTypeDivider:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_DIVIDER
 	default:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_UNSPECIFIED
 	}
@@ -1083,6 +1139,20 @@ func protoToLessonComponentType(t v1.LessonComponentType) valueobject.LessonComp
 		return valueobject.LessonComponentTypeCode
 	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_CALLOUT:
 		return valueobject.LessonComponentTypeCallout
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_STATEMENT:
+		return valueobject.LessonComponentTypeStatement
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_QUOTE:
+		return valueobject.LessonComponentTypeQuote
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_LIST:
+		return valueobject.LessonComponentTypeList
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_GALLERY:
+		return valueobject.LessonComponentTypeGallery
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_MULTIMEDIA:
+		return valueobject.LessonComponentTypeMultimedia
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_CHART:
+		return valueobject.LessonComponentTypeChart
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_DIVIDER:
+		return valueobject.LessonComponentTypeDivider
 	default:
 		return valueobject.LessonComponentTypeText // Default to text
 	}

@@ -2,23 +2,14 @@
 
 import React, { useState } from 'react';
 import { Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
-import { CalloutStyle } from '@/gen/mirai/v1/ai_generation_pb';
-import type { CalloutContent } from '@/gen/mirai/v1/ai_generation_zod';
+import type { CalloutContent } from '@/gen/mirai/v1/component_content_zod';
 
 // Re-export for compatibility
 export type { CalloutContent };
 
-// Callout style enum values from proto
-const CALLOUT_STYLES = {
-  UNSPECIFIED: CalloutStyle.UNSPECIFIED,
-  INFO: CalloutStyle.INFO,
-  WARNING: CalloutStyle.WARNING,
-  SUCCESS: CalloutStyle.SUCCESS,
-  ERROR: CalloutStyle.ERROR,
-  TIP: CalloutStyle.TIP,
-} as const;
-
-export type CalloutStyleValue = (typeof CALLOUT_STYLES)[keyof typeof CALLOUT_STYLES];
+// Callout style string values as defined in proto (CalloutContent.style is string)
+// Values: "info", "warning", "success", "error", "tip"
+export type CalloutStyleString = 'info' | 'warning' | 'success' | 'error' | 'tip';
 
 interface CalloutRendererProps {
   content: CalloutContent;
@@ -26,8 +17,9 @@ interface CalloutRendererProps {
   onEdit?: (content: CalloutContent) => void;
 }
 
+// Style configuration keyed by string values (matching proto contract)
 const styleConfig: Record<
-  CalloutStyleValue,
+  CalloutStyleString,
   {
     icon: React.ComponentType<{ className?: string }>;
     bgColor: string;
@@ -37,15 +29,7 @@ const styleConfig: Record<
     label: string;
   }
 > = {
-  [CALLOUT_STYLES.UNSPECIFIED]: {
-    icon: Info,
-    bgColor: 'bg-gray-50',
-    borderColor: 'border-gray-300',
-    textColor: 'text-gray-800',
-    iconColor: 'text-gray-600',
-    label: 'Note',
-  },
-  [CALLOUT_STYLES.INFO]: {
+  info: {
     icon: Info,
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-300',
@@ -53,7 +37,7 @@ const styleConfig: Record<
     iconColor: 'text-blue-600',
     label: 'Info',
   },
-  [CALLOUT_STYLES.WARNING]: {
+  warning: {
     icon: AlertTriangle,
     bgColor: 'bg-yellow-50',
     borderColor: 'border-yellow-400',
@@ -61,7 +45,7 @@ const styleConfig: Record<
     iconColor: 'text-yellow-600',
     label: 'Warning',
   },
-  [CALLOUT_STYLES.SUCCESS]: {
+  success: {
     icon: CheckCircle,
     bgColor: 'bg-green-50',
     borderColor: 'border-green-300',
@@ -69,7 +53,7 @@ const styleConfig: Record<
     iconColor: 'text-green-600',
     label: 'Success',
   },
-  [CALLOUT_STYLES.ERROR]: {
+  error: {
     icon: XCircle,
     bgColor: 'bg-red-50',
     borderColor: 'border-red-300',
@@ -77,7 +61,7 @@ const styleConfig: Record<
     iconColor: 'text-red-600',
     label: 'Error',
   },
-  [CALLOUT_STYLES.TIP]: {
+  tip: {
     icon: Lightbulb,
     bgColor: 'bg-purple-50',
     borderColor: 'border-purple-300',
@@ -87,10 +71,15 @@ const styleConfig: Record<
   },
 };
 
+// Default config for unknown styles
+const defaultConfig = styleConfig.info;
+
 export function CalloutRenderer({ content, isEditing = false, onEdit }: CalloutRendererProps) {
   const [editContent, setEditContent] = useState(content);
 
-  const config = styleConfig[content.style] || styleConfig[CALLOUT_STYLES.INFO];
+  // Get config using string style (normalize to lowercase for safety)
+  const styleKey = (content.style?.toLowerCase() || 'info') as CalloutStyleString;
+  const config = styleConfig[styleKey] || defaultConfig;
   const Icon = config.icon;
 
   if (isEditing && onEdit) {
@@ -101,17 +90,17 @@ export function CalloutRenderer({ content, isEditing = false, onEdit }: CalloutR
             <select
               value={editContent.style}
               onChange={(e) => {
-                const updated = { ...editContent, style: Number(e.target.value) as CalloutStyleValue };
+                const updated = { ...editContent, style: e.target.value };
                 setEditContent(updated);
                 onEdit(updated);
               }}
               className="text-sm bg-transparent border rounded px-2 py-1"
             >
-              <option value={CALLOUT_STYLES.INFO}>Info</option>
-              <option value={CALLOUT_STYLES.WARNING}>Warning</option>
-              <option value={CALLOUT_STYLES.SUCCESS}>Success</option>
-              <option value={CALLOUT_STYLES.ERROR}>Error</option>
-              <option value={CALLOUT_STYLES.TIP}>Tip</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="success">Success</option>
+              <option value="error">Error</option>
+              <option value="tip">Tip</option>
             </select>
           </div>
           <input
@@ -157,8 +146,9 @@ export function CalloutRenderer({ content, isEditing = false, onEdit }: CalloutR
 }
 
 /**
- * Get label for callout style
+ * Get label for callout style (accepts string style from proto)
  */
-export function getCalloutStyleLabel(style: CalloutStyleValue): string {
-  return styleConfig[style]?.label || 'Note';
+export function getCalloutStyleLabel(style: string): string {
+  const styleKey = (style?.toLowerCase() || 'info') as CalloutStyleString;
+  return styleConfig[styleKey]?.label || 'Note';
 }

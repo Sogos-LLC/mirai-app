@@ -69,9 +69,23 @@ export type GenerateTitleRequest = z.infer<typeof GenerateTitleRequestSchema>;
  */
 export const GenerateOutcomesRequestSchema = z.object({
   courseName: z.string().min(1),
+  sessionId: z.string().optional(),
 });
 
 export type GenerateOutcomesRequest = z.infer<typeof GenerateOutcomesRequestSchema>;
+
+/**
+ * Zod schema for KnowledgeCitation
+ * @generated from message mirai.v1.KnowledgeCitation
+ */
+export const KnowledgeCitationSchema = z.object({
+  sourceId: z.string(),
+  sourceName: z.string(),
+  excerpt: z.string(),
+  relevanceScore: z.number(),
+});
+
+export type KnowledgeCitation = z.infer<typeof KnowledgeCitationSchema>;
 
 /**
  * Zod schema for GenerateSMEPersonasRequest
@@ -142,6 +156,7 @@ export const WizardStepDataSchema = z.object({
   selectedToneId: z.string(),
   additionalContext: z.string(),
   desiredOutcomes: z.string(),
+  internalDataOnly: z.boolean(),
 });
 
 export type WizardStepData = z.infer<typeof WizardStepDataSchema>;

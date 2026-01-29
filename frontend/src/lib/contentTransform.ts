@@ -13,8 +13,8 @@ import {
   type CourseOutline,
   type OutlineSection,
   type ComponentAlignment,
-  LessonComponentType,
-} from '@/gen/mirai/v1/ai_generation_pb';
+} from '@/gen/mirai/v1/ai_generation_types_pb';
+import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
 
 import type {
   CourseBlock as ProtoCourseBlock,

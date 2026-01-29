@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo, useState, useRef, useEffect } from 'react';
-import { MoreVertical, RefreshCw } from 'lucide-react';
-import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_pb';
-import { LessonComponentType } from '@/gen/mirai/v1/ai_generation_pb';
+import { useMemo } from 'react';
+import type { LessonComponent } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
 import type {
   TextContent,
   HeadingContent,
@@ -11,13 +10,21 @@ import type {
   QuizContent,
   CodeContent,
   CalloutContent,
-} from '@/gen/mirai/v1/ai_generation_zod';
+  StatementContent,
+} from '@/gen/mirai/v1/component_content_zod';
 import { TextRenderer } from './TextRenderer';
 import { HeadingRenderer } from './HeadingRenderer';
 import { ImageRenderer } from './ImageRenderer';
 import { QuizRenderer } from './QuizRenderer';
 import { CodeRenderer } from './CodeRenderer';
 import { CalloutRenderer } from './CalloutRenderer';
+import { StatementRenderer } from './StatementRenderer';
+import { QuoteRenderer } from './QuoteRenderer';
+import { ListRenderer } from './ListRenderer';
+import { GalleryRenderer } from './GalleryRenderer';
+import { MultimediaRenderer } from './MultimediaRenderer';
+import { ChartRenderer } from './ChartRenderer';
+import { DividerRenderer } from './DividerRenderer';
 
 // Component type enum values from proto
 const COMPONENT_TYPES = {
@@ -28,6 +35,13 @@ const COMPONENT_TYPES = {
   QUIZ: LessonComponentType.QUIZ,
   CODE: LessonComponentType.CODE,
   CALLOUT: LessonComponentType.CALLOUT,
+  STATEMENT: LessonComponentType.STATEMENT,
+  QUOTE: LessonComponentType.QUOTE,
+  LIST: LessonComponentType.LIST,
+  GALLERY: LessonComponentType.GALLERY,
+  MULTIMEDIA: LessonComponentType.MULTIMEDIA,
+  CHART: LessonComponentType.CHART,
+  DIVIDER: LessonComponentType.DIVIDER,
 } as const;
 
 // Quiz option interface for normalization
@@ -43,7 +57,6 @@ interface ComponentRendererProps {
   onSelect?: () => void;
   onUpdate?: (contentJson: string) => void;
   onQuizAnswer?: (componentId: string, optionId: string, isCorrect: boolean) => void;
-  onOpenRealignment?: (component: LessonComponent) => void;
 }
 
 function parseContent<T>(contentJson: string): T | null {
@@ -54,14 +67,13 @@ function parseContent<T>(contentJson: string): T | null {
   }
 }
 
-// Transform snake_case quiz JSON to camelCase
+// Transform snake_case quiz JSON to camelCase matching new proto schema
 function normalizeQuizContent(raw: Record<string, unknown>): QuizContent {
   return {
-    question: (raw.question as string) || '',
-    questionType: (raw.questionType as string) || (raw.question_type as string) || 'multiple_choice',
-    options: (raw.options as QuizOption[]) || [],
-    correctAnswerId: (raw.correctAnswerId as string) || (raw.correct_answer_id as string) || '',
-    explanation: (raw.explanation as string) || '',
+    quizQuestion: (raw.quizQuestion as string) || (raw.quiz_question as string) || (raw.question as string) || '',
+    quizOptions: (raw.quizOptions as QuizOption[]) || (raw.quiz_options as QuizOption[]) || (raw.options as QuizOption[]) || [],
+    quizCorrectAnswerId: (raw.quizCorrectAnswerId as string) || (raw.quiz_correct_answer_id as string) || (raw.correctAnswerId as string) || (raw.correct_answer_id as string) || '',
+    quizExplanation: (raw.quizExplanation as string) || (raw.quiz_explanation as string) || (raw.explanation as string) || '',
   };
 }
 
@@ -72,11 +84,7 @@ export function ComponentRenderer({
   onSelect,
   onUpdate,
   onQuizAnswer,
-  onOpenRealignment,
 }: ComponentRendererProps) {
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
   const content = useMemo(() => {
     return parseContent<Record<string, unknown>>(component.contentJson);
   }, [component.contentJson]);
@@ -85,39 +93,9 @@ export function ComponentRenderer({
     onUpdate?.(JSON.stringify(newContent));
   };
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-
-    if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showMenu]);
-
-  const handleMenuClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(!showMenu);
-  };
-
-  const handleRealignmentClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    onOpenRealignment?.(component);
-  };
-
-  // Check if this component type should show the menu (all except IMAGE)
-  const showRealignmentMenu = onOpenRealignment && component.type !== COMPONENT_TYPES.IMAGE;
-
   // Wrapper for selectable/editable state
   const Wrapper = ({ children }: { children: React.ReactNode }) => {
-    if (isEditing || onSelect || showRealignmentMenu) {
+    if (isEditing || onSelect) {
       return (
         <div
           className={`
@@ -128,44 +106,6 @@ export function ComponentRenderer({
           onClick={() => !isEditing && onSelect?.()}
         >
           {children}
-
-          {/* 3-dot menu for realignment */}
-          {showRealignmentMenu && (
-            <div
-              ref={menuRef}
-              className="absolute top-2 right-2 z-10"
-            >
-              <button
-                onClick={handleMenuClick}
-                className={`
-                  p-2 rounded-lg transition-all
-                  bg-white dark:bg-dark-surface
-                  border border-gray-200 dark:border-dark-border
-                  shadow-sm hover:shadow
-                  text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white
-                  opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100
-                  touch-device:opacity-100
-                  ${showMenu ? 'opacity-100' : ''}
-                `}
-                aria-label="Component options"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-
-              {/* Dropdown menu */}
-              {showMenu && (
-                <div className="absolute top-full right-0 mt-1 bg-white dark:bg-dark-surface-elevated border border-gray-200 dark:border-dark-border rounded-lg shadow-lg py-1 min-w-[160px]">
-                  <button
-                    onClick={handleRealignmentClick}
-                    className="w-full px-4 py-2 text-sm text-left flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-dark-400 text-gray-700 dark:text-gray-200"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Realignment
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       );
     }
@@ -271,6 +211,109 @@ export function ComponentRenderer({
       );
     }
 
+    case COMPONENT_TYPES.STATEMENT: {
+      const statementContent = content as StatementContent | null;
+      if (!statementContent) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid statement content</div>;
+      }
+      return (
+        <Wrapper>
+          <StatementRenderer
+            content={statementContent}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.QUOTE: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid quote content</div>;
+      }
+      return (
+        <Wrapper>
+          <QuoteRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.LIST: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid list content</div>;
+      }
+      return (
+        <Wrapper>
+          <ListRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.GALLERY: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid gallery content</div>;
+      }
+      return (
+        <Wrapper>
+          <GalleryRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.MULTIMEDIA: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid multimedia content</div>;
+      }
+      return (
+        <Wrapper>
+          <MultimediaRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.CHART: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid chart content</div>;
+      }
+      return (
+        <Wrapper>
+          <ChartRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
+    case COMPONENT_TYPES.DIVIDER: {
+      return (
+        <Wrapper>
+          <DividerRenderer
+            content={content || {}}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
     default:
       return (
         <div className="p-4 bg-gray-100 text-gray-500 rounded">
@@ -292,6 +335,13 @@ export function getComponentTypeName(type: number): string {
     [COMPONENT_TYPES.QUIZ]: 'Quiz',
     [COMPONENT_TYPES.CODE]: 'Code',
     [COMPONENT_TYPES.CALLOUT]: 'Callout',
+    [COMPONENT_TYPES.STATEMENT]: 'Statement',
+    [COMPONENT_TYPES.QUOTE]: 'Quote',
+    [COMPONENT_TYPES.LIST]: 'List',
+    [COMPONENT_TYPES.GALLERY]: 'Gallery',
+    [COMPONENT_TYPES.MULTIMEDIA]: 'Multimedia',
+    [COMPONENT_TYPES.CHART]: 'Chart',
+    [COMPONENT_TYPES.DIVIDER]: 'Divider',
   };
   return names[type] || 'Unknown';
 }
@@ -308,6 +358,13 @@ export function getComponentTypeIcon(type: number): string {
     [COMPONENT_TYPES.QUIZ]: 'Q',
     [COMPONENT_TYPES.CODE]: '<>',
     [COMPONENT_TYPES.CALLOUT]: '!',
+    [COMPONENT_TYPES.STATEMENT]: '*',
+    [COMPONENT_TYPES.QUOTE]: '"',
+    [COMPONENT_TYPES.LIST]: '=',
+    [COMPONENT_TYPES.GALLERY]: 'G',
+    [COMPONENT_TYPES.MULTIMEDIA]: 'M',
+    [COMPONENT_TYPES.CHART]: 'C',
+    [COMPONENT_TYPES.DIVIDER]: '-',
   };
   return icons[type] || '?';
 }

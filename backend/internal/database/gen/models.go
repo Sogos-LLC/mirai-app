@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type AiProvider string
@@ -278,6 +279,97 @@ func (ns NullGenerationJobType) Value() (driver.Value, error) {
 	return string(ns.GenerationJobType), nil
 }
 
+type KnowledgeSourceStatus string
+
+const (
+	KnowledgeSourceStatusPending    KnowledgeSourceStatus = "pending"
+	KnowledgeSourceStatusProcessing KnowledgeSourceStatus = "processing"
+	KnowledgeSourceStatusReady      KnowledgeSourceStatus = "ready"
+	KnowledgeSourceStatusFailed     KnowledgeSourceStatus = "failed"
+)
+
+func (e *KnowledgeSourceStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = KnowledgeSourceStatus(s)
+	case string:
+		*e = KnowledgeSourceStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for KnowledgeSourceStatus: %T", src)
+	}
+	return nil
+}
+
+type NullKnowledgeSourceStatus struct {
+	KnowledgeSourceStatus KnowledgeSourceStatus `json:"knowledge_source_status"`
+	Valid                 bool                  `json:"valid"` // Valid is true if KnowledgeSourceStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullKnowledgeSourceStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.KnowledgeSourceStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.KnowledgeSourceStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullKnowledgeSourceStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.KnowledgeSourceStatus), nil
+}
+
+type KnowledgeSourceType string
+
+const (
+	KnowledgeSourceTypeFileUpload   KnowledgeSourceType = "file_upload"
+	KnowledgeSourceTypeGoogleDrive  KnowledgeSourceType = "google_drive"
+	KnowledgeSourceTypeOnedrive     KnowledgeSourceType = "onedrive"
+	KnowledgeSourceTypeS3           KnowledgeSourceType = "s3"
+	KnowledgeSourceTypeGoogleSheets KnowledgeSourceType = "google_sheets"
+	KnowledgeSourceTypeMicrosoft365 KnowledgeSourceType = "microsoft_365"
+	KnowledgeSourceTypeUrl          KnowledgeSourceType = "url"
+)
+
+func (e *KnowledgeSourceType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = KnowledgeSourceType(s)
+	case string:
+		*e = KnowledgeSourceType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for KnowledgeSourceType: %T", src)
+	}
+	return nil
+}
+
+type NullKnowledgeSourceType struct {
+	KnowledgeSourceType KnowledgeSourceType `json:"knowledge_source_type"`
+	Valid               bool                `json:"valid"` // Valid is true if KnowledgeSourceType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullKnowledgeSourceType) Scan(value interface{}) error {
+	if value == nil {
+		ns.KnowledgeSourceType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.KnowledgeSourceType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullKnowledgeSourceType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.KnowledgeSourceType), nil
+}
+
 type NotificationPriority string
 
 const (
@@ -523,6 +615,33 @@ type Invitation struct {
 	UpdatedAt        time.Time     `db:"updated_at" json:"updated_at"`
 }
 
+// Knowledge sources for RAG-enhanced course generation
+type KnowledgeSource struct {
+	ID       uuid.UUID             `db:"id" json:"id"`
+	TenantID uuid.UUID             `db:"tenant_id" json:"tenant_id"`
+	CourseID uuid.NullUUID         `db:"course_id" json:"course_id"`
+	Type     KnowledgeSourceType   `db:"type" json:"type"`
+	Status   KnowledgeSourceStatus `db:"status" json:"status"`
+	Name     string                `db:"name" json:"name"`
+	// MinIO path for uploaded files
+	FilePath      sql.NullString `db:"file_path" json:"file_path"`
+	MimeType      sql.NullString `db:"mime_type" json:"mime_type"`
+	FileSizeBytes sql.NullInt64  `db:"file_size_bytes" json:"file_size_bytes"`
+	// Number of text chunks in vector store
+	ChunkCount   sql.NullInt32  `db:"chunk_count" json:"chunk_count"`
+	ErrorMessage sql.NullString `db:"error_message" json:"error_message"`
+	// Detected video URLs for multimedia components
+	VideoUrls   pqtype.NullRawMessage `db:"video_urls" json:"video_urls"`
+	CreatedAt   time.Time             `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time             `db:"updated_at" json:"updated_at"`
+	ProcessedAt **time.Time           `db:"processed_at" json:"processed_at"`
+	SessionID   sql.NullString        `db:"session_id" json:"session_id"`
+	Summary     sql.NullString        `db:"summary" json:"summary"`
+	TokenCount  sql.NullInt32         `db:"token_count" json:"token_count"`
+	// Structured index of document contents: main_topics, key_concepts, estimated_lesson_count. Used by AI for course planning.
+	DocumentIndex pqtype.NullRawMessage `db:"document_index" json:"document_index"`
+}
+
 type Lesson struct {
 	ID                       uuid.UUID      `db:"id" json:"id"`
 	TenantID                 uuid.UUID      `db:"tenant_id" json:"tenant_id"`
@@ -628,13 +747,14 @@ type TenantAiSetting struct {
 }
 
 type User struct {
-	ID        uuid.UUID     `db:"id" json:"id"`
-	TenantID  uuid.UUID     `db:"tenant_id" json:"tenant_id"`
-	KratosID  uuid.UUID     `db:"kratos_id" json:"kratos_id"`
-	CompanyID uuid.NullUUID `db:"company_id" json:"company_id"`
-	Role      string        `db:"role" json:"role"`
-	CreatedAt time.Time     `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time     `db:"updated_at" json:"updated_at"`
+	ID           uuid.UUID      `db:"id" json:"id"`
+	TenantID     uuid.UUID      `db:"tenant_id" json:"tenant_id"`
+	KratosID     uuid.UUID      `db:"kratos_id" json:"kratos_id"`
+	CompanyID    uuid.NullUUID  `db:"company_id" json:"company_id"`
+	Role         string         `db:"role" json:"role"`
+	CreatedAt    time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time      `db:"updated_at" json:"updated_at"`
+	CrmContactID sql.NullString `db:"crm_contact_id" json:"crm_contact_id"`
 }
 
 // Stores wizard progress for course creation, allowing users to resume later

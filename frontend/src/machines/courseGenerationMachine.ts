@@ -5,7 +5,7 @@ import type {
   OutlineSection,
   GeneratedLesson,
   GenerationJobStatus,
-} from '@/gen/mirai/v1/ai_generation_pb';
+} from '@/gen/mirai/v1/ai_generation_types_pb';
 import { courseGenerationTelemetry, emitTelemetry, LMS_TELEMETRY } from './shared/telemetry';
 import { NetworkError, createAuthError, type AuthError } from './shared/types';
 

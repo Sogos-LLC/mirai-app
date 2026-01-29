@@ -7,6 +7,7 @@ import { useUIStore } from '@/store/zustand';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
+import { FeedbackButton, FeedbackModal } from '@/components/feedback';
 import {
   useUnreadCount,
   useListNotifications,
@@ -63,8 +64,11 @@ export default function Header({ title }: HeaderProps) {
           </span>
         </div>
 
-        {/* Notifications & Profile */}
+        {/* Feedback, Notifications & Profile */}
         <div className="flex items-center gap-2">
+          {/* Feedback Button */}
+          <FeedbackButton />
+
           {/* Notification Bell with Panel (active jobs shown inside panel) */}
           <div className="relative">
             <NotificationBell unreadCount={unreadCount} />
@@ -86,6 +90,9 @@ export default function Header({ title }: HeaderProps) {
           <ProfileDropdown isProtectedPage />
         </div>
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal />
     </header>
   );
 }

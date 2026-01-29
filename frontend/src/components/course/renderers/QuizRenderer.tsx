@@ -1,19 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-interface QuizOption {
-  id: string;
-  text: string;
-}
-
-interface QuizContent {
-  question: string;
-  questionType: string;
-  options: QuizOption[];
-  correctAnswerId: string;
-  explanation: string;
-}
+import type { QuizContent, QuizOption } from '@/gen/mirai/v1/component_content_zod';
 
 interface QuizRendererProps {
   content: QuizContent;
@@ -29,7 +17,7 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
   const handleSubmit = () => {
     if (selectedOption) {
       setShowFeedback(true);
-      const isCorrect = selectedOption === content.correctAnswerId;
+      const isCorrect = selectedOption === content.quizCorrectAnswerId;
       onAnswer?.(selectedOption, isCorrect);
     }
   };
@@ -39,7 +27,7 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
     setShowFeedback(false);
   };
 
-  const isCorrect = selectedOption === content.correctAnswerId;
+  const isCorrect = selectedOption === content.quizCorrectAnswerId;
 
   if (isEditing && onEdit) {
     return (
@@ -47,8 +35,8 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Question</label>
           <textarea
-            value={content.question}
-            onChange={(e) => onEdit({ ...content, question: e.target.value })}
+            value={content.quizQuestion}
+            onChange={(e) => onEdit({ ...content, quizQuestion: e.target.value })}
             className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
             rows={2}
             placeholder="Enter your question..."
@@ -56,27 +44,15 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Question Type</label>
-          <select
-            value={content.questionType}
-            onChange={(e) => onEdit({ ...content, questionType: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="multiple_choice">Multiple Choice</option>
-            <option value="true_false">True/False</option>
-          </select>
-        </div>
-
-        <div>
           <label className="block text-xs font-medium text-gray-500 mb-2">Answer Options</label>
           <div className="space-y-2">
-            {content.options.map((option, index) => (
+            {content.quizOptions.map((option, index) => (
               <div key={option.id} className="flex items-center gap-2">
                 <input
                   type="radio"
                   name="correctAnswer"
-                  checked={content.correctAnswerId === option.id}
-                  onChange={() => onEdit({ ...content, correctAnswerId: option.id })}
+                  checked={content.quizCorrectAnswerId === option.id}
+                  onChange={() => onEdit({ ...content, quizCorrectAnswerId: option.id })}
                   className="h-4 w-4 text-green-600"
                   title="Mark as correct answer"
                 />
@@ -84,25 +60,25 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
                   type="text"
                   value={option.text}
                   onChange={(e) => {
-                    const newOptions = [...content.options];
+                    const newOptions = [...content.quizOptions];
                     newOptions[index] = { ...option, text: e.target.value };
-                    onEdit({ ...content, options: newOptions });
+                    onEdit({ ...content, quizOptions: newOptions });
                   }}
                   className="flex-1 px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder={`Option ${index + 1}`}
                 />
-                {content.options.length > 2 && (
+                {content.quizOptions.length > 2 && (
                   <button
                     type="button"
                     onClick={() => {
-                      const newOptions = content.options.filter((_, i) => i !== index);
+                      const newOptions = content.quizOptions.filter((_, i) => i !== index);
                       onEdit({
                         ...content,
-                        options: newOptions,
-                        correctAnswerId:
-                          content.correctAnswerId === option.id
+                        quizOptions: newOptions,
+                        quizCorrectAnswerId:
+                          content.quizCorrectAnswerId === option.id
                             ? newOptions[0]?.id || ''
-                            : content.correctAnswerId,
+                            : content.quizCorrectAnswerId,
                       });
                     }}
                     className="p-1 text-red-500 hover:text-red-700"
@@ -120,7 +96,7 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
                 const newId = `option_${Date.now()}`;
                 onEdit({
                   ...content,
-                  options: [...content.options, { id: newId, text: '' }],
+                  quizOptions: [...content.quizOptions, { id: newId, text: '' }],
                 });
               }}
               className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
@@ -137,8 +113,8 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Explanation</label>
           <textarea
-            value={content.explanation}
-            onChange={(e) => onEdit({ ...content, explanation: e.target.value })}
+            value={content.quizExplanation}
+            onChange={(e) => onEdit({ ...content, quizExplanation: e.target.value })}
             className="w-full px-3 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
             rows={2}
             placeholder="Explain why the answer is correct..."
@@ -161,13 +137,13 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
 
       {/* Question */}
       <div className="p-4">
-        <p className="text-gray-900 font-medium mb-4">{content.question}</p>
+        <p className="text-gray-900 font-medium mb-4">{content.quizQuestion}</p>
 
         {/* Options */}
         <div className="space-y-2">
-          {content.options.map((option) => {
+          {content.quizOptions.map((option) => {
             const isSelected = selectedOption === option.id;
-            const isCorrectOption = option.id === content.correctAnswerId;
+            const isCorrectOption = option.id === content.quizCorrectAnswerId;
 
             let optionStyle = 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50';
             if (showFeedback) {
@@ -220,7 +196,7 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
             <p className={`font-medium ${isCorrect ? 'text-green-800' : 'text-amber-800'}`}>
               {isCorrect ? 'Correct!' : 'Not quite right.'}
             </p>
-            <p className="mt-2 text-sm text-gray-700">{content.explanation}</p>
+            <p className="mt-2 text-sm text-gray-700">{content.quizExplanation}</p>
           </div>
         )}
 
