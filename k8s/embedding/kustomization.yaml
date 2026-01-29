@@ -4,3 +4,7 @@ kind: Kustomization
 resources:
 - deployment.yaml
 - service.yaml
+images:
+- name: ghcr.io/sogos-llc/mirai-app/embedding-service
+  newName: ghcr.io/sogos-llc/mirai-app/embedding-service
+  newTag: 213a967
