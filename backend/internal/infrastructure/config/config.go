@@ -70,6 +70,10 @@ type Config struct {
 	// RAG/Knowledge Infrastructure
 	QdrantURL    string // Qdrant vector database URL (e.g., "http://qdrant:6333")
 	EmbeddingURL string // Embedding service URL (e.g., "http://embedding-service:8080")
+
+	// Twenty CRM
+	TwentyAPIURL string // Twenty CRM URL (e.g., "https://crm.sogos.io")
+	TwentyAPIKey string // Twenty CRM API key
 }
 
 // Load loads configuration from environment variables with environment-aware validation.
@@ -140,6 +144,9 @@ func Load() (*Config, error) {
 		// RAG/Knowledge Infrastructure
 		QdrantURL:    getEnv("QDRANT_URL", ""),
 		EmbeddingURL: getEnv("EMBEDDING_URL", ""),
+		// Twenty CRM
+		TwentyAPIURL: getEnv("TWENTY_API_URL", ""),
+		TwentyAPIKey: getEnv("TWENTY_API_KEY", ""),
 	}
 
 	// Step 4: Validate configuration matches the detected environment

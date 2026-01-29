@@ -28,6 +28,8 @@ func NewServer(
 	exportService *appservice.CourseExportService,
 	workerClient *Client,
 	logger domainservice.Logger,
+	crmProvider domainservice.CRMProvider,
+	userRepo UserCRMRepository,
 ) *Server {
 	// Configure the Asynq server
 	server := asynq.NewServer(
@@ -67,6 +69,8 @@ func NewServer(
 		exportService,
 		workerClient,
 		logger,
+		crmProvider,
+		userRepo,
 	)
 
 	// Create and configure the mux
@@ -78,6 +82,7 @@ func NewServer(
 	mux.HandleFunc(worker.TypeAIGenerationPoll, handlers.HandleAIGenerationPoll)
 	mux.HandleFunc(worker.TypeCourseExport, handlers.HandleCourseExport)
 	mux.HandleFunc(worker.TypeCourseExportPoll, handlers.HandleCourseExportPoll)
+	mux.HandleFunc(worker.TypeFeedbackSync, handlers.HandleFeedbackSync)
 
 	return &Server{
 		server:    server,

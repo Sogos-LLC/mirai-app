@@ -161,6 +161,15 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 		mux.Handle(path, handler)
 	}
 
+	// FeedbackService - user feedback collection
+	if cfg.UserService != nil && cfg.WorkerClient != nil {
+		path, handler = miraiv1connect.NewFeedbackServiceHandler(
+			NewFeedbackServiceServer(cfg.UserService, cfg.WorkerClient),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
 	// Add webhook handler (no interceptors - Stripe handles its own auth)
 	webhookHandler := NewWebhookHandler(cfg.BillingService, cfg.PendingRegRepo, cfg.Payments, cfg.WorkerClient, cfg.Logger)
 	mux.HandleFunc("/api/v1/billing/webhook", webhookHandler.HandleStripeWebhook)

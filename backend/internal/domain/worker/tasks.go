@@ -15,6 +15,7 @@ const (
 	TypeAIGenerationPoll = "ai:generation:poll" // Scheduled polling task
 	TypeCourseExport     = "course:export"
 	TypeCourseExportPoll = "course:export:poll" // Scheduled polling task
+	TypeFeedbackSync     = "feedback:sync"      // Sync feedback to CRM
 )
 
 // Queue names for priority handling
@@ -41,6 +42,17 @@ type AIGenerationPayload struct {
 type CourseExportPayload struct {
 	ExportID string `json:"export_id"`
 	TenantID string `json:"tenant_id"`
+}
+
+// FeedbackSyncPayload contains data for syncing feedback to CRM
+type FeedbackSyncPayload struct {
+	UserID       string `json:"user_id"`
+	UserEmail    string `json:"user_email"`
+	UserName     string `json:"user_name"`
+	FeedbackType string `json:"feedback_type"` // bug_report, feature_request, general
+	Message      string `json:"message"`
+	PageURL      string `json:"page_url"`
+	UserAgent    string `json:"user_agent"`
 }
 
 // NewStripeProvisionTask creates a new Stripe provisioning task
@@ -98,4 +110,13 @@ func NewCourseExportTask(exportID, tenantID string) (*asynq.Task, error) {
 // NewCourseExportPollTask creates a new course export polling task (scheduled)
 func NewCourseExportPollTask() *asynq.Task {
 	return asynq.NewTask(TypeCourseExportPoll, nil, asynq.Queue(QueueDefault), asynq.MaxRetry(1))
+}
+
+// NewFeedbackSyncTask creates a new feedback sync task
+func NewFeedbackSyncTask(payload FeedbackSyncPayload) (*asynq.Task, error) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TypeFeedbackSync, data, asynq.Queue(QueueDefault), asynq.MaxRetry(5)), nil
 }

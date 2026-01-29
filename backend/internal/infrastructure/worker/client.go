@@ -105,3 +105,30 @@ func (c *Client) EnqueueCourseExport(exportID, tenantID string) error {
 	)
 	return nil
 }
+
+// EnqueueFeedbackSync enqueues a feedback sync task.
+func (c *Client) EnqueueFeedbackSync(payload worker.FeedbackSyncPayload) error {
+	task, err := worker.NewFeedbackSyncTask(payload)
+	if err != nil {
+		c.logger.Error("failed to create feedback sync task", "error", err)
+		return err
+	}
+
+	info, err := c.client.Enqueue(task)
+	if err != nil {
+		c.logger.Error("failed to enqueue feedback sync task",
+			"userID", payload.UserID,
+			"feedbackType", payload.FeedbackType,
+			"error", err,
+		)
+		return err
+	}
+
+	c.logger.Info("enqueued feedback sync task",
+		"taskID", info.ID,
+		"queue", info.Queue,
+		"userID", payload.UserID,
+		"feedbackType", payload.FeedbackType,
+	)
+	return nil
+}

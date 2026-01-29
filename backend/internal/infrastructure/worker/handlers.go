@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
@@ -22,6 +23,14 @@ type Handlers struct {
 	exportService       *appservice.CourseExportService
 	workerClient        *Client
 	logger              domainservice.Logger
+	crmProvider         domainservice.CRMProvider
+	userRepo            UserCRMRepository
+}
+
+// UserCRMRepository is a subset of UserRepository for CRM operations.
+type UserCRMRepository interface {
+	GetCRMContactID(ctx context.Context, id uuid.UUID) (string, error)
+	UpdateCRMContactID(ctx context.Context, id uuid.UUID, crmContactID string) error
 }
 
 // NewHandlers creates a new Handlers instance with all required services.
@@ -32,6 +41,8 @@ func NewHandlers(
 	exportService *appservice.CourseExportService,
 	workerClient *Client,
 	logger domainservice.Logger,
+	crmProvider domainservice.CRMProvider,
+	userRepo UserCRMRepository,
 ) *Handlers {
 	return &Handlers{
 		provisioningService: provisioningService,
@@ -40,6 +51,8 @@ func NewHandlers(
 		exportService:       exportService,
 		workerClient:        workerClient,
 		logger:              logger,
+		crmProvider:         crmProvider,
+		userRepo:            userRepo,
 	}
 }
 
@@ -269,4 +282,83 @@ func parseUUID(s string) uuid.UUID {
 		return uuid.Nil
 	}
 	return id
+}
+
+// HandleFeedbackSync processes a feedback sync task.
+// This syncs feedback to the CRM, creating the user contact if needed.
+func (h *Handlers) HandleFeedbackSync(ctx context.Context, t *asynq.Task) error {
+	var payload worker.FeedbackSyncPayload
+	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		return fmt.Errorf("failed to unmarshal payload: %w", asynq.SkipRetry)
+	}
+
+	log := h.logger.With(
+		"task", worker.TypeFeedbackSync,
+		"userID", payload.UserID,
+		"feedbackType", payload.FeedbackType,
+	)
+	log.Info("processing feedback sync task")
+
+	// Skip if CRM provider is not configured
+	if h.crmProvider == nil {
+		log.Warn("CRM provider not configured, skipping feedback sync")
+		return nil
+	}
+
+	// Use superadmin context for cross-tenant operations
+	adminCtx := tenant.WithSuperAdmin(ctx, true)
+
+	// Get user's CRM contact ID from DB
+	userID := parseUUID(payload.UserID)
+	crmContactID, err := h.userRepo.GetCRMContactID(adminCtx, userID)
+	if err != nil {
+		log.Error("failed to get CRM contact ID", "error", err)
+		return err
+	}
+
+	// If no CRM contact ID, create/find the contact in CRM
+	if crmContactID == "" {
+		// Parse name into first/last
+		firstName, lastName := splitName(payload.UserName)
+
+		crmContactID, err = h.crmProvider.FindOrCreateContact(ctx, payload.UserEmail, firstName, lastName)
+		if err != nil {
+			log.Error("failed to find/create CRM contact", "error", err)
+			return err
+		}
+
+		// Cache the CRM contact ID
+		if err := h.userRepo.UpdateCRMContactID(adminCtx, userID, crmContactID); err != nil {
+			log.Warn("failed to cache CRM contact ID", "error", err)
+			// Continue anyway - we have the ID for this request
+		}
+
+		log.Info("created CRM contact", "crmContactID", crmContactID)
+	}
+
+	// Create the feedback note in CRM
+	err = h.crmProvider.CreateFeedbackNote(ctx, domainservice.CreateFeedbackNoteRequest{
+		ContactID:    crmContactID,
+		FeedbackType: payload.FeedbackType,
+		Message:      payload.Message,
+		PageURL:      payload.PageURL,
+		UserAgent:    payload.UserAgent,
+	})
+	if err != nil {
+		log.Error("failed to create feedback note in CRM", "error", err)
+		return err
+	}
+
+	log.Info("feedback synced to CRM successfully", "crmContactID", crmContactID)
+	return nil
+}
+
+// splitName splits a full name into first and last name.
+func splitName(name string) (firstName, lastName string) {
+	parts := strings.SplitN(strings.TrimSpace(name), " ", 2)
+	firstName = parts[0]
+	if len(parts) > 1 {
+		lastName = parts[1]
+	}
+	return
 }

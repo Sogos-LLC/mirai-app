@@ -7,6 +7,7 @@ package gen
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -15,7 +16,7 @@ const createUser = `-- name: CreateUser :one
 
 INSERT INTO users (tenant_id, kratos_id, company_id, role)
 VALUES ($1, $2, $3, $4)
-RETURNING id, tenant_id, kratos_id, company_id, role, created_at, updated_at
+RETURNING id, tenant_id, kratos_id, company_id, role, created_at, updated_at, crm_contact_id
 `
 
 type CreateUserParams struct {
@@ -43,12 +44,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CrmContactID,
 	)
 	return i, err
 }
 
 const getOwnerByCompanyID = `-- name: GetOwnerByCompanyID :one
-SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at FROM users
+SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at, crm_contact_id FROM users
 WHERE company_id = $1 AND role = 'admin'
 LIMIT 1
 `
@@ -65,12 +67,13 @@ func (q *Queries) GetOwnerByCompanyID(ctx context.Context, companyID uuid.NullUU
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CrmContactID,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at FROM users WHERE id = $1
+SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at, crm_contact_id FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -84,12 +87,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CrmContactID,
 	)
 	return i, err
 }
 
 const getUserByKratosID = `-- name: GetUserByKratosID :one
-SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at FROM users WHERE kratos_id = $1
+SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at, crm_contact_id FROM users WHERE kratos_id = $1
 `
 
 func (q *Queries) GetUserByKratosID(ctx context.Context, kratosID uuid.UUID) (User, error) {
@@ -103,12 +107,24 @@ func (q *Queries) GetUserByKratosID(ctx context.Context, kratosID uuid.UUID) (Us
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CrmContactID,
 	)
 	return i, err
 }
 
+const getUserCRMContactID = `-- name: GetUserCRMContactID :one
+SELECT crm_contact_id FROM users WHERE id = $1
+`
+
+func (q *Queries) GetUserCRMContactID(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getUserCRMContactID, id)
+	var crm_contact_id sql.NullString
+	err := row.Scan(&crm_contact_id)
+	return crm_contact_id, err
+}
+
 const listUsersByCompanyID = `-- name: ListUsersByCompanyID :many
-SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at FROM users
+SELECT id, tenant_id, kratos_id, company_id, role, created_at, updated_at, crm_contact_id FROM users
 WHERE company_id = $1
 ORDER BY created_at DESC
 `
@@ -130,6 +146,7 @@ func (q *Queries) ListUsersByCompanyID(ctx context.Context, companyID uuid.NullU
 			&i.Role,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.CrmContactID,
 		); err != nil {
 			return nil, err
 		}
@@ -148,7 +165,7 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET company_id = $1, role = $2, updated_at = NOW()
 WHERE id = $3
-RETURNING id, tenant_id, kratos_id, company_id, role, created_at, updated_at
+RETURNING id, tenant_id, kratos_id, company_id, role, created_at, updated_at, crm_contact_id
 `
 
 type UpdateUserParams struct {
@@ -168,6 +185,21 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CrmContactID,
 	)
 	return i, err
+}
+
+const updateUserCRMContactID = `-- name: UpdateUserCRMContactID :exec
+UPDATE users SET crm_contact_id = $1, updated_at = NOW() WHERE id = $2
+`
+
+type UpdateUserCRMContactIDParams struct {
+	CrmContactID sql.NullString `db:"crm_contact_id" json:"crm_contact_id"`
+	ID           uuid.UUID      `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateUserCRMContactID(ctx context.Context, arg UpdateUserCRMContactIDParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserCRMContactID, arg.CrmContactID, arg.ID)
+	return err
 }

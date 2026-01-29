@@ -747,13 +747,14 @@ type TenantAiSetting struct {
 }
 
 type User struct {
-	ID        uuid.UUID     `db:"id" json:"id"`
-	TenantID  uuid.UUID     `db:"tenant_id" json:"tenant_id"`
-	KratosID  uuid.UUID     `db:"kratos_id" json:"kratos_id"`
-	CompanyID uuid.NullUUID `db:"company_id" json:"company_id"`
-	Role      string        `db:"role" json:"role"`
-	CreatedAt time.Time     `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time     `db:"updated_at" json:"updated_at"`
+	ID           uuid.UUID      `db:"id" json:"id"`
+	TenantID     uuid.UUID      `db:"tenant_id" json:"tenant_id"`
+	KratosID     uuid.UUID      `db:"kratos_id" json:"kratos_id"`
+	CompanyID    uuid.NullUUID  `db:"company_id" json:"company_id"`
+	Role         string         `db:"role" json:"role"`
+	CreatedAt    time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time      `db:"updated_at" json:"updated_at"`
+	CrmContactID sql.NullString `db:"crm_contact_id" json:"crm_contact_id"`
 }
 
 // Stores wizard progress for course creation, allowing users to resume later
