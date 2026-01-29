@@ -46,6 +46,12 @@ type UserRepository interface {
 
 	// Update updates a user.
 	Update(ctx context.Context, user *entity.User) error
+
+	// GetCRMContactID retrieves the CRM contact ID for a user.
+	GetCRMContactID(ctx context.Context, id uuid.UUID) (string, error)
+
+	// UpdateCRMContactID updates the CRM contact ID for a user.
+	UpdateCRMContactID(ctx context.Context, id uuid.UUID, crmContactID string) error
 }
 
 // CompanyRepository defines the interface for company data access.

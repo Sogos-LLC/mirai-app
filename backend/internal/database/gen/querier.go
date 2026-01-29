@@ -132,6 +132,7 @@ type Querier interface {
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByKratosID(ctx context.Context, kratosID uuid.UUID) (User, error)
+	GetUserCRMContactID(ctx context.Context, id uuid.UUID) (sql.NullString, error)
 	// Wizard state CRUD operations
 	// Schema: wizard_states table with RLS isolation by tenant_id
 	// Each user can have only one active wizard state at a time
@@ -190,6 +191,7 @@ type Querier interface {
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateTenantAISettings(ctx context.Context, arg UpdateTenantAISettingsParams) (TenantAiSetting, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserCRMContactID(ctx context.Context, arg UpdateUserCRMContactIDParams) error
 	// Updates an existing wizard state
 	UpdateWizardState(ctx context.Context, arg UpdateWizardStateParams) (WizardState, error)
 	// Creates or updates wizard state for a user

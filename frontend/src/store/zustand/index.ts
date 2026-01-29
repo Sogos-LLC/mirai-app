@@ -161,6 +161,15 @@ interface UIStore {
   resetApiKeyTest: () => void;
   toggleUsageExpanded: () => void;
   setUsageTimeRange: (range: UsageTimeRange) => void;
+
+  // Feedback state
+  feedback: {
+    isModalOpen: boolean;
+  };
+
+  // Feedback actions
+  openFeedbackModal: () => void;
+  closeFeedbackModal: () => void;
 }
 
 // ============================================================================
@@ -217,6 +226,10 @@ const initialTenantSettingsState: UIStore['tenantSettings'] = {
   apiKeyTestError: null,
   isUsageExpanded: false,
   usageTimeRange: '30d',
+};
+
+const initialFeedbackState: UIStore['feedback'] = {
+  isModalOpen: false,
 };
 
 // ============================================================================
@@ -513,6 +526,18 @@ export const useUIStore = create<UIStore>()(
       setUsageTimeRange: (range) => set((state) => ({
         tenantSettings: { ...state.tenantSettings, usageTimeRange: range }
       })),
+
+      // ========================================
+      // Feedback State & Actions
+      // ========================================
+      feedback: initialFeedbackState,
+
+      openFeedbackModal: () => set((state) => ({
+        feedback: { ...state.feedback, isModalOpen: true }
+      })),
+      closeFeedbackModal: () => set((state) => ({
+        feedback: { ...state.feedback, isModalOpen: false }
+      })),
     }),
     { name: 'ui-store' }
   )
@@ -548,3 +573,7 @@ export const useIsGenerating = () => useUIStore((s) => s.aiGeneration.isGenerati
 
 // Tenant Settings selectors
 export const useTenantSettingsState = () => useUIStore((s) => s.tenantSettings);
+
+// Feedback selectors
+export const useFeedbackState = () => useUIStore((s) => s.feedback);
+export const useFeedbackModalOpen = () => useUIStore((s) => s.feedback.isModalOpen);

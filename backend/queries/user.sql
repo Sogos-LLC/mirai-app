@@ -28,3 +28,9 @@ UPDATE users
 SET company_id = $1, role = $2, updated_at = NOW()
 WHERE id = $3
 RETURNING *;
+
+-- name: GetUserCRMContactID :one
+SELECT crm_contact_id FROM users WHERE id = $1;
+
+-- name: UpdateUserCRMContactID :exec
+UPDATE users SET crm_contact_id = $1, updated_at = NOW() WHERE id = $2;
