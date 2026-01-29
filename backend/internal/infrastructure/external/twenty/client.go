@@ -61,8 +61,12 @@ func (c *Client) CreateFeedback(ctx context.Context, req service.CreateFeedbackR
 		}
 	`
 
+	// Generate a meaningful name from category and content preview
+	name := generateFeedbackName(req.Category, req.Content)
+
 	variables := map[string]any{
 		"input": map[string]any{
+			"name":        name,
 			"personId":    req.PersonID,
 			"category":    req.Category,
 			"content":     req.Content,
@@ -233,4 +237,28 @@ func (c *Client) executeGraphQL(ctx context.Context, query string, variables map
 // graphQLError represents a GraphQL error response.
 type graphQLError struct {
 	Message string `json:"message"`
+}
+
+// generateFeedbackName creates a display name from category and content.
+func generateFeedbackName(category, content string) string {
+	// Map category to readable label
+	label := "Feedback"
+	switch category {
+	case "BUG":
+		label = "Bug Report"
+	case "FEATURE_REQUEST":
+		label = "Feature Request"
+	case "GENERAL":
+		label = "General Feedback"
+	case "COMPLAINT":
+		label = "Complaint"
+	}
+
+	// Truncate content to first 40 chars for preview
+	preview := content
+	if len(preview) > 40 {
+		preview = preview[:40] + "..."
+	}
+
+	return fmt.Sprintf("%s: %s", label, preview)
 }
