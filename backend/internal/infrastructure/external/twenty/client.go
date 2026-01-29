@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -80,6 +81,7 @@ func (c *Client) createFeedbackRecord(ctx context.Context, req service.CreateFee
 	`
 
 	name := generateFeedbackName(req.Category, req.Content)
+	source := extractHost(req.PagePath)
 
 	variables := map[string]any{
 		"input": map[string]any{
@@ -92,6 +94,7 @@ func (c *Client) createFeedbackRecord(ctx context.Context, req service.CreateFee
 			"appVersion":  req.AppVersion,
 			"userAgent":   req.UserAgent,
 			"status":      "NEW",
+			"source":      source,
 		},
 	}
 
@@ -360,4 +363,16 @@ func generateFeedbackName(category, content string) string {
 	}
 
 	return fmt.Sprintf("%s: %s", label, preview)
+}
+
+// extractHost extracts the host (subdomain) from a URL string.
+func extractHost(pagePath string) string {
+	if pagePath == "" {
+		return ""
+	}
+	parsed, err := url.Parse(pagePath)
+	if err != nil {
+		return pagePath // Return as-is if parsing fails
+	}
+	return parsed.Host
 }
