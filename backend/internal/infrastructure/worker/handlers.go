@@ -336,16 +336,18 @@ func (h *Handlers) HandleFeedbackSync(ctx context.Context, t *asynq.Task) error 
 		log.Info("created CRM contact", "crmContactID", crmContactID)
 	}
 
-	// Create the feedback note in CRM
-	err = h.crmProvider.CreateFeedbackNote(ctx, domainservice.CreateFeedbackNoteRequest{
-		ContactID:    crmContactID,
-		FeedbackType: payload.FeedbackType,
-		Message:      payload.Message,
-		PageURL:      payload.PageURL,
-		UserAgent:    payload.UserAgent,
+	// Create the Feedback custom object in CRM
+	err = h.crmProvider.CreateFeedback(ctx, domainservice.CreateFeedbackRequest{
+		PersonID:    crmContactID,
+		Category:    feedbackTypeToCategory(payload.FeedbackType),
+		Content:     payload.Message,
+		PagePath:    payload.PageURL,
+		FeatureArea: "", // Could be derived from PageURL in future
+		AppVersion:  "", // Could be passed from frontend in future
+		UserAgent:   payload.UserAgent,
 	})
 	if err != nil {
-		log.Error("failed to create feedback note in CRM", "error", err)
+		log.Error("failed to create feedback in CRM", "error", err)
 		return err
 	}
 
@@ -361,4 +363,18 @@ func splitName(name string) (firstName, lastName string) {
 		lastName = parts[1]
 	}
 	return
+}
+
+// feedbackTypeToCategory converts feedback type to Twenty CRM category enum.
+func feedbackTypeToCategory(feedbackType string) string {
+	switch feedbackType {
+	case "bug_report":
+		return "BUG"
+	case "feature_request":
+		return "FEATURE_REQUEST"
+	case "complaint":
+		return "COMPLAINT"
+	default:
+		return "GENERAL"
+	}
 }
