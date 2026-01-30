@@ -62,9 +62,12 @@ func (c *Client) CreateFeedback(ctx context.Context, req service.CreateFeedbackR
 	}
 
 	// Step 2: Create a Note with the content and link it to the Feedback
+	// Note: We intentionally don't return an error here because the feedback
+	// was already created successfully. Returning an error would cause asynq
+	// to retry the task, which would create duplicate feedback records.
 	if err := c.createNoteForFeedback(ctx, feedbackID, req.Category, req.Content); err != nil {
-		// Log but don't fail - the feedback was created successfully
-		return fmt.Errorf("feedback created but failed to create note: %w", err)
+		// Log the error but don't fail the task - feedback was created successfully
+		fmt.Printf("warning: failed to create note for feedback %s: %v\n", feedbackID, err)
 	}
 
 	return nil
@@ -131,16 +134,17 @@ func (c *Client) createNoteForFeedback(ctx context.Context, feedbackID, category
 
 	noteTitle := generateFeedbackName(category, content)
 
+	// Twenty CRM expects blocknote as a JSON string, not a nested object
+	blocknoteJSON := fmt.Sprintf(`[{"id":"%s","type":"paragraph","props":{"textColor":"default","backgroundColor":"default","textAlignment":"left"},"content":[{"type":"text","text":%s,"styles":{}}],"children":[]}]`,
+		feedbackID, // Use feedbackID as a unique block ID
+		jsonEscapeString(content),
+	)
+
 	noteVariables := map[string]any{
 		"input": map[string]any{
 			"title": noteTitle,
 			"bodyV2": map[string]any{
-				"blocknote": []map[string]any{
-					{
-						"type":    "paragraph",
-						"content": content,
-					},
-				},
+				"blocknote": blocknoteJSON,
 			},
 		},
 	}
@@ -375,4 +379,14 @@ func extractHost(pagePath string) string {
 		return pagePath // Return as-is if parsing fails
 	}
 	return parsed.Host
+}
+
+// jsonEscapeString properly escapes a string for embedding in JSON.
+func jsonEscapeString(s string) string {
+	b, err := json.Marshal(s)
+	if err != nil {
+		// Fallback: basic escaping
+		return `"` + strings.ReplaceAll(strings.ReplaceAll(s, `\`, `\\`), `"`, `\"`) + `"`
+	}
+	return string(b)
 }
