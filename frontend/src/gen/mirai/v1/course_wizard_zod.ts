@@ -92,6 +92,23 @@ export const KnowledgeCitationSchema = z.object({
 export type KnowledgeCitation = z.infer<typeof KnowledgeCitationSchema>;
 
 /**
+ * Zod schema for GroundingInfo
+ * @generated from message mirai.v1.GroundingInfo
+ */
+export const GroundingInfoSchema = z.object({
+  score: z.number(),
+  courseTokens: z.number().int(),
+  teamTokens: z.number().int(),
+  globalTokens: z.number().int(),
+  ungroundedTokens: z.number().int(),
+  totalTokens: z.number().int(),
+  sourceCount: z.number().int(),
+  level: z.string(),
+});
+
+export type GroundingInfo = z.infer<typeof GroundingInfoSchema>;
+
+/**
  * Zod schema for GenerateSMEPersonasRequest
  * @generated from message mirai.v1.GenerateSMEPersonasRequest
  */

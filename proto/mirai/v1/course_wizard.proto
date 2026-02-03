@@ -150,6 +150,8 @@ message GenerateOutcomesResponse {
   string outcomes = 1; // Freeform text with bullet points describing what learners will achieve
   // Citations from knowledge sources used to generate outcomes
   repeated KnowledgeCitation citations = 2;
+  // Grounding metrics showing how much content is traceable to knowledge sources
+  GroundingInfo grounding = 3;
 }
 
 // KnowledgeCitation represents a reference to a knowledge source used in generation.
@@ -158,6 +160,18 @@ message KnowledgeCitation {
   string source_name = 2;
   string excerpt = 3; // Relevant excerpt from the source
   float relevance_score = 4;
+}
+
+// GroundingInfo contains metrics about content grounding in knowledge sources.
+message GroundingInfo {
+  float score = 1;            // 0.0 - 1.0, ratio of grounded to total tokens
+  int32 course_tokens = 2;    // Tokens from course-specific knowledge
+  int32 team_tokens = 3;      // Tokens from team knowledge sources
+  int32 global_tokens = 4;    // Tokens from global (tenant-wide) knowledge
+  int32 ungrounded_tokens = 5; // Tokens not traceable to knowledge sources
+  int32 total_tokens = 6;     // Total token count
+  int32 source_count = 7;     // Number of unique knowledge sources used
+  string level = 8;           // "high", "moderate", "low", "minimal"
 }
 
 // GenerateSMEPersonasRequest contains context for SME generation.
