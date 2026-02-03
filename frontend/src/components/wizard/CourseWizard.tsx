@@ -27,6 +27,7 @@ import {
 import { useCreateCourse } from '@/hooks/useCourses';
 import { useUploadAndProcess, useLinkSessionToCourse } from '@/hooks/useKnowledgeSources';
 import { useListKnowledgeSources, KnowledgeSourceStatus } from '@/hooks/useTeamKnowledge';
+import { useListTeams } from '@/hooks/useTeams';
 import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
@@ -77,13 +78,49 @@ export default function CourseWizard() {
   const uploadAndProcess = useUploadAndProcess();
   const linkSessionToCourse = useLinkSessionToCourse();
 
-  // Fetch team knowledge (no teamId = global knowledge)
+  // Fetch global knowledge (no teamId = global/tenant-level knowledge)
   const { sources: globalKnowledgeSources, isLoading: globalKnowledgeLoading } = useListKnowledgeSources();
+
+  // Fetch all teams the user is a member/lead of
+  const { data: userTeams, isLoading: teamsLoading } = useListTeams();
+
+  // For team knowledge, we need to fetch from each team the user belongs to
+  // We'll use individual hooks for the first few teams (React hooks limitation)
+  // In practice, most users belong to 1-3 teams
+  const team0Id = userTeams[0]?.id;
+  const team1Id = userTeams[1]?.id;
+  const team2Id = userTeams[2]?.id;
+
+  const { sources: team0Sources, isLoading: team0Loading } = useListKnowledgeSources(team0Id);
+  const { sources: team1Sources, isLoading: team1Loading } = useListKnowledgeSources(team1Id);
+  const { sources: team2Sources, isLoading: team2Loading } = useListKnowledgeSources(team2Id);
+
+  // Combine team knowledge loading state
+  const teamKnowledgeLoading = teamsLoading ||
+    (team0Id && team0Loading) ||
+    (team1Id && team1Loading) ||
+    (team2Id && team2Loading);
 
   // Filter to only ready sources
   const readyGlobalKnowledge = globalKnowledgeSources.filter(
     (source) => source.status === KnowledgeSourceStatus.READY
   );
+
+  // Combine all team sources and filter to ready
+  const allTeamSources = useMemo(() => {
+    const sources = [
+      ...team0Sources,
+      ...team1Sources,
+      ...team2Sources,
+    ];
+    // Dedupe by ID in case same source appears in multiple teams
+    const seen = new Set<string>();
+    return sources.filter((source) => {
+      if (seen.has(source.id)) return false;
+      seen.add(source.id);
+      return source.status === KnowledgeSourceStatus.READY;
+    });
+  }, [team0Sources, team1Sources, team2Sources]);
 
   // Convert to wizard format
   const availableGlobalDocs: WizardKnowledgeSource[] = readyGlobalKnowledge.map((source) => ({
@@ -94,8 +131,14 @@ export default function CourseWizard() {
     scope: 'global' as const,
   }));
 
-  // For now, team docs are the same as global (we'll separate when we have team-specific knowledge)
-  const availableTeamDocs: WizardKnowledgeSource[] = [];
+  // Convert team knowledge to wizard format
+  const availableTeamDocs: WizardKnowledgeSource[] = allTeamSources.map((source) => ({
+    id: source.id,
+    name: source.name,
+    tokenCount: source.tokenCount ?? 0,
+    summary: source.summary ?? undefined,
+    scope: 'team' as const,
+  }));
 
   // Calculate totals for display in CourseNameStep
   const totalKnowledgeCount = availableTeamDocs.length + availableGlobalDocs.length;
@@ -307,7 +350,7 @@ export default function CourseWizard() {
 
   // Load available knowledge sources into state machine when ready
   useEffect(() => {
-    if (!globalKnowledgeLoading && !knowledgeLoaded) {
+    if (!globalKnowledgeLoading && !teamKnowledgeLoading && !knowledgeLoaded) {
       send({
         type: 'SET_AVAILABLE_KNOWLEDGE',
         teamDocs: availableTeamDocs,
@@ -315,7 +358,7 @@ export default function CourseWizard() {
       });
       setKnowledgeLoaded(true);
     }
-  }, [globalKnowledgeLoading, knowledgeLoaded, availableTeamDocs, availableGlobalDocs, send]);
+  }, [globalKnowledgeLoading, teamKnowledgeLoading, knowledgeLoaded, availableTeamDocs, availableGlobalDocs, send]);
 
   // Handle redirect to outline page after job is queued
   useEffect(() => {
@@ -402,7 +445,7 @@ export default function CourseWizard() {
 
 
   // Loading state while checking for saved state or loading knowledge
-  if (state.matches('checkingSavedState') || getSavedState.isLoading || globalKnowledgeLoading) {
+  if (state.matches('checkingSavedState') || getSavedState.isLoading || globalKnowledgeLoading || teamKnowledgeLoading) {
     return (
       <GeneratingStep
         title="Loading..."

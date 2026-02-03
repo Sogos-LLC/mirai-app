@@ -75,7 +75,10 @@ Rich modal with two tabs:
 
 ### 1.4 CourseWizard.tsx Updates ✅
 
-- Loads global knowledge sources on mount
+- Loads global knowledge sources on mount (tenant-level)
+- Fetches all teams user is member/lead of via `useListTeams`
+- Fetches team-specific knowledge for each team (supports up to 3 teams)
+- Deduplicates and combines team knowledge sources
 - Opens KnowledgeSourcesModal when "Add Knowledge" clicked
 - Passes selected knowledge IDs through generateOutlineActor to wizardData
 
@@ -88,6 +91,8 @@ Rich modal with two tabs:
 - [x] Wizard shows 5 steps
 - [x] "Add Knowledge" button opens rich modal
 - [x] Can select/deselect team and global documents
+- [x] Team knowledge shows sources from all teams user belongs to
+- [x] Global knowledge shows tenant-level sources from settings
 - [x] Can upload new files from modal
 - [x] Token counts update dynamically
 - [x] Selection persists in wizardData
@@ -237,8 +242,19 @@ course_audit_log table for tracking approvals
 | File | Action |
 |------|--------|
 | `proto/mirai/v1/course_wizard.proto` | Added selected doc IDs to WizardStepData |
-| `frontend/src/machines/courseWizardMachine.ts` | Added knowledgeSelection state, new context/events |
-| `frontend/src/components/wizard/CourseWizard.tsx` | Render new step, load available sources |
-| `frontend/src/components/wizard/steps/KnowledgeSelectionStep.tsx` | Created new component |
-| `frontend/src/components/wizard/steps/CourseNameStep.tsx` | Added onBack prop |
-| `frontend/src/components/wizard/WizardProgress.tsx` | Updated to 6 steps with BookOpen icon |
+| `frontend/src/machines/courseWizardMachine.ts` | 5-step wizard with knowledge selection events in courseName state |
+| `frontend/src/components/wizard/CourseWizard.tsx` | Load team + global knowledge, open modal, pass IDs to outline generation |
+| `frontend/src/components/wizard/modals/KnowledgeSourcesModal.tsx` | Created - Rich modal with Existing Sources + Upload tabs |
+| `frontend/src/components/wizard/modals/index.ts` | Export KnowledgeSourcesModal |
+| `frontend/src/components/wizard/WizardProgress.tsx` | 5 steps displayed |
+
+---
+
+## Next Steps
+
+**Ready for Session 2: Provenance Infrastructure**
+- Extend S3 content types with provenance structs
+- Add scope to RAG chunks (course/team/global)
+- Track scope during retrieval
+- Deduplicate with scope priority
+- Calculate and store provenance in S3 JSON
