@@ -550,19 +550,29 @@ func protoToWizardStepData(data *v1.WizardStepData) *entity.WizardStepData {
 		toneOptions[i] = protoToToneOption(o)
 	}
 
-	return &entity.WizardStepData{
-		CourseName:          data.CourseName,
-		ImprovedTitle:       data.ImprovedTitle,
-		Description:         data.Description,
-		SMEPersonas:         smePersonas,
-		SelectedSMEIDs:      data.SelectedSmeIds,
-		AudiencePersonas:    audiencePersonas,
-		SelectedAudienceIDs: data.SelectedAudienceIds,
-		ToneOptions:         toneOptions,
-		SelectedToneID:      data.SelectedToneId,
-		AdditionalContext:   data.AdditionalContext,
-		DesiredOutcomes:     data.DesiredOutcomes,
+	result := &entity.WizardStepData{
+		CourseName:           data.CourseName,
+		ImprovedTitle:        data.ImprovedTitle,
+		Description:          data.Description,
+		SMEPersonas:          smePersonas,
+		SelectedSMEIDs:       data.SelectedSmeIds,
+		AudiencePersonas:     audiencePersonas,
+		SelectedAudienceIDs:  data.SelectedAudienceIds,
+		ToneOptions:          toneOptions,
+		SelectedToneID:       data.SelectedToneId,
+		AdditionalContext:    data.AdditionalContext,
+		DesiredOutcomes:      data.DesiredOutcomes,
+		InternalDataOnly:     data.InternalDataOnly,
+		IncludeTeamKnowledge: data.IncludeTeamKnowledge,
 	}
+
+	// Handle optional team ID
+	if data.TeamId != nil && *data.TeamId != "" {
+		teamID := data.GetTeamId()
+		result.TeamID = &teamID
+	}
+
+	return result
 }
 
 // wizardStepDataToS3WizardData converts entity wizard data to S3 storage format.
@@ -612,12 +622,15 @@ func wizardStepDataToS3WizardData(data *entity.WizardStepData) *service.S3Wizard
 	}
 
 	return &service.S3WizardData{
-		SMEPersonas:         smePersonas,
-		SelectedSMEIDs:      data.SelectedSMEIDs,
-		AudiencePersonas:    audiencePersonas,
-		SelectedAudienceIDs: data.SelectedAudienceIDs,
-		SelectedTone:        selectedTone,
-		AdditionalContext:   data.AdditionalContext,
-		DesiredOutcomes:     data.DesiredOutcomes,
+		SMEPersonas:          smePersonas,
+		SelectedSMEIDs:       data.SelectedSMEIDs,
+		AudiencePersonas:     audiencePersonas,
+		SelectedAudienceIDs:  data.SelectedAudienceIDs,
+		SelectedTone:         selectedTone,
+		AdditionalContext:    data.AdditionalContext,
+		DesiredOutcomes:      data.DesiredOutcomes,
+		InternalDataOnly:     data.InternalDataOnly,
+		IncludeTeamKnowledge: data.IncludeTeamKnowledge,
+		TeamID:               data.TeamID,
 	}
 }

@@ -30,7 +30,25 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 		sb.WriteString("If source material is insufficient for planned components, create FEWER components.\n")
 		sb.WriteString("Quality over quantity - smaller, accurate lessons are better than hallucinated ones.\n\n")
 
-		// Include RAG context
+		// Include Team RAG context first (priority source)
+		if req.IncludeTeamKnowledge && len(req.TeamRAGContext) > 0 {
+			sb.WriteString("## Team Knowledge (PRIORITY SOURCE)\n")
+			sb.WriteString("This content comes from the organization's team knowledge base and should be prioritized:\n\n")
+
+			sourceChunks := make(map[string][]service.RAGChunkInput)
+			for _, chunk := range req.TeamRAGContext {
+				sourceChunks[chunk.SourceName] = append(sourceChunks[chunk.SourceName], chunk)
+			}
+
+			for sourceName, chunks := range sourceChunks {
+				sb.WriteString(fmt.Sprintf("### From Team: %s\n", sourceName))
+				for _, chunk := range chunks {
+					sb.WriteString(fmt.Sprintf("```\n%s\n```\n\n", chunk.Content))
+				}
+			}
+		}
+
+		// Include course-specific RAG context
 		if len(req.RAGContext) > 0 {
 			sb.WriteString("## Source Content (Retrieved from Knowledge Sources)\n")
 			sb.WriteString("Use ONLY this content to build the lesson. Every fact, example, and explanation must come from here:\n\n")
@@ -47,8 +65,25 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 					sb.WriteString(fmt.Sprintf("```\n%s\n```\n\n", chunk.Content))
 				}
 			}
-		} else {
+		} else if !req.IncludeTeamKnowledge || len(req.TeamRAGContext) == 0 {
 			sb.WriteString("**WARNING:** No source content provided. Generate minimal placeholder content.\n\n")
+		}
+	} else if req.IncludeTeamKnowledge && len(req.TeamRAGContext) > 0 {
+		// Not Internal Data Only, but team knowledge is included
+		sb.WriteString("## Team Knowledge (PRIORITY SOURCE)\n")
+		sb.WriteString("The following content comes from the organization's team knowledge base.\n")
+		sb.WriteString("**Prioritize this content when creating lesson components.**\n\n")
+
+		sourceChunks := make(map[string][]service.RAGChunkInput)
+		for _, chunk := range req.TeamRAGContext {
+			sourceChunks[chunk.SourceName] = append(sourceChunks[chunk.SourceName], chunk)
+		}
+
+		for sourceName, chunks := range sourceChunks {
+			sb.WriteString(fmt.Sprintf("### From Team: %s\n", sourceName))
+			for _, chunk := range chunks {
+				sb.WriteString(fmt.Sprintf("```\n%s\n```\n\n", chunk.Content))
+			}
 		}
 	}
 

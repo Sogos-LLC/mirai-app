@@ -142,6 +142,10 @@ type S3WizardData struct {
 	// InternalDataOnly: When true, course content is generated exclusively from
 	// uploaded knowledge sources. AI will not add external information.
 	InternalDataOnly bool `json:"internalDataOnly"`
+	// IncludeTeamKnowledge: When true, team knowledge is included in generation.
+	IncludeTeamKnowledge bool `json:"includeTeamKnowledge"`
+	// TeamID: The team whose knowledge should be included. Required when IncludeTeamKnowledge is true.
+	TeamID *string `json:"teamId,omitempty"`
 }
 
 // S3SMEPersona represents an SME (Subject Matter Expert) persona stored in wizard data.

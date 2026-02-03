@@ -74,6 +74,13 @@ type WizardStepData struct {
 	SelectedToneID      string                  `json:"selected_tone_id"`
 	AdditionalContext   string                  `json:"additional_context"`
 	DesiredOutcomes     string                  `json:"desired_outcomes"` // Course outcomes - the "north star" for all content generation
+	// InternalDataOnly: When true, course content is generated exclusively from
+	// uploaded knowledge sources. AI will not add external information.
+	InternalDataOnly bool `json:"internal_data_only"`
+	// IncludeTeamKnowledge: When true, team knowledge is included in generation.
+	IncludeTeamKnowledge bool `json:"include_team_knowledge"`
+	// TeamID: The team whose knowledge should be included. Required when IncludeTeamKnowledge is true.
+	TeamID *string `json:"team_id,omitempty"`
 }
 
 // ToJSON serializes WizardStepData to JSON.

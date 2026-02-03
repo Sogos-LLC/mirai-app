@@ -60,6 +60,9 @@ type JobEventPublisher interface {
 type KnowledgeSearcher interface {
 	SearchKnowledge(ctx context.Context, courseID uuid.UUID, query string, topK int) ([]*entity.RetrievedChunk, error)
 	ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeSource, error)
+	// Team knowledge methods
+	SearchKnowledgeByTeam(ctx context.Context, teamID uuid.UUID, query string, topK int) ([]*entity.RetrievedChunk, error)
+	GetReadyByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error)
 }
 
 // AIGenerationService handles AI-powered content generation.
@@ -329,6 +332,74 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 			}
 		} else {
 			log.Warn("Internal Data Only mode enabled but no knowledge searcher configured")
+		}
+	}
+
+	// Handle Team Knowledge injection
+	if content.WizardData != nil && content.WizardData.IncludeTeamKnowledge && content.WizardData.TeamID != nil {
+		teamID, err := uuid.Parse(*content.WizardData.TeamID)
+		if err == nil && s.knowledgeSearcher != nil {
+			log.Info("Fetching team knowledge context", "teamID", teamID)
+			outlineRequest.IncludeTeamKnowledge = true
+
+			// Get team document indices
+			teamSources, err := s.knowledgeSearcher.GetReadyByTeam(ctx, teamID)
+			if err != nil {
+				log.Warn("failed to fetch team knowledge sources", "error", err)
+			} else {
+				for _, src := range teamSources {
+					if src.DocumentIndex != nil {
+						outlineRequest.TeamDocumentIndices = append(outlineRequest.TeamDocumentIndices, service.DocumentIndexInput{
+							SourceID:             src.ID.String(),
+							SourceName:           src.Name,
+							Title:                src.DocumentIndex.Title,
+							MainTopics:           src.DocumentIndex.MainTopics,
+							KeyConcepts:          src.DocumentIndex.KeyConcepts,
+							EstimatedLessonCount: src.DocumentIndex.EstimatedLessonCount,
+							ContentDepth:         src.DocumentIndex.ContentDepth,
+						})
+					}
+				}
+				log.Info("Team document indices retrieved", "count", len(outlineRequest.TeamDocumentIndices))
+			}
+
+			// Search team knowledge using course context as queries
+			teamQueries := []string{
+				content.Settings.Title,
+				content.Settings.DesiredOutcome,
+			}
+			if additionalContext != "" {
+				teamQueries = append(teamQueries, additionalContext)
+			}
+
+			seenTeamChunks := make(map[string]bool)
+			for _, query := range teamQueries {
+				chunks, err := s.knowledgeSearcher.SearchKnowledgeByTeam(ctx, teamID, query, 5)
+				if err != nil {
+					log.Warn("Team RAG search failed", "query", query, "error", err)
+					continue
+				}
+				for _, chunk := range chunks {
+					if seenTeamChunks[chunk.ID] {
+						continue
+					}
+					seenTeamChunks[chunk.ID] = true
+					chunkIndex := 0
+					if chunk.ChunkIndex != nil {
+						chunkIndex = int(*chunk.ChunkIndex)
+					}
+					outlineRequest.TeamRAGContext = append(outlineRequest.TeamRAGContext, service.RAGChunkInput{
+						SourceID:        chunk.SourceID.String(),
+						SourceName:      chunk.SourceName,
+						Content:         chunk.Content,
+						ChunkIndex:      chunkIndex,
+						SimilarityScore: chunk.SimilarityScore,
+					})
+				}
+			}
+			log.Info("Team RAG context retrieved", "chunks", len(outlineRequest.TeamRAGContext))
+		} else if err != nil {
+			log.Warn("Failed to parse team ID for knowledge injection", "teamId", *content.WizardData.TeamID, "error", err)
 		}
 	}
 
@@ -731,20 +802,73 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		}
 	}
 
+	// Handle Team Knowledge injection for lesson generation
+	var includeTeamKnowledge bool
+	var teamRAGContext []service.RAGChunkInput
+	if content.WizardData != nil && content.WizardData.IncludeTeamKnowledge && content.WizardData.TeamID != nil {
+		teamID, err := uuid.Parse(*content.WizardData.TeamID)
+		if err == nil && s.knowledgeSearcher != nil {
+			includeTeamKnowledge = true
+			log.Info("Fetching team knowledge for lesson", "teamID", teamID, "lessonTitle", lessonTitle)
+
+			// Search team knowledge using lesson context as queries
+			lessonQueries := []string{lessonTitle + " " + lessonDesc}
+			for _, obj := range learningObjectives {
+				lessonQueries = append(lessonQueries, obj)
+			}
+
+			seenTeamChunks := make(map[string]bool)
+			for _, query := range lessonQueries {
+				chunks, err := s.knowledgeSearcher.SearchKnowledgeByTeam(ctx, teamID, query, 3)
+				if err != nil {
+					log.Warn("Team RAG search failed for lesson", "query", query, "error", err)
+					continue
+				}
+				for _, chunk := range chunks {
+					hashKey := chunk.Content
+					if len(hashKey) > 100 {
+						hashKey = hashKey[:100]
+					}
+					if !seenTeamChunks[hashKey] {
+						seenTeamChunks[hashKey] = true
+						chunkIndex := 0
+						if chunk.ChunkIndex != nil {
+							chunkIndex = int(*chunk.ChunkIndex)
+						}
+						teamRAGContext = append(teamRAGContext, service.RAGChunkInput{
+							SourceID:        chunk.SourceID.String(),
+							SourceName:      chunk.SourceName,
+							Content:         chunk.Content,
+							ChunkIndex:      chunkIndex,
+							SimilarityScore: chunk.SimilarityScore,
+						})
+					}
+				}
+			}
+			log.Info("Fetched team RAG context for lesson",
+				"lessonTitle", lessonTitle,
+				"teamChunkCount", len(teamRAGContext))
+		} else if err != nil {
+			log.Warn("Failed to parse team ID for lesson knowledge injection", "teamId", *content.WizardData.TeamID, "error", err)
+		}
+	}
+
 	// Generate lesson content
 	lessonResult, err := aiProvider.GenerateLessonContent(ctx, service.GenerateLessonRequest{
-		CourseTitle:        content.Settings.Title,
-		SectionTitle:       sectionTitle,
-		LessonTitle:        lessonTitle,
-		LessonDescription:  lessonDesc,
-		LearningObjectives: learningObjectives,
-		SMEKnowledge:       smeKnowledge,
-		TargetAudience:     targetAudience,
-		IsLastInSection:    isLastInSection,
-		IsLastInCourse:     isLastInCourse,
-		AdditionalContext:  lessonAdditionalContext,
-		InternalDataOnly:   internalDataOnly,
-		RAGContext:         ragContext,
+		CourseTitle:          content.Settings.Title,
+		SectionTitle:         sectionTitle,
+		LessonTitle:          lessonTitle,
+		LessonDescription:    lessonDesc,
+		LearningObjectives:   learningObjectives,
+		SMEKnowledge:         smeKnowledge,
+		TargetAudience:       targetAudience,
+		IsLastInSection:      isLastInSection,
+		IsLastInCourse:       isLastInCourse,
+		AdditionalContext:    lessonAdditionalContext,
+		InternalDataOnly:     internalDataOnly,
+		RAGContext:           ragContext,
+		IncludeTeamKnowledge: includeTeamKnowledge,
+		TeamRAGContext:       teamRAGContext,
 	})
 	if err != nil {
 		log.Error("AI lesson generation failed", "error", err)

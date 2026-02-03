@@ -54,6 +54,48 @@ func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
 	}
 	sb.WriteString("\n")
 
+	// Include Team Knowledge if available
+	if req.IncludeTeamKnowledge && (len(req.TeamDocumentIndices) > 0 || len(req.TeamRAGContext) > 0) {
+		sb.WriteString("## Team Knowledge (PRIORITY SOURCE)\n")
+		sb.WriteString("The following content comes from the organization's team knowledge base.\n")
+		sb.WriteString("**Prioritize this content when creating the course outline.**\n\n")
+
+		// Team document indices
+		if len(req.TeamDocumentIndices) > 0 {
+			sb.WriteString("### Team Documents Available\n")
+			for _, doc := range req.TeamDocumentIndices {
+				sb.WriteString(fmt.Sprintf("**%s**", doc.SourceName))
+				if doc.Title != "" {
+					sb.WriteString(fmt.Sprintf(" - %s", doc.Title))
+				}
+				sb.WriteString("\n")
+				if len(doc.MainTopics) > 0 {
+					sb.WriteString(fmt.Sprintf("  Topics: %s\n", strings.Join(doc.MainTopics, ", ")))
+				}
+				if len(doc.KeyConcepts) > 0 {
+					sb.WriteString(fmt.Sprintf("  Concepts: %s\n", strings.Join(doc.KeyConcepts, ", ")))
+				}
+			}
+			sb.WriteString("\n")
+		}
+
+		// Team RAG context
+		if len(req.TeamRAGContext) > 0 {
+			sb.WriteString("### Team Knowledge Content\n")
+			sourceChunks := make(map[string][]service.RAGChunkInput)
+			for _, chunk := range req.TeamRAGContext {
+				sourceChunks[chunk.SourceName] = append(sourceChunks[chunk.SourceName], chunk)
+			}
+			for sourceName, chunks := range sourceChunks {
+				sb.WriteString(fmt.Sprintf("**From: %s**\n", sourceName))
+				for _, chunk := range chunks {
+					sb.WriteString(fmt.Sprintf("```\n%s\n```\n", chunk.Content))
+				}
+				sb.WriteString("\n")
+			}
+		}
+	}
+
 	if req.AdditionalContext != "" {
 		sb.WriteString("## Additional Context\n")
 		sb.WriteString(req.AdditionalContext)
@@ -65,6 +107,9 @@ func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
 	sb.WriteString("Each section should have a clear theme and 2-5 lessons.\n")
 	sb.WriteString("For each section, provide the section title, description, and a list of lesson titles.\n")
 	sb.WriteString("Ensure content flows logically and builds on previous sections.\n")
+	if req.IncludeTeamKnowledge && (len(req.TeamDocumentIndices) > 0 || len(req.TeamRAGContext) > 0) {
+		sb.WriteString("**IMPORTANT:** Prioritize team knowledge when available. Incorporate team-specific terminology, examples, and practices.\n")
+	}
 
 	return sb.String()
 }
@@ -90,6 +135,45 @@ func buildInternalDataOnlySectionsPrompt(req service.GenerateOutlineRequest) str
 	sb.WriteString("## Course Information\n")
 	sb.WriteString(fmt.Sprintf("**Title:** %s\n", req.CourseTitle))
 	sb.WriteString(fmt.Sprintf("**Desired Outcome:** %s\n\n", req.DesiredOutcome))
+
+	// Team Knowledge (priority source in Internal Data Only mode)
+	if req.IncludeTeamKnowledge && (len(req.TeamDocumentIndices) > 0 || len(req.TeamRAGContext) > 0) {
+		sb.WriteString("## Team Knowledge (PRIORITY SOURCE)\n")
+		sb.WriteString("This content comes from the organization's team knowledge base and should be prioritized.\n\n")
+
+		if len(req.TeamDocumentIndices) > 0 {
+			sb.WriteString("### Team Documents\n")
+			for _, doc := range req.TeamDocumentIndices {
+				sb.WriteString(fmt.Sprintf("**%s**", doc.SourceName))
+				if doc.Title != "" {
+					sb.WriteString(fmt.Sprintf(" - %s", doc.Title))
+				}
+				sb.WriteString("\n")
+				if len(doc.MainTopics) > 0 {
+					sb.WriteString(fmt.Sprintf("  Topics: %s\n", strings.Join(doc.MainTopics, ", ")))
+				}
+				if len(doc.KeyConcepts) > 0 {
+					sb.WriteString(fmt.Sprintf("  Concepts: %s\n", strings.Join(doc.KeyConcepts, ", ")))
+				}
+			}
+			sb.WriteString("\n")
+		}
+
+		if len(req.TeamRAGContext) > 0 {
+			sb.WriteString("### Team Knowledge Content\n")
+			sourceChunks := make(map[string][]service.RAGChunkInput)
+			for _, chunk := range req.TeamRAGContext {
+				sourceChunks[chunk.SourceName] = append(sourceChunks[chunk.SourceName], chunk)
+			}
+			for sourceName, chunks := range sourceChunks {
+				sb.WriteString(fmt.Sprintf("**From: %s**\n", sourceName))
+				for _, chunk := range chunks {
+					sb.WriteString(fmt.Sprintf("```\n%s\n```\n", chunk.Content))
+				}
+				sb.WriteString("\n")
+			}
+		}
+	}
 
 	// Document indices show what content is available
 	if len(req.DocumentIndices) > 0 {
@@ -148,8 +232,11 @@ func buildInternalDataOnlySectionsPrompt(req service.GenerateOutlineRequest) str
 	sb.WriteString("3. Each section should have 1-4 lessons (scale to available content)\n")
 	sb.WriteString("4. Lesson titles should reflect actual content from the documents\n")
 	sb.WriteString("5. If content is limited, create fewer sections/lessons - do NOT invent content\n")
-	sb.WriteString("6. Every lesson must be supportable by the provided source material\n\n")
-	sb.WriteString("Remember: Quality over quantity. A smaller, accurate course is better than a large, hallucinated one.\n")
+	sb.WriteString("6. Every lesson must be supportable by the provided source material\n")
+	if req.IncludeTeamKnowledge && (len(req.TeamDocumentIndices) > 0 || len(req.TeamRAGContext) > 0) {
+		sb.WriteString("7. **Prioritize team knowledge** - incorporate team-specific terminology, examples, and practices\n")
+	}
+	sb.WriteString("\nRemember: Quality over quantity. A smaller, accurate course is better than a large, hallucinated one.\n")
 
 	return sb.String()
 }

@@ -491,6 +491,11 @@ type GenerateOutlineRequest struct {
 	InternalDataOnly bool                   // When true, use only RAG content
 	DocumentIndices  []DocumentIndexInput   // Structured indices of uploaded documents
 	RAGContext       []RAGChunkInput        // Retrieved chunks from knowledge sources
+
+	// Team Knowledge fields
+	IncludeTeamKnowledge bool                 // When true, include team knowledge in generation
+	TeamDocumentIndices  []DocumentIndexInput // Structured indices of team documents
+	TeamRAGContext       []RAGChunkInput      // Retrieved chunks from team knowledge sources
 }
 
 // DocumentIndexInput represents a document's structured index for AI navigation.
@@ -608,6 +613,10 @@ type GenerateLessonRequest struct {
 	// Internal Data Only mode fields
 	InternalDataOnly bool            // When true, use only RAG content
 	RAGContext       []RAGChunkInput // Retrieved chunks from knowledge sources
+
+	// Team Knowledge fields
+	IncludeTeamKnowledge bool            // When true, include team knowledge in generation
+	TeamRAGContext       []RAGChunkInput // Retrieved chunks from team knowledge sources
 }
 
 // OutlineSectionSummary provides outline context for lesson generation.
