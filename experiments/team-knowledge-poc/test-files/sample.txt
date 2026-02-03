@@ -1,0 +1,11 @@
+Document Extraction Overview
+
+Document extraction is the process of pulling structured information from unstructured documents. This is a critical component of any knowledge management system, as it allows organizations to make their document repositories searchable and actionable.
+
+The extraction process typically involves several steps. First, the document must be parsed according to its format - whether that's PDF, Word, Excel, or plain text. Each format has its own quirks and challenges that must be handled appropriately.
+
+Once the raw text is extracted, it often needs to be cleaned and normalized. This includes removing extraneous whitespace, handling special characters, and potentially dealing with OCR errors in scanned documents.
+
+Finally, the extracted text can be chunked into smaller segments suitable for embedding and vector search. The chunking strategy significantly impacts retrieval quality - too small and you lose context, too large and you dilute relevance.
+
+This proof-of-concept explores various extraction techniques and evaluates their effectiveness for building a team knowledge base.
