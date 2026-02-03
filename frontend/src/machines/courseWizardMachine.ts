@@ -7,6 +7,7 @@ import type {
   WizardState,
 } from '@/gen/mirai/v1/course_wizard_pb';
 import type { CourseOutline, GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
+import type { KnowledgeSource } from '@/gen/mirai/v1/knowledge_source_pb';
 
 /**
  * Pending file to be uploaded after course creation
@@ -26,10 +27,16 @@ import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 /**
  * Wizard step identifiers matching backend wizard state
- * Note: 'additionalContext' was merged into 'toneSelection' (now a 5-step wizard)
- * Knowledge sources are added via modal on step 1, not as a separate step.
+ * 6-step wizard:
+ * 1. knowledgeSelection - Select existing team/global knowledge (auto-skips if none exist)
+ * 2. courseName - Enter course name + upload additional files + generate outcomes
+ * 3. titleDescription - Review AI-generated title/description
+ * 4. smeSelection - Select SME personas
+ * 5. audienceSelection - Select audience personas
+ * 6. toneSelection - Select tone + additional context
  */
 export type WizardStep =
+  | 'knowledgeSelection'
   | 'courseName'
   | 'titleDescription'
   | 'smeSelection'
@@ -38,38 +45,55 @@ export type WizardStep =
   | 'outlineJobQueued';
 
 /**
+ * Lightweight knowledge source info for wizard context
+ */
+export interface WizardKnowledgeSource {
+  id: string;
+  name: string;
+  tokenCount: number;
+  summary?: string;
+  scope: 'team' | 'global';
+}
+
+/**
  * Context for the course wizard state machine
  */
 export interface CourseWizardContext {
-  // Step 1: Course Name & Desired Outcomes
+  // Step 1: Knowledge Selection
+  availableTeamDocs: WizardKnowledgeSource[];
+  availableGlobalDocs: WizardKnowledgeSource[];
+  selectedTeamDocIds: string[];
+  selectedGlobalDocIds: string[];
+
+  // Step 2: Course Name & Desired Outcomes
   courseName: string;
   desiredOutcomes: string;
 
-  // Step 2: AI-improved Title & Description
+  // Step 3: AI-improved Title & Description
   improvedTitle: string;
   description: string;
 
-  // Step 3: SME Personas
+  // Step 4: SME Personas
   smePersonas: SMEPersona[];
   selectedSMEIds: string[];
 
-  // Step 4: Audience Personas
+  // Step 5: Audience Personas
   audiencePersonas: AudiencePersona[];
   selectedAudienceIds: string[];
 
-  // Knowledge Sources (added via modal on step 1, not a separate step)
+  // Knowledge Sources (added via modal on step 2, not a separate step)
   pendingFiles: PendingFile[];
 
   // Internal Data Only mode - when enabled, course content is generated
   // exclusively from uploaded knowledge sources
   internalDataOnly: boolean;
 
-  // Step 5: Tone Options + Additional Context
+  // Step 6: Tone Options + Additional Context
   toneOptions: ToneOption[];
   selectedToneId: string;
   additionalContext: string;
 
-  // Step 7: Outline Generation & Review
+  // Outline Generation & Review
   outlineJobId: string | null;
   outline: CourseOutline | null;
 
@@ -87,42 +111,52 @@ export interface CourseWizardContext {
 }
 
 export type CourseWizardEvent =
-  // Step 1: Course Name & Outcomes
+  // Step 1: Knowledge Selection
+  | { type: 'SET_AVAILABLE_KNOWLEDGE'; teamDocs: WizardKnowledgeSource[]; globalDocs: WizardKnowledgeSource[] }
+  | { type: 'TOGGLE_TEAM_DOC'; docId: string }
+  | { type: 'TOGGLE_GLOBAL_DOC'; docId: string }
+  | { type: 'SELECT_ALL_TEAM_DOCS' }
+  | { type: 'DESELECT_ALL_TEAM_DOCS' }
+  | { type: 'SELECT_ALL_GLOBAL_DOCS' }
+  | { type: 'DESELECT_ALL_GLOBAL_DOCS' }
+  | { type: 'APPROVE_KNOWLEDGE_SELECTION' }
+  | { type: 'SKIP_KNOWLEDGE_SELECTION' }
+  // Step 2: Course Name & Outcomes
   | { type: 'SET_COURSE_NAME'; name: string }
   | { type: 'SET_DESIRED_OUTCOMES'; outcomes: string }
   | { type: 'GENERATE_OUTCOMES' }
   | { type: 'SUBMIT_COURSE_NAME' }
-  // Step 2: Title/Description
+  // Step 3: Title/Description
   | { type: 'SET_TITLE'; title: string }
   | { type: 'SET_DESCRIPTION'; description: string }
   | { type: 'APPROVE_TITLE_DESCRIPTION' }
   | { type: 'REGENERATE_TITLE' }
-  // Step 3: SME Selection
+  // Step 4: SME Selection
   | { type: 'TOGGLE_SME'; smeId: string }
   | { type: 'EDIT_SME'; persona: SMEPersona }
   | { type: 'ADD_TEMPLATE_SME'; persona: SMEPersona }
   | { type: 'APPROVE_SMES' }
   | { type: 'REGENERATE_SMES' }
-  // Step 4: Audience Selection
+  // Step 5: Audience Selection
   | { type: 'TOGGLE_AUDIENCE'; audienceId: string }
   | { type: 'EDIT_AUDIENCE'; persona: AudiencePersona }
   | { type: 'ADD_TEMPLATE_AUDIENCE'; persona: AudiencePersona }
   | { type: 'APPROVE_AUDIENCES' }
   | { type: 'REGENERATE_AUDIENCES' }
-  // Knowledge Sources (available from Step 1 via modal)
+  // Knowledge Sources (available from Step 2 via modal)
   | { type: 'ADD_FILES'; files: PendingFile[] }
   | { type: 'REMOVE_FILE'; fileId: string }
   // Internal Data Only mode
   | { type: 'SET_INTERNAL_DATA_ONLY'; enabled: boolean }
-  // Step 5: Tone Selection
+  // Step 6: Tone Selection
   | { type: 'SELECT_TONE'; toneId: string }
   | { type: 'APPROVE_TONE' }
   | { type: 'REGENERATE_TONES' }
-  // Step 6: Additional Context
+  // Additional Context
   | { type: 'SET_ADDITIONAL_CONTEXT'; context: string }
   | { type: 'SUBMIT_CONTEXT' }
   | { type: 'SKIP_CONTEXT' }
-  // Step 7: Outline Job Queued - user dismisses success modal
+  // Outline Job Queued - user dismisses success modal
   | { type: 'DISMISS_SUCCESS' }       // User clicks OK to go to dashboard
   // Navigation
   | { type: 'GO_BACK' }
@@ -171,24 +205,38 @@ interface SaveWizardStateResponse {
 // ============================================================
 
 export const initialContext: CourseWizardContext = {
+  // Step 1: Knowledge Selection
+  availableTeamDocs: [],
+  availableGlobalDocs: [],
+  selectedTeamDocIds: [],
+  selectedGlobalDocIds: [],
+  // Step 2: Course Name
   courseName: '',
   desiredOutcomes: '',
+  // Step 3: Title & Description
   improvedTitle: '',
   description: '',
+  // Step 4: SME Personas
   smePersonas: [],
   selectedSMEIds: [],
+  // Step 5: Audience Personas
   audiencePersonas: [],
   selectedAudienceIds: [],
+  // Knowledge sources (uploaded via modal)
   pendingFiles: [],
   internalDataOnly: false,
+  // Step 6: Tone
   toneOptions: [],
   selectedToneId: '',
   additionalContext: '',
+  // Outline
   outlineJobId: null,
   outline: null,
+  // Course
   courseId: null,
   courseTitle: null,
-  currentStep: 'courseName',
+  // UI State
+  currentStep: 'knowledgeSelection',
   error: null,
   flowStartedAt: null,
   savedState: null,
@@ -259,6 +307,8 @@ export const generateOutlineActor = fromPromise<
     toneOption: ToneOption | undefined;
     additionalContext: string;
     internalDataOnly: boolean;
+    selectedTeamDocIds: string[];
+    selectedGlobalDocIds: string[];
   }
 >(async () => {
   throw new NetworkError('generateOutlineActor must be provided by the component');
@@ -309,7 +359,7 @@ export const courseWizardMachine = createMachine({
           }),
         },
         START_FRESH: {
-          target: 'courseName',
+          target: 'knowledgeSelection',
           actions: assign({
             flowStartedAt: () => Date.now(),
           }),
@@ -326,7 +376,7 @@ export const courseWizardMachine = createMachine({
           target: 'resuming',
         },
         START_FRESH: {
-          target: 'courseName',
+          target: 'knowledgeSelection',
           actions: assign({
             ...initialContext,
             flowStartedAt: () => Date.now(),
@@ -341,9 +391,33 @@ export const courseWizardMachine = createMachine({
     resuming: {
       always: [
         {
+          target: 'knowledgeSelection',
+          guard: ({ context }) => context.savedState?.currentStep === 'knowledgeSelection',
+          actions: assign(({ context }) => ({
+            selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
+            selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
+            currentStep: 'knowledgeSelection' as const,
+            flowStartedAt: Date.now(),
+          })),
+        },
+        {
+          target: 'courseName',
+          guard: ({ context }) => context.savedState?.currentStep === 'courseName',
+          actions: assign(({ context }) => ({
+            selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
+            selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
+            courseName: context.savedState?.data?.courseName ?? '',
+            desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
+            currentStep: 'courseName' as const,
+            flowStartedAt: Date.now(),
+          })),
+        },
+        {
           target: 'titleDescription',
           guard: ({ context }) => context.savedState?.currentStep === 'titleDescription',
           actions: assign(({ context }) => ({
+            selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
+            selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
             courseName: context.savedState?.data?.courseName ?? '',
             desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
@@ -356,6 +430,8 @@ export const courseWizardMachine = createMachine({
           target: 'smeSelection',
           guard: ({ context }) => context.savedState?.currentStep === 'smeSelection',
           actions: assign(({ context }) => ({
+            selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
+            selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
             courseName: context.savedState?.data?.courseName ?? '',
             desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
@@ -370,6 +446,8 @@ export const courseWizardMachine = createMachine({
           target: 'audienceSelection',
           guard: ({ context }) => context.savedState?.currentStep === 'audienceSelection',
           actions: assign(({ context }) => ({
+            selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
+            selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
             courseName: context.savedState?.data?.courseName ?? '',
             desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
@@ -386,6 +464,8 @@ export const courseWizardMachine = createMachine({
           target: 'toneSelection',
           guard: ({ context }) => context.savedState?.currentStep === 'toneSelection',
           actions: assign(({ context }) => ({
+            selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
+            selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
             courseName: context.savedState?.data?.courseName ?? '',
             desiredOutcomes: context.savedState?.data?.desiredOutcomes ?? '',
             improvedTitle: context.savedState?.data?.improvedTitle ?? '',
@@ -402,7 +482,7 @@ export const courseWizardMachine = createMachine({
         },
         {
           // Default: start from beginning
-          target: 'courseName',
+          target: 'knowledgeSelection',
           actions: assign({
             flowStartedAt: () => Date.now(),
           }),
@@ -411,7 +491,84 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 1: Course Name Entry
+    // Step 1: Knowledge Selection
+    // Auto-skips to courseName if no knowledge sources available
+    // --------------------------------------------------------
+    knowledgeSelection: {
+      entry: assign({
+        currentStep: 'knowledgeSelection' as const,
+      }),
+      always: [
+        {
+          // Auto-skip if no knowledge sources are available
+          target: 'courseName',
+          guard: ({ context }) =>
+            context.availableTeamDocs.length === 0 &&
+            context.availableGlobalDocs.length === 0,
+        },
+      ],
+      on: {
+        SET_AVAILABLE_KNOWLEDGE: {
+          actions: assign({
+            availableTeamDocs: ({ event }) => event.teamDocs,
+            availableGlobalDocs: ({ event }) => event.globalDocs,
+            // Pre-select all available sources by default
+            selectedTeamDocIds: ({ event }) => event.teamDocs.map((d) => d.id),
+            selectedGlobalDocIds: ({ event }) => event.globalDocs.map((d) => d.id),
+          }),
+        },
+        TOGGLE_TEAM_DOC: {
+          actions: assign({
+            selectedTeamDocIds: ({ context, event }) =>
+              context.selectedTeamDocIds.includes(event.docId)
+                ? context.selectedTeamDocIds.filter((id) => id !== event.docId)
+                : [...context.selectedTeamDocIds, event.docId],
+          }),
+        },
+        TOGGLE_GLOBAL_DOC: {
+          actions: assign({
+            selectedGlobalDocIds: ({ context, event }) =>
+              context.selectedGlobalDocIds.includes(event.docId)
+                ? context.selectedGlobalDocIds.filter((id) => id !== event.docId)
+                : [...context.selectedGlobalDocIds, event.docId],
+          }),
+        },
+        SELECT_ALL_TEAM_DOCS: {
+          actions: assign({
+            selectedTeamDocIds: ({ context }) => context.availableTeamDocs.map((d) => d.id),
+          }),
+        },
+        DESELECT_ALL_TEAM_DOCS: {
+          actions: assign({
+            selectedTeamDocIds: () => [],
+          }),
+        },
+        SELECT_ALL_GLOBAL_DOCS: {
+          actions: assign({
+            selectedGlobalDocIds: ({ context }) => context.availableGlobalDocs.map((d) => d.id),
+          }),
+        },
+        DESELECT_ALL_GLOBAL_DOCS: {
+          actions: assign({
+            selectedGlobalDocIds: () => [],
+          }),
+        },
+        APPROVE_KNOWLEDGE_SELECTION: {
+          target: 'courseName',
+        },
+        SKIP_KNOWLEDGE_SELECTION: {
+          target: 'courseName',
+          actions: assign({
+            selectedTeamDocIds: () => [],
+            selectedGlobalDocIds: () => [],
+          }),
+        },
+        CANCEL: 'cancelled',
+      },
+    },
+
+    // --------------------------------------------------------
+    // Step 2: Course Name Entry
     // --------------------------------------------------------
     courseName: {
       entry: assign({
@@ -453,6 +610,13 @@ export const courseWizardMachine = createMachine({
         SUBMIT_COURSE_NAME: {
           target: 'generatingTitle',
           guard: ({ context }) => context.courseName.trim().length > 0,
+        },
+        GO_BACK: {
+          target: 'knowledgeSelection',
+          // Only allow going back if knowledge selection is meaningful
+          guard: ({ context }) =>
+            context.availableTeamDocs.length > 0 ||
+            context.availableGlobalDocs.length > 0,
         },
         CANCEL: 'cancelled',
       },
@@ -518,7 +682,7 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 2: Title & Description Review
+    // Step 3: Title & Description Review
     // --------------------------------------------------------
     titleDescription: {
       entry: assign({
@@ -581,7 +745,7 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 3: SME Persona Selection
+    // Step 4: SME Persona Selection
     // --------------------------------------------------------
     smeSelection: {
       entry: assign({
@@ -668,7 +832,7 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 4: Audience Persona Selection
+    // Step 5: Audience Persona Selection
     // --------------------------------------------------------
     audienceSelection: {
       entry: assign({
@@ -757,7 +921,7 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 5: Tone Selection + Additional Context (merged)
+    // Step 6: Tone Selection + Additional Context (merged)
     // --------------------------------------------------------
     toneSelection: {
       entry: assign({
@@ -812,6 +976,8 @@ export const courseWizardMachine = createMachine({
           toneOption: context.toneOptions.find((t) => t.id === context.selectedToneId),
           additionalContext: context.additionalContext,
           internalDataOnly: context.internalDataOnly,
+          selectedTeamDocIds: context.selectedTeamDocIds,
+          selectedGlobalDocIds: context.selectedGlobalDocIds,
         }),
         onDone: {
           target: 'outlineJobQueued',
@@ -837,7 +1003,7 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 7: Outline Job Queued - Show success, user clicks OK to redirect
+    // Outline Job Queued - Show success, user clicks OK to redirect
     // --------------------------------------------------------
     outlineJobQueued: {
       entry: assign({
@@ -884,18 +1050,18 @@ export const courseWizardMachine = createMachine({
 // ============================================================
 
 /**
- * Get step number (1-5) from step identifier
+ * Get step number (1-6) from step identifier
  * Note: outlineJobQueued is a confirmation screen, not a wizard step
- * Knowledge sources are added via modal on step 1, not as a separate step.
  */
 export function getStepNumber(step: WizardStep): number {
   const stepMap: Record<WizardStep, number> = {
-    courseName: 1,
-    titleDescription: 2,
-    smeSelection: 3,
-    audienceSelection: 4,
-    toneSelection: 5,
-    outlineJobQueued: 5, // Same as toneSelection since it's a confirmation
+    knowledgeSelection: 1,
+    courseName: 2,
+    titleDescription: 3,
+    smeSelection: 4,
+    audienceSelection: 5,
+    toneSelection: 6,
+    outlineJobQueued: 6, // Same as toneSelection since it's a confirmation
   };
   return stepMap[step];
 }
@@ -905,6 +1071,7 @@ export function getStepNumber(step: WizardStep): number {
  */
 export function getStepLabel(step: WizardStep): string {
   const labelMap: Record<WizardStep, string> = {
+    knowledgeSelection: 'Knowledge Sources',
     courseName: 'Course Name',
     titleDescription: 'Title & Description',
     smeSelection: 'SME Personas',
@@ -917,10 +1084,10 @@ export function getStepLabel(step: WizardStep): string {
 
 /**
  * Get all steps in order (excluding confirmation states)
- * Knowledge sources are added via modal on step 1, not as a separate step.
  */
 export function getAllSteps(): WizardStep[] {
   return [
+    'knowledgeSelection',
     'courseName',
     'titleDescription',
     'smeSelection',
@@ -951,7 +1118,7 @@ export function isGenerating(stateValue: unknown): boolean {
  */
 export function canGoBack(stateValue: unknown): boolean {
   if (typeof stateValue === 'string') {
-    return !['courseName', 'checkingSavedState', 'promptResume', 'resuming', 'complete', 'cancelled'].includes(
+    return !['knowledgeSelection', 'checkingSavedState', 'promptResume', 'resuming', 'complete', 'cancelled'].includes(
       stateValue
     );
   }
@@ -975,5 +1142,30 @@ export function buildWizardStepData(context: CourseWizardContext): Partial<Wizar
     selectedToneId: context.selectedToneId,
     additionalContext: context.additionalContext,
     internalDataOnly: context.internalDataOnly,
+    selectedTeamDocIds: context.selectedTeamDocIds,
+    selectedGlobalDocIds: context.selectedGlobalDocIds,
+  };
+}
+
+/**
+ * Calculate total selected tokens
+ */
+export function getSelectedTokenCount(context: CourseWizardContext): {
+  teamTokens: number;
+  globalTokens: number;
+  totalTokens: number;
+} {
+  const teamTokens = context.availableTeamDocs
+    .filter((doc) => context.selectedTeamDocIds.includes(doc.id))
+    .reduce((sum, doc) => sum + doc.tokenCount, 0);
+
+  const globalTokens = context.availableGlobalDocs
+    .filter((doc) => context.selectedGlobalDocIds.includes(doc.id))
+    .reduce((sum, doc) => sum + doc.tokenCount, 0);
+
+  return {
+    teamTokens,
+    globalTokens,
+    totalTokens: teamTokens + globalTokens,
   };
 }

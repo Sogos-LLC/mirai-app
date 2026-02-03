@@ -13,6 +13,7 @@ interface CourseNameStepProps {
   onDesiredOutcomesChange: (outcomes: string) => void;
   onGenerateOutcomes: () => void;
   onNext: () => void;
+  onBack?: () => void;
   onCancel: () => void;
   isLoading?: boolean;
   isGeneratingOutcomes?: boolean;
@@ -35,6 +36,7 @@ export default function CourseNameStep({
   onDesiredOutcomesChange,
   onGenerateOutcomes,
   onNext,
+  onBack,
   onCancel,
   isLoading = false,
   isGeneratingOutcomes = false,
@@ -200,8 +202,9 @@ export default function CourseNameStep({
 
         <WizardNavigation
           onCancel={onCancel}
+          onBack={onBack}
           onNext={onNext}
-          canGoBack={false}
+          canGoBack={!!onBack}
           canGoNext={courseName.trim().length > 0}
           isLoading={isLoading}
           nextLabel="Generate Title"

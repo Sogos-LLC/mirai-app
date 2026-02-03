@@ -66,6 +66,12 @@ message WizardStepData {
   // exclusively from uploaded knowledge sources. AI will not add external
   // information or fill gaps - course size adapts to available content.
   bool internal_data_only = 12;
+
+  // Knowledge selection (Step 1) - Selected knowledge sources for RAG
+  repeated string selected_team_doc_ids = 15;    // Selected team-level knowledge source IDs
+  repeated string selected_global_doc_ids = 16;  // Selected global (tenant-level) knowledge source IDs
+  int64 estimated_team_tokens = 17;              // Estimated tokens from team sources
+  int64 estimated_global_tokens = 18;            // Estimated tokens from global sources
 }
 
 // WizardState tracks wizard progress for resume capability.

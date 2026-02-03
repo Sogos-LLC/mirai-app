@@ -9,6 +9,7 @@ import {
   courseWizardMachine,
   isGenerating,
   type CourseWizardContext,
+  type WizardKnowledgeSource,
 } from '@/machines/courseWizardMachine';
 import {
   useGenerateTitle,
@@ -25,10 +26,11 @@ import {
 } from '@/hooks/useAIGeneration';
 import { useCreateCourse } from '@/hooks/useCourses';
 import { useUploadAndProcess, useLinkSessionToCourse } from '@/hooks/useKnowledgeSources';
-import { useListTeamKnowledgeSources, KnowledgeSourceStatus } from '@/hooks/useTeamKnowledge';
+import { useListKnowledgeSources, KnowledgeSourceStatus } from '@/hooks/useTeamKnowledge';
 import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
+import KnowledgeSelectionStep from './steps/KnowledgeSelectionStep';
 import CourseNameStep from './steps/CourseNameStep';
 import TitleDescriptionStep from './steps/TitleDescriptionStep';
 import SMEPersonasStep from './steps/SMEPersonasStep';
@@ -60,6 +62,7 @@ export default function CourseWizard() {
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [processedSources, setProcessedSources] = useState<ProcessedSource[]>([]);
   const [sessionId] = useState(() => generateSessionId());
+  const [knowledgeLoaded, setKnowledgeLoaded] = useState(false);
 
   // API hooks - wizard generation
   const generateTitle = useGenerateTitle();
@@ -79,14 +82,30 @@ export default function CourseWizard() {
   const uploadAndProcess = useUploadAndProcess();
   const linkSessionToCourse = useLinkSessionToCourse();
 
-  // Team knowledge (shared across courses)
-  const { sources: teamKnowledgeSources } = useListTeamKnowledgeSources();
-  const readyTeamKnowledge = teamKnowledgeSources.filter(
+  // Fetch team knowledge (no teamId = global knowledge)
+  const { sources: globalKnowledgeSources, isLoading: globalKnowledgeLoading } = useListKnowledgeSources();
+
+  // Filter to only ready sources
+  const readyGlobalKnowledge = globalKnowledgeSources.filter(
     (source) => source.status === KnowledgeSourceStatus.READY
   );
-  const teamKnowledgeCount = readyTeamKnowledge.length;
-  const teamKnowledgeTokens = readyTeamKnowledge.reduce(
-    (sum, source) => sum + (source.tokenCount ?? 0),
+
+  // Convert to wizard format
+  const availableGlobalDocs: WizardKnowledgeSource[] = readyGlobalKnowledge.map((source) => ({
+    id: source.id,
+    name: source.name,
+    tokenCount: source.tokenCount ?? 0,
+    summary: source.summary ?? undefined,
+    scope: 'global' as const,
+  }));
+
+  // For now, team docs are the same as global (we'll separate when we have team-specific knowledge)
+  const availableTeamDocs: WizardKnowledgeSource[] = [];
+
+  // Calculate totals for display in CourseNameStep
+  const totalKnowledgeCount = availableTeamDocs.length + availableGlobalDocs.length;
+  const totalKnowledgeTokens = [...availableTeamDocs, ...availableGlobalDocs].reduce(
+    (sum, doc) => sum + doc.tokenCount,
     0
   );
 
@@ -160,6 +179,8 @@ export default function CourseWizard() {
               toneOption: ToneOption | undefined;
               additionalContext: string;
               internalDataOnly: boolean;
+              selectedTeamDocIds: string[];
+              selectedGlobalDocIds: string[];
             };
           }) => {
             // Step 1: Create a course with wizard data for AI generation context
@@ -181,6 +202,8 @@ export default function CourseWizard() {
                 selectedToneId: input.toneOption?.id ?? '',
                 additionalContext: input.additionalContext,
                 internalDataOnly: input.internalDataOnly,
+                selectedTeamDocIds: input.selectedTeamDocIds,
+                selectedGlobalDocIds: input.selectedGlobalDocIds,
               },
             });
 
@@ -189,6 +212,10 @@ export default function CourseWizard() {
               courseId: courseResult.course?.id,
               title: courseResult.course?.settings?.title,
               hasWizardData: true,
+              selectedKnowledge: {
+                teamDocs: input.selectedTeamDocIds.length,
+                globalDocs: input.selectedGlobalDocIds.length,
+              },
             });
 
             if (!courseResult.course?.id) {
@@ -282,6 +309,18 @@ export default function CourseWizard() {
       send({ type: 'START_FRESH' });
     }
   }, [getSavedState.data, getSavedState.isLoading, send]);
+
+  // Load available knowledge sources into state machine when ready
+  useEffect(() => {
+    if (!globalKnowledgeLoading && !knowledgeLoaded) {
+      send({
+        type: 'SET_AVAILABLE_KNOWLEDGE',
+        teamDocs: availableTeamDocs,
+        globalDocs: availableGlobalDocs,
+      });
+      setKnowledgeLoaded(true);
+    }
+  }, [globalKnowledgeLoading, knowledgeLoaded, availableTeamDocs, availableGlobalDocs, send]);
 
   // Handle redirect to outline page after job is queued
   useEffect(() => {
@@ -377,8 +416,8 @@ export default function CourseWizard() {
     setKnowledgeModalState('upload');
   }, []);
 
-  // Loading state while checking for saved state
-  if (state.matches('checkingSavedState') || getSavedState.isLoading) {
+  // Loading state while checking for saved state or loading knowledge
+  if (state.matches('checkingSavedState') || getSavedState.isLoading || globalKnowledgeLoading) {
     return (
       <GeneratingStep
         title="Loading..."
@@ -548,6 +587,25 @@ export default function CourseWizard() {
       <WizardProgress currentStep={context.currentStep} />
       {renderError()}
 
+      {state.matches('knowledgeSelection') && (
+        <KnowledgeSelectionStep
+          teamDocs={context.availableTeamDocs}
+          globalDocs={context.availableGlobalDocs}
+          selectedTeamDocIds={context.selectedTeamDocIds}
+          selectedGlobalDocIds={context.selectedGlobalDocIds}
+          onToggleTeamDoc={(docId) => send({ type: 'TOGGLE_TEAM_DOC', docId })}
+          onToggleGlobalDoc={(docId) => send({ type: 'TOGGLE_GLOBAL_DOC', docId })}
+          onSelectAllTeamDocs={() => send({ type: 'SELECT_ALL_TEAM_DOCS' })}
+          onDeselectAllTeamDocs={() => send({ type: 'DESELECT_ALL_TEAM_DOCS' })}
+          onSelectAllGlobalDocs={() => send({ type: 'SELECT_ALL_GLOBAL_DOCS' })}
+          onDeselectAllGlobalDocs={() => send({ type: 'DESELECT_ALL_GLOBAL_DOCS' })}
+          onNext={() => send({ type: 'APPROVE_KNOWLEDGE_SELECTION' })}
+          onSkip={() => send({ type: 'SKIP_KNOWLEDGE_SELECTION' })}
+          onCancel={handleCancel}
+          isLoading={isLoading}
+        />
+      )}
+
       {state.matches('courseName') && (
         <CourseNameStep
           courseName={context.courseName}
@@ -556,14 +614,26 @@ export default function CourseWizard() {
           onDesiredOutcomesChange={(outcomes) => send({ type: 'SET_DESIRED_OUTCOMES', outcomes })}
           onGenerateOutcomes={() => send({ type: 'GENERATE_OUTCOMES' })}
           onNext={() => send({ type: 'SUBMIT_COURSE_NAME' })}
+          onBack={
+            context.availableTeamDocs.length > 0 || context.availableGlobalDocs.length > 0
+              ? () => send({ type: 'GO_BACK' })
+              : undefined
+          }
           onCancel={handleCancel}
           isLoading={isLoading}
           isGeneratingOutcomes={state.matches('generatingOutcomes')}
           knowledgeFileCount={pendingFiles.length}
           processedSourcesCount={processedSources.length}
           onOpenKnowledgeModal={handleOpenKnowledgeModal}
-          teamKnowledgeCount={teamKnowledgeCount}
-          teamKnowledgeTokens={teamKnowledgeTokens}
+          teamKnowledgeCount={context.selectedTeamDocIds.length + context.selectedGlobalDocIds.length}
+          teamKnowledgeTokens={
+            [...context.availableTeamDocs, ...context.availableGlobalDocs]
+              .filter((doc) =>
+                context.selectedTeamDocIds.includes(doc.id) ||
+                context.selectedGlobalDocIds.includes(doc.id)
+              )
+              .reduce((sum, doc) => sum + doc.tokenCount, 0)
+          }
           internalDataOnly={context.internalDataOnly}
           onInternalDataOnlyChange={(enabled) => send({ type: 'SET_INTERNAL_DATA_ONLY', enabled })}
         />

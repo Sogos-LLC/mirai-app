@@ -320,8 +320,13 @@ type WizardStepData struct {
 	// exclusively from uploaded knowledge sources. AI will not add external
 	// information or fill gaps - course size adapts to available content.
 	InternalDataOnly bool `protobuf:"varint,12,opt,name=internal_data_only,json=internalDataOnly,proto3" json:"internal_data_only,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Knowledge selection (Step 1) - Selected knowledge sources for RAG
+	SelectedTeamDocIds    []string `protobuf:"bytes,15,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`         // Selected team-level knowledge source IDs
+	SelectedGlobalDocIds  []string `protobuf:"bytes,16,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`   // Selected global (tenant-level) knowledge source IDs
+	EstimatedTeamTokens   int64    `protobuf:"varint,17,opt,name=estimated_team_tokens,json=estimatedTeamTokens,proto3" json:"estimated_team_tokens,omitempty"`       // Estimated tokens from team sources
+	EstimatedGlobalTokens int64    `protobuf:"varint,18,opt,name=estimated_global_tokens,json=estimatedGlobalTokens,proto3" json:"estimated_global_tokens,omitempty"` // Estimated tokens from global sources
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *WizardStepData) Reset() {
@@ -436,6 +441,34 @@ func (x *WizardStepData) GetInternalDataOnly() bool {
 		return x.InternalDataOnly
 	}
 	return false
+}
+
+func (x *WizardStepData) GetSelectedTeamDocIds() []string {
+	if x != nil {
+		return x.SelectedTeamDocIds
+	}
+	return nil
+}
+
+func (x *WizardStepData) GetSelectedGlobalDocIds() []string {
+	if x != nil {
+		return x.SelectedGlobalDocIds
+	}
+	return nil
+}
+
+func (x *WizardStepData) GetEstimatedTeamTokens() int64 {
+	if x != nil {
+		return x.EstimatedTeamTokens
+	}
+	return 0
+}
+
+func (x *WizardStepData) GetEstimatedGlobalTokens() int64 {
+	if x != nil {
+		return x.EstimatedGlobalTokens
+	}
+	return 0
 }
 
 // WizardState tracks wizard progress for resume capability.
@@ -1512,7 +1545,7 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12)\n" +
 	"\vdescription\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x12K\n" +
-	"\x0flevel_of_detail\x18\x04 \x01(\x0e2\x19.mirai.v1.ToneDetailLevelB\b\xbaH\x05\x82\x01\x02\x10\x01R\rlevelOfDetail\"\xc4\x04\n" +
+	"\x0flevel_of_detail\x18\x04 \x01(\x0e2\x19.mirai.v1.ToneDetailLevelB\b\xbaH\x05\x82\x01\x02\x10\x01R\rlevelOfDetail\"\x9a\x06\n" +
 	"\x0eWizardStepData\x12\x1f\n" +
 	"\vcourse_name\x18\x01 \x01(\tR\n" +
 	"courseName\x12%\n" +
@@ -1527,7 +1560,11 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\x12additional_context\x18\n" +
 	" \x01(\tR\x11additionalContext\x12)\n" +
 	"\x10desired_outcomes\x18\v \x01(\tR\x0fdesiredOutcomes\x12,\n" +
-	"\x12internal_data_only\x18\f \x01(\bR\x10internalDataOnly\"\x9a\x02\n" +
+	"\x12internal_data_only\x18\f \x01(\bR\x10internalDataOnly\x121\n" +
+	"\x15selected_team_doc_ids\x18\x0f \x03(\tR\x12selectedTeamDocIds\x125\n" +
+	"\x17selected_global_doc_ids\x18\x10 \x03(\tR\x14selectedGlobalDocIds\x122\n" +
+	"\x15estimated_team_tokens\x18\x11 \x01(\x03R\x13estimatedTeamTokens\x126\n" +
+	"\x17estimated_global_tokens\x18\x12 \x01(\x03R\x15estimatedGlobalTokens\"\x9a\x02\n" +
 	"\vWizardState\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x17\n" +
