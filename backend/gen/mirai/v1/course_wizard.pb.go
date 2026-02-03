@@ -320,8 +320,14 @@ type WizardStepData struct {
 	// exclusively from uploaded knowledge sources. AI will not add external
 	// information or fill gaps - course size adapts to available content.
 	InternalDataOnly bool `protobuf:"varint,12,opt,name=internal_data_only,json=internalDataOnly,proto3" json:"internal_data_only,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Include team knowledge in course generation (opt-in).
+	// When enabled, team knowledge is prioritized alongside course-specific knowledge.
+	IncludeTeamKnowledge bool `protobuf:"varint,13,opt,name=include_team_knowledge,json=includeTeamKnowledge,proto3" json:"include_team_knowledge,omitempty"`
+	// Team ID for team knowledge inclusion.
+	// Required when include_team_knowledge is true.
+	TeamId        *string `protobuf:"bytes,14,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WizardStepData) Reset() {
@@ -436,6 +442,20 @@ func (x *WizardStepData) GetInternalDataOnly() bool {
 		return x.InternalDataOnly
 	}
 	return false
+}
+
+func (x *WizardStepData) GetIncludeTeamKnowledge() bool {
+	if x != nil {
+		return x.IncludeTeamKnowledge
+	}
+	return false
+}
+
+func (x *WizardStepData) GetTeamId() string {
+	if x != nil && x.TeamId != nil {
+		return *x.TeamId
+	}
+	return ""
 }
 
 // WizardState tracks wizard progress for resume capability.
@@ -1512,7 +1532,7 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12)\n" +
 	"\vdescription\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x12K\n" +
-	"\x0flevel_of_detail\x18\x04 \x01(\x0e2\x19.mirai.v1.ToneDetailLevelB\b\xbaH\x05\x82\x01\x02\x10\x01R\rlevelOfDetail\"\xc4\x04\n" +
+	"\x0flevel_of_detail\x18\x04 \x01(\x0e2\x19.mirai.v1.ToneDetailLevelB\b\xbaH\x05\x82\x01\x02\x10\x01R\rlevelOfDetail\"\xa4\x05\n" +
 	"\x0eWizardStepData\x12\x1f\n" +
 	"\vcourse_name\x18\x01 \x01(\tR\n" +
 	"courseName\x12%\n" +
@@ -1527,7 +1547,11 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\x12additional_context\x18\n" +
 	" \x01(\tR\x11additionalContext\x12)\n" +
 	"\x10desired_outcomes\x18\v \x01(\tR\x0fdesiredOutcomes\x12,\n" +
-	"\x12internal_data_only\x18\f \x01(\bR\x10internalDataOnly\"\x9a\x02\n" +
+	"\x12internal_data_only\x18\f \x01(\bR\x10internalDataOnly\x124\n" +
+	"\x16include_team_knowledge\x18\r \x01(\bR\x14includeTeamKnowledge\x12\x1c\n" +
+	"\ateam_id\x18\x0e \x01(\tH\x00R\x06teamId\x88\x01\x01B\n" +
+	"\n" +
+	"\b_team_id\"\x9a\x02\n" +
 	"\vWizardState\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x17\n" +
@@ -1703,6 +1727,7 @@ func file_mirai_v1_course_wizard_proto_init() {
 	if File_mirai_v1_course_wizard_proto != nil {
 		return
 	}
+	file_mirai_v1_course_wizard_proto_msgTypes[3].OneofWrappers = []any{}
 	file_mirai_v1_course_wizard_proto_msgTypes[7].OneofWrappers = []any{}
 	file_mirai_v1_course_wizard_proto_msgTypes[19].OneofWrappers = []any{}
 	type x struct{}

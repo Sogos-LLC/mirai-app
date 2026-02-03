@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "buf/validate/validate.proto";
+import "mirai/v1/knowledge_source.proto";
+
+// =============================================================================
+// TEAM KNOWLEDGE SERVICE - Team-level knowledge source operations
+// =============================================================================
+//
+// Team knowledge is shared across all courses for a team and prioritized
+// during AI generation. Supports async ingestion with human-in-the-loop review.
+//
+// To regenerate after changes: cd proto && buf generate
+// =============================================================================
+
+// TeamKnowledgeService handles team-level knowledge source operations.
+service TeamKnowledgeService {
+  // QueueTeamKnowledgeIngestion uploads a file and queues it for async processing.
+  // Returns immediately with job_id for tracking via SSE stream.
+  rpc QueueTeamKnowledgeIngestion(QueueTeamKnowledgeIngestionRequest)
+    returns (QueueTeamKnowledgeIngestionResponse);
+
+  // SubscribeIngestionStatus streams real-time status updates for ingestion jobs.
+  // Server-sent events pattern for job progress tracking.
+  rpc SubscribeIngestionStatus(SubscribeIngestionStatusRequest)
+    returns (stream SubscribeIngestionStatusResponse);
+
+  // UpdateKnowledgeSourceIndex saves user edits to summary/topics after review.
+  // Human-in-the-loop: user can refine AI-generated summaries before saving.
+  rpc UpdateKnowledgeSourceIndex(UpdateKnowledgeSourceIndexRequest)
+    returns (UpdateKnowledgeSourceIndexResponse);
+
+  // ListTeamKnowledgeSources returns all knowledge sources for a team.
+  rpc ListTeamKnowledgeSources(ListTeamKnowledgeSourcesRequest)
+    returns (ListTeamKnowledgeSourcesResponse);
+
+  // GetTeamKnowledgeSource returns a single team knowledge source by ID.
+  rpc GetTeamKnowledgeSource(GetTeamKnowledgeSourceRequest)
+    returns (GetTeamKnowledgeSourceResponse);
+
+  // DeleteTeamKnowledgeSource removes a team knowledge source.
+  rpc DeleteTeamKnowledgeSource(DeleteTeamKnowledgeSourceRequest)
+    returns (DeleteTeamKnowledgeSourceResponse);
+
+  // SearchTeamKnowledge performs semantic search across team knowledge.
+  rpc SearchTeamKnowledge(SearchTeamKnowledgeRequest)
+    returns (SearchTeamKnowledgeResponse);
+
+  // GetTeamKnowledgeSummary returns aggregated statistics for team knowledge.
+  rpc GetTeamKnowledgeSummary(GetTeamKnowledgeSummaryRequest)
+    returns (GetTeamKnowledgeSummaryResponse);
+
+  // GetAggregatedTeamKnowledge returns combined summary of all team docs.
+  // Used in course wizard when "Include team knowledge" is enabled.
+  rpc GetAggregatedTeamKnowledge(GetAggregatedTeamKnowledgeRequest)
+    returns (GetAggregatedTeamKnowledgeResponse);
+}
+
+// =============================================================================
+// ASYNC INGESTION MESSAGES
+// =============================================================================
+
+// QueueTeamKnowledgeIngestionRequest for uploading team knowledge files.
+message QueueTeamKnowledgeIngestionRequest {
+  string team_id = 1 [(buf.validate.field).string.uuid = true];
+  string filename = 2 [(buf.validate.field).string.min_len = 1];
+  string content_type = 3 [(buf.validate.field).string.min_len = 1];
+  bytes file_content = 4 [(buf.validate.field).bytes.min_len = 1];
+}
+
+message QueueTeamKnowledgeIngestionResponse {
+  string job_id = 1;      // For tracking via SSE stream
+  string source_id = 2;   // Knowledge source ID (status: pending)
+}
+
+// SubscribeIngestionStatusRequest to subscribe to job status updates.
+message SubscribeIngestionStatusRequest {
+  // Empty - subscribes to all jobs for the authenticated user
+}
+
+// SubscribeIngestionStatusResponse wraps a single status event for streaming.
+message SubscribeIngestionStatusResponse {
+  string job_id = 1;
+  string source_id = 2;
+  IngestionStatus status = 3;
+  optional string error_message = 4;
+  optional KnowledgeSource source = 5;  // Populated on completion
+  optional int32 progress_percent = 6;  // Optional progress indicator
+}
+
+// IngestionStatus tracks the state of an ingestion job.
+enum IngestionStatus {
+  INGESTION_STATUS_UNSPECIFIED = 0;
+  INGESTION_STATUS_QUEUED = 1;
+  INGESTION_STATUS_PROCESSING = 2;
+  INGESTION_STATUS_COMPLETED = 3;
+  INGESTION_STATUS_FAILED = 4;
+  INGESTION_STATUS_KEEPALIVE = 5;  // SSE keepalive to prevent timeout
+}
+
+// =============================================================================
+// HUMAN-IN-THE-LOOP REVIEW MESSAGES
+// =============================================================================
+
+// UpdateKnowledgeSourceIndexRequest for saving user edits after review.
+message UpdateKnowledgeSourceIndexRequest {
+  string source_id = 1 [(buf.validate.field).string.uuid = true];
+  string summary = 2;                           // User-edited summary
+  repeated TopicWithExcerpts topics = 3;        // User-edited topics
+  repeated string key_concepts = 4;             // User-edited concepts
+}
+
+message UpdateKnowledgeSourceIndexResponse {
+  KnowledgeSource source = 1;
+}
+
+// =============================================================================
+// CRUD MESSAGES
+// =============================================================================
+
+// ListTeamKnowledgeSourcesRequest for listing team sources.
+message ListTeamKnowledgeSourcesRequest {
+  string team_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message ListTeamKnowledgeSourcesResponse {
+  repeated KnowledgeSource sources = 1;
+}
+
+// GetTeamKnowledgeSourceRequest for single source retrieval.
+message GetTeamKnowledgeSourceRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message GetTeamKnowledgeSourceResponse {
+  KnowledgeSource source = 1;
+}
+
+// DeleteTeamKnowledgeSourceRequest to remove a team source.
+message DeleteTeamKnowledgeSourceRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message DeleteTeamKnowledgeSourceResponse {
+  bool success = 1;
+}
+
+// =============================================================================
+// SEARCH AND AGGREGATION MESSAGES
+// =============================================================================
+
+// SearchTeamKnowledgeRequest for semantic search.
+message SearchTeamKnowledgeRequest {
+  string team_id = 1 [(buf.validate.field).string.uuid = true];
+  string query = 2 [(buf.validate.field).string.min_len = 1];
+  int32 top_k = 3;  // Number of results (default 5, max 20)
+}
+
+message SearchTeamKnowledgeResponse {
+  repeated RetrievedChunk chunks = 1;
+}
+
+// GetTeamKnowledgeSummaryRequest for team knowledge statistics.
+message GetTeamKnowledgeSummaryRequest {
+  string team_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetTeamKnowledgeSummaryResponse provides aggregated team knowledge statistics.
+message GetTeamKnowledgeSummaryResponse {
+  int32 total_sources = 1;
+  int32 total_chunks = 2;
+  int32 total_tokens = 3;
+}
+
+// GetAggregatedTeamKnowledgeRequest for combined team knowledge summary.
+message GetAggregatedTeamKnowledgeRequest {
+  string team_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetAggregatedTeamKnowledgeResponse contains combined summary for wizard.
+message GetAggregatedTeamKnowledgeResponse {
+  // All ready knowledge sources for the team
+  repeated KnowledgeSource sources = 1;
+
+  // Aggregated topics from all documents
+  repeated string main_topics = 2;
+
+  // Aggregated key concepts from all documents
+  repeated string key_concepts = 3;
+
+  // Statistics
+  int32 total_sources = 4;
+  int32 total_chunks = 5;
+  int32 total_tokens = 6;
+}

@@ -127,3 +127,60 @@ UPDATE knowledge_sources SET
     updated_at = NOW()
 WHERE id = $7
 RETURNING *;
+
+-- =============================================================================
+-- TEAM KNOWLEDGE OPERATIONS
+-- =============================================================================
+
+-- name: CreateKnowledgeSourceWithTeam :one
+-- Create a knowledge source for team-level knowledge
+INSERT INTO knowledge_sources (
+    id,
+    tenant_id,
+    team_id,
+    type,
+    status,
+    name,
+    file_path,
+    mime_type,
+    file_size_bytes
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
+)
+RETURNING *;
+
+-- name: ListKnowledgeSourcesByTeam :many
+-- List all knowledge sources for a team
+SELECT * FROM knowledge_sources
+WHERE team_id = $1
+ORDER BY created_at DESC;
+
+-- name: GetReadySourcesByTeam :many
+-- Get only ready sources for a team (for RAG context)
+SELECT * FROM knowledge_sources
+WHERE team_id = $1 AND status = 'ready'
+ORDER BY created_at ASC;
+
+-- name: CountKnowledgeSourcesByTeam :one
+SELECT COUNT(*)::int as count FROM knowledge_sources WHERE team_id = $1;
+
+-- name: DeleteKnowledgeSourcesByTeam :exec
+DELETE FROM knowledge_sources WHERE team_id = $1;
+
+-- name: GetTeamKnowledgeSummary :one
+-- Get aggregated statistics for team knowledge
+SELECT
+    COUNT(*)::int as total_sources,
+    COALESCE(SUM(chunk_count), 0)::int as total_chunks,
+    COALESCE(SUM(token_count), 0)::int as total_tokens
+FROM knowledge_sources
+WHERE team_id = $1 AND status = 'ready';
+
+-- name: UpdateDocumentIndex :one
+-- Update document index after user edits (human-in-the-loop review)
+UPDATE knowledge_sources SET
+    summary = $1,
+    document_index = $2,
+    updated_at = NOW()
+WHERE id = $3
+RETURNING *;

@@ -157,6 +157,8 @@ export const WizardStepDataSchema = z.object({
   additionalContext: z.string(),
   desiredOutcomes: z.string(),
   internalDataOnly: z.boolean(),
+  includeTeamKnowledge: z.boolean(),
+  teamId: z.string().optional(),
 });
 
 export type WizardStepData = z.infer<typeof WizardStepDataSchema>;

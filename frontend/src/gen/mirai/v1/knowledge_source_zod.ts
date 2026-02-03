@@ -20,18 +20,16 @@ export const KnowledgeSourceStatusSchema = z.nativeEnum(KnowledgeSourceStatus);
 export type KnowledgeSourceStatusType = z.infer<typeof KnowledgeSourceStatusSchema>;
 
 /**
- * Zod schema for DocumentIndex
- * @generated from message mirai.v1.DocumentIndex
+ * Zod schema for ContentExcerpt
+ * @generated from message mirai.v1.ContentExcerpt
  */
-export const DocumentIndexSchema = z.object({
-  title: z.string(),
-  mainTopics: z.array(z.string()),
-  keyConcepts: z.array(z.string()),
-  estimatedLessonCount: z.number().int(),
-  contentDepth: z.string(),
+export const ContentExcerptSchema = z.object({
+  content: z.string(),
+  chunkIndex: z.number().int(),
+  relevanceScore: z.number(),
 });
 
-export type DocumentIndex = z.infer<typeof DocumentIndexSchema>;
+export type ContentExcerpt = z.infer<typeof ContentExcerptSchema>;
 
 /**
  * Zod schema for RetrievedChunk
@@ -47,6 +45,32 @@ export const RetrievedChunkSchema = z.object({
 });
 
 export type RetrievedChunk = z.infer<typeof RetrievedChunkSchema>;
+
+/**
+ * Zod schema for TopicWithExcerpts
+ * @generated from message mirai.v1.TopicWithExcerpts
+ */
+export const TopicWithExcerptsSchema = z.object({
+  topic: z.string(),
+  excerpts: z.array(ContentExcerptSchema),
+});
+
+export type TopicWithExcerpts = z.infer<typeof TopicWithExcerptsSchema>;
+
+/**
+ * Zod schema for DocumentIndex
+ * @generated from message mirai.v1.DocumentIndex
+ */
+export const DocumentIndexSchema = z.object({
+  title: z.string(),
+  mainTopics: z.array(z.string()),
+  keyConcepts: z.array(z.string()),
+  estimatedLessonCount: z.number().int(),
+  contentDepth: z.string(),
+  topicsWithExcerpts: z.array(TopicWithExcerptsSchema),
+});
+
+export type DocumentIndex = z.infer<typeof DocumentIndexSchema>;
 
 /**
  * Zod schema for KnowledgeSource
@@ -72,6 +96,7 @@ export const KnowledgeSourceSchema = z.object({
   summary: z.string().optional(),
   tokenCount: z.number().int().optional(),
   documentIndex: DocumentIndexSchema.optional(),
+  teamId: z.string().optional(),
 });
 
 export type KnowledgeSource = z.infer<typeof KnowledgeSourceSchema>;

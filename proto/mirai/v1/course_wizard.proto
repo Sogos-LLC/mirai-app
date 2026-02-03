@@ -66,6 +66,14 @@ message WizardStepData {
   // exclusively from uploaded knowledge sources. AI will not add external
   // information or fill gaps - course size adapts to available content.
   bool internal_data_only = 12;
+
+  // Include team knowledge in course generation (opt-in).
+  // When enabled, team knowledge is prioritized alongside course-specific knowledge.
+  bool include_team_knowledge = 13;
+
+  // Team ID for team knowledge inclusion.
+  // Required when include_team_knowledge is true.
+  optional string team_id = 14;
 }
 
 // WizardState tracks wizard progress for resume capability.

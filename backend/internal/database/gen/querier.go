@@ -33,6 +33,7 @@ type Querier interface {
 	CountExportsByStatus(ctx context.Context, courseID uuid.UUID) (CountExportsByStatusRow, error)
 	CountKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) (int32, error)
 	CountKnowledgeSourcesBySession(ctx context.Context, sessionID sql.NullString) (int32, error)
+	CountKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.NullUUID) (int32, error)
 	CountNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
 	CountPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) (int32, error)
 	CountUnreadNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
@@ -61,6 +62,11 @@ type Querier interface {
 	CreateKnowledgeSource(ctx context.Context, arg CreateKnowledgeSourceParams) (KnowledgeSource, error)
 	// Create a knowledge source with session_id (for pre-course wizard flow)
 	CreateKnowledgeSourceWithSession(ctx context.Context, arg CreateKnowledgeSourceWithSessionParams) (KnowledgeSource, error)
+	// =============================================================================
+	// TEAM KNOWLEDGE OPERATIONS
+	// =============================================================================
+	// Create a knowledge source for team-level knowledge
+	CreateKnowledgeSourceWithTeam(ctx context.Context, arg CreateKnowledgeSourceWithTeamParams) (KnowledgeSource, error)
 	// Notification CRUD operations
 	// Schema: notifications table with RLS isolation by tenant_id
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
@@ -83,6 +89,7 @@ type Querier interface {
 	DeleteFolder(ctx context.Context, id uuid.UUID) error
 	DeleteKnowledgeSource(ctx context.Context, id uuid.UUID) error
 	DeleteKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) error
+	DeleteKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.NullUUID) error
 	DeleteNotification(ctx context.Context, id uuid.UUID) error
 	DeletePendingRegistration(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
@@ -122,8 +129,12 @@ type Querier interface {
 	GetReadySourcesByCourse(ctx context.Context, courseID uuid.NullUUID) ([]KnowledgeSource, error)
 	// Get only ready sources for a session
 	GetReadySourcesBySession(ctx context.Context, sessionID sql.NullString) ([]KnowledgeSource, error)
+	// Get only ready sources for a team (for RAG context)
+	GetReadySourcesByTeam(ctx context.Context, teamID uuid.NullUUID) ([]KnowledgeSource, error)
 	GetSharedFolder(ctx context.Context, tenantID uuid.UUID) (Folder, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
+	// Get aggregated statistics for team knowledge
+	GetTeamKnowledgeSummary(ctx context.Context, teamID uuid.NullUUID) (GetTeamKnowledgeSummaryRow, error)
 	GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamMember, error)
 	// Tenant AI Settings CRUD operations
 	// Schema: tenant_ai_settings table with RLS isolation by tenant_id
@@ -155,6 +166,8 @@ type Querier interface {
 	ListKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) ([]KnowledgeSource, error)
 	// List all sources for a session (pre-course wizard flow)
 	ListKnowledgeSourcesBySession(ctx context.Context, sessionID sql.NullString) ([]KnowledgeSource, error)
+	// List all knowledge sources for a team
+	ListKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.NullUUID) ([]KnowledgeSource, error)
 	ListNotificationsByUserID(ctx context.Context, arg ListNotificationsByUserIDParams) ([]Notification, error)
 	ListPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
 	ListPendingKnowledgeSources(ctx context.Context, limit int32) ([]KnowledgeSource, error)
@@ -177,6 +190,8 @@ type Querier interface {
 	UpdateCourseExportFailed(ctx context.Context, arg UpdateCourseExportFailedParams) error
 	UpdateCourseExportProcessing(ctx context.Context, arg UpdateCourseExportProcessingParams) error
 	UpdateCourseExportProgress(ctx context.Context, arg UpdateCourseExportProgressParams) error
+	// Update document index after user edits (human-in-the-loop review)
+	UpdateDocumentIndex(ctx context.Context, arg UpdateDocumentIndexParams) (KnowledgeSource, error)
 	UpdateFolder(ctx context.Context, arg UpdateFolderParams) (Folder, error)
 	UpdateGenerationJob(ctx context.Context, arg UpdateGenerationJobParams) error
 	UpdateInvitation(ctx context.Context, arg UpdateInvitationParams) (Invitation, error)
