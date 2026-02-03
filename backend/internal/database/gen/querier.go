@@ -80,6 +80,7 @@ type Querier interface {
 	// Schema: tenants table
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateTenantAISettings(ctx context.Context, arg CreateTenantAISettingsParams) (TenantAiSetting, error)
+	CreateTenantKnowledgeSettings(ctx context.Context, arg CreateTenantKnowledgeSettingsParams) (TenantKnowledgeSetting, error)
 	// User CRUD operations
 	// Schema: users table with RLS isolation by tenant_id
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
@@ -149,6 +150,9 @@ type Querier interface {
 	GetTenantAISettings(ctx context.Context, tenantID uuid.UUID) (TenantAiSetting, error)
 	GetTenantByID(ctx context.Context, id uuid.UUID) (Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
+	// Tenant Knowledge Settings CRUD operations
+	// Schema: tenant_knowledge_settings table with RLS isolation by tenant_id
+	GetTenantKnowledgeSettings(ctx context.Context, tenantID uuid.UUID) (TenantKnowledgeSetting, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByKratosID(ctx context.Context, kratosID uuid.UUID) (User, error)
 	GetUserCRMContactID(ctx context.Context, id uuid.UUID) (sql.NullString, error)
@@ -219,6 +223,7 @@ type Querier interface {
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateTenantAISettings(ctx context.Context, arg UpdateTenantAISettingsParams) (TenantAiSetting, error)
+	UpdateTenantKnowledgeSettings(ctx context.Context, arg UpdateTenantKnowledgeSettingsParams) (TenantKnowledgeSetting, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserCRMContactID(ctx context.Context, arg UpdateUserCRMContactIDParams) error
 	// Updates an existing wizard state

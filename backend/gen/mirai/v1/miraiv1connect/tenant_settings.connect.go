@@ -48,6 +48,12 @@ const (
 	// TenantSettingsServiceGetUsageStatsProcedure is the fully-qualified name of the
 	// TenantSettingsService's GetUsageStats RPC.
 	TenantSettingsServiceGetUsageStatsProcedure = "/mirai.v1.TenantSettingsService/GetUsageStats"
+	// TenantSettingsServiceGetKnowledgeSettingsProcedure is the fully-qualified name of the
+	// TenantSettingsService's GetKnowledgeSettings RPC.
+	TenantSettingsServiceGetKnowledgeSettingsProcedure = "/mirai.v1.TenantSettingsService/GetKnowledgeSettings"
+	// TenantSettingsServiceUpdateKnowledgeSettingsProcedure is the fully-qualified name of the
+	// TenantSettingsService's UpdateKnowledgeSettings RPC.
+	TenantSettingsServiceUpdateKnowledgeSettingsProcedure = "/mirai.v1.TenantSettingsService/UpdateKnowledgeSettings"
 )
 
 // TenantSettingsServiceClient is a client for the mirai.v1.TenantSettingsService service.
@@ -62,6 +68,10 @@ type TenantSettingsServiceClient interface {
 	TestAPIKey(context.Context, *connect.Request[v1.TestAPIKeyRequest]) (*connect.Response[v1.TestAPIKeyResponse], error)
 	// GetUsageStats returns AI usage statistics.
 	GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error)
+	// GetKnowledgeSettings returns knowledge/RAG configuration.
+	GetKnowledgeSettings(context.Context, *connect.Request[v1.GetKnowledgeSettingsRequest]) (*connect.Response[v1.GetKnowledgeSettingsResponse], error)
+	// UpdateKnowledgeSettings updates knowledge/RAG configuration.
+	UpdateKnowledgeSettings(context.Context, *connect.Request[v1.UpdateKnowledgeSettingsRequest]) (*connect.Response[v1.UpdateKnowledgeSettingsResponse], error)
 }
 
 // NewTenantSettingsServiceClient constructs a client for the mirai.v1.TenantSettingsService
@@ -105,16 +115,30 @@ func NewTenantSettingsServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(tenantSettingsServiceMethods.ByName("GetUsageStats")),
 			connect.WithClientOptions(opts...),
 		),
+		getKnowledgeSettings: connect.NewClient[v1.GetKnowledgeSettingsRequest, v1.GetKnowledgeSettingsResponse](
+			httpClient,
+			baseURL+TenantSettingsServiceGetKnowledgeSettingsProcedure,
+			connect.WithSchema(tenantSettingsServiceMethods.ByName("GetKnowledgeSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		updateKnowledgeSettings: connect.NewClient[v1.UpdateKnowledgeSettingsRequest, v1.UpdateKnowledgeSettingsResponse](
+			httpClient,
+			baseURL+TenantSettingsServiceUpdateKnowledgeSettingsProcedure,
+			connect.WithSchema(tenantSettingsServiceMethods.ByName("UpdateKnowledgeSettings")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // tenantSettingsServiceClient implements TenantSettingsServiceClient.
 type tenantSettingsServiceClient struct {
-	getAISettings *connect.Client[v1.GetAISettingsRequest, v1.GetAISettingsResponse]
-	setAPIKey     *connect.Client[v1.SetAPIKeyRequest, v1.SetAPIKeyResponse]
-	removeAPIKey  *connect.Client[v1.RemoveAPIKeyRequest, v1.RemoveAPIKeyResponse]
-	testAPIKey    *connect.Client[v1.TestAPIKeyRequest, v1.TestAPIKeyResponse]
-	getUsageStats *connect.Client[v1.GetUsageStatsRequest, v1.GetUsageStatsResponse]
+	getAISettings           *connect.Client[v1.GetAISettingsRequest, v1.GetAISettingsResponse]
+	setAPIKey               *connect.Client[v1.SetAPIKeyRequest, v1.SetAPIKeyResponse]
+	removeAPIKey            *connect.Client[v1.RemoveAPIKeyRequest, v1.RemoveAPIKeyResponse]
+	testAPIKey              *connect.Client[v1.TestAPIKeyRequest, v1.TestAPIKeyResponse]
+	getUsageStats           *connect.Client[v1.GetUsageStatsRequest, v1.GetUsageStatsResponse]
+	getKnowledgeSettings    *connect.Client[v1.GetKnowledgeSettingsRequest, v1.GetKnowledgeSettingsResponse]
+	updateKnowledgeSettings *connect.Client[v1.UpdateKnowledgeSettingsRequest, v1.UpdateKnowledgeSettingsResponse]
 }
 
 // GetAISettings calls mirai.v1.TenantSettingsService.GetAISettings.
@@ -142,6 +166,16 @@ func (c *tenantSettingsServiceClient) GetUsageStats(ctx context.Context, req *co
 	return c.getUsageStats.CallUnary(ctx, req)
 }
 
+// GetKnowledgeSettings calls mirai.v1.TenantSettingsService.GetKnowledgeSettings.
+func (c *tenantSettingsServiceClient) GetKnowledgeSettings(ctx context.Context, req *connect.Request[v1.GetKnowledgeSettingsRequest]) (*connect.Response[v1.GetKnowledgeSettingsResponse], error) {
+	return c.getKnowledgeSettings.CallUnary(ctx, req)
+}
+
+// UpdateKnowledgeSettings calls mirai.v1.TenantSettingsService.UpdateKnowledgeSettings.
+func (c *tenantSettingsServiceClient) UpdateKnowledgeSettings(ctx context.Context, req *connect.Request[v1.UpdateKnowledgeSettingsRequest]) (*connect.Response[v1.UpdateKnowledgeSettingsResponse], error) {
+	return c.updateKnowledgeSettings.CallUnary(ctx, req)
+}
+
 // TenantSettingsServiceHandler is an implementation of the mirai.v1.TenantSettingsService service.
 type TenantSettingsServiceHandler interface {
 	// GetAISettings returns the current AI configuration.
@@ -154,6 +188,10 @@ type TenantSettingsServiceHandler interface {
 	TestAPIKey(context.Context, *connect.Request[v1.TestAPIKeyRequest]) (*connect.Response[v1.TestAPIKeyResponse], error)
 	// GetUsageStats returns AI usage statistics.
 	GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error)
+	// GetKnowledgeSettings returns knowledge/RAG configuration.
+	GetKnowledgeSettings(context.Context, *connect.Request[v1.GetKnowledgeSettingsRequest]) (*connect.Response[v1.GetKnowledgeSettingsResponse], error)
+	// UpdateKnowledgeSettings updates knowledge/RAG configuration.
+	UpdateKnowledgeSettings(context.Context, *connect.Request[v1.UpdateKnowledgeSettingsRequest]) (*connect.Response[v1.UpdateKnowledgeSettingsResponse], error)
 }
 
 // NewTenantSettingsServiceHandler builds an HTTP handler from the service implementation. It
@@ -193,6 +231,18 @@ func NewTenantSettingsServiceHandler(svc TenantSettingsServiceHandler, opts ...c
 		connect.WithSchema(tenantSettingsServiceMethods.ByName("GetUsageStats")),
 		connect.WithHandlerOptions(opts...),
 	)
+	tenantSettingsServiceGetKnowledgeSettingsHandler := connect.NewUnaryHandler(
+		TenantSettingsServiceGetKnowledgeSettingsProcedure,
+		svc.GetKnowledgeSettings,
+		connect.WithSchema(tenantSettingsServiceMethods.ByName("GetKnowledgeSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	tenantSettingsServiceUpdateKnowledgeSettingsHandler := connect.NewUnaryHandler(
+		TenantSettingsServiceUpdateKnowledgeSettingsProcedure,
+		svc.UpdateKnowledgeSettings,
+		connect.WithSchema(tenantSettingsServiceMethods.ByName("UpdateKnowledgeSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.TenantSettingsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TenantSettingsServiceGetAISettingsProcedure:
@@ -205,6 +255,10 @@ func NewTenantSettingsServiceHandler(svc TenantSettingsServiceHandler, opts ...c
 			tenantSettingsServiceTestAPIKeyHandler.ServeHTTP(w, r)
 		case TenantSettingsServiceGetUsageStatsProcedure:
 			tenantSettingsServiceGetUsageStatsHandler.ServeHTTP(w, r)
+		case TenantSettingsServiceGetKnowledgeSettingsProcedure:
+			tenantSettingsServiceGetKnowledgeSettingsHandler.ServeHTTP(w, r)
+		case TenantSettingsServiceUpdateKnowledgeSettingsProcedure:
+			tenantSettingsServiceUpdateKnowledgeSettingsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -232,4 +286,12 @@ func (UnimplementedTenantSettingsServiceHandler) TestAPIKey(context.Context, *co
 
 func (UnimplementedTenantSettingsServiceHandler) GetUsageStats(context.Context, *connect.Request[v1.GetUsageStatsRequest]) (*connect.Response[v1.GetUsageStatsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.TenantSettingsService.GetUsageStats is not implemented"))
+}
+
+func (UnimplementedTenantSettingsServiceHandler) GetKnowledgeSettings(context.Context, *connect.Request[v1.GetKnowledgeSettingsRequest]) (*connect.Response[v1.GetKnowledgeSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.TenantSettingsService.GetKnowledgeSettings is not implemented"))
+}
+
+func (UnimplementedTenantSettingsServiceHandler) UpdateKnowledgeSettings(context.Context, *connect.Request[v1.UpdateKnowledgeSettingsRequest]) (*connect.Response[v1.UpdateKnowledgeSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.TenantSettingsService.UpdateKnowledgeSettings is not implemented"))
 }

@@ -26,6 +26,25 @@ message TenantAISettings {
   optional string updated_by_user_id = 7;
 }
 
+// KnowledgeSettings contains knowledge/RAG configuration for a tenant.
+message KnowledgeSettings {
+  // Allow courses to use global (tenant-wide) knowledge sources
+  bool allow_global_knowledge = 1;
+
+  // Threshold for low grounding warnings (0.0-1.0, default 0.6)
+  float low_grounding_threshold = 2;
+
+  // Enforce internal data only mode for all courses
+  // When true, courses cannot use AI-synthesized content
+  bool enforce_internal_only = 3;
+
+  // Require curriculum map approval before lesson generation
+  bool require_curriculum_approval = 4;
+
+  google.protobuf.Timestamp updated_at = 5;
+  optional string updated_by_user_id = 6;
+}
+
 // TenantSettingsService handles tenant-level settings.
 // All methods require ADMIN or OWNER role.
 service TenantSettingsService {
@@ -43,6 +62,12 @@ service TenantSettingsService {
 
   // GetUsageStats returns AI usage statistics.
   rpc GetUsageStats(GetUsageStatsRequest) returns (GetUsageStatsResponse);
+
+  // GetKnowledgeSettings returns knowledge/RAG configuration.
+  rpc GetKnowledgeSettings(GetKnowledgeSettingsRequest) returns (GetKnowledgeSettingsResponse);
+
+  // UpdateKnowledgeSettings updates knowledge/RAG configuration.
+  rpc UpdateKnowledgeSettings(UpdateKnowledgeSettingsRequest) returns (UpdateKnowledgeSettingsResponse);
 }
 
 // GetAISettingsRequest is empty as tenant is from auth context.
@@ -103,4 +128,25 @@ message GetUsageStatsResponse {
   int64 tokens_this_month = 2;
   optional int64 monthly_limit = 3;
   repeated UsageByType usage_by_type = 4;
+}
+
+// GetKnowledgeSettingsRequest fetches knowledge settings.
+message GetKnowledgeSettingsRequest {}
+
+// GetKnowledgeSettingsResponse contains knowledge settings.
+message GetKnowledgeSettingsResponse {
+  KnowledgeSettings settings = 1;
+}
+
+// UpdateKnowledgeSettingsRequest updates knowledge settings.
+message UpdateKnowledgeSettingsRequest {
+  optional bool allow_global_knowledge = 1;
+  optional float low_grounding_threshold = 2;
+  optional bool enforce_internal_only = 3;
+  optional bool require_curriculum_approval = 4;
+}
+
+// UpdateKnowledgeSettingsResponse contains updated settings.
+message UpdateKnowledgeSettingsResponse {
+  KnowledgeSettings settings = 1;
 }

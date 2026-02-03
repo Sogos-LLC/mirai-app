@@ -38,3 +38,17 @@ export const testAPIKey = TenantSettingsService.method.testAPIKey;
  * @generated from rpc mirai.v1.TenantSettingsService.GetUsageStats
  */
 export const getUsageStats = TenantSettingsService.method.getUsageStats;
+
+/**
+ * GetKnowledgeSettings returns knowledge/RAG configuration.
+ *
+ * @generated from rpc mirai.v1.TenantSettingsService.GetKnowledgeSettings
+ */
+export const getKnowledgeSettings = TenantSettingsService.method.getKnowledgeSettings;
+
+/**
+ * UpdateKnowledgeSettings updates knowledge/RAG configuration.
+ *
+ * @generated from rpc mirai.v1.TenantSettingsService.UpdateKnowledgeSettings
+ */
+export const updateKnowledgeSettings = TenantSettingsService.method.updateKnowledgeSettings;

@@ -12,26 +12,29 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/crypto"
 )
 
-// TenantSettingsService handles tenant AI settings management.
+// TenantSettingsService handles tenant AI and knowledge settings management.
 type TenantSettingsService struct {
-	userRepo     repository.UserRepository
-	settingsRepo repository.TenantAISettingsRepository
-	encryptor    *crypto.Encryptor
-	logger       service.Logger
+	userRepo              repository.UserRepository
+	settingsRepo          repository.TenantAISettingsRepository
+	knowledgeSettingsRepo repository.TenantKnowledgeSettingsRepository
+	encryptor             *crypto.Encryptor
+	logger                service.Logger
 }
 
 // NewTenantSettingsService creates a new tenant settings service.
 func NewTenantSettingsService(
 	userRepo repository.UserRepository,
 	settingsRepo repository.TenantAISettingsRepository,
+	knowledgeSettingsRepo repository.TenantKnowledgeSettingsRepository,
 	encryptor *crypto.Encryptor,
 	logger service.Logger,
 ) *TenantSettingsService {
 	return &TenantSettingsService{
-		userRepo:     userRepo,
-		settingsRepo: settingsRepo,
-		encryptor:    encryptor,
-		logger:       logger,
+		userRepo:              userRepo,
+		settingsRepo:          settingsRepo,
+		knowledgeSettingsRepo: knowledgeSettingsRepo,
+		encryptor:             encryptor,
+		logger:                logger,
 	}
 }
 
@@ -282,4 +285,136 @@ func (s *TenantSettingsService) GetDecryptedAPIKey(ctx context.Context, tenantID
 	}
 
 	return key, nil
+}
+
+// =============================================================================
+// Knowledge Settings
+// =============================================================================
+
+// GetKnowledgeSettingsResult contains the knowledge settings response.
+type GetKnowledgeSettingsResult struct {
+	Settings *entity.TenantKnowledgeSettings
+}
+
+// GetKnowledgeSettings retrieves knowledge settings for the current user's tenant.
+func (s *TenantSettingsService) GetKnowledgeSettings(ctx context.Context, kratosID uuid.UUID) (*GetKnowledgeSettingsResult, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	// Only ADMIN/OWNER can view knowledge settings
+	if !user.CanManageSettings() {
+		return nil, domainerrors.ErrForbidden.WithMessage("only admins and owners can view knowledge settings")
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	settings, err := s.knowledgeSettingsRepo.Get(ctx, *user.TenantID)
+	if err != nil {
+		s.logger.Error("failed to get knowledge settings", "tenantID", user.TenantID, "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Return default settings if none exist yet
+	if settings == nil {
+		settings = entity.DefaultKnowledgeSettings(*user.TenantID)
+	}
+
+	return &GetKnowledgeSettingsResult{Settings: settings}, nil
+}
+
+// UpdateKnowledgeSettingsInput contains the fields to update.
+type UpdateKnowledgeSettingsInput struct {
+	AllowGlobalKnowledge      *bool
+	LowGroundingThreshold     *float32
+	EnforceInternalOnly       *bool
+	RequireCurriculumApproval *bool
+}
+
+// UpdateKnowledgeSettings updates knowledge settings for the current user's tenant.
+func (s *TenantSettingsService) UpdateKnowledgeSettings(ctx context.Context, kratosID uuid.UUID, input UpdateKnowledgeSettingsInput) (*GetKnowledgeSettingsResult, error) {
+	log := s.logger.With("kratosID", kratosID)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	// Only ADMIN/OWNER can update knowledge settings
+	if !user.CanManageSettings() {
+		return nil, domainerrors.ErrForbidden.WithMessage("only admins and owners can update knowledge settings")
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	// Get existing settings
+	settings, err := s.knowledgeSettingsRepo.Get(ctx, *user.TenantID)
+	if err != nil {
+		log.Error("failed to get knowledge settings", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Create new settings if they don't exist
+	if settings == nil {
+		settings = entity.DefaultKnowledgeSettings(*user.TenantID)
+	}
+
+	// Apply updates (only non-nil fields)
+	if input.AllowGlobalKnowledge != nil {
+		settings.AllowGlobalKnowledge = *input.AllowGlobalKnowledge
+	}
+	if input.LowGroundingThreshold != nil {
+		// Validate threshold is in range
+		threshold := *input.LowGroundingThreshold
+		if threshold < 0.0 {
+			threshold = 0.0
+		} else if threshold > 1.0 {
+			threshold = 1.0
+		}
+		settings.LowGroundingThreshold = threshold
+	}
+	if input.EnforceInternalOnly != nil {
+		settings.EnforceInternalOnly = *input.EnforceInternalOnly
+	}
+	if input.RequireCurriculumApproval != nil {
+		settings.RequireCurriculumApproval = *input.RequireCurriculumApproval
+	}
+
+	settings.UpdatedByUserID = &user.ID
+
+	// Create or update
+	if settings.ID == uuid.Nil {
+		if err := s.knowledgeSettingsRepo.Create(ctx, settings); err != nil {
+			log.Error("failed to create knowledge settings", "error", err)
+			return nil, domainerrors.ErrInternal.WithCause(err)
+		}
+	} else {
+		if err := s.knowledgeSettingsRepo.Update(ctx, settings); err != nil {
+			log.Error("failed to update knowledge settings", "error", err)
+			return nil, domainerrors.ErrInternal.WithCause(err)
+		}
+	}
+
+	log.Info("knowledge settings updated successfully")
+	return &GetKnowledgeSettingsResult{Settings: settings}, nil
+}
+
+// GetKnowledgeSettingsByTenantID retrieves knowledge settings for internal use (no auth check).
+func (s *TenantSettingsService) GetKnowledgeSettingsByTenantID(ctx context.Context, tenantID uuid.UUID) (*entity.TenantKnowledgeSettings, error) {
+	settings, err := s.knowledgeSettingsRepo.Get(ctx, tenantID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	// Return default settings if none exist yet
+	if settings == nil {
+		return entity.DefaultKnowledgeSettings(tenantID), nil
+	}
+
+	return settings, nil
 }

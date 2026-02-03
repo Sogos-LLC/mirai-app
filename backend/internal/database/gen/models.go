@@ -615,7 +615,7 @@ type Invitation struct {
 	UpdatedAt        time.Time     `db:"updated_at" json:"updated_at"`
 }
 
-// Knowledge sources for RAG-enhanced course generation
+// Knowledge sources can be scoped to: course (course_id), session (session_id), team (team_id), or global/tenant (all NULL)
 type KnowledgeSource struct {
 	ID       uuid.UUID             `db:"id" json:"id"`
 	TenantID uuid.UUID             `db:"tenant_id" json:"tenant_id"`
@@ -748,6 +748,17 @@ type TenantAiSetting struct {
 	MonthlyTokenLimit sql.NullInt64 `db:"monthly_token_limit" json:"monthly_token_limit"`
 	UpdatedAt         time.Time     `db:"updated_at" json:"updated_at"`
 	UpdatedByUserID   uuid.NullUUID `db:"updated_by_user_id" json:"updated_by_user_id"`
+}
+
+type TenantKnowledgeSetting struct {
+	ID                        uuid.UUID     `db:"id" json:"id"`
+	TenantID                  uuid.UUID     `db:"tenant_id" json:"tenant_id"`
+	AllowGlobalKnowledge      bool          `db:"allow_global_knowledge" json:"allow_global_knowledge"`
+	LowGroundingThreshold     float32       `db:"low_grounding_threshold" json:"low_grounding_threshold"`
+	EnforceInternalOnly       bool          `db:"enforce_internal_only" json:"enforce_internal_only"`
+	RequireCurriculumApproval bool          `db:"require_curriculum_approval" json:"require_curriculum_approval"`
+	UpdatedAt                 time.Time     `db:"updated_at" json:"updated_at"`
+	UpdatedByUserID           uuid.NullUUID `db:"updated_by_user_id" json:"updated_by_user_id"`
 }
 
 type User struct {

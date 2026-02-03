@@ -29,6 +29,21 @@ export const TenantAISettingsSchema = z.object({
 export type TenantAISettings = z.infer<typeof TenantAISettingsSchema>;
 
 /**
+ * Zod schema for KnowledgeSettings
+ * @generated from message mirai.v1.KnowledgeSettings
+ */
+export const KnowledgeSettingsSchema = z.object({
+  allowGlobalKnowledge: z.boolean(),
+  lowGroundingThreshold: z.number(),
+  enforceInternalOnly: z.boolean(),
+  requireCurriculumApproval: z.boolean(),
+  updatedAt: z.string().datetime().optional(),
+  updatedByUserId: z.string().optional(),
+});
+
+export type KnowledgeSettings = z.infer<typeof KnowledgeSettingsSchema>;
+
+/**
  * Zod schema for GetAISettingsRequest
  * @generated from message mirai.v1.GetAISettingsRequest
  */
@@ -90,4 +105,26 @@ export const UsageByTypeSchema = z.object({
 });
 
 export type UsageByType = z.infer<typeof UsageByTypeSchema>;
+
+/**
+ * Zod schema for GetKnowledgeSettingsRequest
+ * @generated from message mirai.v1.GetKnowledgeSettingsRequest
+ */
+export const GetKnowledgeSettingsRequestSchema = z.object({
+});
+
+export type GetKnowledgeSettingsRequest = z.infer<typeof GetKnowledgeSettingsRequestSchema>;
+
+/**
+ * Zod schema for UpdateKnowledgeSettingsRequest
+ * @generated from message mirai.v1.UpdateKnowledgeSettingsRequest
+ */
+export const UpdateKnowledgeSettingsRequestSchema = z.object({
+  allowGlobalKnowledge: z.boolean().optional(),
+  lowGroundingThreshold: z.number().optional(),
+  enforceInternalOnly: z.boolean().optional(),
+  requireCurriculumApproval: z.boolean().optional(),
+});
+
+export type UpdateKnowledgeSettingsRequest = z.infer<typeof UpdateKnowledgeSettingsRequestSchema>;
 

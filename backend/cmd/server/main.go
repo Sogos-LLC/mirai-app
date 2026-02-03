@@ -84,6 +84,7 @@ func main() {
 
 	// AI & Generation repositories
 	aiSettingsRepo := sqlc.NewTenantAISettingsRepository(db.DB)
+	knowledgeSettingsRepo := sqlc.NewTenantKnowledgeSettingsRepository(db.DB)
 	notificationRepo := sqlc.NewNotificationRepository(db.DB)
 	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
 	wizardStateRepo := sqlc.NewWizardStateRepository(db.DB)
@@ -278,7 +279,7 @@ func main() {
 	var courseWizardService *service.CourseWizardService
 	var curriculumService *service.CurriculumService
 	if encryptor != nil {
-		tenantSettingsService = service.NewTenantSettingsService(userRepo, aiSettingsRepo, encryptor, logger)
+		tenantSettingsService = service.NewTenantSettingsService(userRepo, aiSettingsRepo, knowledgeSettingsRepo, encryptor, logger)
 
 		// Create Gemini provider factory for per-tenant API key management
 		geminiProviderFactory := gemini.NewProviderFactory(tenantSettingsService, logger)
@@ -308,6 +309,9 @@ func main() {
 		// Set up team knowledge searcher for team-level RAG
 		aiGenerationService.SetTeamKnowledgeSearcher(teamKnowledgeService)
 		aiGenerationService.SetTeamResolver(teamService)
+
+		// Set up knowledge settings provider for tenant-level configuration
+		aiGenerationService.SetKnowledgeSettingsProvider(tenantSettingsService)
 
 		// Course Wizard service (AI-guided course creation with RAG support)
 		courseWizardService = service.NewCourseWizardService(

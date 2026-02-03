@@ -164,6 +164,96 @@ func (x *TenantAISettings) GetUpdatedByUserId() string {
 	return ""
 }
 
+// KnowledgeSettings contains knowledge/RAG configuration for a tenant.
+type KnowledgeSettings struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Allow courses to use global (tenant-wide) knowledge sources
+	AllowGlobalKnowledge bool `protobuf:"varint,1,opt,name=allow_global_knowledge,json=allowGlobalKnowledge,proto3" json:"allow_global_knowledge,omitempty"`
+	// Threshold for low grounding warnings (0.0-1.0, default 0.6)
+	LowGroundingThreshold float32 `protobuf:"fixed32,2,opt,name=low_grounding_threshold,json=lowGroundingThreshold,proto3" json:"low_grounding_threshold,omitempty"`
+	// Enforce internal data only mode for all courses
+	// When true, courses cannot use AI-synthesized content
+	EnforceInternalOnly bool `protobuf:"varint,3,opt,name=enforce_internal_only,json=enforceInternalOnly,proto3" json:"enforce_internal_only,omitempty"`
+	// Require curriculum map approval before lesson generation
+	RequireCurriculumApproval bool                   `protobuf:"varint,4,opt,name=require_curriculum_approval,json=requireCurriculumApproval,proto3" json:"require_curriculum_approval,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedByUserId           *string                `protobuf:"bytes,6,opt,name=updated_by_user_id,json=updatedByUserId,proto3,oneof" json:"updated_by_user_id,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *KnowledgeSettings) Reset() {
+	*x = KnowledgeSettings{}
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *KnowledgeSettings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*KnowledgeSettings) ProtoMessage() {}
+
+func (x *KnowledgeSettings) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use KnowledgeSettings.ProtoReflect.Descriptor instead.
+func (*KnowledgeSettings) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *KnowledgeSettings) GetAllowGlobalKnowledge() bool {
+	if x != nil {
+		return x.AllowGlobalKnowledge
+	}
+	return false
+}
+
+func (x *KnowledgeSettings) GetLowGroundingThreshold() float32 {
+	if x != nil {
+		return x.LowGroundingThreshold
+	}
+	return 0
+}
+
+func (x *KnowledgeSettings) GetEnforceInternalOnly() bool {
+	if x != nil {
+		return x.EnforceInternalOnly
+	}
+	return false
+}
+
+func (x *KnowledgeSettings) GetRequireCurriculumApproval() bool {
+	if x != nil {
+		return x.RequireCurriculumApproval
+	}
+	return false
+}
+
+func (x *KnowledgeSettings) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *KnowledgeSettings) GetUpdatedByUserId() string {
+	if x != nil && x.UpdatedByUserId != nil {
+		return *x.UpdatedByUserId
+	}
+	return ""
+}
+
 // GetAISettingsRequest is empty as tenant is from auth context.
 type GetAISettingsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -173,7 +263,7 @@ type GetAISettingsRequest struct {
 
 func (x *GetAISettingsRequest) Reset() {
 	*x = GetAISettingsRequest{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[1]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -185,7 +275,7 @@ func (x *GetAISettingsRequest) String() string {
 func (*GetAISettingsRequest) ProtoMessage() {}
 
 func (x *GetAISettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[1]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -198,7 +288,7 @@ func (x *GetAISettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAISettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetAISettingsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{1}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{2}
 }
 
 // GetAISettingsResponse contains the AI settings.
@@ -211,7 +301,7 @@ type GetAISettingsResponse struct {
 
 func (x *GetAISettingsResponse) Reset() {
 	*x = GetAISettingsResponse{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[2]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -223,7 +313,7 @@ func (x *GetAISettingsResponse) String() string {
 func (*GetAISettingsResponse) ProtoMessage() {}
 
 func (x *GetAISettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[2]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -236,7 +326,7 @@ func (x *GetAISettingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAISettingsResponse.ProtoReflect.Descriptor instead.
 func (*GetAISettingsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{2}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetAISettingsResponse) GetSettings() *TenantAISettings {
@@ -257,7 +347,7 @@ type SetAPIKeyRequest struct {
 
 func (x *SetAPIKeyRequest) Reset() {
 	*x = SetAPIKeyRequest{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[3]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -269,7 +359,7 @@ func (x *SetAPIKeyRequest) String() string {
 func (*SetAPIKeyRequest) ProtoMessage() {}
 
 func (x *SetAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[3]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -282,7 +372,7 @@ func (x *SetAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*SetAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{3}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SetAPIKeyRequest) GetProvider() AIProvider {
@@ -309,7 +399,7 @@ type SetAPIKeyResponse struct {
 
 func (x *SetAPIKeyResponse) Reset() {
 	*x = SetAPIKeyResponse{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[4]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -321,7 +411,7 @@ func (x *SetAPIKeyResponse) String() string {
 func (*SetAPIKeyResponse) ProtoMessage() {}
 
 func (x *SetAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[4]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -334,7 +424,7 @@ func (x *SetAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*SetAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{4}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SetAPIKeyResponse) GetSettings() *TenantAISettings {
@@ -353,7 +443,7 @@ type RemoveAPIKeyRequest struct {
 
 func (x *RemoveAPIKeyRequest) Reset() {
 	*x = RemoveAPIKeyRequest{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[5]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -365,7 +455,7 @@ func (x *RemoveAPIKeyRequest) String() string {
 func (*RemoveAPIKeyRequest) ProtoMessage() {}
 
 func (x *RemoveAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[5]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -378,7 +468,7 @@ func (x *RemoveAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*RemoveAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{5}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{6}
 }
 
 // RemoveAPIKeyResponse confirms removal.
@@ -391,7 +481,7 @@ type RemoveAPIKeyResponse struct {
 
 func (x *RemoveAPIKeyResponse) Reset() {
 	*x = RemoveAPIKeyResponse{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[6]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -403,7 +493,7 @@ func (x *RemoveAPIKeyResponse) String() string {
 func (*RemoveAPIKeyResponse) ProtoMessage() {}
 
 func (x *RemoveAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[6]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -416,7 +506,7 @@ func (x *RemoveAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*RemoveAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{6}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RemoveAPIKeyResponse) GetSettings() *TenantAISettings {
@@ -437,7 +527,7 @@ type TestAPIKeyRequest struct {
 
 func (x *TestAPIKeyRequest) Reset() {
 	*x = TestAPIKeyRequest{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[7]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -449,7 +539,7 @@ func (x *TestAPIKeyRequest) String() string {
 func (*TestAPIKeyRequest) ProtoMessage() {}
 
 func (x *TestAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[7]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -462,7 +552,7 @@ func (x *TestAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*TestAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{7}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *TestAPIKeyRequest) GetProvider() AIProvider {
@@ -490,7 +580,7 @@ type TestAPIKeyResponse struct {
 
 func (x *TestAPIKeyResponse) Reset() {
 	*x = TestAPIKeyResponse{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[8]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -502,7 +592,7 @@ func (x *TestAPIKeyResponse) String() string {
 func (*TestAPIKeyResponse) ProtoMessage() {}
 
 func (x *TestAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[8]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -515,7 +605,7 @@ func (x *TestAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*TestAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{8}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *TestAPIKeyResponse) GetValid() bool {
@@ -543,7 +633,7 @@ type GetUsageStatsRequest struct {
 
 func (x *GetUsageStatsRequest) Reset() {
 	*x = GetUsageStatsRequest{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[9]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -555,7 +645,7 @@ func (x *GetUsageStatsRequest) String() string {
 func (*GetUsageStatsRequest) ProtoMessage() {}
 
 func (x *GetUsageStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[9]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -568,7 +658,7 @@ func (x *GetUsageStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUsageStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetUsageStatsRequest) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{9}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetUsageStatsRequest) GetFromDate() *timestamppb.Timestamp {
@@ -597,7 +687,7 @@ type UsageByType struct {
 
 func (x *UsageByType) Reset() {
 	*x = UsageByType{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[10]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -609,7 +699,7 @@ func (x *UsageByType) String() string {
 func (*UsageByType) ProtoMessage() {}
 
 func (x *UsageByType) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[10]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -622,7 +712,7 @@ func (x *UsageByType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UsageByType.ProtoReflect.Descriptor instead.
 func (*UsageByType) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{10}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UsageByType) GetJobType() string {
@@ -659,7 +749,7 @@ type GetUsageStatsResponse struct {
 
 func (x *GetUsageStatsResponse) Reset() {
 	*x = GetUsageStatsResponse{}
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[11]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +761,7 @@ func (x *GetUsageStatsResponse) String() string {
 func (*GetUsageStatsResponse) ProtoMessage() {}
 
 func (x *GetUsageStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[11]
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +774,7 @@ func (x *GetUsageStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUsageStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetUsageStatsResponse) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{11}
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetUsageStatsResponse) GetTotalTokensUsed() int64 {
@@ -715,6 +805,202 @@ func (x *GetUsageStatsResponse) GetUsageByType() []*UsageByType {
 	return nil
 }
 
+// GetKnowledgeSettingsRequest fetches knowledge settings.
+type GetKnowledgeSettingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetKnowledgeSettingsRequest) Reset() {
+	*x = GetKnowledgeSettingsRequest{}
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetKnowledgeSettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetKnowledgeSettingsRequest) ProtoMessage() {}
+
+func (x *GetKnowledgeSettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetKnowledgeSettingsRequest.ProtoReflect.Descriptor instead.
+func (*GetKnowledgeSettingsRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{13}
+}
+
+// GetKnowledgeSettingsResponse contains knowledge settings.
+type GetKnowledgeSettingsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Settings      *KnowledgeSettings     `protobuf:"bytes,1,opt,name=settings,proto3" json:"settings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetKnowledgeSettingsResponse) Reset() {
+	*x = GetKnowledgeSettingsResponse{}
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetKnowledgeSettingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetKnowledgeSettingsResponse) ProtoMessage() {}
+
+func (x *GetKnowledgeSettingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetKnowledgeSettingsResponse.ProtoReflect.Descriptor instead.
+func (*GetKnowledgeSettingsResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetKnowledgeSettingsResponse) GetSettings() *KnowledgeSettings {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+// UpdateKnowledgeSettingsRequest updates knowledge settings.
+type UpdateKnowledgeSettingsRequest struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	AllowGlobalKnowledge      *bool                  `protobuf:"varint,1,opt,name=allow_global_knowledge,json=allowGlobalKnowledge,proto3,oneof" json:"allow_global_knowledge,omitempty"`
+	LowGroundingThreshold     *float32               `protobuf:"fixed32,2,opt,name=low_grounding_threshold,json=lowGroundingThreshold,proto3,oneof" json:"low_grounding_threshold,omitempty"`
+	EnforceInternalOnly       *bool                  `protobuf:"varint,3,opt,name=enforce_internal_only,json=enforceInternalOnly,proto3,oneof" json:"enforce_internal_only,omitempty"`
+	RequireCurriculumApproval *bool                  `protobuf:"varint,4,opt,name=require_curriculum_approval,json=requireCurriculumApproval,proto3,oneof" json:"require_curriculum_approval,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *UpdateKnowledgeSettingsRequest) Reset() {
+	*x = UpdateKnowledgeSettingsRequest{}
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateKnowledgeSettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateKnowledgeSettingsRequest) ProtoMessage() {}
+
+func (x *UpdateKnowledgeSettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateKnowledgeSettingsRequest.ProtoReflect.Descriptor instead.
+func (*UpdateKnowledgeSettingsRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *UpdateKnowledgeSettingsRequest) GetAllowGlobalKnowledge() bool {
+	if x != nil && x.AllowGlobalKnowledge != nil {
+		return *x.AllowGlobalKnowledge
+	}
+	return false
+}
+
+func (x *UpdateKnowledgeSettingsRequest) GetLowGroundingThreshold() float32 {
+	if x != nil && x.LowGroundingThreshold != nil {
+		return *x.LowGroundingThreshold
+	}
+	return 0
+}
+
+func (x *UpdateKnowledgeSettingsRequest) GetEnforceInternalOnly() bool {
+	if x != nil && x.EnforceInternalOnly != nil {
+		return *x.EnforceInternalOnly
+	}
+	return false
+}
+
+func (x *UpdateKnowledgeSettingsRequest) GetRequireCurriculumApproval() bool {
+	if x != nil && x.RequireCurriculumApproval != nil {
+		return *x.RequireCurriculumApproval
+	}
+	return false
+}
+
+// UpdateKnowledgeSettingsResponse contains updated settings.
+type UpdateKnowledgeSettingsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Settings      *KnowledgeSettings     `protobuf:"bytes,1,opt,name=settings,proto3" json:"settings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateKnowledgeSettingsResponse) Reset() {
+	*x = UpdateKnowledgeSettingsResponse{}
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateKnowledgeSettingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateKnowledgeSettingsResponse) ProtoMessage() {}
+
+func (x *UpdateKnowledgeSettingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_tenant_settings_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateKnowledgeSettingsResponse.ProtoReflect.Descriptor instead.
+func (*UpdateKnowledgeSettingsResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_tenant_settings_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *UpdateKnowledgeSettingsResponse) GetSettings() *KnowledgeSettings {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
 var File_mirai_v1_tenant_settings_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_tenant_settings_proto_rawDesc = "" +
@@ -730,6 +1016,15 @@ const file_mirai_v1_tenant_settings_proto_rawDesc = "" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x120\n" +
 	"\x12updated_by_user_id\x18\a \x01(\tH\x01R\x0fupdatedByUserId\x88\x01\x01B\x16\n" +
 	"\x14_monthly_token_limitB\x15\n" +
+	"\x13_updated_by_user_id\"\xf9\x02\n" +
+	"\x11KnowledgeSettings\x124\n" +
+	"\x16allow_global_knowledge\x18\x01 \x01(\bR\x14allowGlobalKnowledge\x126\n" +
+	"\x17low_grounding_threshold\x18\x02 \x01(\x02R\x15lowGroundingThreshold\x122\n" +
+	"\x15enforce_internal_only\x18\x03 \x01(\bR\x13enforceInternalOnly\x12>\n" +
+	"\x1brequire_curriculum_approval\x18\x04 \x01(\bR\x19requireCurriculumApproval\x129\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x120\n" +
+	"\x12updated_by_user_id\x18\x06 \x01(\tH\x00R\x0fupdatedByUserId\x88\x01\x01B\x15\n" +
 	"\x13_updated_by_user_id\"\x16\n" +
 	"\x14GetAISettingsRequest\"O\n" +
 	"\x15GetAISettingsResponse\x126\n" +
@@ -766,18 +1061,34 @@ const file_mirai_v1_tenant_settings_proto_rawDesc = "" +
 	"\x11tokens_this_month\x18\x02 \x01(\x03R\x0ftokensThisMonth\x12(\n" +
 	"\rmonthly_limit\x18\x03 \x01(\x03H\x00R\fmonthlyLimit\x88\x01\x01\x129\n" +
 	"\rusage_by_type\x18\x04 \x03(\v2\x15.mirai.v1.UsageByTypeR\vusageByTypeB\x10\n" +
-	"\x0e_monthly_limit*A\n" +
+	"\x0e_monthly_limit\"\x1d\n" +
+	"\x1bGetKnowledgeSettingsRequest\"W\n" +
+	"\x1cGetKnowledgeSettingsResponse\x127\n" +
+	"\bsettings\x18\x01 \x01(\v2\x1b.mirai.v1.KnowledgeSettingsR\bsettings\"\x87\x03\n" +
+	"\x1eUpdateKnowledgeSettingsRequest\x129\n" +
+	"\x16allow_global_knowledge\x18\x01 \x01(\bH\x00R\x14allowGlobalKnowledge\x88\x01\x01\x12;\n" +
+	"\x17low_grounding_threshold\x18\x02 \x01(\x02H\x01R\x15lowGroundingThreshold\x88\x01\x01\x127\n" +
+	"\x15enforce_internal_only\x18\x03 \x01(\bH\x02R\x13enforceInternalOnly\x88\x01\x01\x12C\n" +
+	"\x1brequire_curriculum_approval\x18\x04 \x01(\bH\x03R\x19requireCurriculumApproval\x88\x01\x01B\x19\n" +
+	"\x17_allow_global_knowledgeB\x1a\n" +
+	"\x18_low_grounding_thresholdB\x18\n" +
+	"\x16_enforce_internal_onlyB\x1e\n" +
+	"\x1c_require_curriculum_approval\"Z\n" +
+	"\x1fUpdateKnowledgeSettingsResponse\x127\n" +
+	"\bsettings\x18\x01 \x01(\v2\x1b.mirai.v1.KnowledgeSettingsR\bsettings*A\n" +
 	"\n" +
 	"AIProvider\x12\x1b\n" +
 	"\x17AI_PROVIDER_UNSPECIFIED\x10\x00\x12\x16\n" +
-	"\x12AI_PROVIDER_GEMINI\x10\x012\x99\x03\n" +
+	"\x12AI_PROVIDER_GEMINI\x10\x012\xf0\x04\n" +
 	"\x15TenantSettingsService\x12P\n" +
 	"\rGetAISettings\x12\x1e.mirai.v1.GetAISettingsRequest\x1a\x1f.mirai.v1.GetAISettingsResponse\x12D\n" +
 	"\tSetAPIKey\x12\x1a.mirai.v1.SetAPIKeyRequest\x1a\x1b.mirai.v1.SetAPIKeyResponse\x12M\n" +
 	"\fRemoveAPIKey\x12\x1d.mirai.v1.RemoveAPIKeyRequest\x1a\x1e.mirai.v1.RemoveAPIKeyResponse\x12G\n" +
 	"\n" +
 	"TestAPIKey\x12\x1b.mirai.v1.TestAPIKeyRequest\x1a\x1c.mirai.v1.TestAPIKeyResponse\x12P\n" +
-	"\rGetUsageStats\x12\x1e.mirai.v1.GetUsageStatsRequest\x1a\x1f.mirai.v1.GetUsageStatsResponseB\x99\x01\n" +
+	"\rGetUsageStats\x12\x1e.mirai.v1.GetUsageStatsRequest\x1a\x1f.mirai.v1.GetUsageStatsResponse\x12e\n" +
+	"\x14GetKnowledgeSettings\x12%.mirai.v1.GetKnowledgeSettingsRequest\x1a&.mirai.v1.GetKnowledgeSettingsResponse\x12n\n" +
+	"\x17UpdateKnowledgeSettings\x12(.mirai.v1.UpdateKnowledgeSettingsRequest\x1a).mirai.v1.UpdateKnowledgeSettingsResponseB\x99\x01\n" +
 	"\fcom.mirai.v1B\x13TenantSettingsProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -793,49 +1104,61 @@ func file_mirai_v1_tenant_settings_proto_rawDescGZIP() []byte {
 }
 
 var file_mirai_v1_tenant_settings_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_mirai_v1_tenant_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_mirai_v1_tenant_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_mirai_v1_tenant_settings_proto_goTypes = []any{
-	(AIProvider)(0),               // 0: mirai.v1.AIProvider
-	(*TenantAISettings)(nil),      // 1: mirai.v1.TenantAISettings
-	(*GetAISettingsRequest)(nil),  // 2: mirai.v1.GetAISettingsRequest
-	(*GetAISettingsResponse)(nil), // 3: mirai.v1.GetAISettingsResponse
-	(*SetAPIKeyRequest)(nil),      // 4: mirai.v1.SetAPIKeyRequest
-	(*SetAPIKeyResponse)(nil),     // 5: mirai.v1.SetAPIKeyResponse
-	(*RemoveAPIKeyRequest)(nil),   // 6: mirai.v1.RemoveAPIKeyRequest
-	(*RemoveAPIKeyResponse)(nil),  // 7: mirai.v1.RemoveAPIKeyResponse
-	(*TestAPIKeyRequest)(nil),     // 8: mirai.v1.TestAPIKeyRequest
-	(*TestAPIKeyResponse)(nil),    // 9: mirai.v1.TestAPIKeyResponse
-	(*GetUsageStatsRequest)(nil),  // 10: mirai.v1.GetUsageStatsRequest
-	(*UsageByType)(nil),           // 11: mirai.v1.UsageByType
-	(*GetUsageStatsResponse)(nil), // 12: mirai.v1.GetUsageStatsResponse
-	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(AIProvider)(0),                         // 0: mirai.v1.AIProvider
+	(*TenantAISettings)(nil),                // 1: mirai.v1.TenantAISettings
+	(*KnowledgeSettings)(nil),               // 2: mirai.v1.KnowledgeSettings
+	(*GetAISettingsRequest)(nil),            // 3: mirai.v1.GetAISettingsRequest
+	(*GetAISettingsResponse)(nil),           // 4: mirai.v1.GetAISettingsResponse
+	(*SetAPIKeyRequest)(nil),                // 5: mirai.v1.SetAPIKeyRequest
+	(*SetAPIKeyResponse)(nil),               // 6: mirai.v1.SetAPIKeyResponse
+	(*RemoveAPIKeyRequest)(nil),             // 7: mirai.v1.RemoveAPIKeyRequest
+	(*RemoveAPIKeyResponse)(nil),            // 8: mirai.v1.RemoveAPIKeyResponse
+	(*TestAPIKeyRequest)(nil),               // 9: mirai.v1.TestAPIKeyRequest
+	(*TestAPIKeyResponse)(nil),              // 10: mirai.v1.TestAPIKeyResponse
+	(*GetUsageStatsRequest)(nil),            // 11: mirai.v1.GetUsageStatsRequest
+	(*UsageByType)(nil),                     // 12: mirai.v1.UsageByType
+	(*GetUsageStatsResponse)(nil),           // 13: mirai.v1.GetUsageStatsResponse
+	(*GetKnowledgeSettingsRequest)(nil),     // 14: mirai.v1.GetKnowledgeSettingsRequest
+	(*GetKnowledgeSettingsResponse)(nil),    // 15: mirai.v1.GetKnowledgeSettingsResponse
+	(*UpdateKnowledgeSettingsRequest)(nil),  // 16: mirai.v1.UpdateKnowledgeSettingsRequest
+	(*UpdateKnowledgeSettingsResponse)(nil), // 17: mirai.v1.UpdateKnowledgeSettingsResponse
+	(*timestamppb.Timestamp)(nil),           // 18: google.protobuf.Timestamp
 }
 var file_mirai_v1_tenant_settings_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.TenantAISettings.provider:type_name -> mirai.v1.AIProvider
-	13, // 1: mirai.v1.TenantAISettings.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 2: mirai.v1.GetAISettingsResponse.settings:type_name -> mirai.v1.TenantAISettings
-	0,  // 3: mirai.v1.SetAPIKeyRequest.provider:type_name -> mirai.v1.AIProvider
-	1,  // 4: mirai.v1.SetAPIKeyResponse.settings:type_name -> mirai.v1.TenantAISettings
-	1,  // 5: mirai.v1.RemoveAPIKeyResponse.settings:type_name -> mirai.v1.TenantAISettings
-	0,  // 6: mirai.v1.TestAPIKeyRequest.provider:type_name -> mirai.v1.AIProvider
-	13, // 7: mirai.v1.GetUsageStatsRequest.from_date:type_name -> google.protobuf.Timestamp
-	13, // 8: mirai.v1.GetUsageStatsRequest.to_date:type_name -> google.protobuf.Timestamp
-	11, // 9: mirai.v1.GetUsageStatsResponse.usage_by_type:type_name -> mirai.v1.UsageByType
-	2,  // 10: mirai.v1.TenantSettingsService.GetAISettings:input_type -> mirai.v1.GetAISettingsRequest
-	4,  // 11: mirai.v1.TenantSettingsService.SetAPIKey:input_type -> mirai.v1.SetAPIKeyRequest
-	6,  // 12: mirai.v1.TenantSettingsService.RemoveAPIKey:input_type -> mirai.v1.RemoveAPIKeyRequest
-	8,  // 13: mirai.v1.TenantSettingsService.TestAPIKey:input_type -> mirai.v1.TestAPIKeyRequest
-	10, // 14: mirai.v1.TenantSettingsService.GetUsageStats:input_type -> mirai.v1.GetUsageStatsRequest
-	3,  // 15: mirai.v1.TenantSettingsService.GetAISettings:output_type -> mirai.v1.GetAISettingsResponse
-	5,  // 16: mirai.v1.TenantSettingsService.SetAPIKey:output_type -> mirai.v1.SetAPIKeyResponse
-	7,  // 17: mirai.v1.TenantSettingsService.RemoveAPIKey:output_type -> mirai.v1.RemoveAPIKeyResponse
-	9,  // 18: mirai.v1.TenantSettingsService.TestAPIKey:output_type -> mirai.v1.TestAPIKeyResponse
-	12, // 19: mirai.v1.TenantSettingsService.GetUsageStats:output_type -> mirai.v1.GetUsageStatsResponse
-	15, // [15:20] is the sub-list for method output_type
-	10, // [10:15] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	18, // 1: mirai.v1.TenantAISettings.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 2: mirai.v1.KnowledgeSettings.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 3: mirai.v1.GetAISettingsResponse.settings:type_name -> mirai.v1.TenantAISettings
+	0,  // 4: mirai.v1.SetAPIKeyRequest.provider:type_name -> mirai.v1.AIProvider
+	1,  // 5: mirai.v1.SetAPIKeyResponse.settings:type_name -> mirai.v1.TenantAISettings
+	1,  // 6: mirai.v1.RemoveAPIKeyResponse.settings:type_name -> mirai.v1.TenantAISettings
+	0,  // 7: mirai.v1.TestAPIKeyRequest.provider:type_name -> mirai.v1.AIProvider
+	18, // 8: mirai.v1.GetUsageStatsRequest.from_date:type_name -> google.protobuf.Timestamp
+	18, // 9: mirai.v1.GetUsageStatsRequest.to_date:type_name -> google.protobuf.Timestamp
+	12, // 10: mirai.v1.GetUsageStatsResponse.usage_by_type:type_name -> mirai.v1.UsageByType
+	2,  // 11: mirai.v1.GetKnowledgeSettingsResponse.settings:type_name -> mirai.v1.KnowledgeSettings
+	2,  // 12: mirai.v1.UpdateKnowledgeSettingsResponse.settings:type_name -> mirai.v1.KnowledgeSettings
+	3,  // 13: mirai.v1.TenantSettingsService.GetAISettings:input_type -> mirai.v1.GetAISettingsRequest
+	5,  // 14: mirai.v1.TenantSettingsService.SetAPIKey:input_type -> mirai.v1.SetAPIKeyRequest
+	7,  // 15: mirai.v1.TenantSettingsService.RemoveAPIKey:input_type -> mirai.v1.RemoveAPIKeyRequest
+	9,  // 16: mirai.v1.TenantSettingsService.TestAPIKey:input_type -> mirai.v1.TestAPIKeyRequest
+	11, // 17: mirai.v1.TenantSettingsService.GetUsageStats:input_type -> mirai.v1.GetUsageStatsRequest
+	14, // 18: mirai.v1.TenantSettingsService.GetKnowledgeSettings:input_type -> mirai.v1.GetKnowledgeSettingsRequest
+	16, // 19: mirai.v1.TenantSettingsService.UpdateKnowledgeSettings:input_type -> mirai.v1.UpdateKnowledgeSettingsRequest
+	4,  // 20: mirai.v1.TenantSettingsService.GetAISettings:output_type -> mirai.v1.GetAISettingsResponse
+	6,  // 21: mirai.v1.TenantSettingsService.SetAPIKey:output_type -> mirai.v1.SetAPIKeyResponse
+	8,  // 22: mirai.v1.TenantSettingsService.RemoveAPIKey:output_type -> mirai.v1.RemoveAPIKeyResponse
+	10, // 23: mirai.v1.TenantSettingsService.TestAPIKey:output_type -> mirai.v1.TestAPIKeyResponse
+	13, // 24: mirai.v1.TenantSettingsService.GetUsageStats:output_type -> mirai.v1.GetUsageStatsResponse
+	15, // 25: mirai.v1.TenantSettingsService.GetKnowledgeSettings:output_type -> mirai.v1.GetKnowledgeSettingsResponse
+	17, // 26: mirai.v1.TenantSettingsService.UpdateKnowledgeSettings:output_type -> mirai.v1.UpdateKnowledgeSettingsResponse
+	20, // [20:27] is the sub-list for method output_type
+	13, // [13:20] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_tenant_settings_proto_init() }
@@ -844,16 +1167,18 @@ func file_mirai_v1_tenant_settings_proto_init() {
 		return
 	}
 	file_mirai_v1_tenant_settings_proto_msgTypes[0].OneofWrappers = []any{}
-	file_mirai_v1_tenant_settings_proto_msgTypes[8].OneofWrappers = []any{}
+	file_mirai_v1_tenant_settings_proto_msgTypes[1].OneofWrappers = []any{}
 	file_mirai_v1_tenant_settings_proto_msgTypes[9].OneofWrappers = []any{}
-	file_mirai_v1_tenant_settings_proto_msgTypes[11].OneofWrappers = []any{}
+	file_mirai_v1_tenant_settings_proto_msgTypes[10].OneofWrappers = []any{}
+	file_mirai_v1_tenant_settings_proto_msgTypes[12].OneofWrappers = []any{}
+	file_mirai_v1_tenant_settings_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_tenant_settings_proto_rawDesc), len(file_mirai_v1_tenant_settings_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

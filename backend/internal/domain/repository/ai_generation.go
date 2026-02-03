@@ -23,6 +23,19 @@ type TenantAISettingsRepository interface {
 	IncrementTokenUsage(ctx context.Context, tenantID uuid.UUID, tokens int64) error
 }
 
+// TenantKnowledgeSettingsRepository defines the interface for tenant knowledge settings data access.
+type TenantKnowledgeSettingsRepository interface {
+	// Get retrieves knowledge settings for a tenant.
+	// Returns (nil, nil) if settings don't exist yet.
+	Get(ctx context.Context, tenantID uuid.UUID) (*entity.TenantKnowledgeSettings, error)
+
+	// Create creates new knowledge settings for a tenant.
+	Create(ctx context.Context, settings *entity.TenantKnowledgeSettings) error
+
+	// Update updates knowledge settings.
+	Update(ctx context.Context, settings *entity.TenantKnowledgeSettings) error
+}
+
 // GenerationJobRepository defines the interface for generation job data access.
 type GenerationJobRepository interface {
 	// Create creates a new job.

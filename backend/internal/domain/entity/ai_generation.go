@@ -33,6 +33,40 @@ func (s *TenantAISettings) HasAPIKey() bool {
 	return len(s.EncryptedAPIKey) > 0
 }
 
+// TenantKnowledgeSettings contains knowledge/RAG configuration for a tenant.
+// Only ADMIN/OWNER roles can access these settings.
+type TenantKnowledgeSettings struct {
+	ID       uuid.UUID
+	TenantID uuid.UUID
+
+	// Allow courses to use global (tenant-wide) knowledge sources
+	AllowGlobalKnowledge bool
+
+	// Threshold for low grounding warnings (0.0-1.0)
+	LowGroundingThreshold float32
+
+	// Enforce internal data only mode for all courses
+	// When true, courses cannot use AI-synthesized content
+	EnforceInternalOnly bool
+
+	// Require curriculum map approval before lesson generation
+	RequireCurriculumApproval bool
+
+	UpdatedAt       time.Time
+	UpdatedByUserID *uuid.UUID
+}
+
+// DefaultKnowledgeSettings returns default settings for a tenant.
+func DefaultKnowledgeSettings(tenantID uuid.UUID) *TenantKnowledgeSettings {
+	return &TenantKnowledgeSettings{
+		TenantID:                  tenantID,
+		AllowGlobalKnowledge:      true,
+		LowGroundingThreshold:     0.6,
+		EnforceInternalOnly:       false,
+		RequireCurriculumApproval: true,
+	}
+}
+
 // GenerationJob represents an AI generation job.
 type GenerationJob struct {
 	ID       uuid.UUID

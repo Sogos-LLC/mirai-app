@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/tenant_settings.proto.
  */
 export const file_mirai_v1_tenant_settings: GenFile = /*@__PURE__*/
-  fileDesc("Ch5taXJhaS92MS90ZW5hbnRfc2V0dGluZ3MucHJvdG8SCG1pcmFpLnYxIqYCChBUZW5hbnRBSVNldHRpbmdzEhEKCXRlbmFudF9pZBgBIAEoCRImCghwcm92aWRlchgCIAEoDjIULm1pcmFpLnYxLkFJUHJvdmlkZXISGgoSYXBpX2tleV9jb25maWd1cmVkGAMgASgIEhkKEXRvdGFsX3Rva2Vuc191c2VkGAQgASgDEiAKE21vbnRobHlfdG9rZW5fbGltaXQYBSABKANIAIgBARIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIfChJ1cGRhdGVkX2J5X3VzZXJfaWQYByABKAlIAYgBAUIWChRfbW9udGhseV90b2tlbl9saW1pdEIVChNfdXBkYXRlZF9ieV91c2VyX2lkIhYKFEdldEFJU2V0dGluZ3NSZXF1ZXN0IkUKFUdldEFJU2V0dGluZ3NSZXNwb25zZRIsCghzZXR0aW5ncxgBIAEoCzIaLm1pcmFpLnYxLlRlbmFudEFJU2V0dGluZ3MiSwoQU2V0QVBJS2V5UmVxdWVzdBImCghwcm92aWRlchgBIAEoDjIULm1pcmFpLnYxLkFJUHJvdmlkZXISDwoHYXBpX2tleRgCIAEoCSJBChFTZXRBUElLZXlSZXNwb25zZRIsCghzZXR0aW5ncxgBIAEoCzIaLm1pcmFpLnYxLlRlbmFudEFJU2V0dGluZ3MiFQoTUmVtb3ZlQVBJS2V5UmVxdWVzdCJEChRSZW1vdmVBUElLZXlSZXNwb25zZRIsCghzZXR0aW5ncxgBIAEoCzIaLm1pcmFpLnYxLlRlbmFudEFJU2V0dGluZ3MiTAoRVGVzdEFQSUtleVJlcXVlc3QSJgoIcHJvdmlkZXIYASABKA4yFC5taXJhaS52MS5BSVByb3ZpZGVyEg8KB2FwaV9rZXkYAiABKAkiUQoSVGVzdEFQSUtleVJlc3BvbnNlEg0KBXZhbGlkGAEgASgIEhoKDWVycm9yX21lc3NhZ2UYAiABKAlIAIgBAUIQCg5fZXJyb3JfbWVzc2FnZSKWAQoUR2V0VXNhZ2VTdGF0c1JlcXVlc3QSMgoJZnJvbV9kYXRlGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEjAKB3RvX2RhdGUYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQFCDAoKX2Zyb21fZGF0ZUIKCghfdG9fZGF0ZSJHCgtVc2FnZUJ5VHlwZRIQCghqb2JfdHlwZRgBIAEoCRITCgt0b2tlbnNfdXNlZBgCIAEoAxIRCglqb2JfY291bnQYAyABKAUiqQEKFUdldFVzYWdlU3RhdHNSZXNwb25zZRIZChF0b3RhbF90b2tlbnNfdXNlZBgBIAEoAxIZChF0b2tlbnNfdGhpc19tb250aBgCIAEoAxIaCg1tb250aGx5X2xpbWl0GAMgASgDSACIAQESLAoNdXNhZ2VfYnlfdHlwZRgEIAMoCzIVLm1pcmFpLnYxLlVzYWdlQnlUeXBlQhAKDl9tb250aGx5X2xpbWl0KkEKCkFJUHJvdmlkZXISGwoXQUlfUFJPVklERVJfVU5TUEVDSUZJRUQQABIWChJBSV9QUk9WSURFUl9HRU1JTkkQATKZAwoVVGVuYW50U2V0dGluZ3NTZXJ2aWNlElAKDUdldEFJU2V0dGluZ3MSHi5taXJhaS52MS5HZXRBSVNldHRpbmdzUmVxdWVzdBofLm1pcmFpLnYxLkdldEFJU2V0dGluZ3NSZXNwb25zZRJECglTZXRBUElLZXkSGi5taXJhaS52MS5TZXRBUElLZXlSZXF1ZXN0GhsubWlyYWkudjEuU2V0QVBJS2V5UmVzcG9uc2USTQoMUmVtb3ZlQVBJS2V5Eh0ubWlyYWkudjEuUmVtb3ZlQVBJS2V5UmVxdWVzdBoeLm1pcmFpLnYxLlJlbW92ZUFQSUtleVJlc3BvbnNlEkcKClRlc3RBUElLZXkSGy5taXJhaS52MS5UZXN0QVBJS2V5UmVxdWVzdBocLm1pcmFpLnYxLlRlc3RBUElLZXlSZXNwb25zZRJQCg1HZXRVc2FnZVN0YXRzEh4ubWlyYWkudjEuR2V0VXNhZ2VTdGF0c1JlcXVlc3QaHy5taXJhaS52MS5HZXRVc2FnZVN0YXRzUmVzcG9uc2VCmQEKDGNvbS5taXJhaS52MUITVGVuYW50U2V0dGluZ3NQcm90b1ABWjNnaXRodWIuY29tL3NvZ29zL21pcmFpLWJhY2tlbmQvZ2VuL21pcmFpL3YxO21pcmFpdjGiAgNNWFiqAghNaXJhaS5WMcoCCE1pcmFpXFYx4gIUTWlyYWlcVjFcR1BCTWV0YWRhdGHqAglNaXJhaTo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("Ch5taXJhaS92MS90ZW5hbnRfc2V0dGluZ3MucHJvdG8SCG1pcmFpLnYxIqYCChBUZW5hbnRBSVNldHRpbmdzEhEKCXRlbmFudF9pZBgBIAEoCRImCghwcm92aWRlchgCIAEoDjIULm1pcmFpLnYxLkFJUHJvdmlkZXISGgoSYXBpX2tleV9jb25maWd1cmVkGAMgASgIEhkKEXRvdGFsX3Rva2Vuc191c2VkGAQgASgDEiAKE21vbnRobHlfdG9rZW5fbGltaXQYBSABKANIAIgBARIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIfChJ1cGRhdGVkX2J5X3VzZXJfaWQYByABKAlIAYgBAUIWChRfbW9udGhseV90b2tlbl9saW1pdEIVChNfdXBkYXRlZF9ieV91c2VyX2lkIoACChFLbm93bGVkZ2VTZXR0aW5ncxIeChZhbGxvd19nbG9iYWxfa25vd2xlZGdlGAEgASgIEh8KF2xvd19ncm91bmRpbmdfdGhyZXNob2xkGAIgASgCEh0KFWVuZm9yY2VfaW50ZXJuYWxfb25seRgDIAEoCBIjChtyZXF1aXJlX2N1cnJpY3VsdW1fYXBwcm92YWwYBCABKAgSLgoKdXBkYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASHwoSdXBkYXRlZF9ieV91c2VyX2lkGAYgASgJSACIAQFCFQoTX3VwZGF0ZWRfYnlfdXNlcl9pZCIWChRHZXRBSVNldHRpbmdzUmVxdWVzdCJFChVHZXRBSVNldHRpbmdzUmVzcG9uc2USLAoIc2V0dGluZ3MYASABKAsyGi5taXJhaS52MS5UZW5hbnRBSVNldHRpbmdzIksKEFNldEFQSUtleVJlcXVlc3QSJgoIcHJvdmlkZXIYASABKA4yFC5taXJhaS52MS5BSVByb3ZpZGVyEg8KB2FwaV9rZXkYAiABKAkiQQoRU2V0QVBJS2V5UmVzcG9uc2USLAoIc2V0dGluZ3MYASABKAsyGi5taXJhaS52MS5UZW5hbnRBSVNldHRpbmdzIhUKE1JlbW92ZUFQSUtleVJlcXVlc3QiRAoUUmVtb3ZlQVBJS2V5UmVzcG9uc2USLAoIc2V0dGluZ3MYASABKAsyGi5taXJhaS52MS5UZW5hbnRBSVNldHRpbmdzIkwKEVRlc3RBUElLZXlSZXF1ZXN0EiYKCHByb3ZpZGVyGAEgASgOMhQubWlyYWkudjEuQUlQcm92aWRlchIPCgdhcGlfa2V5GAIgASgJIlEKElRlc3RBUElLZXlSZXNwb25zZRINCgV2YWxpZBgBIAEoCBIaCg1lcnJvcl9tZXNzYWdlGAIgASgJSACIAQFCEAoOX2Vycm9yX21lc3NhZ2UilgEKFEdldFVzYWdlU3RhdHNSZXF1ZXN0EjIKCWZyb21fZGF0ZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBARIwCgd0b19kYXRlGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBQgwKCl9mcm9tX2RhdGVCCgoIX3RvX2RhdGUiRwoLVXNhZ2VCeVR5cGUSEAoIam9iX3R5cGUYASABKAkSEwoLdG9rZW5zX3VzZWQYAiABKAMSEQoJam9iX2NvdW50GAMgASgFIqkBChVHZXRVc2FnZVN0YXRzUmVzcG9uc2USGQoRdG90YWxfdG9rZW5zX3VzZWQYASABKAMSGQoRdG9rZW5zX3RoaXNfbW9udGgYAiABKAMSGgoNbW9udGhseV9saW1pdBgDIAEoA0gAiAEBEiwKDXVzYWdlX2J5X3R5cGUYBCADKAsyFS5taXJhaS52MS5Vc2FnZUJ5VHlwZUIQCg5fbW9udGhseV9saW1pdCIdChtHZXRLbm93bGVkZ2VTZXR0aW5nc1JlcXVlc3QiTQocR2V0S25vd2xlZGdlU2V0dGluZ3NSZXNwb25zZRItCghzZXR0aW5ncxgBIAEoCzIbLm1pcmFpLnYxLktub3dsZWRnZVNldHRpbmdzIqoCCh5VcGRhdGVLbm93bGVkZ2VTZXR0aW5nc1JlcXVlc3QSIwoWYWxsb3dfZ2xvYmFsX2tub3dsZWRnZRgBIAEoCEgAiAEBEiQKF2xvd19ncm91bmRpbmdfdGhyZXNob2xkGAIgASgCSAGIAQESIgoVZW5mb3JjZV9pbnRlcm5hbF9vbmx5GAMgASgISAKIAQESKAobcmVxdWlyZV9jdXJyaWN1bHVtX2FwcHJvdmFsGAQgASgISAOIAQFCGQoXX2FsbG93X2dsb2JhbF9rbm93bGVkZ2VCGgoYX2xvd19ncm91bmRpbmdfdGhyZXNob2xkQhgKFl9lbmZvcmNlX2ludGVybmFsX29ubHlCHgocX3JlcXVpcmVfY3VycmljdWx1bV9hcHByb3ZhbCJQCh9VcGRhdGVLbm93bGVkZ2VTZXR0aW5nc1Jlc3BvbnNlEi0KCHNldHRpbmdzGAEgASgLMhsubWlyYWkudjEuS25vd2xlZGdlU2V0dGluZ3MqQQoKQUlQcm92aWRlchIbChdBSV9QUk9WSURFUl9VTlNQRUNJRklFRBAAEhYKEkFJX1BST1ZJREVSX0dFTUlOSRABMvAEChVUZW5hbnRTZXR0aW5nc1NlcnZpY2USUAoNR2V0QUlTZXR0aW5ncxIeLm1pcmFpLnYxLkdldEFJU2V0dGluZ3NSZXF1ZXN0Gh8ubWlyYWkudjEuR2V0QUlTZXR0aW5nc1Jlc3BvbnNlEkQKCVNldEFQSUtleRIaLm1pcmFpLnYxLlNldEFQSUtleVJlcXVlc3QaGy5taXJhaS52MS5TZXRBUElLZXlSZXNwb25zZRJNCgxSZW1vdmVBUElLZXkSHS5taXJhaS52MS5SZW1vdmVBUElLZXlSZXF1ZXN0Gh4ubWlyYWkudjEuUmVtb3ZlQVBJS2V5UmVzcG9uc2USRwoKVGVzdEFQSUtleRIbLm1pcmFpLnYxLlRlc3RBUElLZXlSZXF1ZXN0GhwubWlyYWkudjEuVGVzdEFQSUtleVJlc3BvbnNlElAKDUdldFVzYWdlU3RhdHMSHi5taXJhaS52MS5HZXRVc2FnZVN0YXRzUmVxdWVzdBofLm1pcmFpLnYxLkdldFVzYWdlU3RhdHNSZXNwb25zZRJlChRHZXRLbm93bGVkZ2VTZXR0aW5ncxIlLm1pcmFpLnYxLkdldEtub3dsZWRnZVNldHRpbmdzUmVxdWVzdBomLm1pcmFpLnYxLkdldEtub3dsZWRnZVNldHRpbmdzUmVzcG9uc2USbgoXVXBkYXRlS25vd2xlZGdlU2V0dGluZ3MSKC5taXJhaS52MS5VcGRhdGVLbm93bGVkZ2VTZXR0aW5nc1JlcXVlc3QaKS5taXJhaS52MS5VcGRhdGVLbm93bGVkZ2VTZXR0aW5nc1Jlc3BvbnNlQpkBCgxjb20ubWlyYWkudjFCE1RlbmFudFNldHRpbmdzUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * TenantAISettings contains AI configuration for a tenant.
@@ -69,6 +69,59 @@ export const TenantAISettingsSchema: GenMessage<TenantAISettings> = /*@__PURE__*
   messageDesc(file_mirai_v1_tenant_settings, 0);
 
 /**
+ * KnowledgeSettings contains knowledge/RAG configuration for a tenant.
+ *
+ * @generated from message mirai.v1.KnowledgeSettings
+ */
+export type KnowledgeSettings = Message<"mirai.v1.KnowledgeSettings"> & {
+  /**
+   * Allow courses to use global (tenant-wide) knowledge sources
+   *
+   * @generated from field: bool allow_global_knowledge = 1;
+   */
+  allowGlobalKnowledge: boolean;
+
+  /**
+   * Threshold for low grounding warnings (0.0-1.0, default 0.6)
+   *
+   * @generated from field: float low_grounding_threshold = 2;
+   */
+  lowGroundingThreshold: number;
+
+  /**
+   * Enforce internal data only mode for all courses
+   * When true, courses cannot use AI-synthesized content
+   *
+   * @generated from field: bool enforce_internal_only = 3;
+   */
+  enforceInternalOnly: boolean;
+
+  /**
+   * Require curriculum map approval before lesson generation
+   *
+   * @generated from field: bool require_curriculum_approval = 4;
+   */
+  requireCurriculumApproval: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 5;
+   */
+  updatedAt?: Timestamp;
+
+  /**
+   * @generated from field: optional string updated_by_user_id = 6;
+   */
+  updatedByUserId?: string;
+};
+
+/**
+ * Describes the message mirai.v1.KnowledgeSettings.
+ * Use `create(KnowledgeSettingsSchema)` to create a new message.
+ */
+export const KnowledgeSettingsSchema: GenMessage<KnowledgeSettings> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_tenant_settings, 1);
+
+/**
  * GetAISettingsRequest is empty as tenant is from auth context.
  *
  * @generated from message mirai.v1.GetAISettingsRequest
@@ -81,7 +134,7 @@ export type GetAISettingsRequest = Message<"mirai.v1.GetAISettingsRequest"> & {
  * Use `create(GetAISettingsRequestSchema)` to create a new message.
  */
 export const GetAISettingsRequestSchema: GenMessage<GetAISettingsRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 1);
+  messageDesc(file_mirai_v1_tenant_settings, 2);
 
 /**
  * GetAISettingsResponse contains the AI settings.
@@ -100,7 +153,7 @@ export type GetAISettingsResponse = Message<"mirai.v1.GetAISettingsResponse"> & 
  * Use `create(GetAISettingsResponseSchema)` to create a new message.
  */
 export const GetAISettingsResponseSchema: GenMessage<GetAISettingsResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 2);
+  messageDesc(file_mirai_v1_tenant_settings, 3);
 
 /**
  * SetAPIKeyRequest contains the API key to set.
@@ -126,7 +179,7 @@ export type SetAPIKeyRequest = Message<"mirai.v1.SetAPIKeyRequest"> & {
  * Use `create(SetAPIKeyRequestSchema)` to create a new message.
  */
 export const SetAPIKeyRequestSchema: GenMessage<SetAPIKeyRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 3);
+  messageDesc(file_mirai_v1_tenant_settings, 4);
 
 /**
  * SetAPIKeyResponse confirms the key was set.
@@ -145,7 +198,7 @@ export type SetAPIKeyResponse = Message<"mirai.v1.SetAPIKeyResponse"> & {
  * Use `create(SetAPIKeyResponseSchema)` to create a new message.
  */
 export const SetAPIKeyResponseSchema: GenMessage<SetAPIKeyResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 4);
+  messageDesc(file_mirai_v1_tenant_settings, 5);
 
 /**
  * RemoveAPIKeyRequest removes the API key.
@@ -160,7 +213,7 @@ export type RemoveAPIKeyRequest = Message<"mirai.v1.RemoveAPIKeyRequest"> & {
  * Use `create(RemoveAPIKeyRequestSchema)` to create a new message.
  */
 export const RemoveAPIKeyRequestSchema: GenMessage<RemoveAPIKeyRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 5);
+  messageDesc(file_mirai_v1_tenant_settings, 6);
 
 /**
  * RemoveAPIKeyResponse confirms removal.
@@ -179,7 +232,7 @@ export type RemoveAPIKeyResponse = Message<"mirai.v1.RemoveAPIKeyResponse"> & {
  * Use `create(RemoveAPIKeyResponseSchema)` to create a new message.
  */
 export const RemoveAPIKeyResponseSchema: GenMessage<RemoveAPIKeyResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 6);
+  messageDesc(file_mirai_v1_tenant_settings, 7);
 
 /**
  * TestAPIKeyRequest tests an API key without saving.
@@ -203,7 +256,7 @@ export type TestAPIKeyRequest = Message<"mirai.v1.TestAPIKeyRequest"> & {
  * Use `create(TestAPIKeyRequestSchema)` to create a new message.
  */
 export const TestAPIKeyRequestSchema: GenMessage<TestAPIKeyRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 7);
+  messageDesc(file_mirai_v1_tenant_settings, 8);
 
 /**
  * TestAPIKeyResponse indicates if the key is valid.
@@ -227,7 +280,7 @@ export type TestAPIKeyResponse = Message<"mirai.v1.TestAPIKeyResponse"> & {
  * Use `create(TestAPIKeyResponseSchema)` to create a new message.
  */
 export const TestAPIKeyResponseSchema: GenMessage<TestAPIKeyResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 8);
+  messageDesc(file_mirai_v1_tenant_settings, 9);
 
 /**
  * GetUsageStatsRequest fetches usage statistics.
@@ -251,7 +304,7 @@ export type GetUsageStatsRequest = Message<"mirai.v1.GetUsageStatsRequest"> & {
  * Use `create(GetUsageStatsRequestSchema)` to create a new message.
  */
 export const GetUsageStatsRequestSchema: GenMessage<GetUsageStatsRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 9);
+  messageDesc(file_mirai_v1_tenant_settings, 10);
 
 /**
  * UsageByType breaks down usage by job type.
@@ -280,7 +333,7 @@ export type UsageByType = Message<"mirai.v1.UsageByType"> & {
  * Use `create(UsageByTypeSchema)` to create a new message.
  */
 export const UsageByTypeSchema: GenMessage<UsageByType> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 10);
+  messageDesc(file_mirai_v1_tenant_settings, 11);
 
 /**
  * GetUsageStatsResponse contains usage statistics.
@@ -314,7 +367,94 @@ export type GetUsageStatsResponse = Message<"mirai.v1.GetUsageStatsResponse"> & 
  * Use `create(GetUsageStatsResponseSchema)` to create a new message.
  */
 export const GetUsageStatsResponseSchema: GenMessage<GetUsageStatsResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_tenant_settings, 11);
+  messageDesc(file_mirai_v1_tenant_settings, 12);
+
+/**
+ * GetKnowledgeSettingsRequest fetches knowledge settings.
+ *
+ * @generated from message mirai.v1.GetKnowledgeSettingsRequest
+ */
+export type GetKnowledgeSettingsRequest = Message<"mirai.v1.GetKnowledgeSettingsRequest"> & {
+};
+
+/**
+ * Describes the message mirai.v1.GetKnowledgeSettingsRequest.
+ * Use `create(GetKnowledgeSettingsRequestSchema)` to create a new message.
+ */
+export const GetKnowledgeSettingsRequestSchema: GenMessage<GetKnowledgeSettingsRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_tenant_settings, 13);
+
+/**
+ * GetKnowledgeSettingsResponse contains knowledge settings.
+ *
+ * @generated from message mirai.v1.GetKnowledgeSettingsResponse
+ */
+export type GetKnowledgeSettingsResponse = Message<"mirai.v1.GetKnowledgeSettingsResponse"> & {
+  /**
+   * @generated from field: mirai.v1.KnowledgeSettings settings = 1;
+   */
+  settings?: KnowledgeSettings;
+};
+
+/**
+ * Describes the message mirai.v1.GetKnowledgeSettingsResponse.
+ * Use `create(GetKnowledgeSettingsResponseSchema)` to create a new message.
+ */
+export const GetKnowledgeSettingsResponseSchema: GenMessage<GetKnowledgeSettingsResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_tenant_settings, 14);
+
+/**
+ * UpdateKnowledgeSettingsRequest updates knowledge settings.
+ *
+ * @generated from message mirai.v1.UpdateKnowledgeSettingsRequest
+ */
+export type UpdateKnowledgeSettingsRequest = Message<"mirai.v1.UpdateKnowledgeSettingsRequest"> & {
+  /**
+   * @generated from field: optional bool allow_global_knowledge = 1;
+   */
+  allowGlobalKnowledge?: boolean;
+
+  /**
+   * @generated from field: optional float low_grounding_threshold = 2;
+   */
+  lowGroundingThreshold?: number;
+
+  /**
+   * @generated from field: optional bool enforce_internal_only = 3;
+   */
+  enforceInternalOnly?: boolean;
+
+  /**
+   * @generated from field: optional bool require_curriculum_approval = 4;
+   */
+  requireCurriculumApproval?: boolean;
+};
+
+/**
+ * Describes the message mirai.v1.UpdateKnowledgeSettingsRequest.
+ * Use `create(UpdateKnowledgeSettingsRequestSchema)` to create a new message.
+ */
+export const UpdateKnowledgeSettingsRequestSchema: GenMessage<UpdateKnowledgeSettingsRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_tenant_settings, 15);
+
+/**
+ * UpdateKnowledgeSettingsResponse contains updated settings.
+ *
+ * @generated from message mirai.v1.UpdateKnowledgeSettingsResponse
+ */
+export type UpdateKnowledgeSettingsResponse = Message<"mirai.v1.UpdateKnowledgeSettingsResponse"> & {
+  /**
+   * @generated from field: mirai.v1.KnowledgeSettings settings = 1;
+   */
+  settings?: KnowledgeSettings;
+};
+
+/**
+ * Describes the message mirai.v1.UpdateKnowledgeSettingsResponse.
+ * Use `create(UpdateKnowledgeSettingsResponseSchema)` to create a new message.
+ */
+export const UpdateKnowledgeSettingsResponseSchema: GenMessage<UpdateKnowledgeSettingsResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_tenant_settings, 16);
 
 /**
  * AIProvider represents supported AI providers.
@@ -395,6 +535,26 @@ export const TenantSettingsService: GenService<{
     methodKind: "unary";
     input: typeof GetUsageStatsRequestSchema;
     output: typeof GetUsageStatsResponseSchema;
+  },
+  /**
+   * GetKnowledgeSettings returns knowledge/RAG configuration.
+   *
+   * @generated from rpc mirai.v1.TenantSettingsService.GetKnowledgeSettings
+   */
+  getKnowledgeSettings: {
+    methodKind: "unary";
+    input: typeof GetKnowledgeSettingsRequestSchema;
+    output: typeof GetKnowledgeSettingsResponseSchema;
+  },
+  /**
+   * UpdateKnowledgeSettings updates knowledge/RAG configuration.
+   *
+   * @generated from rpc mirai.v1.TenantSettingsService.UpdateKnowledgeSettings
+   */
+  updateKnowledgeSettings: {
+    methodKind: "unary";
+    input: typeof UpdateKnowledgeSettingsRequestSchema;
+    output: typeof UpdateKnowledgeSettingsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_mirai_v1_tenant_settings, 0);

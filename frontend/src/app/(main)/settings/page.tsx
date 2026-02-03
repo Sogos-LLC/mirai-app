@@ -6,6 +6,7 @@ import BillingSettings from '@/components/settings/BillingSettings';
 import TeamSettings from '@/components/settings/TeamSettings';
 import TeamKnowledgeSettings from '@/components/settings/TeamKnowledgeSettings';
 import { AISettingsPanel } from '@/components/settings/AISettingsPanel';
+import { KnowledgeSettingsPanel } from '@/components/settings/KnowledgeSettingsPanel';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
 import {
   useGetAISettings,
@@ -351,7 +352,14 @@ export default function SettingsPage() {
         );
 
       case 'ai':
-        return <AISettingsContainer />;
+        return (
+          <div className="space-y-8">
+            <AISettingsContainer />
+            <div className="border-t pt-8">
+              <KnowledgeSettingsPanel />
+            </div>
+          </div>
+        );
 
       case 'billing':
         return <BillingSettings />;

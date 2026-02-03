@@ -74,6 +74,11 @@ type TeamResolver interface {
 	GetTeamByTenant(ctx context.Context, tenantID uuid.UUID) (*entity.Team, error)
 }
 
+// KnowledgeSettingsProvider provides access to tenant knowledge settings.
+type KnowledgeSettingsProvider interface {
+	GetKnowledgeSettingsByTenantID(ctx context.Context, tenantID uuid.UUID) (*entity.TenantKnowledgeSettings, error)
+}
+
 // AIGenerationService handles AI-powered content generation.
 // All course content is stored in MinIO - no PostgreSQL tables for outlines/lessons.
 type AIGenerationService struct {
@@ -89,9 +94,10 @@ type AIGenerationService struct {
 	contentStorage         *storage.TenantAwareStorage
 	jobEventPublisher      JobEventPublisher
 	knowledgeSearcher      KnowledgeSearcher     // For course-level RAG queries
-	teamKnowledgeSearcher  TeamKnowledgeSearcher // For team-level RAG queries
-	teamResolver           TeamResolver          // Resolves team for tenant
-	logger                 service.Logger
+	teamKnowledgeSearcher     TeamKnowledgeSearcher     // For team-level RAG queries
+	teamResolver              TeamResolver              // Resolves team for tenant
+	knowledgeSettingsProvider KnowledgeSettingsProvider // For tenant knowledge settings
+	logger                    service.Logger
 }
 
 // NewAIGenerationService creates a new AI generation service.
@@ -141,6 +147,11 @@ func (s *AIGenerationService) SetTeamResolver(resolver TeamResolver) {
 // SetJobEventPublisher sets the optional job event publisher for real-time streaming.
 func (s *AIGenerationService) SetJobEventPublisher(publisher JobEventPublisher) {
 	s.jobEventPublisher = publisher
+}
+
+// SetKnowledgeSettingsProvider sets the provider for tenant knowledge settings.
+func (s *AIGenerationService) SetKnowledgeSettingsProvider(provider KnowledgeSettingsProvider) {
+	s.knowledgeSettingsProvider = provider
 }
 
 // GenerateCourseOutlineRequest contains the inputs for outline generation.
@@ -531,6 +542,25 @@ func (s *AIGenerationService) GenerateAllLessons(ctx context.Context, kratosID u
 	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
 	if err != nil {
 		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
+	}
+
+	// Precondition: Check curriculum map is approved if required by tenant settings
+	// This ensures coverage validation is complete before generating lessons
+	requireApproval := true // Default to requiring approval
+	if s.knowledgeSettingsProvider != nil {
+		knowledgeSettings, err := s.knowledgeSettingsProvider.GetKnowledgeSettingsByTenantID(ctx, *user.TenantID)
+		if err != nil {
+			log.Warn("failed to get knowledge settings, using default (require approval)", "error", err)
+		} else {
+			requireApproval = knowledgeSettings.RequireCurriculumApproval
+		}
+	}
+
+	if requireApproval && content.CurriculumMap != nil && content.CurriculumMap.Status != "approved" {
+		log.Warn("lesson generation blocked: curriculum map not approved",
+			"curriculumMapStatus", content.CurriculumMap.Status,
+		)
+		return nil, domainerrors.ErrInvalidInput.WithMessage("curriculum map must be approved before generating lessons")
 	}
 
 	// Count lessons from outline

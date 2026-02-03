@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetAISettingsRequest, GetAISettingsResponse, GetUsageStatsRequest, GetUsageStatsResponse, RemoveAPIKeyRequest, RemoveAPIKeyResponse, SetAPIKeyRequest, SetAPIKeyResponse, TestAPIKeyRequest, TestAPIKeyResponse } from "./tenant_settings_pb.js";
+import { GetAISettingsRequest, GetAISettingsResponse, GetKnowledgeSettingsRequest, GetKnowledgeSettingsResponse, GetUsageStatsRequest, GetUsageStatsResponse, RemoveAPIKeyRequest, RemoveAPIKeyResponse, SetAPIKeyRequest, SetAPIKeyResponse, TestAPIKeyRequest, TestAPIKeyResponse, UpdateKnowledgeSettingsRequest, UpdateKnowledgeSettingsResponse } from "./tenant_settings_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -68,6 +68,28 @@ export const TenantSettingsService = {
       name: "GetUsageStats",
       I: GetUsageStatsRequest,
       O: GetUsageStatsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetKnowledgeSettings returns knowledge/RAG configuration.
+     *
+     * @generated from rpc mirai.v1.TenantSettingsService.GetKnowledgeSettings
+     */
+    getKnowledgeSettings: {
+      name: "GetKnowledgeSettings",
+      I: GetKnowledgeSettingsRequest,
+      O: GetKnowledgeSettingsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * UpdateKnowledgeSettings updates knowledge/RAG configuration.
+     *
+     * @generated from rpc mirai.v1.TenantSettingsService.UpdateKnowledgeSettings
+     */
+    updateKnowledgeSettings: {
+      name: "UpdateKnowledgeSettings",
+      I: UpdateKnowledgeSettingsRequest,
+      O: UpdateKnowledgeSettingsResponse,
       kind: MethodKind.Unary,
     },
   }

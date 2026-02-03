@@ -204,6 +204,86 @@ func (s *TenantSettingsServiceServer) GetUsageStats(
 	}), nil
 }
 
+// GetKnowledgeSettings returns knowledge/RAG configuration.
+func (s *TenantSettingsServiceServer) GetKnowledgeSettings(
+	ctx context.Context,
+	req *connect.Request[v1.GetKnowledgeSettingsRequest],
+) (*connect.Response[v1.GetKnowledgeSettingsResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	result, err := s.settingsService.GetKnowledgeSettings(ctx, kratosID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	settings := result.Settings
+	return connect.NewResponse(&v1.GetKnowledgeSettingsResponse{
+		Settings: &v1.KnowledgeSettings{
+			AllowGlobalKnowledge:      settings.AllowGlobalKnowledge,
+			LowGroundingThreshold:     settings.LowGroundingThreshold,
+			EnforceInternalOnly:       settings.EnforceInternalOnly,
+			RequireCurriculumApproval: settings.RequireCurriculumApproval,
+			UpdatedAt:                 timestamppb.New(settings.UpdatedAt),
+			UpdatedByUserId:           uuidPtrToString(settings.UpdatedByUserID),
+		},
+	}), nil
+}
+
+// UpdateKnowledgeSettings updates knowledge/RAG configuration.
+func (s *TenantSettingsServiceServer) UpdateKnowledgeSettings(
+	ctx context.Context,
+	req *connect.Request[v1.UpdateKnowledgeSettingsRequest],
+) (*connect.Response[v1.UpdateKnowledgeSettingsResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	input := service.UpdateKnowledgeSettingsInput{}
+	if req.Msg.AllowGlobalKnowledge != nil {
+		input.AllowGlobalKnowledge = req.Msg.AllowGlobalKnowledge
+	}
+	if req.Msg.LowGroundingThreshold != nil {
+		input.LowGroundingThreshold = req.Msg.LowGroundingThreshold
+	}
+	if req.Msg.EnforceInternalOnly != nil {
+		input.EnforceInternalOnly = req.Msg.EnforceInternalOnly
+	}
+	if req.Msg.RequireCurriculumApproval != nil {
+		input.RequireCurriculumApproval = req.Msg.RequireCurriculumApproval
+	}
+
+	result, err := s.settingsService.UpdateKnowledgeSettings(ctx, kratosID, input)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	settings := result.Settings
+	return connect.NewResponse(&v1.UpdateKnowledgeSettingsResponse{
+		Settings: &v1.KnowledgeSettings{
+			AllowGlobalKnowledge:      settings.AllowGlobalKnowledge,
+			LowGroundingThreshold:     settings.LowGroundingThreshold,
+			EnforceInternalOnly:       settings.EnforceInternalOnly,
+			RequireCurriculumApproval: settings.RequireCurriculumApproval,
+			UpdatedAt:                 timestamppb.New(settings.UpdatedAt),
+			UpdatedByUserId:           uuidPtrToString(settings.UpdatedByUserID),
+		},
+	}), nil
+}
+
 // Helper functions for proto conversion
 
 func aiProviderToProto(p valueobject.AIProvider) v1.AIProvider {
