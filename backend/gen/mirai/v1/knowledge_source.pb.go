@@ -173,7 +173,9 @@ type KnowledgeSource struct {
 	// Used for "Internal Data Only" mode course planning
 	DocumentIndex *DocumentIndex `protobuf:"bytes,19,opt,name=document_index,json=documentIndex,proto3,oneof" json:"document_index,omitempty"`
 	// Team ID for team-level knowledge sources (shared across all team courses)
-	TeamId        *string `protobuf:"bytes,20,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
+	TeamId *string `protobuf:"bytes,20,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
+	// SHA-256 hash of file content for duplicate detection
+	ContentHash   *string `protobuf:"bytes,21,opt,name=content_hash,json=contentHash,proto3,oneof" json:"content_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -344,6 +346,13 @@ func (x *KnowledgeSource) GetDocumentIndex() *DocumentIndex {
 func (x *KnowledgeSource) GetTeamId() string {
 	if x != nil && x.TeamId != nil {
 		return *x.TeamId
+	}
+	return ""
+}
+
+func (x *KnowledgeSource) GetContentHash() string {
+	if x != nil && x.ContentHash != nil {
+		return *x.ContentHash
 	}
 	return ""
 }
@@ -521,7 +530,7 @@ var File_mirai_v1_knowledge_source_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"\n" +
-	"\x1fmirai/v1/knowledge_source.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9a\a\n" +
+	"\x1fmirai/v1/knowledge_source.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd3\a\n" +
 	"\x0fKnowledgeSource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1b\n" +
@@ -549,7 +558,8 @@ const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"\vtoken_count\x18\x12 \x01(\x05H\x04R\n" +
 	"tokenCount\x88\x01\x01\x12C\n" +
 	"\x0edocument_index\x18\x13 \x01(\v2\x17.mirai.v1.DocumentIndexH\x05R\rdocumentIndex\x88\x01\x01\x12\x1c\n" +
-	"\ateam_id\x18\x14 \x01(\tH\x06R\x06teamId\x88\x01\x01B\x10\n" +
+	"\ateam_id\x18\x14 \x01(\tH\x06R\x06teamId\x88\x01\x01\x12&\n" +
+	"\fcontent_hash\x18\x15 \x01(\tH\aR\vcontentHash\x88\x01\x01B\x10\n" +
 	"\x0e_error_messageB\x0f\n" +
 	"\r_processed_atB\r\n" +
 	"\v_session_idB\n" +
@@ -558,7 +568,8 @@ const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"\f_token_countB\x11\n" +
 	"\x0f_document_indexB\n" +
 	"\n" +
-	"\b_team_id\"\xc4\x01\n" +
+	"\b_team_idB\x0f\n" +
+	"\r_content_hash\"\xc4\x01\n" +
 	"\rDocumentIndex\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1f\n" +
 	"\vmain_topics\x18\x02 \x03(\tR\n" +

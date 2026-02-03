@@ -14,15 +14,19 @@ import {
   RefreshCw,
   Globe,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   useListKnowledgeSources,
   useUploadKnowledge,
   useDeleteKnowledgeSource,
+  useCheckDuplicateKnowledge,
+  computeFileHash,
   getStatusInfo,
   formatFileSize,
   KnowledgeSourceStatus,
   type KnowledgeSource,
+  type DuplicateCheckResult,
 } from '@/hooks/useTeamKnowledge';
 
 // =============================================================================
@@ -223,8 +227,15 @@ interface UploadZoneProps {
 function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    file: File;
+    hash: string;
+    duplicate: DuplicateCheckResult;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { mutate: uploadFile, isLoading: isUploading } = useUploadKnowledge(teamId);
+  const { checkDuplicate } = useCheckDuplicateKnowledge();
 
   const acceptedTypes = ['.txt', '.md'];
 
@@ -244,7 +255,7 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
   };
 
   const handleUpload = useCallback(
-    async (file: File) => {
+    async (file: File, skipDuplicateCheck = false) => {
       setUploadError(null);
 
       const validationError = validateFile(file);
@@ -254,9 +265,26 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
       }
 
       try {
-        await uploadFile(file);
+        // Compute file hash
+        setIsCheckingDuplicate(true);
+        const hash = await computeFileHash(file);
+
+        // Check for duplicate (unless skipping)
+        if (!skipDuplicateCheck) {
+          const duplicateResult = await checkDuplicate(hash);
+          if (duplicateResult.exists) {
+            setIsCheckingDuplicate(false);
+            setDuplicateWarning({ file, hash, duplicate: duplicateResult });
+            return;
+          }
+        }
+        setIsCheckingDuplicate(false);
+
+        // Proceed with upload
+        await uploadFile(file, hash);
         onSuccess();
       } catch (err) {
+        setIsCheckingDuplicate(false);
         if (err instanceof Error) {
           setUploadError(err.message);
         } else {
@@ -264,8 +292,18 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
         }
       }
     },
-    [uploadFile, onSuccess]
+    [uploadFile, checkDuplicate, onSuccess]
   );
+
+  const handleConfirmDuplicate = useCallback(async () => {
+    if (!duplicateWarning) return;
+    setDuplicateWarning(null);
+    await handleUpload(duplicateWarning.file, true);
+  }, [duplicateWarning, handleUpload]);
+
+  const handleCancelDuplicate = useCallback(() => {
+    setDuplicateWarning(null);
+  }, []);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -304,18 +342,20 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
     [handleUpload]
   );
 
+  const isProcessing = isUploading || isCheckingDuplicate;
+
   return (
     <div className="space-y-2">
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={() => !isUploading && fileInputRef.current?.click()}
+        onClick={() => !isProcessing && fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
           isDragOver
             ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
             : 'border-gray-300 dark:border-dark-border hover:border-primary-400 dark:hover:border-primary-600'
-        } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input
           ref={fileInputRef}
@@ -323,13 +363,15 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
           accept={acceptedTypes.join(',')}
           onChange={handleFileSelect}
           className="hidden"
-          disabled={isUploading}
+          disabled={isProcessing}
         />
 
-        {isUploading ? (
+        {isProcessing ? (
           <>
             <Loader2 className="w-10 h-10 text-primary-600 dark:text-primary-400 mx-auto mb-3 animate-spin" />
-            <p className="font-medium text-gray-900 dark:text-white">Uploading...</p>
+            <p className="font-medium text-gray-900 dark:text-white">
+              {isCheckingDuplicate ? 'Checking for duplicates...' : 'Uploading...'}
+            </p>
           </>
         ) : (
           <>
@@ -350,6 +392,82 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
           {uploadError}
         </div>
       )}
+
+      {/* Duplicate Warning Modal */}
+      {duplicateWarning && (
+        <DuplicateWarningModal
+          fileName={duplicateWarning.file.name}
+          existingName={duplicateWarning.duplicate.existingSource?.name || 'Unknown'}
+          location={duplicateWarning.duplicate.location || 'Unknown'}
+          onConfirm={handleConfirmDuplicate}
+          onCancel={handleCancelDuplicate}
+        />
+      )}
+    </div>
+  );
+}
+
+interface DuplicateWarningModalProps {
+  fileName: string;
+  existingName: string;
+  location: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function DuplicateWarningModal({
+  fileName,
+  existingName,
+  location,
+  onConfirm,
+  onCancel,
+}: DuplicateWarningModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-dark-surface rounded-xl shadow-xl max-w-md w-full p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
+            <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Duplicate File Detected
+          </h3>
+        </div>
+
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          A file with the same content already exists in your knowledge base.
+        </p>
+
+        <div className="bg-gray-50 dark:bg-dark-50 rounded-lg p-4 mb-6 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500 dark:text-gray-400">New file:</span>
+            <span className="font-medium text-gray-900 dark:text-white">{fileName}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500 dark:text-gray-400">Existing file:</span>
+            <span className="font-medium text-gray-900 dark:text-white">{existingName}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500 dark:text-gray-400">Location:</span>
+            <span className="font-medium text-gray-900 dark:text-white">{location}</span>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-dark-50 rounded-lg hover:bg-gray-200 dark:hover:bg-dark-100 font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 text-white bg-primary-600 rounded-lg hover:bg-primary-700 font-medium"
+          >
+            Upload Anyway
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

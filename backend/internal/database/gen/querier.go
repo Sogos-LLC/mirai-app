@@ -101,6 +101,9 @@ type Querier interface {
 	DeleteWizardStateByID(ctx context.Context, id uuid.UUID) error
 	ExistsPendingRegistrationByEmail(ctx context.Context, email string) (bool, error)
 	FinalizeParentJob(ctx context.Context, arg FinalizeParentJobParams) error
+	// Find a knowledge source by content hash (for duplicate detection)
+	// Returns the first match across all scopes (global and team)
+	FindKnowledgeSourceByContentHash(ctx context.Context, contentHash sql.NullString) (KnowledgeSource, error)
 	// Find registrations stuck in "paid" status older than cutoff time
 	FindStuckPaidRegistrations(ctx context.Context, updatedAt time.Time) ([]PendingRegistration, error)
 	GetChildJobStats(ctx context.Context, parentJobID uuid.NullUUID) (GetChildJobStatsRow, error)
@@ -204,6 +207,8 @@ type Querier interface {
 	UpdateFolder(ctx context.Context, arg UpdateFolderParams) (Folder, error)
 	UpdateGenerationJob(ctx context.Context, arg UpdateGenerationJobParams) error
 	UpdateInvitation(ctx context.Context, arg UpdateInvitationParams) (Invitation, error)
+	// Update the content hash for a knowledge source
+	UpdateKnowledgeSourceContentHash(ctx context.Context, arg UpdateKnowledgeSourceContentHashParams) error
 	UpdateKnowledgeSourceStatus(ctx context.Context, arg UpdateKnowledgeSourceStatusParams) (KnowledgeSource, error)
 	UpdateKnowledgeSourceVideoURLs(ctx context.Context, arg UpdateKnowledgeSourceVideoURLsParams) (KnowledgeSource, error)
 	// Update knowledge source with document index for Internal Data Only mode

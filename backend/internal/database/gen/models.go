@@ -642,6 +642,8 @@ type KnowledgeSource struct {
 	DocumentIndex pqtype.NullRawMessage `db:"document_index" json:"document_index"`
 	// Team ID for team-level knowledge sources (shared across all team courses)
 	TeamID uuid.NullUUID `db:"team_id" json:"team_id"`
+	// SHA-256 hash of file content for duplicate detection
+	ContentHash sql.NullString `db:"content_hash" json:"content_hash"`
 }
 
 type Lesson struct {

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { DeleteTeamKnowledgeSourceRequest, DeleteTeamKnowledgeSourceResponse, GetTeamKnowledgeSourceRequest, GetTeamKnowledgeSourceResponse, ListTeamKnowledgeSourcesRequest, ListTeamKnowledgeSourcesResponse, SearchTeamKnowledgeRequest, SearchTeamKnowledgeResponse, UploadTeamKnowledgeRequest, UploadTeamKnowledgeResponse } from "./team_knowledge_service_pb.js";
+import { CheckDuplicateKnowledgeRequest, CheckDuplicateKnowledgeResponse, DeleteTeamKnowledgeSourceRequest, DeleteTeamKnowledgeSourceResponse, GetTeamKnowledgeSourceRequest, GetTeamKnowledgeSourceResponse, ListTeamKnowledgeSourcesRequest, ListTeamKnowledgeSourcesResponse, SearchTeamKnowledgeRequest, SearchTeamKnowledgeResponse, UploadTeamKnowledgeRequest, UploadTeamKnowledgeResponse } from "./team_knowledge_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -73,6 +73,18 @@ export const TeamKnowledgeService = {
       name: "SearchTeamKnowledge",
       I: SearchTeamKnowledgeRequest,
       O: SearchTeamKnowledgeResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * CheckDuplicateKnowledge checks if a file with the same content hash already exists.
+     * Used before upload to warn users about duplicate files.
+     *
+     * @generated from rpc mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge
+     */
+    checkDuplicateKnowledge: {
+      name: "CheckDuplicateKnowledge",
+      I: CheckDuplicateKnowledgeRequest,
+      O: CheckDuplicateKnowledgeResponse,
       kind: MethodKind.Unary,
     },
   }

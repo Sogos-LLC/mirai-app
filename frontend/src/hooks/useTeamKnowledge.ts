@@ -6,12 +6,14 @@ import {
   getTeamKnowledgeSource,
   uploadTeamKnowledge,
   deleteTeamKnowledgeSource,
+  checkDuplicateKnowledge,
 } from '@/gen/mirai/v1/team_knowledge_service-TeamKnowledgeService_connectquery';
 import {
   UploadTeamKnowledgeRequestSchema,
   DeleteTeamKnowledgeSourceRequestSchema,
   GetTeamKnowledgeSourceRequestSchema,
   ListTeamKnowledgeSourcesRequestSchema,
+  CheckDuplicateKnowledgeRequestSchema,
 } from '@/gen/mirai/v1/team_knowledge_service_pb';
 import {
   KnowledgeSource,
@@ -21,6 +23,25 @@ import {
 // Re-export types and enums
 export { KnowledgeSourceStatus };
 export type { KnowledgeSource };
+
+/**
+ * Compute SHA-256 hash of file content
+ */
+export async function computeFileHash(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Duplicate check result
+ */
+export interface DuplicateCheckResult {
+  exists: boolean;
+  existingSource?: KnowledgeSource;
+  location?: string;
+}
 
 /**
  * Helper to get status display info
@@ -132,6 +153,31 @@ export function useGetTeamKnowledgeSource(id: string | undefined) {
 }
 
 /**
+ * Hook to check for duplicate knowledge files.
+ */
+export function useCheckDuplicateKnowledge() {
+  const mutation = useMutation(checkDuplicateKnowledge);
+
+  return {
+    checkDuplicate: async (contentHash: string): Promise<DuplicateCheckResult> => {
+      const request = create(CheckDuplicateKnowledgeRequestSchema, {
+        contentHash,
+      });
+
+      const result = await mutation.mutateAsync(request);
+
+      return {
+        exists: result.exists,
+        existingSource: result.existingSource,
+        location: result.location,
+      };
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+/**
  * Hook to upload a file as knowledge.
  * @param teamId - Optional team ID. If omitted, creates global knowledge.
  *                 If provided, creates team-specific knowledge.
@@ -141,7 +187,7 @@ export function useUploadKnowledge(teamId?: string) {
   const mutation = useMutation(uploadTeamKnowledge);
 
   return {
-    mutate: async (file: File) => {
+    mutate: async (file: File, contentHash: string) => {
       // Read file content as Uint8Array
       const arrayBuffer = await file.arrayBuffer();
       const fileContent = new Uint8Array(arrayBuffer);
@@ -151,6 +197,7 @@ export function useUploadKnowledge(teamId?: string) {
         contentType: file.type || 'application/octet-stream',
         fileContent,
         teamId: teamId,
+        contentHash: contentHash,
       });
 
       const result = await mutation.mutateAsync(request);

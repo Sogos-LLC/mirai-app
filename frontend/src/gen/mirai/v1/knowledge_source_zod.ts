@@ -73,6 +73,7 @@ export const KnowledgeSourceSchema = z.object({
   tokenCount: z.number().int().optional(),
   documentIndex: DocumentIndexSchema.optional(),
   teamId: z.string().optional(),
+  contentHash: z.string().optional(),
 });
 
 export type KnowledgeSource = z.infer<typeof KnowledgeSourceSchema>;

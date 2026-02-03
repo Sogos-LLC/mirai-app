@@ -36,6 +36,9 @@ type KnowledgeSource struct {
 	// Document index for AI navigation (Internal Data Only mode)
 	DocumentIndex *DocumentIndex
 
+	// SHA-256 hash of file content for duplicate detection
+	ContentHash *string
+
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	ProcessedAt *time.Time

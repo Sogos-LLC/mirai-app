@@ -44,3 +44,11 @@ export const deleteTeamKnowledgeSource = TeamKnowledgeService.method.deleteTeamK
  * @generated from rpc mirai.v1.TeamKnowledgeService.SearchTeamKnowledge
  */
 export const searchTeamKnowledge = TeamKnowledgeService.method.searchTeamKnowledge;
+
+/**
+ * CheckDuplicateKnowledge checks if a file with the same content hash already exists.
+ * Used before upload to warn users about duplicate files.
+ *
+ * @generated from rpc mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge
+ */
+export const checkDuplicateKnowledge = TeamKnowledgeService.method.checkDuplicateKnowledge;

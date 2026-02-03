@@ -13,6 +13,7 @@ export const UploadTeamKnowledgeRequestSchema = z.object({
   contentType: z.string().min(1),
   fileContent: z.instanceof(Uint8Array),
   teamId: z.string().optional(),
+  contentHash: z.string().length(64),
 });
 
 export type UploadTeamKnowledgeRequest = z.infer<typeof UploadTeamKnowledgeRequestSchema>;
@@ -58,4 +59,14 @@ export const SearchTeamKnowledgeRequestSchema = z.object({
 });
 
 export type SearchTeamKnowledgeRequest = z.infer<typeof SearchTeamKnowledgeRequestSchema>;
+
+/**
+ * Zod schema for CheckDuplicateKnowledgeRequest
+ * @generated from message mirai.v1.CheckDuplicateKnowledgeRequest
+ */
+export const CheckDuplicateKnowledgeRequestSchema = z.object({
+  contentHash: z.string().length(64),
+});
+
+export type CheckDuplicateKnowledgeRequest = z.infer<typeof CheckDuplicateKnowledgeRequestSchema>;
 

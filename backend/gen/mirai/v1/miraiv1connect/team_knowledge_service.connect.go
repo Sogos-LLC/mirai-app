@@ -48,6 +48,9 @@ const (
 	// TeamKnowledgeServiceSearchTeamKnowledgeProcedure is the fully-qualified name of the
 	// TeamKnowledgeService's SearchTeamKnowledge RPC.
 	TeamKnowledgeServiceSearchTeamKnowledgeProcedure = "/mirai.v1.TeamKnowledgeService/SearchTeamKnowledge"
+	// TeamKnowledgeServiceCheckDuplicateKnowledgeProcedure is the fully-qualified name of the
+	// TeamKnowledgeService's CheckDuplicateKnowledge RPC.
+	TeamKnowledgeServiceCheckDuplicateKnowledgeProcedure = "/mirai.v1.TeamKnowledgeService/CheckDuplicateKnowledge"
 )
 
 // TeamKnowledgeServiceClient is a client for the mirai.v1.TeamKnowledgeService service.
@@ -68,6 +71,9 @@ type TeamKnowledgeServiceClient interface {
 	// If team_id is omitted, searches global knowledge.
 	// If team_id is provided, searches team-specific knowledge.
 	SearchTeamKnowledge(context.Context, *connect.Request[v1.SearchTeamKnowledgeRequest]) (*connect.Response[v1.SearchTeamKnowledgeResponse], error)
+	// CheckDuplicateKnowledge checks if a file with the same content hash already exists.
+	// Used before upload to warn users about duplicate files.
+	CheckDuplicateKnowledge(context.Context, *connect.Request[v1.CheckDuplicateKnowledgeRequest]) (*connect.Response[v1.CheckDuplicateKnowledgeResponse], error)
 }
 
 // NewTeamKnowledgeServiceClient constructs a client for the mirai.v1.TeamKnowledgeService service.
@@ -111,6 +117,12 @@ func NewTeamKnowledgeServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(teamKnowledgeServiceMethods.ByName("SearchTeamKnowledge")),
 			connect.WithClientOptions(opts...),
 		),
+		checkDuplicateKnowledge: connect.NewClient[v1.CheckDuplicateKnowledgeRequest, v1.CheckDuplicateKnowledgeResponse](
+			httpClient,
+			baseURL+TeamKnowledgeServiceCheckDuplicateKnowledgeProcedure,
+			connect.WithSchema(teamKnowledgeServiceMethods.ByName("CheckDuplicateKnowledge")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -121,6 +133,7 @@ type teamKnowledgeServiceClient struct {
 	getTeamKnowledgeSource    *connect.Client[v1.GetTeamKnowledgeSourceRequest, v1.GetTeamKnowledgeSourceResponse]
 	deleteTeamKnowledgeSource *connect.Client[v1.DeleteTeamKnowledgeSourceRequest, v1.DeleteTeamKnowledgeSourceResponse]
 	searchTeamKnowledge       *connect.Client[v1.SearchTeamKnowledgeRequest, v1.SearchTeamKnowledgeResponse]
+	checkDuplicateKnowledge   *connect.Client[v1.CheckDuplicateKnowledgeRequest, v1.CheckDuplicateKnowledgeResponse]
 }
 
 // UploadTeamKnowledge calls mirai.v1.TeamKnowledgeService.UploadTeamKnowledge.
@@ -148,6 +161,11 @@ func (c *teamKnowledgeServiceClient) SearchTeamKnowledge(ctx context.Context, re
 	return c.searchTeamKnowledge.CallUnary(ctx, req)
 }
 
+// CheckDuplicateKnowledge calls mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge.
+func (c *teamKnowledgeServiceClient) CheckDuplicateKnowledge(ctx context.Context, req *connect.Request[v1.CheckDuplicateKnowledgeRequest]) (*connect.Response[v1.CheckDuplicateKnowledgeResponse], error) {
+	return c.checkDuplicateKnowledge.CallUnary(ctx, req)
+}
+
 // TeamKnowledgeServiceHandler is an implementation of the mirai.v1.TeamKnowledgeService service.
 type TeamKnowledgeServiceHandler interface {
 	// UploadTeamKnowledge uploads a file and processes it for RAG.
@@ -166,6 +184,9 @@ type TeamKnowledgeServiceHandler interface {
 	// If team_id is omitted, searches global knowledge.
 	// If team_id is provided, searches team-specific knowledge.
 	SearchTeamKnowledge(context.Context, *connect.Request[v1.SearchTeamKnowledgeRequest]) (*connect.Response[v1.SearchTeamKnowledgeResponse], error)
+	// CheckDuplicateKnowledge checks if a file with the same content hash already exists.
+	// Used before upload to warn users about duplicate files.
+	CheckDuplicateKnowledge(context.Context, *connect.Request[v1.CheckDuplicateKnowledgeRequest]) (*connect.Response[v1.CheckDuplicateKnowledgeResponse], error)
 }
 
 // NewTeamKnowledgeServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -205,6 +226,12 @@ func NewTeamKnowledgeServiceHandler(svc TeamKnowledgeServiceHandler, opts ...con
 		connect.WithSchema(teamKnowledgeServiceMethods.ByName("SearchTeamKnowledge")),
 		connect.WithHandlerOptions(opts...),
 	)
+	teamKnowledgeServiceCheckDuplicateKnowledgeHandler := connect.NewUnaryHandler(
+		TeamKnowledgeServiceCheckDuplicateKnowledgeProcedure,
+		svc.CheckDuplicateKnowledge,
+		connect.WithSchema(teamKnowledgeServiceMethods.ByName("CheckDuplicateKnowledge")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.TeamKnowledgeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TeamKnowledgeServiceUploadTeamKnowledgeProcedure:
@@ -217,6 +244,8 @@ func NewTeamKnowledgeServiceHandler(svc TeamKnowledgeServiceHandler, opts ...con
 			teamKnowledgeServiceDeleteTeamKnowledgeSourceHandler.ServeHTTP(w, r)
 		case TeamKnowledgeServiceSearchTeamKnowledgeProcedure:
 			teamKnowledgeServiceSearchTeamKnowledgeHandler.ServeHTTP(w, r)
+		case TeamKnowledgeServiceCheckDuplicateKnowledgeProcedure:
+			teamKnowledgeServiceCheckDuplicateKnowledgeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -244,4 +273,8 @@ func (UnimplementedTeamKnowledgeServiceHandler) DeleteTeamKnowledgeSource(contex
 
 func (UnimplementedTeamKnowledgeServiceHandler) SearchTeamKnowledge(context.Context, *connect.Request[v1.SearchTeamKnowledgeRequest]) (*connect.Response[v1.SearchTeamKnowledgeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.TeamKnowledgeService.SearchTeamKnowledge is not implemented"))
+}
+
+func (UnimplementedTeamKnowledgeServiceHandler) CheckDuplicateKnowledge(context.Context, *connect.Request[v1.CheckDuplicateKnowledgeRequest]) (*connect.Response[v1.CheckDuplicateKnowledgeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge is not implemented"))
 }

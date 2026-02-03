@@ -50,6 +50,7 @@ func (r *TeamKnowledgeRepository) CreateWithTeam(ctx context.Context, source *en
 			FilePath:      toNullString(source.FilePath),
 			MimeType:      toNullString(source.MimeType),
 			FileSizeBytes: toNullInt64(source.FileSizeBytes),
+			ContentHash:   toNullString(source.ContentHash),
 		})
 	})
 	if err != nil {
@@ -299,5 +300,44 @@ func (r *TeamKnowledgeRepository) DeleteByTeam(ctx context.Context, teamID uuid.
 	}
 
 	log.Printf("[TeamKnowledgeRepository.DeleteByTeam] SUCCESS: teamID=%s", teamID)
+	return nil
+}
+
+// FindByContentHash finds a knowledge source by content hash (for duplicate detection).
+func (r *TeamKnowledgeRepository) FindByContentHash(ctx context.Context, contentHash string) (*entity.KnowledgeSource, error) {
+	log.Printf("[TeamKnowledgeRepository.FindByContentHash] Finding source by hash: %s", contentHash[:16]+"...")
+
+	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.KnowledgeSource, error) {
+		return q.FindKnowledgeSourceByContentHash(ctx, sql.NullString{String: contentHash, Valid: true})
+	})
+	if err == sql.ErrNoRows {
+		log.Printf("[TeamKnowledgeRepository.FindByContentHash] No duplicate found")
+		return nil, nil
+	}
+	if err != nil {
+		log.Printf("[TeamKnowledgeRepository.FindByContentHash] ERROR: %v", err)
+		return nil, fmt.Errorf("failed to find by content hash: %w", err)
+	}
+
+	log.Printf("[TeamKnowledgeRepository.FindByContentHash] Found duplicate: id=%s, name=%s", result.ID, result.Name)
+	return toKnowledgeSourceEntity(&result), nil
+}
+
+// UpdateContentHash updates the content hash for a knowledge source.
+func (r *TeamKnowledgeRepository) UpdateContentHash(ctx context.Context, id uuid.UUID, contentHash string) error {
+	log.Printf("[TeamKnowledgeRepository.UpdateContentHash] Updating hash for: id=%s", id)
+
+	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
+		return q.UpdateKnowledgeSourceContentHash(ctx, gen.UpdateKnowledgeSourceContentHashParams{
+			ID:          id,
+			ContentHash: sql.NullString{String: contentHash, Valid: true},
+		})
+	})
+	if err != nil {
+		log.Printf("[TeamKnowledgeRepository.UpdateContentHash] ERROR: %v", err)
+		return fmt.Errorf("failed to update content hash: %w", err)
+	}
+
+	log.Printf("[TeamKnowledgeRepository.UpdateContentHash] SUCCESS: id=%s", id)
 	return nil
 }

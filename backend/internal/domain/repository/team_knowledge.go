@@ -48,4 +48,10 @@ type TeamKnowledgeRepository interface {
 
 	// DeleteByTeam deletes all knowledge sources for a team.
 	DeleteByTeam(ctx context.Context, teamID uuid.UUID) error
+
+	// FindByContentHash finds a knowledge source by content hash (for duplicate detection).
+	FindByContentHash(ctx context.Context, contentHash string) (*entity.KnowledgeSource, error)
+
+	// UpdateContentHash updates the content hash for a knowledge source.
+	UpdateContentHash(ctx context.Context, id uuid.UUID, contentHash string) error
 }

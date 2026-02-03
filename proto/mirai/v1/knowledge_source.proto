@@ -72,6 +72,9 @@ message KnowledgeSource {
 
   // Team ID for team-level knowledge sources (shared across all team courses)
   optional string team_id = 20;
+
+  // SHA-256 hash of file content for duplicate detection
+  optional string content_hash = 21;
 }
 
 // DocumentIndex provides a structured outline of document contents for AI navigation.

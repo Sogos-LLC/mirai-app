@@ -321,3 +321,15 @@ func generateDocumentSummary(content string, name string) string {
 	}
 	return fmt.Sprintf("Document '%s': %s...", name, content[:maxLen])
 }
+
+// CheckDuplicate checks if a file with the same content hash already exists.
+func (s *TeamKnowledgeService) CheckDuplicate(ctx context.Context, contentHash string) (*entity.KnowledgeSource, error) {
+	log.Printf("[TeamKnowledgeService.CheckDuplicate] Checking for duplicate: hash=%s", contentHash[:16]+"...")
+	return s.repo.FindByContentHash(ctx, contentHash)
+}
+
+// UpdateContentHash updates the content hash for a knowledge source.
+func (s *TeamKnowledgeService) UpdateContentHash(ctx context.Context, id uuid.UUID, contentHash string) error {
+	log.Printf("[TeamKnowledgeService.UpdateContentHash] Updating hash for: id=%s", id)
+	return s.repo.UpdateContentHash(ctx, id, contentHash)
+}

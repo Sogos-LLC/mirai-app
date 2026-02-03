@@ -97,6 +97,7 @@ func (s *TeamKnowledgeServiceServer) UploadTeamKnowledge(
 	// Step 4: Create DB record
 	log.Printf("[Knowledge.Upload] Step 4: Creating DB record")
 	fileSize := int64(len(req.Msg.FileContent))
+	contentHash := req.Msg.ContentHash // Frontend provides SHA-256 hash
 	source := &entity.KnowledgeSource{
 		ID:            uuid.New(),
 		TenantID:      tenantID,
@@ -107,6 +108,7 @@ func (s *TeamKnowledgeServiceServer) UploadTeamKnowledge(
 		FilePath:      &storagePath,
 		MimeType:      &req.Msg.ContentType,
 		FileSizeBytes: &fileSize,
+		ContentHash:   &contentHash,
 	}
 
 	if err := s.teamKnowledgeService.Create(ctx, source); err != nil {
@@ -272,6 +274,50 @@ func (s *TeamKnowledgeServiceServer) DeleteTeamKnowledgeSource(
 	}), nil
 }
 
+// CheckDuplicateKnowledge checks if a file with the same content hash already exists.
+func (s *TeamKnowledgeServiceServer) CheckDuplicateKnowledge(
+	ctx context.Context,
+	req *connect.Request[v1.CheckDuplicateKnowledgeRequest],
+) (*connect.Response[v1.CheckDuplicateKnowledgeResponse], error) {
+	log.Printf("[Knowledge.CheckDuplicate] Checking hash: %s...", req.Msg.ContentHash[:16])
+
+	// Check authentication
+	_, ok := tenant.FromContext(ctx)
+	if !ok {
+		log.Printf("[Knowledge.CheckDuplicate] ERROR: No tenant in context")
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	// Check for duplicate
+	existing, err := s.teamKnowledgeService.CheckDuplicate(ctx, req.Msg.ContentHash)
+	if err != nil {
+		log.Printf("[Knowledge.CheckDuplicate] ERROR: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check duplicate: %w", err))
+	}
+
+	if existing == nil {
+		log.Printf("[Knowledge.CheckDuplicate] No duplicate found")
+		return connect.NewResponse(&v1.CheckDuplicateKnowledgeResponse{
+			Exists: false,
+		}), nil
+	}
+
+	// Determine location description
+	var location string
+	if existing.TeamID != nil {
+		location = "Team Knowledge"
+	} else {
+		location = "Global Knowledge"
+	}
+
+	log.Printf("[Knowledge.CheckDuplicate] Duplicate found: id=%s, name=%s, location=%s", existing.ID, existing.Name, location)
+	return connect.NewResponse(&v1.CheckDuplicateKnowledgeResponse{
+		Exists:         true,
+		ExistingSource: teamKnowledgeSourceToProto(existing),
+		Location:       location,
+	}), nil
+}
+
 // SearchTeamKnowledge performs semantic search across team knowledge.
 func (s *TeamKnowledgeServiceServer) SearchTeamKnowledge(
 	ctx context.Context,
@@ -378,6 +424,9 @@ func teamKnowledgeSourceToProto(source *entity.KnowledgeSource) *v1.KnowledgeSou
 	}
 	if source.ProcessedAt != nil {
 		proto.ProcessedAt = timestamppb.New(*source.ProcessedAt)
+	}
+	if source.ContentHash != nil {
+		proto.ContentHash = source.ContentHash
 	}
 
 	return proto

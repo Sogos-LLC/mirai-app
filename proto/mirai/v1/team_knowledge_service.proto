@@ -40,6 +40,10 @@ service TeamKnowledgeService {
   // If team_id is omitted, searches global knowledge.
   // If team_id is provided, searches team-specific knowledge.
   rpc SearchTeamKnowledge(SearchTeamKnowledgeRequest) returns (SearchTeamKnowledgeResponse);
+
+  // CheckDuplicateKnowledge checks if a file with the same content hash already exists.
+  // Used before upload to warn users about duplicate files.
+  rpc CheckDuplicateKnowledge(CheckDuplicateKnowledgeRequest) returns (CheckDuplicateKnowledgeResponse);
 }
 
 // UploadTeamKnowledgeRequest for uploading a file to knowledge base.
@@ -56,6 +60,9 @@ message UploadTeamKnowledgeRequest {
   // Optional team ID. If omitted, creates global knowledge (tenant-level).
   // If provided, creates team-specific knowledge.
   optional string team_id = 4;
+
+  // SHA-256 hash of file content for duplicate detection (hex string, 64 chars)
+  string content_hash = 5 [(buf.validate.field).string.len = 64];
 }
 
 message UploadTeamKnowledgeResponse {
@@ -118,4 +125,21 @@ message SearchTeamKnowledgeRequest {
 message SearchTeamKnowledgeResponse {
   // Retrieved chunks with similarity scores
   repeated RetrievedChunk chunks = 1;
+}
+
+// CheckDuplicateKnowledgeRequest to check for existing files with same content.
+message CheckDuplicateKnowledgeRequest {
+  // SHA-256 hash of file content (hex string, 64 chars)
+  string content_hash = 1 [(buf.validate.field).string.len = 64];
+}
+
+message CheckDuplicateKnowledgeResponse {
+  // Whether a duplicate exists
+  bool exists = 1;
+
+  // If duplicate exists, the existing source info
+  KnowledgeSource existing_source = 2;
+
+  // Human-readable location of the duplicate (e.g., "Global Knowledge" or "Team: Engineering")
+  string location = 3;
 }

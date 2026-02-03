@@ -345,6 +345,7 @@ func toKnowledgeSourceEntity(ks *gen.KnowledgeSource) *entity.KnowledgeSource {
 		Summary:       fromNullStringPtr(ks.Summary),
 		TokenCount:    fromNullInt32Ptr(ks.TokenCount),
 		VideoURLs:     videoURLs,
+		ContentHash:   fromNullStringPtr(ks.ContentHash),
 		CreatedAt:     ks.CreatedAt,
 		UpdatedAt:     ks.UpdatedAt,
 		ProcessedAt:   fromDoublePointerTime(ks.ProcessedAt),

@@ -35,11 +35,12 @@ INSERT INTO knowledge_sources (
     name,
     file_path,
     mime_type,
-    file_size_bytes
+    file_size_bytes,
+    content_hash
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
-RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id
+RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id, content_hash
 `
 
 type CreateTeamKnowledgeSourceParams struct {
@@ -52,6 +53,7 @@ type CreateTeamKnowledgeSourceParams struct {
 	FilePath      sql.NullString        `db:"file_path" json:"file_path"`
 	MimeType      sql.NullString        `db:"mime_type" json:"mime_type"`
 	FileSizeBytes sql.NullInt64         `db:"file_size_bytes" json:"file_size_bytes"`
+	ContentHash   sql.NullString        `db:"content_hash" json:"content_hash"`
 }
 
 // Team knowledge source operations
@@ -68,6 +70,7 @@ func (q *Queries) CreateTeamKnowledgeSource(ctx context.Context, arg CreateTeamK
 		arg.FilePath,
 		arg.MimeType,
 		arg.FileSizeBytes,
+		arg.ContentHash,
 	)
 	var i KnowledgeSource
 	err := row.Scan(
@@ -91,6 +94,7 @@ func (q *Queries) CreateTeamKnowledgeSource(ctx context.Context, arg CreateTeamK
 		&i.TokenCount,
 		&i.DocumentIndex,
 		&i.TeamID,
+		&i.ContentHash,
 	)
 	return i, err
 }
@@ -105,8 +109,45 @@ func (q *Queries) DeleteKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.
 	return err
 }
 
+const findKnowledgeSourceByContentHash = `-- name: FindKnowledgeSourceByContentHash :one
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id, content_hash FROM knowledge_sources
+WHERE content_hash = $1
+LIMIT 1
+`
+
+// Find a knowledge source by content hash (for duplicate detection)
+// Returns the first match across all scopes (global and team)
+func (q *Queries) FindKnowledgeSourceByContentHash(ctx context.Context, contentHash sql.NullString) (KnowledgeSource, error) {
+	row := q.db.QueryRowContext(ctx, findKnowledgeSourceByContentHash, contentHash)
+	var i KnowledgeSource
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CourseID,
+		&i.Type,
+		&i.Status,
+		&i.Name,
+		&i.FilePath,
+		&i.MimeType,
+		&i.FileSizeBytes,
+		&i.ChunkCount,
+		&i.ErrorMessage,
+		&i.VideoUrls,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProcessedAt,
+		&i.SessionID,
+		&i.Summary,
+		&i.TokenCount,
+		&i.DocumentIndex,
+		&i.TeamID,
+		&i.ContentHash,
+	)
+	return i, err
+}
+
 const getKnowledgeSourceByIDForTeam = `-- name: GetKnowledgeSourceByIDForTeam :one
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id FROM knowledge_sources WHERE id = $1
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id, content_hash FROM knowledge_sources WHERE id = $1
 `
 
 // Get a knowledge source by ID (used for team knowledge operations)
@@ -134,12 +175,13 @@ func (q *Queries) GetKnowledgeSourceByIDForTeam(ctx context.Context, id uuid.UUI
 		&i.TokenCount,
 		&i.DocumentIndex,
 		&i.TeamID,
+		&i.ContentHash,
 	)
 	return i, err
 }
 
 const getReadyGlobalSources = `-- name: GetReadyGlobalSources :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id, content_hash FROM knowledge_sources
 WHERE team_id IS NULL AND status = 'ready'
 ORDER BY created_at ASC
 `
@@ -175,6 +217,7 @@ func (q *Queries) GetReadyGlobalSources(ctx context.Context) ([]KnowledgeSource,
 			&i.TokenCount,
 			&i.DocumentIndex,
 			&i.TeamID,
+			&i.ContentHash,
 		); err != nil {
 			return nil, err
 		}
@@ -190,7 +233,7 @@ func (q *Queries) GetReadyGlobalSources(ctx context.Context) ([]KnowledgeSource,
 }
 
 const getReadySourcesByTeam = `-- name: GetReadySourcesByTeam :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id, content_hash FROM knowledge_sources
 WHERE team_id = $1 AND status = 'ready'
 ORDER BY created_at ASC
 `
@@ -226,6 +269,7 @@ func (q *Queries) GetReadySourcesByTeam(ctx context.Context, teamID uuid.NullUUI
 			&i.TokenCount,
 			&i.DocumentIndex,
 			&i.TeamID,
+			&i.ContentHash,
 		); err != nil {
 			return nil, err
 		}
@@ -241,7 +285,7 @@ func (q *Queries) GetReadySourcesByTeam(ctx context.Context, teamID uuid.NullUUI
 }
 
 const listGlobalKnowledgeSources = `-- name: ListGlobalKnowledgeSources :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id, content_hash FROM knowledge_sources
 WHERE team_id IS NULL
 ORDER BY created_at DESC
 `
@@ -277,6 +321,7 @@ func (q *Queries) ListGlobalKnowledgeSources(ctx context.Context) ([]KnowledgeSo
 			&i.TokenCount,
 			&i.DocumentIndex,
 			&i.TeamID,
+			&i.ContentHash,
 		); err != nil {
 			return nil, err
 		}
@@ -292,7 +337,7 @@ func (q *Queries) ListGlobalKnowledgeSources(ctx context.Context) ([]KnowledgeSo
 }
 
 const listKnowledgeSourcesByTeam = `-- name: ListKnowledgeSourcesByTeam :many
-SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id FROM knowledge_sources
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id, content_hash FROM knowledge_sources
 WHERE team_id = $1
 ORDER BY created_at DESC
 `
@@ -328,6 +373,7 @@ func (q *Queries) ListKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.Nu
 			&i.TokenCount,
 			&i.DocumentIndex,
 			&i.TeamID,
+			&i.ContentHash,
 		); err != nil {
 			return nil, err
 		}
@@ -368,4 +414,21 @@ func (q *Queries) SumTokenCountGlobal(ctx context.Context) (int64, error) {
 	var total int64
 	err := row.Scan(&total)
 	return total, err
+}
+
+const updateKnowledgeSourceContentHash = `-- name: UpdateKnowledgeSourceContentHash :exec
+UPDATE knowledge_sources
+SET content_hash = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateKnowledgeSourceContentHashParams struct {
+	ID          uuid.UUID      `db:"id" json:"id"`
+	ContentHash sql.NullString `db:"content_hash" json:"content_hash"`
+}
+
+// Update the content hash for a knowledge source
+func (q *Queries) UpdateKnowledgeSourceContentHash(ctx context.Context, arg UpdateKnowledgeSourceContentHashParams) error {
+	_, err := q.db.ExecContext(ctx, updateKnowledgeSourceContentHash, arg.ID, arg.ContentHash)
+	return err
 }

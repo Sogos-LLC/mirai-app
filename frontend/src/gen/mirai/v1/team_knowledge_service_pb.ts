@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/team_knowledge_service.proto.
  */
 export const file_mirai_v1_team_knowledge_service: GenFile = /*@__PURE__*/
-  fileDesc("CiVtaXJhaS92MS90ZWFtX2tub3dsZWRnZV9zZXJ2aWNlLnByb3RvEghtaXJhaS52MSKXAQoaVXBsb2FkVGVhbUtub3dsZWRnZVJlcXVlc3QSGQoIZmlsZW5hbWUYASABKAlCB7pIBHICEAESHQoMY29udGVudF90eXBlGAIgASgJQge6SARyAhABEh0KDGZpbGVfY29udGVudBgDIAEoDEIHukgEegIQARIUCgd0ZWFtX2lkGAQgASgJSACIAQFCCgoIX3RlYW1faWQiXQobVXBsb2FkVGVhbUtub3dsZWRnZVJlc3BvbnNlEikKBnNvdXJjZRgBIAEoCzIZLm1pcmFpLnYxLktub3dsZWRnZVNvdXJjZRITCgtyYWdfc3VtbWFyeRgCIAEoCSJDCh9MaXN0VGVhbUtub3dsZWRnZVNvdXJjZXNSZXF1ZXN0EhQKB3RlYW1faWQYASABKAlIAIgBAUIKCghfdGVhbV9pZCJ7CiBMaXN0VGVhbUtub3dsZWRnZVNvdXJjZXNSZXNwb25zZRIqCgdzb3VyY2VzGAEgAygLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlEhUKDXRvdGFsX3NvdXJjZXMYAiABKAUSFAoMdG90YWxfdG9rZW5zGAMgASgDIjUKHUdldFRlYW1Lbm93bGVkZ2VTb3VyY2VSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASJLCh5HZXRUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USKQoGc291cmNlGAEgASgLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlIjgKIERlbGV0ZVRlYW1Lbm93bGVkZ2VTb3VyY2VSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASI0CiFEZWxldGVUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJlChpTZWFyY2hUZWFtS25vd2xlZGdlUmVxdWVzdBIWCgVxdWVyeRgBIAEoCUIHukgEcgIQARINCgV0b3BfaxgCIAEoBRIUCgd0ZWFtX2lkGAMgASgJSACIAQFCCgoIX3RlYW1faWQiRwobU2VhcmNoVGVhbUtub3dsZWRnZVJlc3BvbnNlEigKBmNodW5rcxgBIAMoCzIYLm1pcmFpLnYxLlJldHJpZXZlZENodW5rMrQEChRUZWFtS25vd2xlZGdlU2VydmljZRJiChNVcGxvYWRUZWFtS25vd2xlZGdlEiQubWlyYWkudjEuVXBsb2FkVGVhbUtub3dsZWRnZVJlcXVlc3QaJS5taXJhaS52MS5VcGxvYWRUZWFtS25vd2xlZGdlUmVzcG9uc2UScQoYTGlzdFRlYW1Lbm93bGVkZ2VTb3VyY2VzEikubWlyYWkudjEuTGlzdFRlYW1Lbm93bGVkZ2VTb3VyY2VzUmVxdWVzdBoqLm1pcmFpLnYxLkxpc3RUZWFtS25vd2xlZGdlU291cmNlc1Jlc3BvbnNlEmsKFkdldFRlYW1Lbm93bGVkZ2VTb3VyY2USJy5taXJhaS52MS5HZXRUZWFtS25vd2xlZGdlU291cmNlUmVxdWVzdBooLm1pcmFpLnYxLkdldFRlYW1Lbm93bGVkZ2VTb3VyY2VSZXNwb25zZRJ0ChlEZWxldGVUZWFtS25vd2xlZGdlU291cmNlEioubWlyYWkudjEuRGVsZXRlVGVhbUtub3dsZWRnZVNvdXJjZVJlcXVlc3QaKy5taXJhaS52MS5EZWxldGVUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USYgoTU2VhcmNoVGVhbUtub3dsZWRnZRIkLm1pcmFpLnYxLlNlYXJjaFRlYW1Lbm93bGVkZ2VSZXF1ZXN0GiUubWlyYWkudjEuU2VhcmNoVGVhbUtub3dsZWRnZVJlc3BvbnNlQp8BCgxjb20ubWlyYWkudjFCGVRlYW1Lbm93bGVkZ2VTZXJ2aWNlUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_buf_validate_validate, file_mirai_v1_knowledge_source]);
+  fileDesc("CiVtaXJhaS92MS90ZWFtX2tub3dsZWRnZV9zZXJ2aWNlLnByb3RvEghtaXJhaS52MSK3AQoaVXBsb2FkVGVhbUtub3dsZWRnZVJlcXVlc3QSGQoIZmlsZW5hbWUYASABKAlCB7pIBHICEAESHQoMY29udGVudF90eXBlGAIgASgJQge6SARyAhABEh0KDGZpbGVfY29udGVudBgDIAEoDEIHukgEegIQARIUCgd0ZWFtX2lkGAQgASgJSACIAQESHgoMY29udGVudF9oYXNoGAUgASgJQgi6SAVyA5gBQEIKCghfdGVhbV9pZCJdChtVcGxvYWRUZWFtS25vd2xlZGdlUmVzcG9uc2USKQoGc291cmNlGAEgASgLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlEhMKC3JhZ19zdW1tYXJ5GAIgASgJIkMKH0xpc3RUZWFtS25vd2xlZGdlU291cmNlc1JlcXVlc3QSFAoHdGVhbV9pZBgBIAEoCUgAiAEBQgoKCF90ZWFtX2lkInsKIExpc3RUZWFtS25vd2xlZGdlU291cmNlc1Jlc3BvbnNlEioKB3NvdXJjZXMYASADKAsyGS5taXJhaS52MS5Lbm93bGVkZ2VTb3VyY2USFQoNdG90YWxfc291cmNlcxgCIAEoBRIUCgx0b3RhbF90b2tlbnMYAyABKAMiNQodR2V0VGVhbUtub3dsZWRnZVNvdXJjZVJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBIksKHkdldFRlYW1Lbm93bGVkZ2VTb3VyY2VSZXNwb25zZRIpCgZzb3VyY2UYASABKAsyGS5taXJhaS52MS5Lbm93bGVkZ2VTb3VyY2UiOAogRGVsZXRlVGVhbUtub3dsZWRnZVNvdXJjZVJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBIjQKIURlbGV0ZVRlYW1Lbm93bGVkZ2VTb3VyY2VSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIImUKGlNlYXJjaFRlYW1Lbm93bGVkZ2VSZXF1ZXN0EhYKBXF1ZXJ5GAEgASgJQge6SARyAhABEg0KBXRvcF9rGAIgASgFEhQKB3RlYW1faWQYAyABKAlIAIgBAUIKCghfdGVhbV9pZCJHChtTZWFyY2hUZWFtS25vd2xlZGdlUmVzcG9uc2USKAoGY2h1bmtzGAEgAygLMhgubWlyYWkudjEuUmV0cmlldmVkQ2h1bmsiQAoeQ2hlY2tEdXBsaWNhdGVLbm93bGVkZ2VSZXF1ZXN0Eh4KDGNvbnRlbnRfaGFzaBgBIAEoCUIIukgFcgOYAUAidwofQ2hlY2tEdXBsaWNhdGVLbm93bGVkZ2VSZXNwb25zZRIOCgZleGlzdHMYASABKAgSMgoPZXhpc3Rpbmdfc291cmNlGAIgASgLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlEhAKCGxvY2F0aW9uGAMgASgJMqQFChRUZWFtS25vd2xlZGdlU2VydmljZRJiChNVcGxvYWRUZWFtS25vd2xlZGdlEiQubWlyYWkudjEuVXBsb2FkVGVhbUtub3dsZWRnZVJlcXVlc3QaJS5taXJhaS52MS5VcGxvYWRUZWFtS25vd2xlZGdlUmVzcG9uc2UScQoYTGlzdFRlYW1Lbm93bGVkZ2VTb3VyY2VzEikubWlyYWkudjEuTGlzdFRlYW1Lbm93bGVkZ2VTb3VyY2VzUmVxdWVzdBoqLm1pcmFpLnYxLkxpc3RUZWFtS25vd2xlZGdlU291cmNlc1Jlc3BvbnNlEmsKFkdldFRlYW1Lbm93bGVkZ2VTb3VyY2USJy5taXJhaS52MS5HZXRUZWFtS25vd2xlZGdlU291cmNlUmVxdWVzdBooLm1pcmFpLnYxLkdldFRlYW1Lbm93bGVkZ2VTb3VyY2VSZXNwb25zZRJ0ChlEZWxldGVUZWFtS25vd2xlZGdlU291cmNlEioubWlyYWkudjEuRGVsZXRlVGVhbUtub3dsZWRnZVNvdXJjZVJlcXVlc3QaKy5taXJhaS52MS5EZWxldGVUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USYgoTU2VhcmNoVGVhbUtub3dsZWRnZRIkLm1pcmFpLnYxLlNlYXJjaFRlYW1Lbm93bGVkZ2VSZXF1ZXN0GiUubWlyYWkudjEuU2VhcmNoVGVhbUtub3dsZWRnZVJlc3BvbnNlEm4KF0NoZWNrRHVwbGljYXRlS25vd2xlZGdlEigubWlyYWkudjEuQ2hlY2tEdXBsaWNhdGVLbm93bGVkZ2VSZXF1ZXN0GikubWlyYWkudjEuQ2hlY2tEdXBsaWNhdGVLbm93bGVkZ2VSZXNwb25zZUKfAQoMY29tLm1pcmFpLnYxQhlUZWFtS25vd2xlZGdlU2VydmljZVByb3RvUAFaM2dpdGh1Yi5jb20vc29nb3MvbWlyYWktYmFja2VuZC9nZW4vbWlyYWkvdjE7bWlyYWl2MaICA01YWKoCCE1pcmFpLlYxygIITWlyYWlcVjHiAhRNaXJhaVxWMVxHUEJNZXRhZGF0YeoCCU1pcmFpOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_mirai_v1_knowledge_source]);
 
 /**
  * UploadTeamKnowledgeRequest for uploading a file to knowledge base.
@@ -49,6 +49,13 @@ export type UploadTeamKnowledgeRequest = Message<"mirai.v1.UploadTeamKnowledgeRe
    * @generated from field: optional string team_id = 4;
    */
   teamId?: string;
+
+  /**
+   * SHA-256 hash of file content for duplicate detection (hex string, 64 chars)
+   *
+   * @generated from field: string content_hash = 5;
+   */
+  contentHash: string;
 };
 
 /**
@@ -267,6 +274,60 @@ export const SearchTeamKnowledgeResponseSchema: GenMessage<SearchTeamKnowledgeRe
   messageDesc(file_mirai_v1_team_knowledge_service, 9);
 
 /**
+ * CheckDuplicateKnowledgeRequest to check for existing files with same content.
+ *
+ * @generated from message mirai.v1.CheckDuplicateKnowledgeRequest
+ */
+export type CheckDuplicateKnowledgeRequest = Message<"mirai.v1.CheckDuplicateKnowledgeRequest"> & {
+  /**
+   * SHA-256 hash of file content (hex string, 64 chars)
+   *
+   * @generated from field: string content_hash = 1;
+   */
+  contentHash: string;
+};
+
+/**
+ * Describes the message mirai.v1.CheckDuplicateKnowledgeRequest.
+ * Use `create(CheckDuplicateKnowledgeRequestSchema)` to create a new message.
+ */
+export const CheckDuplicateKnowledgeRequestSchema: GenMessage<CheckDuplicateKnowledgeRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_team_knowledge_service, 10);
+
+/**
+ * @generated from message mirai.v1.CheckDuplicateKnowledgeResponse
+ */
+export type CheckDuplicateKnowledgeResponse = Message<"mirai.v1.CheckDuplicateKnowledgeResponse"> & {
+  /**
+   * Whether a duplicate exists
+   *
+   * @generated from field: bool exists = 1;
+   */
+  exists: boolean;
+
+  /**
+   * If duplicate exists, the existing source info
+   *
+   * @generated from field: mirai.v1.KnowledgeSource existing_source = 2;
+   */
+  existingSource?: KnowledgeSource;
+
+  /**
+   * Human-readable location of the duplicate (e.g., "Global Knowledge" or "Team: Engineering")
+   *
+   * @generated from field: string location = 3;
+   */
+  location: string;
+};
+
+/**
+ * Describes the message mirai.v1.CheckDuplicateKnowledgeResponse.
+ * Use `create(CheckDuplicateKnowledgeResponseSchema)` to create a new message.
+ */
+export const CheckDuplicateKnowledgeResponseSchema: GenMessage<CheckDuplicateKnowledgeResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_team_knowledge_service, 11);
+
+/**
  * TeamKnowledgeService handles global and team-level knowledge source operations.
  *
  * @generated from service mirai.v1.TeamKnowledgeService
@@ -327,6 +388,17 @@ export const TeamKnowledgeService: GenService<{
     methodKind: "unary";
     input: typeof SearchTeamKnowledgeRequestSchema;
     output: typeof SearchTeamKnowledgeResponseSchema;
+  },
+  /**
+   * CheckDuplicateKnowledge checks if a file with the same content hash already exists.
+   * Used before upload to warn users about duplicate files.
+   *
+   * @generated from rpc mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge
+   */
+  checkDuplicateKnowledge: {
+    methodKind: "unary";
+    input: typeof CheckDuplicateKnowledgeRequestSchema;
+    output: typeof CheckDuplicateKnowledgeResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_mirai_v1_team_knowledge_service, 0);

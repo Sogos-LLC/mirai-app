@@ -12,9 +12,10 @@ INSERT INTO knowledge_sources (
     name,
     file_path,
     mime_type,
-    file_size_bytes
+    file_size_bytes,
+    content_hash
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
 RETURNING *;
 
@@ -65,3 +66,16 @@ ORDER BY created_at ASC;
 SELECT COALESCE(SUM(token_count), 0)::bigint as total
 FROM knowledge_sources
 WHERE team_id IS NULL AND status = 'ready';
+
+-- name: FindKnowledgeSourceByContentHash :one
+-- Find a knowledge source by content hash (for duplicate detection)
+-- Returns the first match across all scopes (global and team)
+SELECT * FROM knowledge_sources
+WHERE content_hash = $1
+LIMIT 1;
+
+-- name: UpdateKnowledgeSourceContentHash :exec
+-- Update the content hash for a knowledge source
+UPDATE knowledge_sources
+SET content_hash = $2, updated_at = NOW()
+WHERE id = $1;
