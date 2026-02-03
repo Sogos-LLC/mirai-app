@@ -99,6 +99,7 @@ export const OutlineLessonSchema = z.object({
   isFirstInCourse: z.boolean(),
   isLastInCourse: z.boolean(),
   citations: z.array(KnowledgeCitationSchema),
+  groundingScore: z.number(),
 });
 
 export type OutlineLesson = z.infer<typeof OutlineLessonSchema>;
@@ -203,6 +204,10 @@ export const GeneratedLessonSchema = z.object({
   components: z.array(LessonComponentSchema),
   segueText: z.string().optional(),
   generatedAt: z.string().datetime().optional(),
+  groundingScore: z.number(),
+  sourceCount: z.number().int(),
+  groundedTokenCount: z.number().int(),
+  totalTokenCount: z.number().int(),
 });
 
 export type GeneratedLesson = z.infer<typeof GeneratedLessonSchema>;

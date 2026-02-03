@@ -860,9 +860,11 @@ type OutlineLesson struct {
 	IsFirstInCourse          bool                   `protobuf:"varint,9,opt,name=is_first_in_course,json=isFirstInCourse,proto3" json:"is_first_in_course,omitempty"`
 	IsLastInCourse           bool                   `protobuf:"varint,10,opt,name=is_last_in_course,json=isLastInCourse,proto3" json:"is_last_in_course,omitempty"`
 	// Citations from knowledge sources used to inform this lesson
-	Citations     []*KnowledgeCitation `protobuf:"bytes,11,rep,name=citations,proto3" json:"citations,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Citations []*KnowledgeCitation `protobuf:"bytes,11,rep,name=citations,proto3" json:"citations,omitempty"`
+	// How grounded in knowledge sources (0.0-1.0)
+	GroundingScore float32 `protobuf:"fixed32,12,opt,name=grounding_score,json=groundingScore,proto3" json:"grounding_score,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *OutlineLesson) Reset() {
@@ -972,6 +974,13 @@ func (x *OutlineLesson) GetCitations() []*KnowledgeCitation {
 	return nil
 }
 
+func (x *OutlineLesson) GetGroundingScore() float32 {
+	if x != nil {
+		return x.GroundingScore
+	}
+	return 0
+}
+
 // GeneratedLesson contains full lesson content.
 type GeneratedLesson struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -983,8 +992,13 @@ type GeneratedLesson struct {
 	Components      []*LessonComponent     `protobuf:"bytes,6,rep,name=components,proto3" json:"components,omitempty"`
 	SegueText       *string                `protobuf:"bytes,7,opt,name=segue_text,json=segueText,proto3,oneof" json:"segue_text,omitempty"`
 	GeneratedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=generated_at,json=generatedAt,proto3" json:"generated_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Provenance tracking
+	GroundingScore     float32 `protobuf:"fixed32,9,opt,name=grounding_score,json=groundingScore,proto3" json:"grounding_score,omitempty"`               // Aggregate grounding across components (0.0-1.0)
+	SourceCount        int32   `protobuf:"varint,10,opt,name=source_count,json=sourceCount,proto3" json:"source_count,omitempty"`                        // Number of knowledge sources used
+	GroundedTokenCount int32   `protobuf:"varint,11,opt,name=grounded_token_count,json=groundedTokenCount,proto3" json:"grounded_token_count,omitempty"` // Tokens from knowledge sources
+	TotalTokenCount    int32   `protobuf:"varint,12,opt,name=total_token_count,json=totalTokenCount,proto3" json:"total_token_count,omitempty"`          // Total tokens in lesson
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GeneratedLesson) Reset() {
@@ -1071,6 +1085,34 @@ func (x *GeneratedLesson) GetGeneratedAt() *timestamppb.Timestamp {
 		return x.GeneratedAt
 	}
 	return nil
+}
+
+func (x *GeneratedLesson) GetGroundingScore() float32 {
+	if x != nil {
+		return x.GroundingScore
+	}
+	return 0
+}
+
+func (x *GeneratedLesson) GetSourceCount() int32 {
+	if x != nil {
+		return x.SourceCount
+	}
+	return 0
+}
+
+func (x *GeneratedLesson) GetGroundedTokenCount() int32 {
+	if x != nil {
+		return x.GroundedTokenCount
+	}
+	return 0
+}
+
+func (x *GeneratedLesson) GetTotalTokenCount() int32 {
+	if x != nil {
+		return x.TotalTokenCount
+	}
+	return 0
 }
 
 // LessonComponent represents a content component in a lesson.
@@ -1378,7 +1420,7 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x06intent\x18\f \x01(\x0e2\x17.mirai.v1.SectionIntentR\x06intent\x125\n" +
 	"\bemphasis\x18\r \x01(\x0e2\x19.mirai.v1.SectionEmphasisR\bemphasis\x12'\n" +
 	"\x0fgrounding_score\x18\x0e \x01(\x02R\x0egroundingScore\x124\n" +
-	"\x16contributing_chunk_ids\x18\x0f \x03(\tR\x14contributingChunkIds\"\xcb\x03\n" +
+	"\x16contributing_chunk_ids\x18\x0f \x03(\tR\x14contributingChunkIds\"\xf4\x03\n" +
 	"\rOutlineLesson\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -1391,7 +1433,8 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x12is_first_in_course\x18\t \x01(\bR\x0fisFirstInCourse\x12)\n" +
 	"\x11is_last_in_course\x18\n" +
 	" \x01(\bR\x0eisLastInCourse\x129\n" +
-	"\tcitations\x18\v \x03(\v2\x1b.mirai.v1.KnowledgeCitationR\tcitations\"\xcc\x02\n" +
+	"\tcitations\x18\v \x03(\v2\x1b.mirai.v1.KnowledgeCitationR\tcitations\x12'\n" +
+	"\x0fgrounding_score\x18\f \x01(\x02R\x0egroundingScore\"\xf6\x03\n" +
 	"\x0fGeneratedLesson\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12\x1d\n" +
@@ -1404,7 +1447,12 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"components\x12\"\n" +
 	"\n" +
 	"segue_text\x18\a \x01(\tH\x00R\tsegueText\x88\x01\x01\x12=\n" +
-	"\fgenerated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vgeneratedAtB\r\n" +
+	"\fgenerated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vgeneratedAt\x12'\n" +
+	"\x0fgrounding_score\x18\t \x01(\x02R\x0egroundingScore\x12!\n" +
+	"\fsource_count\x18\n" +
+	" \x01(\x05R\vsourceCount\x120\n" +
+	"\x14grounded_token_count\x18\v \x01(\x05R\x12groundedTokenCount\x12*\n" +
+	"\x11total_token_count\x18\f \x01(\x05R\x0ftotalTokenCountB\r\n" +
 	"\v_segue_text\"\xdc\x01\n" +
 	"\x0fLessonComponent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +

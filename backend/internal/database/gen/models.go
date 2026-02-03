@@ -534,6 +534,16 @@ type Course struct {
 	FolderID        uuid.NullUUID  `db:"folder_id" json:"folder_id"`
 }
 
+type CourseAuditLog struct {
+	ID        uuid.UUID             `db:"id" json:"id"`
+	TenantID  uuid.UUID             `db:"tenant_id" json:"tenant_id"`
+	CourseID  uuid.UUID             `db:"course_id" json:"course_id"`
+	Action    string                `db:"action" json:"action"`
+	ActorID   uuid.UUID             `db:"actor_id" json:"actor_id"`
+	Metadata  pqtype.NullRawMessage `db:"metadata" json:"metadata"`
+	CreatedAt time.Time             `db:"created_at" json:"created_at"`
+}
+
 // Tracks SCORM and other format export jobs for courses
 type CourseExport struct {
 	ID       uuid.UUID    `db:"id" json:"id"`

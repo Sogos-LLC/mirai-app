@@ -571,6 +571,9 @@ type OutlineLessonResult struct {
 	IsLastInSection          bool // Last lesson in section
 	IsFirstInCourse          bool // First lesson in entire course
 	IsLastInCourse           bool // Last lesson in entire course
+
+	// Grounding (inherited from section at outline time, refined during lesson generation)
+	GroundingScore float32 // How grounded in knowledge sources (0.0-1.0)
 }
 
 // GenerateLessonRequest contains inputs for lesson content generation.

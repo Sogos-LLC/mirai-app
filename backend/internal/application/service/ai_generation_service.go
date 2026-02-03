@@ -433,10 +433,64 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 	job.TokensUsed = outlineResult.TokensUsed
 	_ = s.jobRepo.Update(ctx, job)
 
+	// Calculate section grounding scores based on RAG context
+	// If RAG chunks were provided, distribute a baseline grounding score across sections
+	var sectionGroundingScores []float32
+	if len(outlineRequest.RAGContext) > 0 && outlineRequest.InternalDataOnly {
+		// Calculate grounding score based on RAG coverage
+		// More chunks = higher grounding, but cap at reasonable max
+		chunksPerSection := float32(len(outlineRequest.RAGContext)) / float32(len(outlineResult.Sections))
+		for range outlineResult.Sections {
+			// Base score starts at 0.4 with RAG, scales up based on chunk density
+			// 10+ chunks per section = 0.8+ grounding
+			score := float32(0.4) + (chunksPerSection / 25.0)
+			if score > 0.95 {
+				score = 0.95
+			}
+			sectionGroundingScores = append(sectionGroundingScores, score)
+		}
+	} else {
+		// No RAG context = 0 grounding (fully synthesized)
+		for range outlineResult.Sections {
+			sectionGroundingScores = append(sectionGroundingScores, 0.0)
+		}
+	}
+
+	// Collect contributing chunk IDs per section (distribute evenly for now)
+	var sectionChunkIDs [][]string
+	if len(outlineRequest.RAGContext) > 0 {
+		chunksPerSection := len(outlineRequest.RAGContext) / len(outlineResult.Sections)
+		if chunksPerSection < 1 {
+			chunksPerSection = 1
+		}
+		for i := range outlineResult.Sections {
+			start := i * chunksPerSection
+			end := start + chunksPerSection
+			if end > len(outlineRequest.RAGContext) {
+				end = len(outlineRequest.RAGContext)
+			}
+			if i == len(outlineResult.Sections)-1 {
+				// Last section gets remaining chunks
+				end = len(outlineRequest.RAGContext)
+			}
+			var chunkIDs []string
+			for j := start; j < end && j < len(outlineRequest.RAGContext); j++ {
+				chunkIDs = append(chunkIDs, outlineRequest.RAGContext[j].ChunkID)
+			}
+			sectionChunkIDs = append(sectionChunkIDs, chunkIDs)
+		}
+	} else {
+		for range outlineResult.Sections {
+			sectionChunkIDs = append(sectionChunkIDs, nil)
+		}
+	}
+
 	// Convert AI result to content sections format
 	sections := make([]map[string]any, 0, len(outlineResult.Sections))
 	totalLessons := 0
 	for sIdx, sectionResult := range outlineResult.Sections {
+		sectionGrounding := sectionGroundingScores[sIdx]
+
 		lessons := make([]map[string]any, 0, len(sectionResult.Lessons))
 		for lIdx, lessonResult := range sectionResult.Lessons {
 			lesson := map[string]any{
@@ -448,6 +502,7 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 				"learningObjectives":       lessonResult.LearningObjectives,
 				"isLastInSection":          lessonResult.IsLastInSection,
 				"isLastInCourse":           lessonResult.IsLastInCourse,
+				"groundingScore":           sectionGrounding, // Inherit section's grounding score
 			}
 			lessons = append(lessons, lesson)
 			totalLessons++
@@ -463,8 +518,8 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 			"intent":               sectionResult.Intent,
 			"emphasis":             sectionResult.Emphasis,
 			"mappedOutcomeIndices": sectionResult.MappedOutcomeIndices,
-			"groundingScore":       sectionResult.GroundingScore,
-			"contributingChunkIds": sectionResult.ContributingChunkIDs,
+			"groundingScore":       sectionGrounding,
+			"contributingChunkIds": sectionChunkIDs[sIdx],
 		}
 		sections = append(sections, section)
 	}

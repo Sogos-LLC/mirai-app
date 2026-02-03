@@ -45,6 +45,7 @@ import {
 } from '@/gen/mirai/v1/ai_generation_types_pb';
 import SectionMetadataBadges from '@/components/outline/SectionMetadataBadges';
 import SectionFeedbackControls, { type SectionFeedbackData } from '@/components/outline/SectionFeedbackControls';
+import { LessonSourcePanel } from '@/components/lessons/LessonSourcePanel';
 import {
   AIGenerationService,
   GetJobRequestSchema,
@@ -85,6 +86,8 @@ export default function OutlineReviewPage() {
   const [copied, setCopied] = useState(false);
   // Section feedback editing state
   const [feedbackSectionIndex, setFeedbackSectionIndex] = useState<number | null>(null);
+  // Source panel open state (tracks which lesson's panel is open)
+  const [openSourcePanel, setOpenSourcePanel] = useState<{ sectionIndex: number; lessonIndex: number } | null>(null);
 
   // Fetch course data for metadata header
   const courseQuery = useGetCourse(courseId);
@@ -782,16 +785,53 @@ export default function OutlineReviewPage() {
                                             {lesson.title || `Lesson ${lessonIndex + 1}`}
                                           </p>
                                           <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
-                                          {/* Citation indicator */}
+                                          {/* Grounding indicator */}
+                                          {lesson.groundingScore > 0 && (
+                                            <span
+                                              className={`px-1.5 py-0.5 text-xs rounded ${
+                                                lesson.groundingScore >= 0.8
+                                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                  : lesson.groundingScore >= 0.6
+                                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                              }`}
+                                              title={`${Math.round(lesson.groundingScore * 100)}% grounded in knowledge sources`}
+                                            >
+                                              {Math.round(lesson.groundingScore * 100)}%
+                                            </span>
+                                          )}
+                                          {/* Citation indicator with source panel */}
                                           {lesson.citations && lesson.citations.length > 0 && (
                                             <div className="relative" onClick={(e) => e.stopPropagation()}>
                                               <button
+                                                onClick={() =>
+                                                  setOpenSourcePanel(
+                                                    openSourcePanel?.sectionIndex === sectionIndex &&
+                                                    openSourcePanel?.lessonIndex === lessonIndex
+                                                      ? null
+                                                      : { sectionIndex, lessonIndex }
+                                                  )
+                                                }
                                                 className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
                                                 title={`${lesson.citations.length} knowledge source${lesson.citations.length > 1 ? 's' : ''}`}
                                               >
                                                 <FileText className="w-3 h-3" />
                                                 <span>{lesson.citations.length}</span>
                                               </button>
+                                              <LessonSourcePanel
+                                                citations={lesson.citations.map((c: { sourceId: string; sourceName: string; excerpt: string; relevanceScore: number }) => ({
+                                                  sourceId: c.sourceId || '',
+                                                  sourceName: c.sourceName || '',
+                                                  excerpt: c.excerpt || '',
+                                                  relevanceScore: c.relevanceScore || 0,
+                                                }))}
+                                                groundingScore={lesson.groundingScore}
+                                                isOpen={
+                                                  openSourcePanel?.sectionIndex === sectionIndex &&
+                                                  openSourcePanel?.lessonIndex === lessonIndex
+                                                }
+                                                onClose={() => setOpenSourcePanel(null)}
+                                              />
                                             </div>
                                           )}
                                         </div>

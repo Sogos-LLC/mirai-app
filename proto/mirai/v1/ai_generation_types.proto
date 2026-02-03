@@ -145,6 +145,8 @@ message OutlineLesson {
   bool is_last_in_course = 10;
   // Citations from knowledge sources used to inform this lesson
   repeated KnowledgeCitation citations = 11;
+  // How grounded in knowledge sources (0.0-1.0)
+  float grounding_score = 12;
 }
 
 // GeneratedLesson contains full lesson content.
@@ -157,6 +159,12 @@ message GeneratedLesson {
   repeated LessonComponent components = 6;
   optional string segue_text = 7;
   google.protobuf.Timestamp generated_at = 8;
+
+  // Provenance tracking
+  float grounding_score = 9;        // Aggregate grounding across components (0.0-1.0)
+  int32 source_count = 10;          // Number of knowledge sources used
+  int32 grounded_token_count = 11;  // Tokens from knowledge sources
+  int32 total_token_count = 12;     // Total tokens in lesson
 }
 
 // LessonComponent represents a content component in a lesson.

@@ -27,6 +27,7 @@ type Querier interface {
 	ClaimQueuedJob(ctx context.Context) (GenerationJob, error)
 	// Count active wizards for a tenant (for analytics)
 	CountActiveWizards(ctx context.Context, tenantID uuid.UUID) (int32, error)
+	CountAuditLogByCourse(ctx context.Context, courseID uuid.UUID) (int64, error)
 	// Count with same filters as ListCourses
 	CountCourses(ctx context.Context, arg CountCoursesParams) (int32, error)
 	CountCoursesByFolderID(ctx context.Context, folderID uuid.NullUUID) (int32, error)
@@ -39,6 +40,9 @@ type Querier interface {
 	CountPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) (int32, error)
 	CountUnreadNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
 	CountUsersByCompanyID(ctx context.Context, companyID uuid.NullUUID) (int32, error)
+	// Course Audit Log CRUD operations
+	// Schema: course_audit_log table with RLS isolation by tenant_id
+	CreateAuditLogEntry(ctx context.Context, arg CreateAuditLogEntryParams) (CourseAuditLog, error)
 	// Company CRUD operations
 	// Schema: companies table with RLS isolation by tenant_id
 	CreateCompany(ctx context.Context, arg CreateCompanyParams) (Company, error)
@@ -107,6 +111,7 @@ type Querier interface {
 	FindKnowledgeSourceByContentHash(ctx context.Context, contentHash sql.NullString) (KnowledgeSource, error)
 	// Find registrations stuck in "paid" status older than cutoff time
 	FindStuckPaidRegistrations(ctx context.Context, updatedAt time.Time) ([]PendingRegistration, error)
+	GetAuditLogEntry(ctx context.Context, id uuid.UUID) (CourseAuditLog, error)
 	GetChildJobStats(ctx context.Context, parentJobID uuid.NullUUID) (GetChildJobStatsRow, error)
 	GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, error)
 	GetCompanyByStripeCustomerID(ctx context.Context, stripeCustomerID sql.NullString) (Company, error)
@@ -164,6 +169,8 @@ type Querier interface {
 	IncrementTenantAITokenUsage(ctx context.Context, arg IncrementTenantAITokenUsageParams) error
 	// Link all sources from a session to a course
 	LinkSessionToCourse(ctx context.Context, arg LinkSessionToCourseParams) (int64, error)
+	ListAuditLogByActor(ctx context.Context, arg ListAuditLogByActorParams) ([]CourseAuditLog, error)
+	ListAuditLogByCourse(ctx context.Context, arg ListAuditLogByCourseParams) ([]CourseAuditLog, error)
 	ListCourseExportsByCourseID(ctx context.Context, courseID uuid.UUID) ([]CourseExport, error)
 	// Dynamic filtering using nullable parameters
 	// NULL param = skip filter, non-NULL = apply filter
