@@ -93,6 +93,30 @@ func (s *TeamKnowledgeService) SumTokensByTeam(ctx context.Context, teamID uuid.
 	return s.repo.SumTokensByTeam(ctx, teamID)
 }
 
+// ListGlobal retrieves all global knowledge sources (team_id IS NULL).
+func (s *TeamKnowledgeService) ListGlobal(ctx context.Context) ([]*entity.KnowledgeSource, error) {
+	log.Printf("[TeamKnowledgeService.ListGlobal] Listing global knowledge sources")
+	sources, err := s.repo.ListGlobal(ctx)
+	if err != nil {
+		log.Printf("[TeamKnowledgeService.ListGlobal] ERROR: %v", err)
+		return nil, err
+	}
+	log.Printf("[TeamKnowledgeService.ListGlobal] SUCCESS: count=%d", len(sources))
+	return sources, nil
+}
+
+// SumTokensGlobal returns the total token count for all ready global sources.
+func (s *TeamKnowledgeService) SumTokensGlobal(ctx context.Context) (int64, error) {
+	log.Printf("[TeamKnowledgeService.SumTokensGlobal] Summing global tokens")
+	return s.repo.SumTokensGlobal(ctx)
+}
+
+// GetReadyGlobal retrieves ready global sources.
+func (s *TeamKnowledgeService) GetReadyGlobal(ctx context.Context) ([]*entity.KnowledgeSource, error) {
+	log.Printf("[TeamKnowledgeService.GetReadyGlobal] Getting ready global sources")
+	return s.repo.GetReadyGlobal(ctx)
+}
+
 // UpdateStatus updates the processing status of a source.
 func (s *TeamKnowledgeService) UpdateStatus(
 	ctx context.Context,

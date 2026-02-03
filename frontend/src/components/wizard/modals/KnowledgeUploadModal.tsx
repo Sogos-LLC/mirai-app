@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Upload, FileText, X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
@@ -61,26 +61,43 @@ export function KnowledgeUploadModal({
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Track files currently being processed to prevent duplicate uploads
+  const processingRef = useRef<Set<string>>(new Set());
+
   // Auto-upload files when they're added with 'pending' status
+  // Uses a ref to prevent race conditions with concurrent uploads
   useEffect(() => {
-    const pendingToUpload = pendingFiles.filter(f => f.status === 'pending');
+    const uploadPendingFiles = async () => {
+      const pendingToUpload = pendingFiles.filter(
+        (f) => f.status === 'pending' && !processingRef.current.has(f.id)
+      );
 
-    pendingToUpload.forEach(async (file) => {
-      console.log('[KnowledgeUpload] Starting upload for file:', file.name, 'size:', file.size);
-      // Mark as uploading
-      onUpdateFileStatus(file.id, 'uploading');
+      // Process files sequentially to avoid overwhelming the server
+      for (const file of pendingToUpload) {
+        // Mark as processing to prevent duplicate uploads
+        processingRef.current.add(file.id);
 
-      try {
-        console.log('[KnowledgeUpload] Calling onUploadFile...');
-        const result = await onUploadFile(file);
-        console.log('[KnowledgeUpload] Upload successful:', result);
-        onUpdateFileStatus(file.id, 'done');
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Upload failed';
-        console.error('[KnowledgeUpload] Upload failed:', errorMsg, err);
-        onUpdateFileStatus(file.id, 'error', errorMsg);
+        console.log('[KnowledgeUpload] Starting upload for file:', file.name, 'size:', file.size);
+        // Mark as uploading in UI
+        onUpdateFileStatus(file.id, 'uploading');
+
+        try {
+          console.log('[KnowledgeUpload] Calling onUploadFile...');
+          const result = await onUploadFile(file);
+          console.log('[KnowledgeUpload] Upload successful:', result);
+          onUpdateFileStatus(file.id, 'done');
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+          console.error('[KnowledgeUpload] Upload failed:', errorMsg, err);
+          onUpdateFileStatus(file.id, 'error', errorMsg);
+        } finally {
+          // Remove from processing set after completion
+          processingRef.current.delete(file.id);
+        }
       }
-    });
+    };
+
+    uploadPendingFiles();
   }, [pendingFiles, onUploadFile, onUpdateFileStatus]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {

@@ -22,7 +22,7 @@ type QdrantClient struct {
 func NewQdrantClient(baseURL string) *QdrantClient {
 	return &QdrantClient{
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 120 * time.Second, // 2 minutes for large document batches
 		},
 		baseURL: baseURL,
 	}

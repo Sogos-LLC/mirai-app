@@ -8,25 +8,34 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 )
 
-// TeamKnowledgeRepository defines the interface for team-level knowledge source data access.
+// TeamKnowledgeRepository defines the interface for global and team-level knowledge source data access.
 type TeamKnowledgeRepository interface {
-	// CreateWithTeam creates a team-level knowledge source.
+	// CreateWithTeam creates a knowledge source (team_id can be nil for global).
 	CreateWithTeam(ctx context.Context, source *entity.KnowledgeSource) error
 
 	// GetByID retrieves a knowledge source by ID.
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.KnowledgeSource, error)
 
-	// ListByTeam retrieves all knowledge sources for a team.
+	// ListByTeam retrieves all knowledge sources for a specific team.
 	ListByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error)
 
-	// GetReadyByTeam retrieves ready sources for a team.
+	// ListGlobal retrieves all global knowledge sources (team_id IS NULL).
+	ListGlobal(ctx context.Context) ([]*entity.KnowledgeSource, error)
+
+	// GetReadyByTeam retrieves ready sources for a specific team.
 	GetReadyByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error)
+
+	// GetReadyGlobal retrieves ready global sources (team_id IS NULL).
+	GetReadyGlobal(ctx context.Context) ([]*entity.KnowledgeSource, error)
 
 	// CountByTeam returns the count of sources for a team.
 	CountByTeam(ctx context.Context, teamID uuid.UUID) (int32, error)
 
 	// SumTokensByTeam returns the total token count for all ready sources in a team.
 	SumTokensByTeam(ctx context.Context, teamID uuid.UUID) (int64, error)
+
+	// SumTokensGlobal returns the total token count for all ready global sources.
+	SumTokensGlobal(ctx context.Context) (int64, error)
 
 	// UpdateStatus updates the processing status of a source.
 	UpdateStatus(ctx context.Context, id uuid.UUID, status valueobject.KnowledgeSourceStatus, errorMsg *string, chunkCount int32) (*entity.KnowledgeSource, error)

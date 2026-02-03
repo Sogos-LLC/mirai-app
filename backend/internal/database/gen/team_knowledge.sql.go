@@ -138,6 +138,57 @@ func (q *Queries) GetKnowledgeSourceByIDForTeam(ctx context.Context, id uuid.UUI
 	return i, err
 }
 
+const getReadyGlobalSources = `-- name: GetReadyGlobalSources :many
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id FROM knowledge_sources
+WHERE team_id IS NULL AND status = 'ready'
+ORDER BY created_at ASC
+`
+
+// Get only ready global sources (team_id IS NULL)
+func (q *Queries) GetReadyGlobalSources(ctx context.Context) ([]KnowledgeSource, error) {
+	rows, err := q.db.QueryContext(ctx, getReadyGlobalSources)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []KnowledgeSource{}
+	for rows.Next() {
+		var i KnowledgeSource
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.CourseID,
+			&i.Type,
+			&i.Status,
+			&i.Name,
+			&i.FilePath,
+			&i.MimeType,
+			&i.FileSizeBytes,
+			&i.ChunkCount,
+			&i.ErrorMessage,
+			&i.VideoUrls,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProcessedAt,
+			&i.SessionID,
+			&i.Summary,
+			&i.TokenCount,
+			&i.DocumentIndex,
+			&i.TeamID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getReadySourcesByTeam = `-- name: GetReadySourcesByTeam :many
 SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id FROM knowledge_sources
 WHERE team_id = $1 AND status = 'ready'
@@ -147,6 +198,57 @@ ORDER BY created_at ASC
 // Get only ready sources for a team
 func (q *Queries) GetReadySourcesByTeam(ctx context.Context, teamID uuid.NullUUID) ([]KnowledgeSource, error) {
 	rows, err := q.db.QueryContext(ctx, getReadySourcesByTeam, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []KnowledgeSource{}
+	for rows.Next() {
+		var i KnowledgeSource
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.CourseID,
+			&i.Type,
+			&i.Status,
+			&i.Name,
+			&i.FilePath,
+			&i.MimeType,
+			&i.FileSizeBytes,
+			&i.ChunkCount,
+			&i.ErrorMessage,
+			&i.VideoUrls,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProcessedAt,
+			&i.SessionID,
+			&i.Summary,
+			&i.TokenCount,
+			&i.DocumentIndex,
+			&i.TeamID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGlobalKnowledgeSources = `-- name: ListGlobalKnowledgeSources :many
+SELECT id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id FROM knowledge_sources
+WHERE team_id IS NULL
+ORDER BY created_at DESC
+`
+
+// List all global knowledge sources (team_id IS NULL)
+func (q *Queries) ListGlobalKnowledgeSources(ctx context.Context) ([]KnowledgeSource, error) {
+	rows, err := q.db.QueryContext(ctx, listGlobalKnowledgeSources)
 	if err != nil {
 		return nil, err
 	}
@@ -249,6 +351,20 @@ WHERE team_id = $1 AND status = 'ready'
 // Sum token count for all ready sources in a team
 func (q *Queries) SumTokenCountByTeam(ctx context.Context, teamID uuid.NullUUID) (int64, error) {
 	row := q.db.QueryRowContext(ctx, sumTokenCountByTeam, teamID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const sumTokenCountGlobal = `-- name: SumTokenCountGlobal :one
+SELECT COALESCE(SUM(token_count), 0)::bigint as total
+FROM knowledge_sources
+WHERE team_id IS NULL AND status = 'ready'
+`
+
+// Sum token count for all ready global sources
+func (q *Queries) SumTokenCountGlobal(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, sumTokenCountGlobal)
 	var total int64
 	err := row.Scan(&total)
 	return total, err

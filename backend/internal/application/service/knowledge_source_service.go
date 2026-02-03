@@ -232,6 +232,11 @@ func (s *KnowledgeSourceService) ProcessAndIndex(
 		return 0, 0, fmt.Errorf("failed to embed chunks: %w", err)
 	}
 
+	// Validate embedding response
+	if embeddings == nil || len(embeddings) != len(chunks) {
+		return 0, 0, fmt.Errorf("embedding response mismatch: got %d embeddings for %d chunks", len(embeddings), len(chunks))
+	}
+
 	// Build points for vector DB
 	points := make([]vectordb.Point, len(chunks))
 	for i, chunk := range chunks {
@@ -261,9 +266,16 @@ func (s *KnowledgeSourceService) ProcessAndIndex(
 		}
 	}
 
-	// Upsert vectors
-	if err := s.vectorClient.Upsert(ctx, VectorCollectionName, points); err != nil {
-		return 0, 0, fmt.Errorf("failed to upsert vectors: %w", err)
+	// Upsert vectors in batches to avoid timeout
+	const batchSize = 100
+	for i := 0; i < len(points); i += batchSize {
+		end := i + batchSize
+		if end > len(points) {
+			end = len(points)
+		}
+		if err := s.vectorClient.Upsert(ctx, VectorCollectionName, points[i:end]); err != nil {
+			return 0, 0, fmt.Errorf("failed to upsert vectors (batch %d-%d): %w", i, end, err)
+		}
 	}
 
 	return int32(len(chunks)), tokenCount, nil

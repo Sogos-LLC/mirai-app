@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Wand2, Loader2, Paperclip, CheckCircle } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, Paperclip, CheckCircle, BookOpen } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import WizardNavigation from '../WizardNavigation';
@@ -16,10 +16,13 @@ interface CourseNameStepProps {
   onCancel: () => void;
   isLoading?: boolean;
   isGeneratingOutcomes?: boolean;
-  // Knowledge sources
+  // Knowledge sources (course-level)
   knowledgeFileCount?: number;
   processedSourcesCount?: number;
   onOpenKnowledgeModal?: () => void;
+  // Team knowledge (shared across courses)
+  teamKnowledgeCount?: number;
+  teamKnowledgeTokens?: number;
   // Internal Data Only mode
   internalDataOnly?: boolean;
   onInternalDataOnlyChange?: (enabled: boolean) => void;
@@ -38,11 +41,14 @@ export default function CourseNameStep({
   knowledgeFileCount = 0,
   processedSourcesCount = 0,
   onOpenKnowledgeModal,
+  teamKnowledgeCount = 0,
+  teamKnowledgeTokens = 0,
   internalDataOnly = false,
   onInternalDataOnlyChange,
 }: CourseNameStepProps) {
   const hasProcessedSources = processedSourcesCount > 0;
   const hasPendingFiles = knowledgeFileCount > 0;
+  const hasTeamKnowledge = teamKnowledgeCount > 0;
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (courseName.trim().length > 0) {
@@ -155,8 +161,23 @@ export default function CourseNameStep({
               </p>
             </div>
 
-            {/* Internal Data Only mode - only show when knowledge sources are present */}
-            {hasProcessedSources && onInternalDataOnlyChange && (
+            {/* Team Knowledge Available indicator */}
+            {hasTeamKnowledge && (
+              <div className="flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg text-left">
+                <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                <div className="text-sm text-indigo-800 dark:text-indigo-200">
+                  <span className="font-semibold">Team Knowledge Available</span>
+                  <span className="block mt-1 text-indigo-700 dark:text-indigo-300">
+                    {teamKnowledgeCount} document{teamKnowledgeCount !== 1 ? 's' : ''} from your team&apos;s knowledge base
+                    {teamKnowledgeTokens > 0 && ` (~${Math.round(teamKnowledgeTokens / 1000)}k tokens)`} will be used
+                    to enhance course content.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Internal Data Only mode - show when any knowledge sources are present */}
+            {(hasProcessedSources || hasTeamKnowledge) && onInternalDataOnlyChange && (
               <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-left">
                 <input
                   type="checkbox"
@@ -168,7 +189,7 @@ export default function CourseNameStep({
                 <label htmlFor="internalDataOnly" className="text-sm text-amber-800 dark:text-amber-200">
                   <span className="font-semibold">Internal Data Only</span>
                   <span className="block mt-1 text-amber-700 dark:text-amber-300">
-                    Generate course content exclusively from your uploaded documents.
+                    Generate course content exclusively from your {hasTeamKnowledge && hasProcessedSources ? 'team and uploaded documents' : hasTeamKnowledge ? 'team knowledge' : 'uploaded documents'}.
                     AI will not add external information or fill gaps — course size adapts to available content.
                   </span>
                 </label>

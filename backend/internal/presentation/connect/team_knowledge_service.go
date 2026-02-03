@@ -47,140 +47,160 @@ func NewTeamKnowledgeServiceServer(
 	}
 }
 
-// UploadTeamKnowledge uploads a file and processes it for team-wide RAG.
+// UploadTeamKnowledge uploads a file and processes it for RAG.
+// If team_id is omitted, creates global knowledge (tenant-level).
+// If team_id is provided, creates team-specific knowledge.
 func (s *TeamKnowledgeServiceServer) UploadTeamKnowledge(
 	ctx context.Context,
 	req *connect.Request[v1.UploadTeamKnowledgeRequest],
 ) (*connect.Response[v1.UploadTeamKnowledgeResponse], error) {
-	log.Printf("[TeamKnowledge.Upload] Step 1: Extracting context")
+	log.Printf("[Knowledge.Upload] Step 1: Extracting context")
 
 	// Step 1: Extract tenant from context
 	tenantID, ok := tenant.FromContext(ctx)
 	if !ok {
-		log.Printf("[TeamKnowledge.Upload] ERROR: No tenant in context")
+		log.Printf("[Knowledge.Upload] ERROR: No tenant in context")
 		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
 	}
-	log.Printf("[TeamKnowledge.Upload] Context extracted: tenantID=%s", tenantID)
 
-	// Step 2: Get user's team
-	log.Printf("[TeamKnowledge.Upload] Step 2: Getting user's team")
-	team, err := s.teamService.GetTeamByTenant(ctx, tenantID)
-	if err != nil {
-		log.Printf("[TeamKnowledge.Upload] ERROR: Failed to get team: %v", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get team: %w", err))
+	// Step 2: Determine scope (global vs team)
+	var teamID *uuid.UUID
+	var teamIDStr string
+	var storagePath string
+
+	if req.Msg.TeamId != nil && *req.Msg.TeamId != "" {
+		// Team-specific knowledge
+		parsedTeamID, err := uuid.Parse(*req.Msg.TeamId)
+		if err != nil {
+			log.Printf("[Knowledge.Upload] ERROR: Invalid team ID: %v", err)
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid team_id"))
+		}
+		teamID = &parsedTeamID
+		teamIDStr = parsedTeamID.String()
+		storagePath = fmt.Sprintf("knowledge/%s/team/%s/%s", tenantID.String(), teamIDStr, req.Msg.Filename)
+		log.Printf("[Knowledge.Upload] Team knowledge: teamID=%s", teamIDStr)
+	} else {
+		// Global knowledge (tenant-level)
+		teamIDStr = "" // Empty string for enqueue
+		storagePath = fmt.Sprintf("knowledge/%s/global/%s", tenantID.String(), req.Msg.Filename)
+		log.Printf("[Knowledge.Upload] Global knowledge: tenantID=%s", tenantID)
 	}
-	if team == nil {
-		log.Printf("[TeamKnowledge.Upload] ERROR: No team found for tenant")
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no team found"))
-	}
-	log.Printf("[TeamKnowledge.Upload] Team found: teamID=%s, name=%s", team.ID, team.Name)
 
 	// Step 3: Store file to MinIO
-	log.Printf("[TeamKnowledge.Upload] Step 3: Storing file to MinIO")
-	filePath := fmt.Sprintf("knowledge/%s/team/%s/%s", tenantID.String(), team.ID.String(), req.Msg.Filename)
-	if err := s.storageClient.PutContent(ctx, filePath, req.Msg.FileContent, req.Msg.ContentType); err != nil {
-		log.Printf("[TeamKnowledge.Upload] ERROR: Failed to store file: %v", err)
+	log.Printf("[Knowledge.Upload] Step 3: Storing file to MinIO")
+	if err := s.storageClient.PutContent(ctx, storagePath, req.Msg.FileContent, req.Msg.ContentType); err != nil {
+		log.Printf("[Knowledge.Upload] ERROR: Failed to store file: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to store file: %w", err))
 	}
-	log.Printf("[TeamKnowledge.Upload] File stored: path=%s, size=%d", filePath, len(req.Msg.FileContent))
+	log.Printf("[Knowledge.Upload] File stored: path=%s, size=%d", storagePath, len(req.Msg.FileContent))
 
 	// Step 4: Create DB record
-	log.Printf("[TeamKnowledge.Upload] Step 4: Creating DB record")
+	log.Printf("[Knowledge.Upload] Step 4: Creating DB record")
 	fileSize := int64(len(req.Msg.FileContent))
 	source := &entity.KnowledgeSource{
 		ID:            uuid.New(),
 		TenantID:      tenantID,
-		TeamID:        &team.ID,
+		TeamID:        teamID, // nil for global, set for team
 		Type:          valueobject.KnowledgeSourceTypeFileUpload,
 		Status:        valueobject.KnowledgeSourceStatusPending,
 		Name:          req.Msg.Filename,
-		FilePath:      &filePath,
+		FilePath:      &storagePath,
 		MimeType:      &req.Msg.ContentType,
 		FileSizeBytes: &fileSize,
 	}
 
 	if err := s.teamKnowledgeService.Create(ctx, source); err != nil {
-		log.Printf("[TeamKnowledge.Upload] ERROR: Failed to create source: %v", err)
+		log.Printf("[Knowledge.Upload] ERROR: Failed to create source: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create source: %w", err))
 	}
-	log.Printf("[TeamKnowledge.Upload] DB record created: sourceID=%s", source.ID)
+	log.Printf("[Knowledge.Upload] DB record created: sourceID=%s", source.ID)
 
 	// Step 5: Enqueue worker task for async processing
-	log.Printf("[TeamKnowledge.Upload] Step 5: Enqueueing worker task")
+	log.Printf("[Knowledge.Upload] Step 5: Enqueueing worker task")
 	if s.taskEnqueuer != nil {
 		if err := s.taskEnqueuer.EnqueueTeamKnowledgeIngestion(
 			source.ID.String(),
 			tenantID.String(),
-			team.ID.String(),
-			filePath,
+			teamIDStr, // Empty for global knowledge
+			storagePath,
 		); err != nil {
-			log.Printf("[TeamKnowledge.Upload] ERROR: Failed to enqueue task: %v", err)
+			log.Printf("[Knowledge.Upload] ERROR: Failed to enqueue task: %v", err)
 			// Don't fail the request - the source is created, worker poll can pick it up
 		} else {
-			log.Printf("[TeamKnowledge.Upload] Worker task enqueued successfully")
+			log.Printf("[Knowledge.Upload] Worker task enqueued successfully")
 		}
 	} else {
-		log.Printf("[TeamKnowledge.Upload] WARNING: No task enqueuer configured, processing will not happen")
+		log.Printf("[Knowledge.Upload] WARNING: No task enqueuer configured, processing will not happen")
 	}
 
 	// Step 6: Return response
-	log.Printf("[TeamKnowledge.Upload] Step 6: Returning response")
+	scope := "global"
+	if teamID != nil {
+		scope = "team"
+	}
+	summary := fmt.Sprintf("Document '%s' uploaded to %s knowledge. Processing will begin shortly.", req.Msg.Filename, scope)
 
-	// Generate a stub summary for now
-	summary := fmt.Sprintf("Document '%s' uploaded successfully. Processing will begin shortly.", req.Msg.Filename)
-
-	log.Printf("[TeamKnowledge.Upload] SUCCESS: sourceID=%s", source.ID)
+	log.Printf("[Knowledge.Upload] SUCCESS: sourceID=%s, scope=%s", source.ID, scope)
 	return connect.NewResponse(&v1.UploadTeamKnowledgeResponse{
 		Source:     teamKnowledgeSourceToProto(source),
 		RagSummary: summary,
 	}), nil
 }
 
-// ListTeamKnowledgeSources returns all team-level knowledge sources.
+// ListTeamKnowledgeSources returns knowledge sources.
+// If team_id is omitted, returns global knowledge (tenant-level).
+// If team_id is provided, returns team-specific knowledge.
 func (s *TeamKnowledgeServiceServer) ListTeamKnowledgeSources(
 	ctx context.Context,
 	req *connect.Request[v1.ListTeamKnowledgeSourcesRequest],
 ) (*connect.Response[v1.ListTeamKnowledgeSourcesResponse], error) {
-	log.Printf("[TeamKnowledge.List] Step 1: Extracting context")
+	log.Printf("[Knowledge.List] Step 1: Extracting context")
 
 	tenantID, ok := tenant.FromContext(ctx)
 	if !ok {
-		log.Printf("[TeamKnowledge.List] ERROR: No tenant in context")
+		log.Printf("[Knowledge.List] ERROR: No tenant in context")
 		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
 	}
-	log.Printf("[TeamKnowledge.List] Context extracted: tenantID=%s", tenantID)
 
-	// Step 2: Get user's team
-	log.Printf("[TeamKnowledge.List] Step 2: Getting user's team")
-	team, err := s.teamService.GetTeamByTenant(ctx, tenantID)
-	if err != nil {
-		log.Printf("[TeamKnowledge.List] ERROR: Failed to get team: %v", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get team: %w", err))
-	}
-	if team == nil {
-		log.Printf("[TeamKnowledge.List] No team found, returning empty list")
-		return connect.NewResponse(&v1.ListTeamKnowledgeSourcesResponse{
-			Sources:      []*v1.KnowledgeSource{},
-			TotalSources: 0,
-			TotalTokens:  0,
-		}), nil
-	}
-	log.Printf("[TeamKnowledge.List] Team found: teamID=%s", team.ID)
+	var sources []*entity.KnowledgeSource
+	var totalTokens int64
+	var err error
 
-	// Step 3: List sources
-	log.Printf("[TeamKnowledge.List] Step 3: Listing sources")
-	sources, err := s.teamKnowledgeService.ListByTeam(ctx, team.ID)
-	if err != nil {
-		log.Printf("[TeamKnowledge.List] ERROR: Failed to list sources: %v", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list sources: %w", err))
-	}
+	if req.Msg.TeamId != nil && *req.Msg.TeamId != "" {
+		// Team-specific knowledge
+		teamID, parseErr := uuid.Parse(*req.Msg.TeamId)
+		if parseErr != nil {
+			log.Printf("[Knowledge.List] ERROR: Invalid team ID: %v", parseErr)
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid team_id"))
+		}
+		log.Printf("[Knowledge.List] Listing team knowledge: teamID=%s", teamID)
 
-	// Step 4: Get totals
-	log.Printf("[TeamKnowledge.List] Step 4: Getting totals")
-	totalTokens, err := s.teamKnowledgeService.SumTokensByTeam(ctx, team.ID)
-	if err != nil {
-		log.Printf("[TeamKnowledge.List] Warning: Failed to sum tokens: %v", err)
-		totalTokens = 0
+		sources, err = s.teamKnowledgeService.ListByTeam(ctx, teamID)
+		if err != nil {
+			log.Printf("[Knowledge.List] ERROR: Failed to list sources: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list sources: %w", err))
+		}
+
+		totalTokens, err = s.teamKnowledgeService.SumTokensByTeam(ctx, teamID)
+		if err != nil {
+			log.Printf("[Knowledge.List] Warning: Failed to sum tokens: %v", err)
+			totalTokens = 0
+		}
+	} else {
+		// Global knowledge (tenant-level, team_id IS NULL)
+		log.Printf("[Knowledge.List] Listing global knowledge: tenantID=%s", tenantID)
+
+		sources, err = s.teamKnowledgeService.ListGlobal(ctx)
+		if err != nil {
+			log.Printf("[Knowledge.List] ERROR: Failed to list global sources: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list sources: %w", err))
+		}
+
+		totalTokens, err = s.teamKnowledgeService.SumTokensGlobal(ctx)
+		if err != nil {
+			log.Printf("[Knowledge.List] Warning: Failed to sum global tokens: %v", err)
+			totalTokens = 0
+		}
 	}
 
 	protoSources := make([]*v1.KnowledgeSource, len(sources))
@@ -188,7 +208,7 @@ func (s *TeamKnowledgeServiceServer) ListTeamKnowledgeSources(
 		protoSources[i] = teamKnowledgeSourceToProto(source)
 	}
 
-	log.Printf("[TeamKnowledge.List] SUCCESS: count=%d, tokens=%d", len(sources), totalTokens)
+	log.Printf("[Knowledge.List] SUCCESS: count=%d, tokens=%d", len(sources), totalTokens)
 	return connect.NewResponse(&v1.ListTeamKnowledgeSourcesResponse{
 		Sources:      protoSources,
 		TotalSources: int32(len(sources)),

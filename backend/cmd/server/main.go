@@ -304,6 +304,10 @@ func main() {
 		// Set up knowledge searcher for Internal Data Only mode (RAG-grounded generation)
 		aiGenerationService.SetKnowledgeSearcher(knowledgeSourceService)
 
+		// Set up team knowledge searcher for team-level RAG
+		aiGenerationService.SetTeamKnowledgeSearcher(teamKnowledgeService)
+		aiGenerationService.SetTeamResolver(teamService)
+
 		// Course Wizard service (AI-guided course creation with RAG support)
 		courseWizardService = service.NewCourseWizardService(
 			userRepo,

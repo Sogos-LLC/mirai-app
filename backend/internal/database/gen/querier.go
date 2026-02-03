@@ -129,6 +129,8 @@ type Querier interface {
 	GetPendingRegistrationByCheckoutSessionID(ctx context.Context, checkoutSessionID string) (PendingRegistration, error)
 	GetPendingRegistrationByEmail(ctx context.Context, email string) (PendingRegistration, error)
 	GetPendingRegistrationByID(ctx context.Context, id uuid.UUID) (PendingRegistration, error)
+	// Get only ready global sources (team_id IS NULL)
+	GetReadyGlobalSources(ctx context.Context) ([]KnowledgeSource, error)
 	GetReadySourcesByCourse(ctx context.Context, courseID uuid.NullUUID) ([]KnowledgeSource, error)
 	// Get only ready sources for a session
 	GetReadySourcesBySession(ctx context.Context, sessionID sql.NullString) ([]KnowledgeSource, error)
@@ -165,6 +167,8 @@ type Querier interface {
 	ListFoldersByParentID(ctx context.Context, arg ListFoldersByParentIDParams) ([]Folder, error)
 	ListGenerationJobs(ctx context.Context, arg ListGenerationJobsParams) ([]GenerationJob, error)
 	ListGenerationJobsByParentID(ctx context.Context, parentJobID uuid.NullUUID) ([]GenerationJob, error)
+	// List all global knowledge sources (team_id IS NULL)
+	ListGlobalKnowledgeSources(ctx context.Context) ([]KnowledgeSource, error)
 	ListInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
 	ListKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) ([]KnowledgeSource, error)
 	// List all sources for a session (pre-course wizard flow)
@@ -188,6 +192,8 @@ type Querier interface {
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	// Sum token count for all ready sources in a team
 	SumTokenCountByTeam(ctx context.Context, teamID uuid.NullUUID) (int64, error)
+	// Sum token count for all ready global sources
+	SumTokenCountGlobal(ctx context.Context) (int64, error)
 	UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error)
 	UpdateCompanyStripeFields(ctx context.Context, arg UpdateCompanyStripeFieldsParams) error
 	UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Course, error)

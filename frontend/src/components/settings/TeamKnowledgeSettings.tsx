@@ -12,11 +12,13 @@ import {
   XCircle,
   Database,
   RefreshCw,
+  Globe,
+  Users,
 } from 'lucide-react';
 import {
-  useListTeamKnowledgeSources,
-  useUploadTeamKnowledge,
-  useDeleteTeamKnowledgeSource,
+  useListKnowledgeSources,
+  useUploadKnowledge,
+  useDeleteKnowledgeSource,
   getStatusInfo,
   formatFileSize,
   KnowledgeSourceStatus,
@@ -24,10 +26,33 @@ import {
 } from '@/hooks/useTeamKnowledge';
 
 // =============================================================================
-// Main Component
+// Types
 // =============================================================================
 
-export default function TeamKnowledgeSettings() {
+interface KnowledgeBaseProps {
+  /** Optional team ID. If omitted, shows global knowledge (tenant-level). */
+  teamId?: string;
+  /** Title override for the knowledge base section */
+  title?: string;
+  /** Description override */
+  description?: string;
+}
+
+// =============================================================================
+// Reusable Knowledge Base Component
+// =============================================================================
+
+export function KnowledgeBase({
+  teamId,
+  title,
+  description,
+}: KnowledgeBaseProps) {
+  const isGlobal = !teamId;
+  const defaultTitle = isGlobal ? 'Global Knowledge' : 'Team Knowledge';
+  const defaultDescription = isGlobal
+    ? 'Shared knowledge base available to all teams for AI-powered course generation'
+    : 'Team-specific knowledge base for AI-powered course generation';
+
   const {
     sources,
     totalSources,
@@ -36,7 +61,7 @@ export default function TeamKnowledgeSettings() {
     error,
     refetch,
     hasActiveProcessing,
-  } = useListTeamKnowledgeSources();
+  } = useListKnowledgeSources(teamId);
 
   // Auto-refresh when processing
   useEffect(() => {
@@ -75,7 +100,7 @@ export default function TeamKnowledgeSettings() {
     <div>
       <div className="flex items-center justify-between mb-4 lg:mb-6">
         <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
-          Knowledge Base
+          {title || defaultTitle}
         </h2>
         {hasActiveProcessing && (
           <button
@@ -89,10 +114,16 @@ export default function TeamKnowledgeSettings() {
       </div>
 
       {/* Stats Card */}
-      <StatsCard totalSources={totalSources} totalTokens={totalTokens} />
+      <StatsCard
+        totalSources={totalSources}
+        totalTokens={totalTokens}
+        isGlobal={isGlobal}
+        title={title || defaultTitle}
+        description={description || defaultDescription}
+      />
 
       {/* Upload Zone */}
-      <UploadZone onSuccess={refetch} />
+      <UploadZone teamId={teamId} onSuccess={refetch} />
 
       {/* Sources List */}
       {sources.length > 0 ? (
@@ -107,6 +138,7 @@ export default function TeamKnowledgeSettings() {
                 source={source}
                 isLast={idx === sources.length - 1}
                 onDelete={refetch}
+                teamId={teamId}
               />
             ))}
           </div>
@@ -118,12 +150,22 @@ export default function TeamKnowledgeSettings() {
             No knowledge sources yet
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Upload files to build your team&apos;s knowledge base
+            {isGlobal
+              ? 'Upload files to build your organization\'s global knowledge base'
+              : 'Upload files to build your team\'s knowledge base'}
           </p>
         </div>
       )}
     </div>
   );
+}
+
+// =============================================================================
+// Main Component (Global Knowledge for Settings page)
+// =============================================================================
+
+export default function TeamKnowledgeSettings() {
+  return <KnowledgeBase />;
 }
 
 // =============================================================================
@@ -133,25 +175,30 @@ export default function TeamKnowledgeSettings() {
 interface StatsCardProps {
   totalSources: number;
   totalTokens: bigint;
+  isGlobal: boolean;
+  title: string;
+  description: string;
 }
 
-function StatsCard({ totalSources, totalTokens }: StatsCardProps) {
+function StatsCard({ totalSources, totalTokens, isGlobal, title, description }: StatsCardProps) {
   const tokenCount = Number(totalTokens);
   const formattedTokens =
     tokenCount >= 1000 ? `${(tokenCount / 1000).toFixed(1)}k` : tokenCount.toString();
+
+  const Icon = isGlobal ? Globe : Users;
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-5 mb-6">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-            Team Knowledge
+            {title}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            Shared knowledge base for AI-powered course generation
+            {description}
           </p>
         </div>
-        <Database className="w-8 h-8 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+        <Icon className="w-8 h-8 text-primary-600 dark:text-primary-400 flex-shrink-0" />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -169,17 +216,17 @@ function StatsCard({ totalSources, totalTokens }: StatsCardProps) {
 }
 
 interface UploadZoneProps {
+  teamId?: string;
   onSuccess: () => void;
 }
 
-function UploadZone({ onSuccess }: UploadZoneProps) {
+function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { mutate: uploadFile, isLoading: isUploading } = useUploadTeamKnowledge();
+  const { mutate: uploadFile, isLoading: isUploading } = useUploadKnowledge(teamId);
 
   const acceptedTypes = ['.txt', '.md'];
-  const acceptedMimeTypes = ['text/plain', 'text/markdown', 'text/x-markdown'];
 
   const validateFile = (file: File): string | null => {
     // Check extension
@@ -311,12 +358,13 @@ interface SourceRowProps {
   source: KnowledgeSource;
   isLast: boolean;
   onDelete: () => void;
+  teamId?: string;
 }
 
-function SourceRow({ source, isLast, onDelete }: SourceRowProps) {
+function SourceRow({ source, isLast, onDelete, teamId }: SourceRowProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const { mutate: deleteSource } = useDeleteTeamKnowledgeSource();
+  const { mutate: deleteSource } = useDeleteKnowledgeSource(teamId);
 
   const statusInfo = getStatusInfo(source.status);
 

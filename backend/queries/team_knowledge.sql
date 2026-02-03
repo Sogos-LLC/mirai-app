@@ -47,3 +47,21 @@ WHERE team_id = $1 AND status = 'ready';
 -- name: DeleteKnowledgeSourcesByTeam :exec
 -- Delete all knowledge sources for a team
 DELETE FROM knowledge_sources WHERE team_id = $1;
+
+-- name: ListGlobalKnowledgeSources :many
+-- List all global knowledge sources (team_id IS NULL)
+SELECT * FROM knowledge_sources
+WHERE team_id IS NULL
+ORDER BY created_at DESC;
+
+-- name: GetReadyGlobalSources :many
+-- Get only ready global sources (team_id IS NULL)
+SELECT * FROM knowledge_sources
+WHERE team_id IS NULL AND status = 'ready'
+ORDER BY created_at ASC;
+
+-- name: SumTokenCountGlobal :one
+-- Sum token count for all ready global sources
+SELECT COALESCE(SUM(token_count), 0)::bigint as total
+FROM knowledge_sources
+WHERE team_id IS NULL AND status = 'ready';

@@ -52,16 +52,21 @@ const (
 
 // TeamKnowledgeServiceClient is a client for the mirai.v1.TeamKnowledgeService service.
 type TeamKnowledgeServiceClient interface {
-	// UploadTeamKnowledge uploads a file and processes it for team-wide RAG.
-	// The file is stored in MinIO and indexed for semantic search.
+	// UploadTeamKnowledge uploads a file and processes it for RAG.
+	// If team_id is omitted, creates global knowledge (tenant-level).
+	// If team_id is provided, creates team-specific knowledge.
 	UploadTeamKnowledge(context.Context, *connect.Request[v1.UploadTeamKnowledgeRequest]) (*connect.Response[v1.UploadTeamKnowledgeResponse], error)
-	// ListTeamKnowledgeSources returns all team-level knowledge sources.
+	// ListTeamKnowledgeSources returns knowledge sources.
+	// If team_id is omitted, returns global knowledge (tenant-level).
+	// If team_id is provided, returns team-specific knowledge.
 	ListTeamKnowledgeSources(context.Context, *connect.Request[v1.ListTeamKnowledgeSourcesRequest]) (*connect.Response[v1.ListTeamKnowledgeSourcesResponse], error)
-	// GetTeamKnowledgeSource returns a single team knowledge source by ID.
+	// GetTeamKnowledgeSource returns a single knowledge source by ID.
 	GetTeamKnowledgeSource(context.Context, *connect.Request[v1.GetTeamKnowledgeSourceRequest]) (*connect.Response[v1.GetTeamKnowledgeSourceResponse], error)
-	// DeleteTeamKnowledgeSource removes a team knowledge source and its vectors.
+	// DeleteTeamKnowledgeSource removes a knowledge source and its vectors.
 	DeleteTeamKnowledgeSource(context.Context, *connect.Request[v1.DeleteTeamKnowledgeSourceRequest]) (*connect.Response[v1.DeleteTeamKnowledgeSourceResponse], error)
-	// SearchTeamKnowledge performs semantic search across team knowledge.
+	// SearchTeamKnowledge performs semantic search across knowledge.
+	// If team_id is omitted, searches global knowledge.
+	// If team_id is provided, searches team-specific knowledge.
 	SearchTeamKnowledge(context.Context, *connect.Request[v1.SearchTeamKnowledgeRequest]) (*connect.Response[v1.SearchTeamKnowledgeResponse], error)
 }
 
@@ -145,16 +150,21 @@ func (c *teamKnowledgeServiceClient) SearchTeamKnowledge(ctx context.Context, re
 
 // TeamKnowledgeServiceHandler is an implementation of the mirai.v1.TeamKnowledgeService service.
 type TeamKnowledgeServiceHandler interface {
-	// UploadTeamKnowledge uploads a file and processes it for team-wide RAG.
-	// The file is stored in MinIO and indexed for semantic search.
+	// UploadTeamKnowledge uploads a file and processes it for RAG.
+	// If team_id is omitted, creates global knowledge (tenant-level).
+	// If team_id is provided, creates team-specific knowledge.
 	UploadTeamKnowledge(context.Context, *connect.Request[v1.UploadTeamKnowledgeRequest]) (*connect.Response[v1.UploadTeamKnowledgeResponse], error)
-	// ListTeamKnowledgeSources returns all team-level knowledge sources.
+	// ListTeamKnowledgeSources returns knowledge sources.
+	// If team_id is omitted, returns global knowledge (tenant-level).
+	// If team_id is provided, returns team-specific knowledge.
 	ListTeamKnowledgeSources(context.Context, *connect.Request[v1.ListTeamKnowledgeSourcesRequest]) (*connect.Response[v1.ListTeamKnowledgeSourcesResponse], error)
-	// GetTeamKnowledgeSource returns a single team knowledge source by ID.
+	// GetTeamKnowledgeSource returns a single knowledge source by ID.
 	GetTeamKnowledgeSource(context.Context, *connect.Request[v1.GetTeamKnowledgeSourceRequest]) (*connect.Response[v1.GetTeamKnowledgeSourceResponse], error)
-	// DeleteTeamKnowledgeSource removes a team knowledge source and its vectors.
+	// DeleteTeamKnowledgeSource removes a knowledge source and its vectors.
 	DeleteTeamKnowledgeSource(context.Context, *connect.Request[v1.DeleteTeamKnowledgeSourceRequest]) (*connect.Response[v1.DeleteTeamKnowledgeSourceResponse], error)
-	// SearchTeamKnowledge performs semantic search across team knowledge.
+	// SearchTeamKnowledge performs semantic search across knowledge.
+	// If team_id is omitted, searches global knowledge.
+	// If team_id is provided, searches team-specific knowledge.
 	SearchTeamKnowledge(context.Context, *connect.Request[v1.SearchTeamKnowledgeRequest]) (*connect.Response[v1.SearchTeamKnowledgeResponse], error)
 }
 

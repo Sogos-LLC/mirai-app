@@ -11,6 +11,7 @@ import {
   UploadTeamKnowledgeRequestSchema,
   DeleteTeamKnowledgeSourceRequestSchema,
   GetTeamKnowledgeSourceRequestSchema,
+  ListTeamKnowledgeSourcesRequestSchema,
 } from '@/gen/mirai/v1/team_knowledge_service_pb';
 import {
   KnowledgeSource,
@@ -74,11 +75,17 @@ export function formatFileSize(bytes: bigint): string {
 }
 
 /**
- * Hook to list all team knowledge sources.
+ * Hook to list knowledge sources.
+ * @param teamId - Optional team ID. If omitted, lists global knowledge (tenant-level).
+ *                 If provided, lists team-specific knowledge.
  * Refetches periodically when there are pending/processing sources.
  */
-export function useListTeamKnowledgeSources() {
-  const query = useQuery(listTeamKnowledgeSources, {});
+export function useListKnowledgeSources(teamId?: string) {
+  const request = create(ListTeamKnowledgeSourcesRequestSchema, {
+    teamId: teamId,
+  });
+
+  const query = useQuery(listTeamKnowledgeSources, request);
 
   // Check if any sources are still processing
   const hasActiveProcessing = query.data?.sources?.some(
@@ -96,6 +103,14 @@ export function useListTeamKnowledgeSources() {
     refetch: query.refetch,
     hasActiveProcessing,
   };
+}
+
+/**
+ * @deprecated Use useListKnowledgeSources() instead
+ * Hook to list all team knowledge sources (global knowledge).
+ */
+export function useListTeamKnowledgeSources() {
+  return useListKnowledgeSources();
 }
 
 /**
@@ -117,9 +132,11 @@ export function useGetTeamKnowledgeSource(id: string | undefined) {
 }
 
 /**
- * Hook to upload a file as team knowledge.
+ * Hook to upload a file as knowledge.
+ * @param teamId - Optional team ID. If omitted, creates global knowledge.
+ *                 If provided, creates team-specific knowledge.
  */
-export function useUploadTeamKnowledge() {
+export function useUploadKnowledge(teamId?: string) {
   const queryClient = useQueryClient();
   const mutation = useMutation(uploadTeamKnowledge);
 
@@ -133,6 +150,7 @@ export function useUploadTeamKnowledge() {
         filename: file.name,
         contentType: file.type || 'application/octet-stream',
         fileContent,
+        teamId: teamId,
       });
 
       const result = await mutation.mutateAsync(request);
@@ -153,9 +171,18 @@ export function useUploadTeamKnowledge() {
 }
 
 /**
- * Hook to delete a team knowledge source.
+ * @deprecated Use useUploadKnowledge() instead
+ * Hook to upload a file as team knowledge (global).
  */
-export function useDeleteTeamKnowledgeSource() {
+export function useUploadTeamKnowledge() {
+  return useUploadKnowledge();
+}
+
+/**
+ * Hook to delete a knowledge source.
+ * @param teamId - Optional team ID for cache invalidation purposes.
+ */
+export function useDeleteKnowledgeSource(teamId?: string) {
   const queryClient = useQueryClient();
   const mutation = useMutation(deleteTeamKnowledgeSource);
 
@@ -177,4 +204,12 @@ export function useDeleteTeamKnowledgeSource() {
     isLoading: mutation.isPending,
     error: mutation.error,
   };
+}
+
+/**
+ * @deprecated Use useDeleteKnowledgeSource() instead
+ * Hook to delete a team knowledge source.
+ */
+export function useDeleteTeamKnowledgeSource() {
+  return useDeleteKnowledgeSource();
 }

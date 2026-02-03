@@ -22,7 +22,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// UploadTeamKnowledgeRequest for uploading a file to team knowledge.
+// UploadTeamKnowledgeRequest for uploading a file to knowledge base.
 type UploadTeamKnowledgeRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Filename for display and MIME type detection
@@ -30,7 +30,10 @@ type UploadTeamKnowledgeRequest struct {
 	// Content type (e.g., "text/plain", "text/markdown")
 	ContentType string `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
 	// File content as bytes
-	FileContent   []byte `protobuf:"bytes,3,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"`
+	FileContent []byte `protobuf:"bytes,3,opt,name=file_content,json=fileContent,proto3" json:"file_content,omitempty"`
+	// Optional team ID. If omitted, creates global knowledge (tenant-level).
+	// If provided, creates team-specific knowledge.
+	TeamId        *string `protobuf:"bytes,4,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -84,6 +87,13 @@ func (x *UploadTeamKnowledgeRequest) GetFileContent() []byte {
 		return x.FileContent
 	}
 	return nil
+}
+
+func (x *UploadTeamKnowledgeRequest) GetTeamId() string {
+	if x != nil && x.TeamId != nil {
+		return *x.TeamId
+	}
+	return ""
 }
 
 type UploadTeamKnowledgeResponse struct {
@@ -140,10 +150,12 @@ func (x *UploadTeamKnowledgeResponse) GetRagSummary() string {
 	return ""
 }
 
-// ListTeamKnowledgeSourcesRequest for listing team sources.
-// Team ID is derived from the authenticated user's team membership.
+// ListTeamKnowledgeSourcesRequest for listing knowledge sources.
 type ListTeamKnowledgeSourcesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional team ID. If omitted, lists global knowledge (tenant-level).
+	// If provided, lists team-specific knowledge.
+	TeamId        *string `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -178,9 +190,16 @@ func (*ListTeamKnowledgeSourcesRequest) Descriptor() ([]byte, []int) {
 	return file_mirai_v1_team_knowledge_service_proto_rawDescGZIP(), []int{2}
 }
 
+func (x *ListTeamKnowledgeSourcesRequest) GetTeamId() string {
+	if x != nil && x.TeamId != nil {
+		return *x.TeamId
+	}
+	return ""
+}
+
 type ListTeamKnowledgeSourcesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// All knowledge sources for the team
+	// Knowledge sources for the specified scope
 	Sources []*KnowledgeSource `protobuf:"bytes,1,rep,name=sources,proto3" json:"sources,omitempty"`
 	// Total number of sources
 	TotalSources int32 `protobuf:"varint,2,opt,name=total_sources,json=totalSources,proto3" json:"total_sources,omitempty"`
@@ -419,13 +438,16 @@ func (x *DeleteTeamKnowledgeSourceResponse) GetSuccess() bool {
 	return false
 }
 
-// SearchTeamKnowledgeRequest for semantic search across team knowledge.
+// SearchTeamKnowledgeRequest for semantic search across knowledge.
 type SearchTeamKnowledgeRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Search query
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// Number of results to return (default 5, max 20)
-	TopK          int32 `protobuf:"varint,2,opt,name=top_k,json=topK,proto3" json:"top_k,omitempty"`
+	TopK int32 `protobuf:"varint,2,opt,name=top_k,json=topK,proto3" json:"top_k,omitempty"`
+	// Optional team ID. If omitted, searches global knowledge.
+	// If provided, searches team-specific knowledge.
+	TeamId        *string `protobuf:"bytes,3,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -472,6 +494,13 @@ func (x *SearchTeamKnowledgeRequest) GetTopK() int32 {
 		return x.TopK
 	}
 	return 0
+}
+
+func (x *SearchTeamKnowledgeRequest) GetTeamId() string {
+	if x != nil && x.TeamId != nil {
+		return *x.TeamId
+	}
+	return ""
 }
 
 type SearchTeamKnowledgeResponse struct {
@@ -523,16 +552,22 @@ var File_mirai_v1_team_knowledge_service_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_team_knowledge_service_proto_rawDesc = "" +
 	"\n" +
-	"%mirai/v1/team_knowledge_service.proto\x12\bmirai.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fmirai/v1/knowledge_source.proto\"\x99\x01\n" +
+	"%mirai/v1/team_knowledge_service.proto\x12\bmirai.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fmirai/v1/knowledge_source.proto\"\xc3\x01\n" +
 	"\x1aUploadTeamKnowledgeRequest\x12#\n" +
 	"\bfilename\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bfilename\x12*\n" +
 	"\fcontent_type\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vcontentType\x12*\n" +
-	"\ffile_content\x18\x03 \x01(\fB\a\xbaH\x04z\x02\x10\x01R\vfileContent\"q\n" +
+	"\ffile_content\x18\x03 \x01(\fB\a\xbaH\x04z\x02\x10\x01R\vfileContent\x12\x1c\n" +
+	"\ateam_id\x18\x04 \x01(\tH\x00R\x06teamId\x88\x01\x01B\n" +
+	"\n" +
+	"\b_team_id\"q\n" +
 	"\x1bUploadTeamKnowledgeResponse\x121\n" +
 	"\x06source\x18\x01 \x01(\v2\x19.mirai.v1.KnowledgeSourceR\x06source\x12\x1f\n" +
 	"\vrag_summary\x18\x02 \x01(\tR\n" +
-	"ragSummary\"!\n" +
-	"\x1fListTeamKnowledgeSourcesRequest\"\x9f\x01\n" +
+	"ragSummary\"K\n" +
+	"\x1fListTeamKnowledgeSourcesRequest\x12\x1c\n" +
+	"\ateam_id\x18\x01 \x01(\tH\x00R\x06teamId\x88\x01\x01B\n" +
+	"\n" +
+	"\b_team_id\"\x9f\x01\n" +
 	" ListTeamKnowledgeSourcesResponse\x123\n" +
 	"\asources\x18\x01 \x03(\v2\x19.mirai.v1.KnowledgeSourceR\asources\x12#\n" +
 	"\rtotal_sources\x18\x02 \x01(\x05R\ftotalSources\x12!\n" +
@@ -544,10 +579,13 @@ const file_mirai_v1_team_knowledge_service_proto_rawDesc = "" +
 	" DeleteTeamKnowledgeSourceRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"=\n" +
 	"!DeleteTeamKnowledgeSourceResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"P\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"z\n" +
 	"\x1aSearchTeamKnowledgeRequest\x12\x1d\n" +
 	"\x05query\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05query\x12\x13\n" +
-	"\x05top_k\x18\x02 \x01(\x05R\x04topK\"O\n" +
+	"\x05top_k\x18\x02 \x01(\x05R\x04topK\x12\x1c\n" +
+	"\ateam_id\x18\x03 \x01(\tH\x00R\x06teamId\x88\x01\x01B\n" +
+	"\n" +
+	"\b_team_id\"O\n" +
 	"\x1bSearchTeamKnowledgeResponse\x120\n" +
 	"\x06chunks\x18\x01 \x03(\v2\x18.mirai.v1.RetrievedChunkR\x06chunks2\xb4\x04\n" +
 	"\x14TeamKnowledgeService\x12b\n" +
@@ -613,6 +651,9 @@ func file_mirai_v1_team_knowledge_service_proto_init() {
 		return
 	}
 	file_mirai_v1_knowledge_source_proto_init()
+	file_mirai_v1_team_knowledge_service_proto_msgTypes[0].OneofWrappers = []any{}
+	file_mirai_v1_team_knowledge_service_proto_msgTypes[2].OneofWrappers = []any{}
+	file_mirai_v1_team_knowledge_service_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

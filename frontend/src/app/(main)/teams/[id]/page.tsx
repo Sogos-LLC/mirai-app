@@ -6,6 +6,7 @@ import { useGetTeam, useUpdateTeam, useDeleteTeam, type Team } from '@/hooks/use
 import { TeamMembersPanel } from '@/components/teams/TeamMembersPanel';
 import { EditTeamModal } from '@/components/teams/EditTeamModal';
 import { PageShell } from '@/components/layout/PageShell';
+import { KnowledgeBase } from '@/components/settings/TeamKnowledgeSettings';
 
 export default function TeamDetailPage() {
   const params = useParams();
@@ -124,6 +125,11 @@ export default function TeamDetailPage() {
 
       {/* Team Members Panel */}
       <TeamMembersPanel teamId={teamId} />
+
+      {/* Team Knowledge Base */}
+      <div className="mt-6 bg-surface shadow dark:shadow-glow-sm rounded-lg border p-6">
+        <KnowledgeBase teamId={teamId} />
+      </div>
 
       {/* Edit Team Modal */}
       {showEditModal && (

@@ -13,10 +13,10 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/team_knowledge_service.proto.
  */
 export const file_mirai_v1_team_knowledge_service: GenFile = /*@__PURE__*/
-  fileDesc("CiVtaXJhaS92MS90ZWFtX2tub3dsZWRnZV9zZXJ2aWNlLnByb3RvEghtaXJhaS52MSJ1ChpVcGxvYWRUZWFtS25vd2xlZGdlUmVxdWVzdBIZCghmaWxlbmFtZRgBIAEoCUIHukgEcgIQARIdCgxjb250ZW50X3R5cGUYAiABKAlCB7pIBHICEAESHQoMZmlsZV9jb250ZW50GAMgASgMQge6SAR6AhABIl0KG1VwbG9hZFRlYW1Lbm93bGVkZ2VSZXNwb25zZRIpCgZzb3VyY2UYASABKAsyGS5taXJhaS52MS5Lbm93bGVkZ2VTb3VyY2USEwoLcmFnX3N1bW1hcnkYAiABKAkiIQofTGlzdFRlYW1Lbm93bGVkZ2VTb3VyY2VzUmVxdWVzdCJ7CiBMaXN0VGVhbUtub3dsZWRnZVNvdXJjZXNSZXNwb25zZRIqCgdzb3VyY2VzGAEgAygLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlEhUKDXRvdGFsX3NvdXJjZXMYAiABKAUSFAoMdG90YWxfdG9rZW5zGAMgASgDIjUKHUdldFRlYW1Lbm93bGVkZ2VTb3VyY2VSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASJLCh5HZXRUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USKQoGc291cmNlGAEgASgLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlIjgKIERlbGV0ZVRlYW1Lbm93bGVkZ2VTb3VyY2VSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASI0CiFEZWxldGVUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJDChpTZWFyY2hUZWFtS25vd2xlZGdlUmVxdWVzdBIWCgVxdWVyeRgBIAEoCUIHukgEcgIQARINCgV0b3BfaxgCIAEoBSJHChtTZWFyY2hUZWFtS25vd2xlZGdlUmVzcG9uc2USKAoGY2h1bmtzGAEgAygLMhgubWlyYWkudjEuUmV0cmlldmVkQ2h1bmsytAQKFFRlYW1Lbm93bGVkZ2VTZXJ2aWNlEmIKE1VwbG9hZFRlYW1Lbm93bGVkZ2USJC5taXJhaS52MS5VcGxvYWRUZWFtS25vd2xlZGdlUmVxdWVzdBolLm1pcmFpLnYxLlVwbG9hZFRlYW1Lbm93bGVkZ2VSZXNwb25zZRJxChhMaXN0VGVhbUtub3dsZWRnZVNvdXJjZXMSKS5taXJhaS52MS5MaXN0VGVhbUtub3dsZWRnZVNvdXJjZXNSZXF1ZXN0GioubWlyYWkudjEuTGlzdFRlYW1Lbm93bGVkZ2VTb3VyY2VzUmVzcG9uc2USawoWR2V0VGVhbUtub3dsZWRnZVNvdXJjZRInLm1pcmFpLnYxLkdldFRlYW1Lbm93bGVkZ2VTb3VyY2VSZXF1ZXN0GigubWlyYWkudjEuR2V0VGVhbUtub3dsZWRnZVNvdXJjZVJlc3BvbnNlEnQKGURlbGV0ZVRlYW1Lbm93bGVkZ2VTb3VyY2USKi5taXJhaS52MS5EZWxldGVUZWFtS25vd2xlZGdlU291cmNlUmVxdWVzdBorLm1pcmFpLnYxLkRlbGV0ZVRlYW1Lbm93bGVkZ2VTb3VyY2VSZXNwb25zZRJiChNTZWFyY2hUZWFtS25vd2xlZGdlEiQubWlyYWkudjEuU2VhcmNoVGVhbUtub3dsZWRnZVJlcXVlc3QaJS5taXJhaS52MS5TZWFyY2hUZWFtS25vd2xlZGdlUmVzcG9uc2VCnwEKDGNvbS5taXJhaS52MUIZVGVhbUtub3dsZWRnZVNlcnZpY2VQcm90b1ABWjNnaXRodWIuY29tL3NvZ29zL21pcmFpLWJhY2tlbmQvZ2VuL21pcmFpL3YxO21pcmFpdjGiAgNNWFiqAghNaXJhaS5WMcoCCE1pcmFpXFYx4gIUTWlyYWlcVjFcR1BCTWV0YWRhdGHqAglNaXJhaTo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_mirai_v1_knowledge_source]);
+  fileDesc("CiVtaXJhaS92MS90ZWFtX2tub3dsZWRnZV9zZXJ2aWNlLnByb3RvEghtaXJhaS52MSKXAQoaVXBsb2FkVGVhbUtub3dsZWRnZVJlcXVlc3QSGQoIZmlsZW5hbWUYASABKAlCB7pIBHICEAESHQoMY29udGVudF90eXBlGAIgASgJQge6SARyAhABEh0KDGZpbGVfY29udGVudBgDIAEoDEIHukgEegIQARIUCgd0ZWFtX2lkGAQgASgJSACIAQFCCgoIX3RlYW1faWQiXQobVXBsb2FkVGVhbUtub3dsZWRnZVJlc3BvbnNlEikKBnNvdXJjZRgBIAEoCzIZLm1pcmFpLnYxLktub3dsZWRnZVNvdXJjZRITCgtyYWdfc3VtbWFyeRgCIAEoCSJDCh9MaXN0VGVhbUtub3dsZWRnZVNvdXJjZXNSZXF1ZXN0EhQKB3RlYW1faWQYASABKAlIAIgBAUIKCghfdGVhbV9pZCJ7CiBMaXN0VGVhbUtub3dsZWRnZVNvdXJjZXNSZXNwb25zZRIqCgdzb3VyY2VzGAEgAygLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlEhUKDXRvdGFsX3NvdXJjZXMYAiABKAUSFAoMdG90YWxfdG9rZW5zGAMgASgDIjUKHUdldFRlYW1Lbm93bGVkZ2VTb3VyY2VSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASJLCh5HZXRUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USKQoGc291cmNlGAEgASgLMhkubWlyYWkudjEuS25vd2xlZGdlU291cmNlIjgKIERlbGV0ZVRlYW1Lbm93bGVkZ2VTb3VyY2VSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASI0CiFEZWxldGVUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCJlChpTZWFyY2hUZWFtS25vd2xlZGdlUmVxdWVzdBIWCgVxdWVyeRgBIAEoCUIHukgEcgIQARINCgV0b3BfaxgCIAEoBRIUCgd0ZWFtX2lkGAMgASgJSACIAQFCCgoIX3RlYW1faWQiRwobU2VhcmNoVGVhbUtub3dsZWRnZVJlc3BvbnNlEigKBmNodW5rcxgBIAMoCzIYLm1pcmFpLnYxLlJldHJpZXZlZENodW5rMrQEChRUZWFtS25vd2xlZGdlU2VydmljZRJiChNVcGxvYWRUZWFtS25vd2xlZGdlEiQubWlyYWkudjEuVXBsb2FkVGVhbUtub3dsZWRnZVJlcXVlc3QaJS5taXJhaS52MS5VcGxvYWRUZWFtS25vd2xlZGdlUmVzcG9uc2UScQoYTGlzdFRlYW1Lbm93bGVkZ2VTb3VyY2VzEikubWlyYWkudjEuTGlzdFRlYW1Lbm93bGVkZ2VTb3VyY2VzUmVxdWVzdBoqLm1pcmFpLnYxLkxpc3RUZWFtS25vd2xlZGdlU291cmNlc1Jlc3BvbnNlEmsKFkdldFRlYW1Lbm93bGVkZ2VTb3VyY2USJy5taXJhaS52MS5HZXRUZWFtS25vd2xlZGdlU291cmNlUmVxdWVzdBooLm1pcmFpLnYxLkdldFRlYW1Lbm93bGVkZ2VTb3VyY2VSZXNwb25zZRJ0ChlEZWxldGVUZWFtS25vd2xlZGdlU291cmNlEioubWlyYWkudjEuRGVsZXRlVGVhbUtub3dsZWRnZVNvdXJjZVJlcXVlc3QaKy5taXJhaS52MS5EZWxldGVUZWFtS25vd2xlZGdlU291cmNlUmVzcG9uc2USYgoTU2VhcmNoVGVhbUtub3dsZWRnZRIkLm1pcmFpLnYxLlNlYXJjaFRlYW1Lbm93bGVkZ2VSZXF1ZXN0GiUubWlyYWkudjEuU2VhcmNoVGVhbUtub3dsZWRnZVJlc3BvbnNlQp8BCgxjb20ubWlyYWkudjFCGVRlYW1Lbm93bGVkZ2VTZXJ2aWNlUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_buf_validate_validate, file_mirai_v1_knowledge_source]);
 
 /**
- * UploadTeamKnowledgeRequest for uploading a file to team knowledge.
+ * UploadTeamKnowledgeRequest for uploading a file to knowledge base.
  *
  * @generated from message mirai.v1.UploadTeamKnowledgeRequest
  */
@@ -41,6 +41,14 @@ export type UploadTeamKnowledgeRequest = Message<"mirai.v1.UploadTeamKnowledgeRe
    * @generated from field: bytes file_content = 3;
    */
   fileContent: Uint8Array;
+
+  /**
+   * Optional team ID. If omitted, creates global knowledge (tenant-level).
+   * If provided, creates team-specific knowledge.
+   *
+   * @generated from field: optional string team_id = 4;
+   */
+  teamId?: string;
 };
 
 /**
@@ -77,12 +85,18 @@ export const UploadTeamKnowledgeResponseSchema: GenMessage<UploadTeamKnowledgeRe
   messageDesc(file_mirai_v1_team_knowledge_service, 1);
 
 /**
- * ListTeamKnowledgeSourcesRequest for listing team sources.
- * Team ID is derived from the authenticated user's team membership.
+ * ListTeamKnowledgeSourcesRequest for listing knowledge sources.
  *
  * @generated from message mirai.v1.ListTeamKnowledgeSourcesRequest
  */
 export type ListTeamKnowledgeSourcesRequest = Message<"mirai.v1.ListTeamKnowledgeSourcesRequest"> & {
+  /**
+   * Optional team ID. If omitted, lists global knowledge (tenant-level).
+   * If provided, lists team-specific knowledge.
+   *
+   * @generated from field: optional string team_id = 1;
+   */
+  teamId?: string;
 };
 
 /**
@@ -97,7 +111,7 @@ export const ListTeamKnowledgeSourcesRequestSchema: GenMessage<ListTeamKnowledge
  */
 export type ListTeamKnowledgeSourcesResponse = Message<"mirai.v1.ListTeamKnowledgeSourcesResponse"> & {
   /**
-   * All knowledge sources for the team
+   * Knowledge sources for the specified scope
    *
    * @generated from field: repeated mirai.v1.KnowledgeSource sources = 1;
    */
@@ -198,7 +212,7 @@ export const DeleteTeamKnowledgeSourceResponseSchema: GenMessage<DeleteTeamKnowl
   messageDesc(file_mirai_v1_team_knowledge_service, 7);
 
 /**
- * SearchTeamKnowledgeRequest for semantic search across team knowledge.
+ * SearchTeamKnowledgeRequest for semantic search across knowledge.
  *
  * @generated from message mirai.v1.SearchTeamKnowledgeRequest
  */
@@ -216,6 +230,14 @@ export type SearchTeamKnowledgeRequest = Message<"mirai.v1.SearchTeamKnowledgeRe
    * @generated from field: int32 top_k = 2;
    */
   topK: number;
+
+  /**
+   * Optional team ID. If omitted, searches global knowledge.
+   * If provided, searches team-specific knowledge.
+   *
+   * @generated from field: optional string team_id = 3;
+   */
+  teamId?: string;
 };
 
 /**
@@ -245,14 +267,15 @@ export const SearchTeamKnowledgeResponseSchema: GenMessage<SearchTeamKnowledgeRe
   messageDesc(file_mirai_v1_team_knowledge_service, 9);
 
 /**
- * TeamKnowledgeService handles team-level knowledge source operations.
+ * TeamKnowledgeService handles global and team-level knowledge source operations.
  *
  * @generated from service mirai.v1.TeamKnowledgeService
  */
 export const TeamKnowledgeService: GenService<{
   /**
-   * UploadTeamKnowledge uploads a file and processes it for team-wide RAG.
-   * The file is stored in MinIO and indexed for semantic search.
+   * UploadTeamKnowledge uploads a file and processes it for RAG.
+   * If team_id is omitted, creates global knowledge (tenant-level).
+   * If team_id is provided, creates team-specific knowledge.
    *
    * @generated from rpc mirai.v1.TeamKnowledgeService.UploadTeamKnowledge
    */
@@ -262,7 +285,9 @@ export const TeamKnowledgeService: GenService<{
     output: typeof UploadTeamKnowledgeResponseSchema;
   },
   /**
-   * ListTeamKnowledgeSources returns all team-level knowledge sources.
+   * ListTeamKnowledgeSources returns knowledge sources.
+   * If team_id is omitted, returns global knowledge (tenant-level).
+   * If team_id is provided, returns team-specific knowledge.
    *
    * @generated from rpc mirai.v1.TeamKnowledgeService.ListTeamKnowledgeSources
    */
@@ -272,7 +297,7 @@ export const TeamKnowledgeService: GenService<{
     output: typeof ListTeamKnowledgeSourcesResponseSchema;
   },
   /**
-   * GetTeamKnowledgeSource returns a single team knowledge source by ID.
+   * GetTeamKnowledgeSource returns a single knowledge source by ID.
    *
    * @generated from rpc mirai.v1.TeamKnowledgeService.GetTeamKnowledgeSource
    */
@@ -282,7 +307,7 @@ export const TeamKnowledgeService: GenService<{
     output: typeof GetTeamKnowledgeSourceResponseSchema;
   },
   /**
-   * DeleteTeamKnowledgeSource removes a team knowledge source and its vectors.
+   * DeleteTeamKnowledgeSource removes a knowledge source and its vectors.
    *
    * @generated from rpc mirai.v1.TeamKnowledgeService.DeleteTeamKnowledgeSource
    */
@@ -292,7 +317,9 @@ export const TeamKnowledgeService: GenService<{
     output: typeof DeleteTeamKnowledgeSourceResponseSchema;
   },
   /**
-   * SearchTeamKnowledge performs semantic search across team knowledge.
+   * SearchTeamKnowledge performs semantic search across knowledge.
+   * If team_id is omitted, searches global knowledge.
+   * If team_id is provided, searches team-specific knowledge.
    *
    * @generated from rpc mirai.v1.TeamKnowledgeService.SearchTeamKnowledge
    */

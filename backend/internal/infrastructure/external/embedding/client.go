@@ -20,7 +20,7 @@ type Client struct {
 func NewClient(baseURL string) *Client {
 	return &Client{
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 120 * time.Second, // 2 minutes for large document embedding
 		},
 		baseURL: baseURL,
 	}

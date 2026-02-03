@@ -7,7 +7,7 @@ import { DeleteTeamKnowledgeSourceRequest, DeleteTeamKnowledgeSourceResponse, Ge
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
- * TeamKnowledgeService handles team-level knowledge source operations.
+ * TeamKnowledgeService handles global and team-level knowledge source operations.
  *
  * @generated from service mirai.v1.TeamKnowledgeService
  */
@@ -15,8 +15,9 @@ export const TeamKnowledgeService = {
   typeName: "mirai.v1.TeamKnowledgeService",
   methods: {
     /**
-     * UploadTeamKnowledge uploads a file and processes it for team-wide RAG.
-     * The file is stored in MinIO and indexed for semantic search.
+     * UploadTeamKnowledge uploads a file and processes it for RAG.
+     * If team_id is omitted, creates global knowledge (tenant-level).
+     * If team_id is provided, creates team-specific knowledge.
      *
      * @generated from rpc mirai.v1.TeamKnowledgeService.UploadTeamKnowledge
      */
@@ -27,7 +28,9 @@ export const TeamKnowledgeService = {
       kind: MethodKind.Unary,
     },
     /**
-     * ListTeamKnowledgeSources returns all team-level knowledge sources.
+     * ListTeamKnowledgeSources returns knowledge sources.
+     * If team_id is omitted, returns global knowledge (tenant-level).
+     * If team_id is provided, returns team-specific knowledge.
      *
      * @generated from rpc mirai.v1.TeamKnowledgeService.ListTeamKnowledgeSources
      */
@@ -38,7 +41,7 @@ export const TeamKnowledgeService = {
       kind: MethodKind.Unary,
     },
     /**
-     * GetTeamKnowledgeSource returns a single team knowledge source by ID.
+     * GetTeamKnowledgeSource returns a single knowledge source by ID.
      *
      * @generated from rpc mirai.v1.TeamKnowledgeService.GetTeamKnowledgeSource
      */
@@ -49,7 +52,7 @@ export const TeamKnowledgeService = {
       kind: MethodKind.Unary,
     },
     /**
-     * DeleteTeamKnowledgeSource removes a team knowledge source and its vectors.
+     * DeleteTeamKnowledgeSource removes a knowledge source and its vectors.
      *
      * @generated from rpc mirai.v1.TeamKnowledgeService.DeleteTeamKnowledgeSource
      */
@@ -60,7 +63,9 @@ export const TeamKnowledgeService = {
       kind: MethodKind.Unary,
     },
     /**
-     * SearchTeamKnowledge performs semantic search across team knowledge.
+     * SearchTeamKnowledge performs semantic search across knowledge.
+     * If team_id is omitted, searches global knowledge.
+     * If team_id is provided, searches team-specific knowledge.
      *
      * @generated from rpc mirai.v1.TeamKnowledgeService.SearchTeamKnowledge
      */

@@ -25,7 +25,7 @@ func NewTeamKnowledgeRepository(db *sql.DB) repository.TeamKnowledgeRepository {
 	return &TeamKnowledgeRepository{db: db}
 }
 
-// CreateWithTeam creates a team-level knowledge source.
+// CreateWithTeam creates a knowledge source (team_id can be nil for global).
 func (r *TeamKnowledgeRepository) CreateWithTeam(ctx context.Context, source *entity.KnowledgeSource) error {
 	log.Printf("[TeamKnowledgeRepository.CreateWithTeam] Creating source: name=%s, teamID=%v", source.Name, source.TeamID)
 
@@ -33,11 +33,17 @@ func (r *TeamKnowledgeRepository) CreateWithTeam(ctx context.Context, source *en
 		source.ID = uuid.New()
 	}
 
+	// Build team_id - handle nil for global knowledge
+	var teamIDParam uuid.NullUUID
+	if source.TeamID != nil {
+		teamIDParam = uuid.NullUUID{UUID: *source.TeamID, Valid: true}
+	}
+
 	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.KnowledgeSource, error) {
 		return q.CreateTeamKnowledgeSource(ctx, gen.CreateTeamKnowledgeSourceParams{
 			ID:            source.ID,
 			TenantID:      source.TenantID,
-			TeamID:        uuid.NullUUID{UUID: *source.TeamID, Valid: source.TeamID != nil},
+			TeamID:        teamIDParam,
 			Type:          toKnowledgeSourceType(source.Type.String()),
 			Status:        toKnowledgeSourceStatus(source.Status.String()),
 			Name:          source.Name,
@@ -146,6 +152,62 @@ func (r *TeamKnowledgeRepository) SumTokensByTeam(ctx context.Context, teamID uu
 	}
 
 	log.Printf("[TeamKnowledgeRepository.SumTokensByTeam] SUCCESS: total=%d", total)
+	return total, nil
+}
+
+// ListGlobal retrieves all global knowledge sources (team_id IS NULL).
+func (r *TeamKnowledgeRepository) ListGlobal(ctx context.Context) ([]*entity.KnowledgeSource, error) {
+	log.Printf("[TeamKnowledgeRepository.ListGlobal] Listing global knowledge sources")
+
+	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.KnowledgeSource, error) {
+		return q.ListGlobalKnowledgeSources(ctx)
+	})
+	if err != nil {
+		log.Printf("[TeamKnowledgeRepository.ListGlobal] ERROR: %v", err)
+		return nil, fmt.Errorf("failed to list global knowledge sources: %w", err)
+	}
+
+	sources := make([]*entity.KnowledgeSource, len(results))
+	for i := range results {
+		sources[i] = toKnowledgeSourceEntity(&results[i])
+	}
+	log.Printf("[TeamKnowledgeRepository.ListGlobal] SUCCESS: count=%d", len(sources))
+	return sources, nil
+}
+
+// GetReadyGlobal retrieves ready global sources (team_id IS NULL).
+func (r *TeamKnowledgeRepository) GetReadyGlobal(ctx context.Context) ([]*entity.KnowledgeSource, error) {
+	log.Printf("[TeamKnowledgeRepository.GetReadyGlobal] Getting ready global sources")
+
+	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.KnowledgeSource, error) {
+		return q.GetReadyGlobalSources(ctx)
+	})
+	if err != nil {
+		log.Printf("[TeamKnowledgeRepository.GetReadyGlobal] ERROR: %v", err)
+		return nil, fmt.Errorf("failed to get ready global sources: %w", err)
+	}
+
+	sources := make([]*entity.KnowledgeSource, len(results))
+	for i := range results {
+		sources[i] = toKnowledgeSourceEntity(&results[i])
+	}
+	log.Printf("[TeamKnowledgeRepository.GetReadyGlobal] SUCCESS: count=%d", len(sources))
+	return sources, nil
+}
+
+// SumTokensGlobal returns the total token count for all ready global sources.
+func (r *TeamKnowledgeRepository) SumTokensGlobal(ctx context.Context) (int64, error) {
+	log.Printf("[TeamKnowledgeRepository.SumTokensGlobal] Summing global tokens")
+
+	total, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (int64, error) {
+		return q.SumTokenCountGlobal(ctx)
+	})
+	if err != nil {
+		log.Printf("[TeamKnowledgeRepository.SumTokensGlobal] ERROR: %v", err)
+		return 0, fmt.Errorf("failed to sum global token count: %w", err)
+	}
+
+	log.Printf("[TeamKnowledgeRepository.SumTokensGlobal] SUCCESS: total=%d", total)
 	return total, nil
 }
 

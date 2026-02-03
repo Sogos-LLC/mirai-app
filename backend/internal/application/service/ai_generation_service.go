@@ -62,22 +62,35 @@ type KnowledgeSearcher interface {
 	ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeSource, error)
 }
 
+// TeamKnowledgeSearcher provides RAG search capabilities for team-level knowledge.
+type TeamKnowledgeSearcher interface {
+	SearchByTeam(ctx context.Context, teamID uuid.UUID, query string, topK int) ([]*entity.RetrievedChunk, error)
+	GetReadyByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error)
+}
+
+// TeamResolver resolves the team for a tenant.
+type TeamResolver interface {
+	GetTeamByTenant(ctx context.Context, tenantID uuid.UUID) (*entity.Team, error)
+}
+
 // AIGenerationService handles AI-powered content generation.
 // All course content is stored in MinIO - no PostgreSQL tables for outlines/lessons.
 type AIGenerationService struct {
-	userRepo           repository.UserRepository
-	jobRepo            repository.GenerationJobRepository
-	aiSettingsRepo     repository.TenantAISettingsRepository
-	aiProviderFactory  AIProviderFactory
-	notifier           JobNotifier
-	completionNotifier CourseCompletionNotifier
-	outlineNotifier    OutlineCompletionNotifier
-	taskEnqueuer       TaskEnqueuer
-	imageStorage       ImageStorage
-	contentStorage     *storage.TenantAwareStorage
-	jobEventPublisher  JobEventPublisher
-	knowledgeSearcher  KnowledgeSearcher // For Internal Data Only RAG queries
-	logger             service.Logger
+	userRepo               repository.UserRepository
+	jobRepo                repository.GenerationJobRepository
+	aiSettingsRepo         repository.TenantAISettingsRepository
+	aiProviderFactory      AIProviderFactory
+	notifier               JobNotifier
+	completionNotifier     CourseCompletionNotifier
+	outlineNotifier        OutlineCompletionNotifier
+	taskEnqueuer           TaskEnqueuer
+	imageStorage           ImageStorage
+	contentStorage         *storage.TenantAwareStorage
+	jobEventPublisher      JobEventPublisher
+	knowledgeSearcher      KnowledgeSearcher     // For course-level RAG queries
+	teamKnowledgeSearcher  TeamKnowledgeSearcher // For team-level RAG queries
+	teamResolver           TeamResolver          // Resolves team for tenant
+	logger                 service.Logger
 }
 
 // NewAIGenerationService creates a new AI generation service.
@@ -112,6 +125,16 @@ func NewAIGenerationService(
 // SetKnowledgeSearcher sets the knowledge searcher for Internal Data Only mode.
 func (s *AIGenerationService) SetKnowledgeSearcher(searcher KnowledgeSearcher) {
 	s.knowledgeSearcher = searcher
+}
+
+// SetTeamKnowledgeSearcher sets the team knowledge searcher for team-level RAG.
+func (s *AIGenerationService) SetTeamKnowledgeSearcher(searcher TeamKnowledgeSearcher) {
+	s.teamKnowledgeSearcher = searcher
+}
+
+// SetTeamResolver sets the team resolver for looking up team by tenant.
+func (s *AIGenerationService) SetTeamResolver(resolver TeamResolver) {
+	s.teamResolver = resolver
 }
 
 // SetJobEventPublisher sets the optional job event publisher for real-time streaming.
@@ -329,6 +352,54 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 			}
 		} else {
 			log.Warn("Internal Data Only mode enabled but no knowledge searcher configured")
+		}
+
+		// Also search team-level knowledge if available
+		if s.teamKnowledgeSearcher != nil && s.teamResolver != nil {
+			team, err := s.teamResolver.GetTeamByTenant(ctx, job.TenantID)
+			if err != nil {
+				log.Warn("failed to resolve team for tenant", "error", err)
+			} else if team != nil {
+				log.Info("[AI.RAG] Searching team knowledge", "teamID", team.ID)
+
+				// Search team knowledge with the same queries
+				teamQueries := []string{
+					content.Settings.Title,
+					content.Settings.DesiredOutcome,
+				}
+				if additionalContext != "" {
+					teamQueries = append(teamQueries, additionalContext)
+				}
+
+				seenTeamChunks := make(map[string]bool)
+				// Copy existing chunk IDs to avoid duplicates across course and team
+				for _, chunk := range outlineRequest.RAGContext {
+					seenTeamChunks[chunk.SourceID+"-"+fmt.Sprintf("%d", chunk.ChunkIndex)] = true
+				}
+
+				for _, query := range teamQueries {
+					chunks, err := s.teamKnowledgeSearcher.SearchByTeam(ctx, team.ID, query, 10)
+					if err != nil {
+						log.Warn("Team RAG search failed", "query", query, "error", err)
+						continue
+					}
+					for _, chunk := range chunks {
+						chunkKey := chunk.SourceID.String() + "-" + fmt.Sprintf("%d", *chunk.ChunkIndex)
+						if seenTeamChunks[chunkKey] {
+							continue
+						}
+						seenTeamChunks[chunkKey] = true
+						outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
+							SourceID:        chunk.SourceID.String(),
+							SourceName:      chunk.SourceName + " (Team Knowledge)",
+							Content:         chunk.Content,
+							ChunkIndex:      int(*chunk.ChunkIndex),
+							SimilarityScore: chunk.SimilarityScore,
+						})
+					}
+				}
+				log.Info("[AI.RAG] Added team knowledge context", "totalChunks", len(outlineRequest.RAGContext))
+			}
 		}
 	}
 
@@ -728,6 +799,62 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 			log.Info("Fetched RAG context for lesson",
 				"lessonTitle", lessonTitle,
 				"chunkCount", len(ragContext))
+		}
+
+		// Also search team-level knowledge for lesson content
+		if s.teamKnowledgeSearcher != nil && s.teamResolver != nil {
+			team, err := s.teamResolver.GetTeamByTenant(ctx, job.TenantID)
+			if err != nil {
+				log.Warn("failed to resolve team for tenant", "error", err)
+			} else if team != nil {
+				log.Info("[AI.RAG] Searching team knowledge for lesson", "teamID", team.ID, "lessonTitle", lessonTitle)
+
+				// Build search queries for team knowledge
+				teamSearchQueries := []string{lessonTitle + " " + lessonDesc}
+				for _, obj := range learningObjectives {
+					teamSearchQueries = append(teamSearchQueries, obj)
+				}
+
+				// Track already seen content (using simple hash)
+				teamSeenChunks := make(map[string]bool)
+				for _, chunk := range ragContext {
+					hashKey := chunk.Content
+					if len(hashKey) > 100 {
+						hashKey = hashKey[:100]
+					}
+					teamSeenChunks[hashKey] = true
+				}
+
+				for _, query := range teamSearchQueries {
+					chunks, err := s.teamKnowledgeSearcher.SearchByTeam(ctx, team.ID, query, 5)
+					if err != nil {
+						log.Warn("Team RAG search failed for lesson", "query", query, "error", err)
+						continue
+					}
+					for _, chunk := range chunks {
+						hashKey := chunk.Content
+						if len(hashKey) > 100 {
+							hashKey = hashKey[:100]
+						}
+						if teamSeenChunks[hashKey] {
+							continue
+						}
+						teamSeenChunks[hashKey] = true
+						chunkIndex := 0
+						if chunk.ChunkIndex != nil {
+							chunkIndex = int(*chunk.ChunkIndex)
+						}
+						ragContext = append(ragContext, service.RAGChunkInput{
+							SourceID:        chunk.SourceID.String(),
+							SourceName:      chunk.SourceName + " (Team Knowledge)",
+							Content:         chunk.Content,
+							ChunkIndex:      chunkIndex,
+							SimilarityScore: chunk.SimilarityScore,
+						})
+					}
+				}
+				log.Info("[AI.RAG] Added team knowledge context for lesson", "totalChunks", len(ragContext))
+			}
 		}
 	}
 

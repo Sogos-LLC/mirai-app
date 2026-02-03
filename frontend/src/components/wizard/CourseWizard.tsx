@@ -25,6 +25,7 @@ import {
 } from '@/hooks/useAIGeneration';
 import { useCreateCourse } from '@/hooks/useCourses';
 import { useUploadAndProcess, useLinkSessionToCourse } from '@/hooks/useKnowledgeSources';
+import { useListTeamKnowledgeSources, KnowledgeSourceStatus } from '@/hooks/useTeamKnowledge';
 import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
@@ -77,6 +78,17 @@ export default function CourseWizard() {
   // API hooks - knowledge sources
   const uploadAndProcess = useUploadAndProcess();
   const linkSessionToCourse = useLinkSessionToCourse();
+
+  // Team knowledge (shared across courses)
+  const { sources: teamKnowledgeSources } = useListTeamKnowledgeSources();
+  const readyTeamKnowledge = teamKnowledgeSources.filter(
+    (source) => source.status === KnowledgeSourceStatus.READY
+  );
+  const teamKnowledgeCount = readyTeamKnowledge.length;
+  const teamKnowledgeTokens = readyTeamKnowledge.reduce(
+    (sum, source) => sum + (source.tokenCount ?? 0),
+    0
+  );
 
   // Create machine with provided actors
   const machineWithActors = useMemo(() => {
@@ -550,6 +562,8 @@ export default function CourseWizard() {
           knowledgeFileCount={pendingFiles.length}
           processedSourcesCount={processedSources.length}
           onOpenKnowledgeModal={handleOpenKnowledgeModal}
+          teamKnowledgeCount={teamKnowledgeCount}
+          teamKnowledgeTokens={teamKnowledgeTokens}
           internalDataOnly={context.internalDataOnly}
           onInternalDataOnlyChange={(enabled) => send({ type: 'SET_INTERNAL_DATA_ONLY', enabled })}
         />

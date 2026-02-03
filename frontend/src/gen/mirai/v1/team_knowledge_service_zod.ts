@@ -12,6 +12,7 @@ export const UploadTeamKnowledgeRequestSchema = z.object({
   filename: z.string().min(1),
   contentType: z.string().min(1),
   fileContent: z.instanceof(Uint8Array),
+  teamId: z.string().optional(),
 });
 
 export type UploadTeamKnowledgeRequest = z.infer<typeof UploadTeamKnowledgeRequestSchema>;
@@ -21,6 +22,7 @@ export type UploadTeamKnowledgeRequest = z.infer<typeof UploadTeamKnowledgeReque
  * @generated from message mirai.v1.ListTeamKnowledgeSourcesRequest
  */
 export const ListTeamKnowledgeSourcesRequestSchema = z.object({
+  teamId: z.string().optional(),
 });
 
 export type ListTeamKnowledgeSourcesRequest = z.infer<typeof ListTeamKnowledgeSourcesRequestSchema>;
@@ -52,6 +54,7 @@ export type DeleteTeamKnowledgeSourceRequest = z.infer<typeof DeleteTeamKnowledg
 export const SearchTeamKnowledgeRequestSchema = z.object({
   query: z.string().min(1),
   topK: z.number().int(),
+  teamId: z.string().optional(),
 });
 
 export type SearchTeamKnowledgeRequest = z.infer<typeof SearchTeamKnowledgeRequestSchema>;

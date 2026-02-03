@@ -5,36 +5,41 @@
 import { TeamKnowledgeService } from "./team_knowledge_service_pb";
 
 /**
- * UploadTeamKnowledge uploads a file and processes it for team-wide RAG.
- * The file is stored in MinIO and indexed for semantic search.
+ * UploadTeamKnowledge uploads a file and processes it for RAG.
+ * If team_id is omitted, creates global knowledge (tenant-level).
+ * If team_id is provided, creates team-specific knowledge.
  *
  * @generated from rpc mirai.v1.TeamKnowledgeService.UploadTeamKnowledge
  */
 export const uploadTeamKnowledge = TeamKnowledgeService.method.uploadTeamKnowledge;
 
 /**
- * ListTeamKnowledgeSources returns all team-level knowledge sources.
+ * ListTeamKnowledgeSources returns knowledge sources.
+ * If team_id is omitted, returns global knowledge (tenant-level).
+ * If team_id is provided, returns team-specific knowledge.
  *
  * @generated from rpc mirai.v1.TeamKnowledgeService.ListTeamKnowledgeSources
  */
 export const listTeamKnowledgeSources = TeamKnowledgeService.method.listTeamKnowledgeSources;
 
 /**
- * GetTeamKnowledgeSource returns a single team knowledge source by ID.
+ * GetTeamKnowledgeSource returns a single knowledge source by ID.
  *
  * @generated from rpc mirai.v1.TeamKnowledgeService.GetTeamKnowledgeSource
  */
 export const getTeamKnowledgeSource = TeamKnowledgeService.method.getTeamKnowledgeSource;
 
 /**
- * DeleteTeamKnowledgeSource removes a team knowledge source and its vectors.
+ * DeleteTeamKnowledgeSource removes a knowledge source and its vectors.
  *
  * @generated from rpc mirai.v1.TeamKnowledgeService.DeleteTeamKnowledgeSource
  */
 export const deleteTeamKnowledgeSource = TeamKnowledgeService.method.deleteTeamKnowledgeSource;
 
 /**
- * SearchTeamKnowledge performs semantic search across team knowledge.
+ * SearchTeamKnowledge performs semantic search across knowledge.
+ * If team_id is omitted, searches global knowledge.
+ * If team_id is provided, searches team-specific knowledge.
  *
  * @generated from rpc mirai.v1.TeamKnowledgeService.SearchTeamKnowledge
  */

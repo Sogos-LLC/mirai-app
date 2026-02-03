@@ -74,7 +74,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User, description: 'Name, email, and bio' },
     { id: 'team', label: 'Team', icon: Users, description: 'Manage members and invitations' },
-    { id: 'knowledge', label: 'Knowledge Base', icon: Database, description: 'Team knowledge sources' },
+    { id: 'knowledge', label: 'Knowledge Base', icon: Database, description: 'Global knowledge for AI generation' },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Email and push settings' },
     { id: 'security', label: 'Security', icon: Lock, description: 'Password and 2FA' },
     { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme settings' },

@@ -6,35 +6,43 @@ import "buf/validate/validate.proto";
 import "mirai/v1/knowledge_source.proto";
 
 // =============================================================================
-// TEAM KNOWLEDGE SERVICE - RPC definitions for team-level knowledge operations
+// KNOWLEDGE SERVICE - RPC definitions for global and team-level knowledge
 // =============================================================================
 //
-// Team knowledge sources are shared across all courses for a team.
-// This differs from course-level knowledge which is specific to a single course.
+// Knowledge sources can be scoped at two levels:
+// 1. Global Knowledge (team_id omitted) - Shared across entire tenant
+// 2. Team Knowledge (team_id provided) - Shared within a specific team
+//
+// Both levels are used during RAG-powered course generation.
 //
 // To regenerate after changes: cd proto && buf generate
 // =============================================================================
 
-// TeamKnowledgeService handles team-level knowledge source operations.
+// TeamKnowledgeService handles global and team-level knowledge source operations.
 service TeamKnowledgeService {
-  // UploadTeamKnowledge uploads a file and processes it for team-wide RAG.
-  // The file is stored in MinIO and indexed for semantic search.
+  // UploadTeamKnowledge uploads a file and processes it for RAG.
+  // If team_id is omitted, creates global knowledge (tenant-level).
+  // If team_id is provided, creates team-specific knowledge.
   rpc UploadTeamKnowledge(UploadTeamKnowledgeRequest) returns (UploadTeamKnowledgeResponse);
 
-  // ListTeamKnowledgeSources returns all team-level knowledge sources.
+  // ListTeamKnowledgeSources returns knowledge sources.
+  // If team_id is omitted, returns global knowledge (tenant-level).
+  // If team_id is provided, returns team-specific knowledge.
   rpc ListTeamKnowledgeSources(ListTeamKnowledgeSourcesRequest) returns (ListTeamKnowledgeSourcesResponse);
 
-  // GetTeamKnowledgeSource returns a single team knowledge source by ID.
+  // GetTeamKnowledgeSource returns a single knowledge source by ID.
   rpc GetTeamKnowledgeSource(GetTeamKnowledgeSourceRequest) returns (GetTeamKnowledgeSourceResponse);
 
-  // DeleteTeamKnowledgeSource removes a team knowledge source and its vectors.
+  // DeleteTeamKnowledgeSource removes a knowledge source and its vectors.
   rpc DeleteTeamKnowledgeSource(DeleteTeamKnowledgeSourceRequest) returns (DeleteTeamKnowledgeSourceResponse);
 
-  // SearchTeamKnowledge performs semantic search across team knowledge.
+  // SearchTeamKnowledge performs semantic search across knowledge.
+  // If team_id is omitted, searches global knowledge.
+  // If team_id is provided, searches team-specific knowledge.
   rpc SearchTeamKnowledge(SearchTeamKnowledgeRequest) returns (SearchTeamKnowledgeResponse);
 }
 
-// UploadTeamKnowledgeRequest for uploading a file to team knowledge.
+// UploadTeamKnowledgeRequest for uploading a file to knowledge base.
 message UploadTeamKnowledgeRequest {
   // Filename for display and MIME type detection
   string filename = 1 [(buf.validate.field).string.min_len = 1];
@@ -44,6 +52,10 @@ message UploadTeamKnowledgeRequest {
 
   // File content as bytes
   bytes file_content = 3 [(buf.validate.field).bytes.min_len = 1];
+
+  // Optional team ID. If omitted, creates global knowledge (tenant-level).
+  // If provided, creates team-specific knowledge.
+  optional string team_id = 4;
 }
 
 message UploadTeamKnowledgeResponse {
@@ -54,12 +66,15 @@ message UploadTeamKnowledgeResponse {
   string rag_summary = 2;
 }
 
-// ListTeamKnowledgeSourcesRequest for listing team sources.
-// Team ID is derived from the authenticated user's team membership.
-message ListTeamKnowledgeSourcesRequest {}
+// ListTeamKnowledgeSourcesRequest for listing knowledge sources.
+message ListTeamKnowledgeSourcesRequest {
+  // Optional team ID. If omitted, lists global knowledge (tenant-level).
+  // If provided, lists team-specific knowledge.
+  optional string team_id = 1;
+}
 
 message ListTeamKnowledgeSourcesResponse {
-  // All knowledge sources for the team
+  // Knowledge sources for the specified scope
   repeated KnowledgeSource sources = 1;
 
   // Total number of sources
@@ -87,13 +102,17 @@ message DeleteTeamKnowledgeSourceResponse {
   bool success = 1;
 }
 
-// SearchTeamKnowledgeRequest for semantic search across team knowledge.
+// SearchTeamKnowledgeRequest for semantic search across knowledge.
 message SearchTeamKnowledgeRequest {
   // Search query
   string query = 1 [(buf.validate.field).string.min_len = 1];
 
   // Number of results to return (default 5, max 20)
   int32 top_k = 2;
+
+  // Optional team ID. If omitted, searches global knowledge.
+  // If provided, searches team-specific knowledge.
+  optional string team_id = 3;
 }
 
 message SearchTeamKnowledgeResponse {
