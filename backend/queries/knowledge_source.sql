@@ -123,7 +123,7 @@ UPDATE knowledge_sources SET
     summary = $4,
     token_count = $5,
     document_index = $6,
-    processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
+    processed_at = CASE WHEN $1::text = 'ready' THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $7
 RETURNING *;
