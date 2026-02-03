@@ -181,8 +181,16 @@ test.describe('Team Knowledge Settings', () => {
     const knowledgeTab = page.getByRole('button', { name: /knowledge base/i });
     if (await knowledgeTab.isVisible({ timeout: 3000 }).catch(() => false)) {
       await knowledgeTab.click();
-      await page.waitForTimeout(1000);
     }
+
+    // Wait for upload zone to appear (indicates page has loaded)
+    console.log('Waiting for upload zone to appear...');
+    const uploadZone = page.locator('text=/drop files here|click to upload/i');
+    const uploadZoneVisible = await uploadZone.isVisible({ timeout: 10000 }).catch(() => false);
+    console.log(`Upload zone visible: ${uploadZoneVisible}`);
+
+    // Also wait for stats to load (0 Sources indicator)
+    await page.waitForTimeout(2000);
 
     await page.screenshot({
       path: `${SCREENSHOT_DIR}/upload-01-knowledge-page.png`,
@@ -194,8 +202,9 @@ test.describe('Team Knowledge Settings', () => {
     console.log('\nStep 2: Uploading test file...');
     const testFilePath = path.join(process.cwd(), 'e2e/fixtures/acme-safety-test.md');
 
-    // Find file input (may be hidden)
+    // Find file input (may be hidden, it's inside the upload zone label)
     const fileInput = page.locator('input[type="file"]');
+    await fileInput.first().waitFor({ state: 'attached', timeout: 10000 }).catch(() => {});
     const fileInputCount = await fileInput.count();
     console.log(`Found ${fileInputCount} file input(s)`);
 
