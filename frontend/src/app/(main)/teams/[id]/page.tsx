@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useGetTeam, useUpdateTeam, useDeleteTeam, type Team } from '@/hooks/useTeams';
 import { TeamMembersPanel } from '@/components/teams/TeamMembersPanel';
+import { TeamKnowledgePanel } from '@/components/teams/TeamKnowledgePanel';
 import { EditTeamModal } from '@/components/teams/EditTeamModal';
 import { PageShell } from '@/components/layout/PageShell';
 
@@ -124,6 +125,11 @@ export default function TeamDetailPage() {
 
       {/* Team Members Panel */}
       <TeamMembersPanel teamId={teamId} />
+
+      {/* Team Knowledge Base */}
+      <div className="mt-6">
+        <TeamKnowledgePanel teamId={teamId} />
+      </div>
 
       {/* Edit Team Modal */}
       {showEditModal && (
