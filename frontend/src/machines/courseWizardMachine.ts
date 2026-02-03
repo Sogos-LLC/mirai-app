@@ -27,14 +27,16 @@ import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 /**
  * Wizard step identifiers matching backend wizard state
- * 5-step wizard:
- * 1. courseName - Enter course name + select knowledge sources via modal + generate outcomes
- * 2. titleDescription - Review AI-generated title/description
- * 3. smeSelection - Select SME personas
- * 4. audienceSelection - Select audience personas
- * 5. toneSelection - Select tone + additional context
+ * 6-step wizard:
+ * 1. knowledgeSelection - Select team/global knowledge sources (auto-skips if none exist)
+ * 2. courseName - Enter course name + generate outcomes
+ * 3. titleDescription - Review AI-generated title/description
+ * 4. smeSelection - Select SME personas
+ * 5. audienceSelection - Select audience personas
+ * 6. toneSelection - Select tone + additional context
  */
 export type WizardStep =
+  | 'knowledgeSelection'
   | 'courseName'
   | 'titleDescription'
   | 'smeSelection'
@@ -109,7 +111,7 @@ export interface CourseWizardContext {
 }
 
 export type CourseWizardEvent =
-  // Knowledge Selection (via modal, available from step 1)
+  // Knowledge Selection (Step 1)
   | { type: 'SET_AVAILABLE_KNOWLEDGE'; teamDocs: WizardKnowledgeSource[]; globalDocs: WizardKnowledgeSource[] }
   | { type: 'TOGGLE_TEAM_DOC'; docId: string }
   | { type: 'TOGGLE_GLOBAL_DOC'; docId: string }
@@ -117,7 +119,9 @@ export type CourseWizardEvent =
   | { type: 'DESELECT_ALL_TEAM_DOCS' }
   | { type: 'SELECT_ALL_GLOBAL_DOCS' }
   | { type: 'DESELECT_ALL_GLOBAL_DOCS' }
-  // Step 1: Course Name & Outcomes
+  | { type: 'APPROVE_KNOWLEDGE_SELECTION' }
+  | { type: 'SKIP_KNOWLEDGE_SELECTION' }
+  // Step 2: Course Name & Outcomes
   | { type: 'SET_COURSE_NAME'; name: string }
   | { type: 'SET_DESIRED_OUTCOMES'; outcomes: string }
   | { type: 'GENERATE_OUTCOMES' }
@@ -362,7 +366,7 @@ export const courseWizardMachine = createMachine({
           }),
         },
         START_FRESH: {
-          target: 'courseName',
+          target: 'knowledgeSelection',
           actions: assign({
             flowStartedAt: () => Date.now(),
           }),
@@ -379,7 +383,7 @@ export const courseWizardMachine = createMachine({
           target: 'resuming',
         },
         START_FRESH: {
-          target: 'courseName',
+          target: 'knowledgeSelection',
           actions: assign({
             ...initialContext,
             flowStartedAt: () => Date.now(),
@@ -393,6 +397,16 @@ export const courseWizardMachine = createMachine({
     // --------------------------------------------------------
     resuming: {
       always: [
+        {
+          target: 'knowledgeSelection',
+          guard: ({ context }) => context.savedState?.currentStep === 'knowledgeSelection',
+          actions: assign(({ context }) => ({
+            selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
+            selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
+            currentStep: 'knowledgeSelection' as const,
+            flowStartedAt: Date.now(),
+          })),
+        },
         {
           target: 'courseName',
           guard: ({ context }) => context.savedState?.currentStep === 'courseName',
@@ -475,7 +489,7 @@ export const courseWizardMachine = createMachine({
         },
         {
           // Default: start from beginning
-          target: 'courseName',
+          target: 'knowledgeSelection',
           actions: assign({
             flowStartedAt: () => Date.now(),
           }),
@@ -484,15 +498,25 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 1: Course Name Entry
-    // Knowledge sources are selected via modal (not a separate step)
+    // Step 1: Knowledge Source Selection
+    // Select team and global knowledge sources to ground the course
+    // Auto-skips to courseName if no knowledge sources are available
     // --------------------------------------------------------
-    courseName: {
+    knowledgeSelection: {
       entry: assign({
-        currentStep: 'courseName' as const,
+        currentStep: 'knowledgeSelection' as const,
       }),
+      // Auto-skip if no knowledge sources available
+      always: [
+        {
+          target: 'courseName',
+          guard: ({ context }) =>
+            context.availableTeamDocs.length === 0 &&
+            context.availableGlobalDocs.length === 0,
+        },
+      ],
       on: {
-        // Knowledge source selection (triggered from modal)
+        // Load available knowledge sources
         SET_AVAILABLE_KNOWLEDGE: {
           actions: assign({
             availableTeamDocs: ({ event }) => event.teamDocs,
@@ -538,6 +562,36 @@ export const courseWizardMachine = createMachine({
             selectedGlobalDocIds: () => [],
           }),
         },
+        // Internal Data Only mode
+        SET_INTERNAL_DATA_ONLY: {
+          actions: assign({
+            internalDataOnly: ({ event }) => event.enabled,
+          }),
+        },
+        // Proceed to course name step
+        APPROVE_KNOWLEDGE_SELECTION: {
+          target: 'courseName',
+        },
+        // Skip knowledge selection entirely (proceed with no sources)
+        SKIP_KNOWLEDGE_SELECTION: {
+          target: 'courseName',
+          actions: assign({
+            selectedTeamDocIds: () => [],
+            selectedGlobalDocIds: () => [],
+          }),
+        },
+        CANCEL: 'cancelled',
+      },
+    },
+
+    // --------------------------------------------------------
+    // Step 2: Course Name Entry
+    // --------------------------------------------------------
+    courseName: {
+      entry: assign({
+        currentStep: 'courseName' as const,
+      }),
+      on: {
         // Course name events
         SET_COURSE_NAME: {
           actions: assign({
@@ -550,7 +604,7 @@ export const courseWizardMachine = createMachine({
             desiredOutcomes: ({ event }) => event.outcomes,
           }),
         },
-        // Knowledge sources (added via modal)
+        // Knowledge sources (added via modal for course-specific uploads)
         ADD_FILES: {
           actions: assign({
             pendingFiles: ({ context, event }) => [...context.pendingFiles, ...event.files],
@@ -575,6 +629,7 @@ export const courseWizardMachine = createMachine({
           target: 'generatingTitle',
           guard: ({ context }) => context.courseName.trim().length > 0,
         },
+        GO_BACK: 'knowledgeSelection',
         CANCEL: 'cancelled',
       },
     },
@@ -1021,17 +1076,18 @@ export const courseWizardMachine = createMachine({
 // ============================================================
 
 /**
- * Get step number (1-5) from step identifier
+ * Get step number (1-6) from step identifier
  * Note: outlineJobQueued is a confirmation screen, not a wizard step
  */
 export function getStepNumber(step: WizardStep): number {
   const stepMap: Record<WizardStep, number> = {
-    courseName: 1,
-    titleDescription: 2,
-    smeSelection: 3,
-    audienceSelection: 4,
-    toneSelection: 5,
-    outlineJobQueued: 5, // Same as toneSelection since it's a confirmation
+    knowledgeSelection: 1,
+    courseName: 2,
+    titleDescription: 3,
+    smeSelection: 4,
+    audienceSelection: 5,
+    toneSelection: 6,
+    outlineJobQueued: 6, // Same as toneSelection since it's a confirmation
   };
   return stepMap[step];
 }
@@ -1041,6 +1097,7 @@ export function getStepNumber(step: WizardStep): number {
  */
 export function getStepLabel(step: WizardStep): string {
   const labelMap: Record<WizardStep, string> = {
+    knowledgeSelection: 'Knowledge Sources',
     courseName: 'Course Name',
     titleDescription: 'Title & Description',
     smeSelection: 'SME Personas',
@@ -1056,6 +1113,7 @@ export function getStepLabel(step: WizardStep): string {
  */
 export function getAllSteps(): WizardStep[] {
   return [
+    'knowledgeSelection',
     'courseName',
     'titleDescription',
     'smeSelection',
@@ -1086,7 +1144,7 @@ export function isGenerating(stateValue: unknown): boolean {
  */
 export function canGoBack(stateValue: unknown): boolean {
   if (typeof stateValue === 'string') {
-    return !['courseName', 'checkingSavedState', 'promptResume', 'resuming', 'complete', 'cancelled'].includes(
+    return !['knowledgeSelection', 'checkingSavedState', 'promptResume', 'resuming', 'complete', 'cancelled'].includes(
       stateValue
     );
   }

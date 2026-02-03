@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle, FileText, Sparkles, Users, Target, Palette, Loader2 } from 'lucide-react';
+import { CheckCircle, BookOpen, FileText, Sparkles, Users, Target, Palette, Loader2 } from 'lucide-react';
 import type { WizardStep } from '@/machines/courseWizardMachine';
 import { getStepNumber, getAllSteps, getStepLabel } from '@/machines/courseWizardMachine';
 
@@ -11,6 +11,7 @@ interface WizardProgressProps {
 }
 
 const stepIcons: Record<WizardStep, React.ComponentType<{ className?: string }>> = {
+  knowledgeSelection: BookOpen,
   courseName: FileText,
   titleDescription: Sparkles,
   smeSelection: Users,
