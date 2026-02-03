@@ -26,6 +26,7 @@ import {
   formatFileSize,
   KnowledgeSourceStatus,
 } from '@/hooks/useTeamKnowledge';
+import { GetTeamKnowledgeSourceResponse } from '@/gen/mirai/v1/team_knowledge_service_pb';
 
 // =============================================================================
 // Types
@@ -123,53 +124,101 @@ export function KnowledgeUploadModal({
       // Upload complete, start simulating processing stages
       const stages: ProcessingStage[] = ['parsing', 'chunking', 'embedding', 'indexing'];
       let stageIndex = 0;
+      let cancelled = false;
 
       const advanceStage = () => {
+        if (cancelled) return;
         if (stageIndex < stages.length) {
-          setCurrentStage(stages[stageIndex]);
+          setCurrentStage((prev) => {
+            // Don't advance if we've already reached a terminal state
+            if (prev === 'ready' || prev === 'failed') {
+              cancelled = true;
+              return prev;
+            }
+            return stages[stageIndex];
+          });
           stageIndex++;
-          setTimeout(advanceStage, STAGE_TIMINGS[stages[stageIndex - 1]] || 2000);
+          if (!cancelled && stageIndex < stages.length) {
+            setTimeout(advanceStage, STAGE_TIMINGS[stages[stageIndex - 1]] || 2000);
+          }
         }
       };
 
-      setTimeout(advanceStage, 1000);
+      const timeoutId = setTimeout(advanceStage, 1000);
+
+      return () => {
+        cancelled = true;
+        clearTimeout(timeoutId);
+      };
     }
   }, [currentStage, isUploading]);
 
   // Poll for source status updates
   useEffect(() => {
     if (!sourceId) return;
+    // Don't poll if we're already done
+    if (currentStage === 'ready' || currentStage === 'failed') return;
 
     const poll = async () => {
-      await refetchSource();
+      try {
+        const result = await refetchSource();
+        // refetch returns QueryObserverResult, data is GetTeamKnowledgeSourceResponse
+        // We need to access .source to get the KnowledgeSource
+        const response = result.data as GetTeamKnowledgeSourceResponse | undefined;
+        const fetchedSource = response?.source;
+        if (fetchedSource?.status === KnowledgeSourceStatus.READY) {
+          setCurrentStage('ready');
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+        } else if (fetchedSource?.status === KnowledgeSourceStatus.FAILED) {
+          setCurrentStage('failed');
+          setError(fetchedSource.errorMessage || 'Processing failed');
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+        }
+      } catch (err) {
+        console.error('Error polling source status:', err);
+      }
     };
 
+    // Initial fetch
+    poll();
+    // Then poll every 2 seconds
     pollIntervalRef.current = setInterval(poll, 2000);
 
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
       }
     };
-  }, [sourceId, refetchSource]);
+  }, [sourceId, currentStage, refetchSource]);
 
-  // Update stage when source status changes
+  // Update stage when source status changes (backup check via React Query cache)
   useEffect(() => {
     if (!source) return;
+    // Skip if already in terminal state
+    if (currentStage === 'ready' || currentStage === 'failed') return;
 
     if (source.status === KnowledgeSourceStatus.READY) {
       setCurrentStage('ready');
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
       }
     } else if (source.status === KnowledgeSourceStatus.FAILED) {
       setCurrentStage('failed');
       setError(source.errorMessage || 'Processing failed');
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
       }
     }
-  }, [source]);
+  }, [source, currentStage]);
 
   // Handle upload
   const handleUpload = useCallback(async () => {
@@ -180,7 +229,13 @@ export function KnowledgeUploadModal({
     try {
       const hash = await computeFileHash(file);
       const result = await uploadFile(file, hash);
-      setSourceId(result.source?.id || null);
+      const newSourceId = result.source?.id || null;
+      setSourceId(newSourceId);
+
+      // Check if the returned source is already READY (e.g., duplicate that was re-processed)
+      if (result.source?.status === KnowledgeSourceStatus.READY) {
+        setCurrentStage('ready');
+      }
     } catch (err) {
       setCurrentStage('failed');
       if (err instanceof Error) {
