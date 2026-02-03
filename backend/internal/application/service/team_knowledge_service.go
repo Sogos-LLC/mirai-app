@@ -161,20 +161,23 @@ func (s *TeamKnowledgeService) ProcessAndIndex(ctx context.Context, source *enti
 	}
 
 	// Chunk the content
-	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Step 2: Chunking content")
+	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Step 2: Chunking content (len=%d)", len(content))
 	chunks := ChunkText(content, ChunkSize, ChunkOverlap)
+	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Step 2a: ChunkText returned %d chunks", len(chunks))
 	if len(chunks) == 0 {
 		log.Printf("[TeamKnowledgeService.ProcessAndIndex] ERROR: no content to process")
 		return 0, 0, fmt.Errorf("no content to process")
 	}
-	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Chunked into %d chunks", len(chunks))
+	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Step 2b: Chunks validated")
 
 	// Calculate token count (rough estimate: ~4 chars per token)
 	tokenCount := int32(len(content) / 4)
 
 	// Generate embeddings for all chunks
-	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Step 3: Generating embeddings")
+	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Step 3: Generating embeddings for %d chunks", len(chunks))
+	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Step 3a: About to call embedding service...")
 	embeddings, err := s.embeddingClient.Embed(ctx, chunks)
+	log.Printf("[TeamKnowledgeService.ProcessAndIndex] Step 3b: Embedding call returned")
 	if err != nil {
 		log.Printf("[TeamKnowledgeService.ProcessAndIndex] ERROR: failed to embed chunks: %v", err)
 		return 0, 0, fmt.Errorf("failed to embed chunks: %w", err)
