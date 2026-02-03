@@ -25,6 +25,16 @@ type JobEvent struct {
 	Job       *v1.GenerationJob `json:"job"`
 }
 
+// IngestionEvent represents an ingestion event for pub/sub.
+type IngestionEvent struct {
+	JobID           string                   `json:"job_id"`
+	SourceID        string                   `json:"source_id"`
+	Status          v1.IngestionStatus       `json:"status"`
+	ErrorMessage    *string                  `json:"error_message,omitempty"`
+	Source          *v1.KnowledgeSource      `json:"source,omitempty"`
+	ProgressPercent *int32                   `json:"progress_percent,omitempty"`
+}
+
 // notificationEventWire is the wire format for NotificationEvent using protojson for Notification.
 type notificationEventWire struct {
 	EventType    v1.NotificationEventType `json:"event_type"`
@@ -103,16 +113,69 @@ func (e *JobEvent) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// ingestionEventWire is the wire format for IngestionEvent using protojson for Source.
+type ingestionEventWire struct {
+	JobID           string             `json:"job_id"`
+	SourceID        string             `json:"source_id"`
+	Status          v1.IngestionStatus `json:"status"`
+	ErrorMessage    *string            `json:"error_message,omitempty"`
+	Source          json.RawMessage    `json:"source,omitempty"`
+	ProgressPercent *int32             `json:"progress_percent,omitempty"`
+}
+
+// MarshalJSON implements custom JSON marshaling using protojson for Source.
+func (e *IngestionEvent) MarshalJSON() ([]byte, error) {
+	var sourceBytes []byte
+	var err error
+	if e.Source != nil {
+		sourceBytes, err = protojson.Marshal(e.Source)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal source: %w", err)
+		}
+	}
+	wire := ingestionEventWire{
+		JobID:           e.JobID,
+		SourceID:        e.SourceID,
+		Status:          e.Status,
+		ErrorMessage:    e.ErrorMessage,
+		Source:          sourceBytes,
+		ProgressPercent: e.ProgressPercent,
+	}
+	return json.Marshal(wire)
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling using protojson for Source.
+func (e *IngestionEvent) UnmarshalJSON(data []byte) error {
+	var wire ingestionEventWire
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+	e.JobID = wire.JobID
+	e.SourceID = wire.SourceID
+	e.Status = wire.Status
+	e.ErrorMessage = wire.ErrorMessage
+	e.ProgressPercent = wire.ProgressPercent
+	if len(wire.Source) > 0 {
+		e.Source = &v1.KnowledgeSource{}
+		if err := protojson.Unmarshal(wire.Source, e.Source); err != nil {
+			return fmt.Errorf("failed to unmarshal source: %w", err)
+		}
+	}
+	return nil
+}
+
 // Publisher defines the interface for publishing events.
 type Publisher interface {
 	PublishNotificationEvent(ctx context.Context, userID uuid.UUID, event *NotificationEvent) error
 	PublishJobEvent(ctx context.Context, userID uuid.UUID, event *JobEvent) error
+	PublishIngestionEvent(ctx context.Context, userID uuid.UUID, event *IngestionEvent) error
 }
 
 // Subscriber defines the interface for subscribing to events.
 type Subscriber interface {
 	SubscribeUserEvents(ctx context.Context, userID uuid.UUID) (<-chan *NotificationEvent, func(), error)
 	SubscribeJobEvents(ctx context.Context, userID uuid.UUID) (<-chan *JobEvent, func(), error)
+	SubscribeIngestionEvents(ctx context.Context, userID uuid.UUID) (<-chan *IngestionEvent, func(), error)
 }
 
 // RedisPubSub implements Publisher and Subscriber using Redis pub/sub.
@@ -163,6 +226,11 @@ func userChannel(userID uuid.UUID) string {
 // jobChannel returns the Redis channel name for a user's job events.
 func jobChannel(userID uuid.UUID) string {
 	return fmt.Sprintf("events:jobs:%s", userID.String())
+}
+
+// ingestionChannel returns the Redis channel name for a user's ingestion events.
+func ingestionChannel(userID uuid.UUID) string {
+	return fmt.Sprintf("events:ingestion:%s", userID.String())
 }
 
 // PublishNotificationEvent publishes a notification event to the user's channel.
@@ -323,6 +391,86 @@ func (p *RedisPubSub) SubscribeJobEvents(ctx context.Context, userID uuid.UUID) 
 	return eventCh, cleanup, nil
 }
 
+// PublishIngestionEvent publishes an ingestion event to the user's channel.
+func (p *RedisPubSub) PublishIngestionEvent(ctx context.Context, userID uuid.UUID, event *IngestionEvent) error {
+	channel := ingestionChannel(userID)
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ingestion event: %w", err)
+	}
+
+	if err := p.client.Publish(ctx, channel, data).Err(); err != nil {
+		return fmt.Errorf("failed to publish ingestion event: %w", err)
+	}
+
+	p.logger.Debug("published ingestion event",
+		"channel", channel,
+		"job_id", event.JobID,
+		"source_id", event.SourceID,
+		"status", event.Status.String(),
+	)
+
+	return nil
+}
+
+// SubscribeIngestionEvents subscribes to a user's ingestion events.
+// Returns a channel that receives events, a cleanup function, and an error.
+func (p *RedisPubSub) SubscribeIngestionEvents(ctx context.Context, userID uuid.UUID) (<-chan *IngestionEvent, func(), error) {
+	channel := ingestionChannel(userID)
+
+	pubsub := p.client.Subscribe(ctx, channel)
+
+	// Verify subscription is active
+	_, err := pubsub.Receive(ctx)
+	if err != nil {
+		pubsub.Close()
+		return nil, nil, fmt.Errorf("failed to subscribe to ingestion channel %s: %w", channel, err)
+	}
+
+	eventCh := make(chan *IngestionEvent, 10)
+
+	// Goroutine to forward messages to the event channel
+	go func() {
+		defer close(eventCh)
+
+		msgCh := pubsub.Channel()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-msgCh:
+				if !ok {
+					return
+				}
+
+				var event IngestionEvent
+				if err := json.Unmarshal([]byte(msg.Payload), &event); err != nil {
+					p.logger.Error("failed to unmarshal ingestion event",
+						"error", err,
+						"payload", msg.Payload,
+					)
+					continue
+				}
+
+				select {
+				case eventCh <- &event:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
+	cleanup := func() {
+		pubsub.Close()
+	}
+
+	p.logger.Debug("subscribed to ingestion events", "channel", channel)
+
+	return eventCh, cleanup, nil
+}
+
 // Close closes the Redis connection.
 func (p *RedisPubSub) Close() error {
 	return p.client.Close()
@@ -356,6 +504,18 @@ func (p *NoOpPubSub) PublishJobEvent(ctx context.Context, userID uuid.UUID, even
 // SubscribeJobEvents returns a closed channel (no events will be received).
 func (p *NoOpPubSub) SubscribeJobEvents(ctx context.Context, userID uuid.UUID) (<-chan *JobEvent, func(), error) {
 	ch := make(chan *JobEvent)
+	close(ch)
+	return ch, func() {}, nil
+}
+
+// PublishIngestionEvent does nothing.
+func (p *NoOpPubSub) PublishIngestionEvent(ctx context.Context, userID uuid.UUID, event *IngestionEvent) error {
+	return nil
+}
+
+// SubscribeIngestionEvents returns a closed channel (no events will be received).
+func (p *NoOpPubSub) SubscribeIngestionEvents(ctx context.Context, userID uuid.UUID) (<-chan *IngestionEvent, func(), error) {
+	ch := make(chan *IngestionEvent)
 	close(ch)
 	return ch, func() {}, nil
 }

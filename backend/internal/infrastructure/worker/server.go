@@ -12,11 +12,12 @@ import (
 
 // Server wraps the Asynq server and scheduler for background job processing.
 type Server struct {
-	server    *asynq.Server
-	scheduler *asynq.Scheduler
-	mux       *asynq.ServeMux
-	handlers  *Handlers
-	logger    domainservice.Logger
+	server               *asynq.Server
+	scheduler            *asynq.Scheduler
+	mux                  *asynq.ServeMux
+	handlers             *Handlers
+	teamKnowledgeHandler *TeamKnowledgeHandler
+	logger               domainservice.Logger
 }
 
 // NewServer creates a new Asynq worker server with all handlers registered.
@@ -151,6 +152,14 @@ func (s *Server) Shutdown() {
 	s.logger.Info("shutting down Asynq worker server")
 	s.scheduler.Shutdown()
 	s.server.Shutdown()
+}
+
+// RegisterTeamKnowledgeHandler registers the team knowledge ingestion handler.
+// This should be called after server creation with all required dependencies.
+func (s *Server) RegisterTeamKnowledgeHandler(handler *TeamKnowledgeHandler) {
+	s.teamKnowledgeHandler = handler
+	s.mux.HandleFunc(worker.TypeTeamKnowledgeIngestion, handler.HandleTeamKnowledgeIngestion)
+	s.logger.Info("registered team knowledge ingestion handler")
 }
 
 // asynqLogger adapts our logger to Asynq's logger interface

@@ -57,4 +57,25 @@ type KnowledgeSourceRepository interface {
 
 	// CountBySession returns the count of sources for a session.
 	CountBySession(ctx context.Context, sessionID string) (int32, error)
+
+	// CreateWithTeam creates a knowledge source with team_id (team-level knowledge).
+	CreateWithTeam(ctx context.Context, source *entity.KnowledgeSource) error
+
+	// ListByTeam retrieves all knowledge sources for a team.
+	ListByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error)
+
+	// GetReadyByTeam retrieves ready sources for a team (for RAG context).
+	GetReadyByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error)
+
+	// GetTeamSummary returns aggregated statistics for team knowledge.
+	GetTeamSummary(ctx context.Context, teamID uuid.UUID) (*entity.TeamKnowledgeSummary, error)
+
+	// CountByTeam returns the count of sources for a team.
+	CountByTeam(ctx context.Context, teamID uuid.UUID) (int32, error)
+
+	// DeleteByTeam deletes all knowledge sources for a team.
+	DeleteByTeam(ctx context.Context, teamID uuid.UUID) error
+
+	// UpdateDocumentIndex updates the summary and document index after user review.
+	UpdateDocumentIndex(ctx context.Context, id uuid.UUID, summary string, documentIndex *entity.DocumentIndex) (*entity.KnowledgeSource, error)
 }

@@ -358,3 +358,155 @@ func getIntPayload(payload map[string]interface{}, key string) int32 {
 	}
 	return 0
 }
+
+// =============================================================================
+// TEAM KNOWLEDGE METHODS
+// =============================================================================
+
+// CreateWithTeam creates a knowledge source with team_id (team-level knowledge).
+func (s *KnowledgeSourceService) CreateWithTeam(ctx context.Context, source *entity.KnowledgeSource) error {
+	source.Status = valueobject.KnowledgeSourceStatusPending
+	return s.repo.CreateWithTeam(ctx, source)
+}
+
+// ListByTeam retrieves all knowledge sources for a team.
+func (s *KnowledgeSourceService) ListByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error) {
+	return s.repo.ListByTeam(ctx, teamID)
+}
+
+// GetReadyByTeam retrieves ready sources for a team (for RAG context).
+func (s *KnowledgeSourceService) GetReadyByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error) {
+	return s.repo.GetReadyByTeam(ctx, teamID)
+}
+
+// GetTeamSummary returns aggregated statistics for team knowledge.
+func (s *KnowledgeSourceService) GetTeamSummary(ctx context.Context, teamID uuid.UUID) (*entity.TeamKnowledgeSummary, error) {
+	return s.repo.GetTeamSummary(ctx, teamID)
+}
+
+// SearchKnowledgeByTeam performs semantic search across team knowledge.
+func (s *KnowledgeSourceService) SearchKnowledgeByTeam(
+	ctx context.Context,
+	teamID uuid.UUID,
+	query string,
+	topK int,
+) ([]*entity.RetrievedChunk, error) {
+	if s.embeddingClient == nil || s.vectorClient == nil {
+		return nil, fmt.Errorf("embedding or vector client not configured")
+	}
+
+	// Generate query embedding
+	queryVector, err := s.embeddingClient.EmbedSingle(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to embed query: %w", err)
+	}
+
+	// Build filter for team
+	filter := map[string]interface{}{
+		"must": []map[string]interface{}{
+			{
+				"key":   "team_id",
+				"match": map[string]interface{}{"value": teamID.String()},
+			},
+		},
+	}
+
+	// Search vectors
+	results, err := s.vectorClient.Search(ctx, VectorCollectionName, queryVector, topK, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search vectors: %w", err)
+	}
+
+	// Convert to domain entities
+	chunks := make([]*entity.RetrievedChunk, len(results))
+	for i, r := range results {
+		sourceID, _ := uuid.Parse(getStringPayload(r.Payload, "source_id"))
+		chunkIndex := getIntPayload(r.Payload, "chunk_index")
+
+		chunks[i] = &entity.RetrievedChunk{
+			ID:              r.ID,
+			SourceID:        sourceID,
+			SourceName:      getStringPayload(r.Payload, "source_name"),
+			Content:         getStringPayload(r.Payload, "content"),
+			SimilarityScore: r.Score,
+			ChunkIndex:      &chunkIndex,
+		}
+	}
+
+	return chunks, nil
+}
+
+// UpdateDocumentIndex updates the summary and document index after user review.
+func (s *KnowledgeSourceService) UpdateDocumentIndex(
+	ctx context.Context,
+	id uuid.UUID,
+	summary string,
+	documentIndex *entity.DocumentIndex,
+) (*entity.KnowledgeSource, error) {
+	return s.repo.UpdateDocumentIndex(ctx, id, summary, documentIndex)
+}
+
+// ProcessAndIndexForTeam processes document content and stores vectors with team_id filter.
+// Returns chunk count and token count for the processed document.
+func (s *KnowledgeSourceService) ProcessAndIndexForTeam(
+	ctx context.Context,
+	source *entity.KnowledgeSource,
+	content string,
+) (chunkCount int32, tokenCount int32, err error) {
+	if s.embeddingClient == nil || s.vectorClient == nil {
+		return 0, 0, fmt.Errorf("embedding or vector client not configured")
+	}
+
+	// Ensure collection exists
+	if err := s.vectorClient.EnsureCollection(ctx, VectorCollectionName, VectorDimensions); err != nil {
+		return 0, 0, fmt.Errorf("failed to ensure collection: %w", err)
+	}
+
+	// Chunk the content
+	chunks := ChunkText(content, ChunkSize, ChunkOverlap)
+	if len(chunks) == 0 {
+		return 0, 0, fmt.Errorf("no content to process")
+	}
+
+	// Calculate token count (rough estimate: ~4 chars per token)
+	tokenCount = int32(len(content) / 4)
+
+	// Generate embeddings for all chunks
+	embeddings, err := s.embeddingClient.Embed(ctx, chunks)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to embed chunks: %w", err)
+	}
+
+	// Build points for vector DB
+	points := make([]vectordb.Point, len(chunks))
+	for i, chunk := range chunks {
+		pointID := uuid.New().String()
+
+		// Build payload with metadata
+		payload := map[string]interface{}{
+			"source_id":   source.ID.String(),
+			"source_name": source.Name,
+			"content":     chunk,
+			"chunk_index": i,
+			"tenant_id":   source.TenantID.String(),
+		}
+
+		// Add team_id for team-level knowledge
+		if source.TeamID != nil {
+			payload["team_id"] = source.TeamID.String()
+		}
+
+		points[i] = vectordb.Point{
+			ID:      pointID,
+			Vector:  embeddings[i],
+			Payload: payload,
+		}
+	}
+
+	// Upsert vectors
+	if err := s.vectorClient.Upsert(ctx, VectorCollectionName, points); err != nil {
+		return 0, 0, fmt.Errorf("failed to upsert vectors: %w", err)
+	}
+
+	return int32(len(chunks)), tokenCount, nil
+}

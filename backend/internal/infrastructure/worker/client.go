@@ -132,3 +132,32 @@ func (c *Client) EnqueueFeedbackSync(payload worker.FeedbackSyncPayload) error {
 	)
 	return nil
 }
+
+// EnqueueTeamKnowledgeIngestion enqueues a team knowledge ingestion task.
+func (c *Client) EnqueueTeamKnowledgeIngestion(payload worker.TeamKnowledgeIngestionPayload) error {
+	task, err := worker.NewTeamKnowledgeIngestionTask(payload)
+	if err != nil {
+		c.logger.Error("failed to create team knowledge ingestion task", "error", err)
+		return err
+	}
+
+	info, err := c.client.Enqueue(task)
+	if err != nil {
+		c.logger.Error("failed to enqueue team knowledge ingestion task",
+			"jobID", payload.JobID,
+			"sourceID", payload.SourceID,
+			"teamID", payload.TeamID,
+			"error", err,
+		)
+		return err
+	}
+
+	c.logger.Info("enqueued team knowledge ingestion task",
+		"taskID", info.ID,
+		"queue", info.Queue,
+		"jobID", payload.JobID,
+		"sourceID", payload.SourceID,
+		"teamID", payload.TeamID,
+	)
+	return nil
+}

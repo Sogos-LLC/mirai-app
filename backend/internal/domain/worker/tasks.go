@@ -8,14 +8,15 @@ import (
 
 // Task type constants
 const (
-	TypeStripeProvision  = "stripe:provision"
-	TypeStripeReconcile  = "stripe:reconcile" // Scheduled reconciliation for orphaned payments
-	TypeCleanupExpired   = "cleanup:expired"
-	TypeAIGeneration     = "ai:generation"
-	TypeAIGenerationPoll = "ai:generation:poll" // Scheduled polling task
-	TypeCourseExport     = "course:export"
-	TypeCourseExportPoll = "course:export:poll" // Scheduled polling task
-	TypeFeedbackSync     = "feedback:sync"      // Sync feedback to CRM
+	TypeStripeProvision        = "stripe:provision"
+	TypeStripeReconcile        = "stripe:reconcile"        // Scheduled reconciliation for orphaned payments
+	TypeCleanupExpired         = "cleanup:expired"
+	TypeAIGeneration           = "ai:generation"
+	TypeAIGenerationPoll       = "ai:generation:poll"       // Scheduled polling task
+	TypeCourseExport           = "course:export"
+	TypeCourseExportPoll       = "course:export:poll"       // Scheduled polling task
+	TypeFeedbackSync           = "feedback:sync"            // Sync feedback to CRM
+	TypeTeamKnowledgeIngestion = "team_knowledge:ingest"    // Team knowledge file ingestion
 )
 
 // Queue names for priority handling
@@ -119,4 +120,25 @@ func NewFeedbackSyncTask(payload FeedbackSyncPayload) (*asynq.Task, error) {
 		return nil, err
 	}
 	return asynq.NewTask(TypeFeedbackSync, data, asynq.Queue(QueueDefault), asynq.MaxRetry(5)), nil
+}
+
+// TeamKnowledgeIngestionPayload contains data for team knowledge file ingestion jobs
+type TeamKnowledgeIngestionPayload struct {
+	JobID       string `json:"job_id"`
+	SourceID    string `json:"source_id"`
+	TeamID      string `json:"team_id"`
+	TenantID    string `json:"tenant_id"`
+	UserID      string `json:"user_id"`
+	FilePath    string `json:"file_path"`
+	Filename    string `json:"filename"`
+	ContentType string `json:"content_type"`
+}
+
+// NewTeamKnowledgeIngestionTask creates a new team knowledge ingestion task
+func NewTeamKnowledgeIngestionTask(payload TeamKnowledgeIngestionPayload) (*asynq.Task, error) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TypeTeamKnowledgeIngestion, data, asynq.Queue(QueueDefault), asynq.MaxRetry(3)), nil
 }

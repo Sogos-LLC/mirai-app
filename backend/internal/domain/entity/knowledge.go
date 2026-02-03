@@ -13,6 +13,7 @@ type KnowledgeSource struct {
 	TenantID  uuid.UUID
 	CourseID  *uuid.UUID // Optional - nil for pre-course session sources
 	SessionID *string    // For pre-course wizard flow
+	TeamID    *uuid.UUID // Optional - for team-level knowledge sources
 
 	Type   valueobject.KnowledgeSourceType
 	Status valueobject.KnowledgeSourceStatus
@@ -68,4 +69,11 @@ type RetrievedChunk struct {
 	Content         string
 	SimilarityScore float32
 	ChunkIndex      *int32
+}
+
+// TeamKnowledgeSummary represents aggregated statistics for team knowledge.
+type TeamKnowledgeSummary struct {
+	TotalSources int32
+	TotalChunks  int32
+	TotalTokens  int32
 }
