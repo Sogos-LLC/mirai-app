@@ -47,7 +47,7 @@ UPDATE knowledge_sources SET
     status = $1,
     error_message = $2,
     chunk_count = $3,
-    processed_at = CASE WHEN $1::text = 'ready' THEN NOW() ELSE processed_at END,
+    processed_at = CASE WHEN $1 = 'ready'::knowledge_source_status THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $4
 RETURNING *;
@@ -60,7 +60,7 @@ UPDATE knowledge_sources SET
     chunk_count = $3,
     summary = $4,
     token_count = $5,
-    processed_at = CASE WHEN $1::text = 'ready' THEN NOW() ELSE processed_at END,
+    processed_at = CASE WHEN $1 = 'ready'::knowledge_source_status THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $6
 RETURNING *;
@@ -123,7 +123,7 @@ UPDATE knowledge_sources SET
     summary = $4,
     token_count = $5,
     document_index = $6,
-    processed_at = CASE WHEN $1::text = 'ready' THEN NOW() ELSE processed_at END,
+    processed_at = CASE WHEN $1 = 'ready'::knowledge_source_status THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $7
 RETURNING *;
