@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
+	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/embedding"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/vectordb"
@@ -18,6 +19,7 @@ type TeamKnowledgeService struct {
 	repo            repository.TeamKnowledgeRepository
 	embeddingClient *embedding.Client
 	vectorClient    *vectordb.QdrantClient
+	fileStorage     domainservice.FileStorage
 }
 
 // NewTeamKnowledgeService creates a new team knowledge service.
@@ -25,12 +27,14 @@ func NewTeamKnowledgeService(
 	repo repository.TeamKnowledgeRepository,
 	embeddingClient *embedding.Client,
 	vectorClient *vectordb.QdrantClient,
+	fileStorage domainservice.FileStorage,
 ) *TeamKnowledgeService {
 	log.Printf("[TeamKnowledgeService] Initializing service")
 	return &TeamKnowledgeService{
 		repo:            repo,
 		embeddingClient: embeddingClient,
 		vectorClient:    vectorClient,
+		fileStorage:     fileStorage,
 	}
 }
 
@@ -144,11 +148,22 @@ func (s *TeamKnowledgeService) UpdateStatusWithSummary(
 	return s.repo.UpdateStatusWithSummary(ctx, id, status, errorMsg, chunkCount, summary, tokenCount)
 }
 
-// Delete deletes a knowledge source and its vectors.
+// Delete deletes a knowledge source, its vectors, and the stored file.
 func (s *TeamKnowledgeService) Delete(ctx context.Context, id uuid.UUID) error {
 	log.Printf("[TeamKnowledgeService.Delete] Deleting source: id=%s", id)
 
-	// Delete vectors first
+	// First, fetch the source to get the file path
+	source, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		log.Printf("[TeamKnowledgeService.Delete] ERROR fetching source: %v", err)
+		return fmt.Errorf("failed to fetch source for deletion: %w", err)
+	}
+	if source == nil {
+		log.Printf("[TeamKnowledgeService.Delete] Source not found: id=%s", id)
+		return fmt.Errorf("knowledge source not found: %s", id)
+	}
+
+	// Step 1: Delete vectors from Qdrant
 	if s.vectorClient != nil {
 		log.Printf("[TeamKnowledgeService.Delete] Step 1: Deleting vectors from Qdrant")
 		if err := s.vectorClient.DeleteBySourceID(ctx, VectorCollectionName, id); err != nil {
@@ -157,8 +172,18 @@ func (s *TeamKnowledgeService) Delete(ctx context.Context, id uuid.UUID) error {
 		}
 	}
 
-	log.Printf("[TeamKnowledgeService.Delete] Step 2: Deleting DB record")
-	err := s.repo.Delete(ctx, id)
+	// Step 2: Delete file from storage
+	if s.fileStorage != nil && source.FilePath != nil && *source.FilePath != "" {
+		log.Printf("[TeamKnowledgeService.Delete] Step 2: Deleting file from storage: %s", *source.FilePath)
+		if err := s.fileStorage.Delete(ctx, *source.FilePath); err != nil {
+			// Log but don't fail - file may not exist or already deleted
+			log.Printf("[TeamKnowledgeService.Delete] Warning: failed to delete file: %v", err)
+		}
+	}
+
+	// Step 3: Delete DB record
+	log.Printf("[TeamKnowledgeService.Delete] Step 3: Deleting DB record")
+	err = s.repo.Delete(ctx, id)
 	if err != nil {
 		log.Printf("[TeamKnowledgeService.Delete] ERROR: %v", err)
 		return err

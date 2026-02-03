@@ -265,7 +265,7 @@ func main() {
 	logger.Info("knowledge source service initialized")
 
 	// Team Knowledge service (for team-level RAG knowledge)
-	teamKnowledgeService := service.NewTeamKnowledgeService(teamKnowledgeRepo, embeddingClient, vectorClient)
+	teamKnowledgeService := service.NewTeamKnowledgeService(teamKnowledgeRepo, embeddingClient, vectorClient, baseStorage)
 	logger.Info("team knowledge service initialized")
 
 	// Team Knowledge worker handler (for async processing)
