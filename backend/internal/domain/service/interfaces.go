@@ -550,6 +550,14 @@ type OutlineSectionResult struct {
 	Lessons        []OutlineLessonResult
 	IsFirstSection bool // First section in course
 	IsLastSection  bool // Last section in course
+
+	// Section metadata for curriculum planning
+	Level                string   // Learning level: "introduce", "develop", "master"
+	Intent               string   // Primary intent: "teach", "assess", "reinforce"
+	Emphasis             string   // Relative importance: "low", "medium", "high"
+	MappedOutcomeIndices []int    // Indices of course outcomes this section addresses
+	GroundingScore       float32  // How grounded in knowledge sources (0.0-1.0)
+	ContributingChunkIDs []string // IDs of RAG chunks that informed this section
 }
 
 // OutlineLessonResult represents a generated lesson in the outline.

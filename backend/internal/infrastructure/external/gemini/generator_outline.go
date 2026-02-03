@@ -103,12 +103,16 @@ func (c *Client) GenerateCourseOutline(ctx context.Context, req service.Generate
 			}
 
 			sections[i] = service.OutlineSectionResult{
-				Title:          section.Title,
-				Description:    section.Description,
-				Order:          i + 1,
-				Lessons:        lessons,
-				IsFirstSection: i == 0,
-				IsLastSection:  i == len(sectionsResp.Sections)-1,
+				Title:                section.Title,
+				Description:          section.Description,
+				Order:                i + 1,
+				Lessons:              lessons,
+				IsFirstSection:       i == 0,
+				IsLastSection:        i == len(sectionsResp.Sections)-1,
+				Level:                section.Level,
+				Intent:               section.Intent,
+				Emphasis:             section.Emphasis,
+				MappedOutcomeIndices: section.MappedOutcomeIndices,
 			}
 
 			return nil

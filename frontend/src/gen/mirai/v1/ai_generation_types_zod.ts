@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import { z } from "zod";
-import { GenerationJobStatus, GenerationJobType, JobEventType, OutlineApprovalStatus } from "./ai_generation_types_pb";
+import { GenerationJobStatus, GenerationJobType, JobEventType, OutlineApprovalStatus, SectionEmphasis, SectionIntent, SectionLevel } from "./ai_generation_types_pb";
 import { KnowledgeCitationSchema } from "./course_wizard_zod";
 import { LessonComponentType } from "./component_enums_pb";
 
@@ -34,6 +34,27 @@ export type OutlineApprovalStatusType = z.infer<typeof OutlineApprovalStatusSche
  */
 export const JobEventTypeSchema = z.nativeEnum(JobEventType);
 export type JobEventTypeType = z.infer<typeof JobEventTypeSchema>;
+
+/**
+ * Zod schema for SectionLevel enum
+ * @generated from enum mirai.v1.SectionLevel
+ */
+export const SectionLevelSchema = z.nativeEnum(SectionLevel);
+export type SectionLevelType = z.infer<typeof SectionLevelSchema>;
+
+/**
+ * Zod schema for SectionIntent enum
+ * @generated from enum mirai.v1.SectionIntent
+ */
+export const SectionIntentSchema = z.nativeEnum(SectionIntent);
+export type SectionIntentType = z.infer<typeof SectionIntentSchema>;
+
+/**
+ * Zod schema for SectionEmphasis enum
+ * @generated from enum mirai.v1.SectionEmphasis
+ */
+export const SectionEmphasisSchema = z.nativeEnum(SectionEmphasis);
+export type SectionEmphasisType = z.infer<typeof SectionEmphasisSchema>;
 
 /**
  * Zod schema for GenerationJob
@@ -127,6 +148,12 @@ export const OutlineSectionSchema = z.object({
   lessons: z.array(OutlineLessonSchema),
   isFirstSection: z.boolean(),
   isLastSection: z.boolean(),
+  mappedOutcomeIds: z.array(z.string()),
+  level: z.nativeEnum(SectionLevel),
+  intent: z.nativeEnum(SectionIntent),
+  emphasis: z.nativeEnum(SectionEmphasis),
+  groundingScore: z.number(),
+  contributingChunkIds: z.array(z.string()),
 });
 
 export type OutlineSection = z.infer<typeof OutlineSectionSchema>;

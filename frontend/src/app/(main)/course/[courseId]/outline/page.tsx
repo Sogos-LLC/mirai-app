@@ -19,6 +19,7 @@ import {
   Copy,
   CheckCheck,
   FileText,
+  Settings2,
 } from 'lucide-react';
 import {
   outlineReviewMachine,
@@ -36,8 +37,14 @@ import { transport } from '@/lib/connect';
 import {
   GenerationJobStatus,
   GenerationJobType,
+  SectionLevel,
+  SectionIntent,
+  SectionEmphasis,
   type CourseOutline,
+  type OutlineSection,
 } from '@/gen/mirai/v1/ai_generation_types_pb';
+import SectionMetadataBadges from '@/components/outline/SectionMetadataBadges';
+import SectionFeedbackControls, { type SectionFeedbackData } from '@/components/outline/SectionFeedbackControls';
 import {
   AIGenerationService,
   GetJobRequestSchema,
@@ -76,6 +83,8 @@ export default function OutlineReviewPage() {
   const [editState, setEditState] = useState<EditState | null>(null);
   // Copy success state
   const [copied, setCopied] = useState(false);
+  // Section feedback editing state
+  const [feedbackSectionIndex, setFeedbackSectionIndex] = useState<number | null>(null);
 
   // Fetch course data for metadata header
   const courseQuery = useGetCourse(courseId);
@@ -297,6 +306,36 @@ export default function OutlineReviewPage() {
     // Deduplicate and limit to top 5
     return [...new Set(allObjectives)].slice(0, 5);
   }, [context.outline]);
+
+  // Convert learning outcomes to selectable format for feedback controls
+  const availableOutcomesForFeedback = useMemo(() => {
+    return learningOutcomes.map((outcome, idx) => ({
+      id: `outcome-${idx}`,
+      text: outcome,
+    }));
+  }, [learningOutcomes]);
+
+  // Handle section feedback save
+  const handleSaveSectionFeedback = (sectionIndex: number, data: SectionFeedbackData) => {
+    // Update section metadata via state machine
+    send({
+      type: 'UPDATE_SECTION_METADATA',
+      sectionIndex,
+      level: data.level,
+      intent: data.intent,
+      emphasis: data.emphasis,
+      mappedOutcomeIds: data.mappedOutcomeIds,
+    });
+    setFeedbackSectionIndex(null);
+  };
+
+  // Get initial feedback data for a section
+  const getSectionFeedbackData = (section: OutlineSection): SectionFeedbackData => ({
+    level: section.level ?? SectionLevel.UNSPECIFIED,
+    intent: section.intent ?? SectionIntent.UNSPECIFIED,
+    emphasis: section.emphasis ?? SectionEmphasis.UNSPECIFIED,
+    mappedOutcomeIds: section.mappedOutcomeIds ?? [],
+  });
 
   // Build outline text for clipboard
   const buildOutlineText = (
@@ -612,29 +651,67 @@ export default function OutlineReviewPage() {
                             </div>
                           </div>
                         ) : (
-                          <div
-                            className="flex-1 py-3 pr-4 cursor-pointer group min-h-[44px] flex flex-col justify-center"
-                            onClick={() => setEditState({
-                              type: 'section',
-                              sectionIndex,
-                              title: section.title || `Section ${sectionIndex + 1}`,
-                            })}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-muted">
-                                Section {sectionIndex + 1}
-                              </span>
-                              <span className="text-xs text-muted">
-                                ({section.lessons?.length ?? 0} lessons)
-                              </span>
-                              <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
+                          <div className="flex-1 py-3 pr-4 min-h-[44px] flex flex-col justify-center">
+                            <div
+                              className="cursor-pointer group"
+                              onClick={() => setEditState({
+                                type: 'section',
+                                sectionIndex,
+                                title: section.title || `Section ${sectionIndex + 1}`,
+                              })}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-muted">
+                                  Section {sectionIndex + 1}
+                                </span>
+                                <span className="text-xs text-muted">
+                                  ({section.lessons?.length ?? 0} lessons)
+                                </span>
+                                <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
+                              </div>
+                              <h3 className="font-semibold text-primary">
+                                {section.title || `Section ${sectionIndex + 1}`}
+                              </h3>
                             </div>
-                            <h3 className="font-semibold text-primary">
-                              {section.title || `Section ${sectionIndex + 1}`}
-                            </h3>
+
+                            {/* Section Metadata Badges */}
+                            <div className="flex items-center gap-2 mt-2">
+                              <SectionMetadataBadges
+                                level={section.level}
+                                intent={section.intent}
+                                emphasis={section.emphasis}
+                                groundingScore={section.groundingScore}
+                                contributingChunkIds={section.contributingChunkIds}
+                                compact={false}
+                              />
+                              {/* Feedback button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFeedbackSectionIndex(sectionIndex);
+                                }}
+                                className={`p-1 rounded transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'} hover:bg-hover text-muted`}
+                                title="Edit section metadata"
+                              >
+                                <Settings2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
+
+                      {/* Section Feedback Controls */}
+                      {feedbackSectionIndex === sectionIndex && (
+                        <div className="px-4 pb-3">
+                          <SectionFeedbackControls
+                            initialData={getSectionFeedbackData(section)}
+                            availableOutcomes={availableOutcomesForFeedback}
+                            sectionTitle={section.title || `Section ${sectionIndex + 1}`}
+                            onSave={(data) => handleSaveSectionFeedback(sectionIndex, data)}
+                            onCancel={() => setFeedbackSectionIndex(null)}
+                          />
+                        </div>
+                      )}
 
                       {expandedSections.has(sectionIndex) && section.lessons && (
                         <div className="px-2 sm:px-4 pb-3">

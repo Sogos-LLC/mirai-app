@@ -443,11 +443,17 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 		}
 
 		section := map[string]any{
-			"id":          uuid.New().String(),
-			"title":       sectionResult.Title,
-			"description": sectionResult.Description,
-			"order":       sIdx + 1,
-			"lessons":     lessons,
+			"id":                   uuid.New().String(),
+			"title":                sectionResult.Title,
+			"description":          sectionResult.Description,
+			"order":                sIdx + 1,
+			"lessons":              lessons,
+			"level":                sectionResult.Level,
+			"intent":               sectionResult.Intent,
+			"emphasis":             sectionResult.Emphasis,
+			"mappedOutcomeIndices": sectionResult.MappedOutcomeIndices,
+			"groundingScore":       sectionResult.GroundingScore,
+			"contributingChunkIds": sectionResult.ContributingChunkIDs,
 		}
 		sections = append(sections, section)
 	}

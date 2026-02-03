@@ -88,6 +88,30 @@ message CourseOutline {
   optional string approved_by_user_id = 9;
 }
 
+// SectionLevel indicates the learning depth of a section.
+enum SectionLevel {
+  SECTION_LEVEL_UNSPECIFIED = 0;
+  SECTION_LEVEL_INTRODUCE = 1;  // First exposure to concepts
+  SECTION_LEVEL_DEVELOP = 2;    // Building understanding
+  SECTION_LEVEL_MASTER = 3;     // Deep proficiency
+}
+
+// SectionIntent indicates the primary purpose of a section.
+enum SectionIntent {
+  SECTION_INTENT_UNSPECIFIED = 0;
+  SECTION_INTENT_TEACH = 1;      // Primary instruction
+  SECTION_INTENT_ASSESS = 2;     // Evaluation/testing
+  SECTION_INTENT_REINFORCE = 3;  // Practice and reinforcement
+}
+
+// SectionEmphasis indicates relative importance of a section.
+enum SectionEmphasis {
+  SECTION_EMPHASIS_UNSPECIFIED = 0;
+  SECTION_EMPHASIS_LOW = 1;
+  SECTION_EMPHASIS_MEDIUM = 2;
+  SECTION_EMPHASIS_HIGH = 3;
+}
+
 // OutlineSection represents a section in the outline.
 message OutlineSection {
   string id = 1;
@@ -97,6 +121,14 @@ message OutlineSection {
   repeated OutlineLesson lessons = 5;
   bool is_first_section = 6;
   bool is_last_section = 7;
+
+  // Section metadata for curriculum planning
+  repeated string mapped_outcome_ids = 10;     // IDs of outcomes this section addresses
+  SectionLevel level = 11;                      // Learning level (introduce/develop/master)
+  SectionIntent intent = 12;                    // Primary intent (teach/assess/reinforce)
+  SectionEmphasis emphasis = 13;                // Relative importance
+  float grounding_score = 14;                   // How grounded in knowledge sources (0.0-1.0)
+  repeated string contributing_chunk_ids = 15; // IDs of RAG chunks that informed this section
 }
 
 // OutlineLesson represents a lesson in the outline.

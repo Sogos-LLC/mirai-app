@@ -255,6 +255,165 @@ func (JobEventType) EnumDescriptor() ([]byte, []int) {
 	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{3}
 }
 
+// SectionLevel indicates the learning depth of a section.
+type SectionLevel int32
+
+const (
+	SectionLevel_SECTION_LEVEL_UNSPECIFIED SectionLevel = 0
+	SectionLevel_SECTION_LEVEL_INTRODUCE   SectionLevel = 1 // First exposure to concepts
+	SectionLevel_SECTION_LEVEL_DEVELOP     SectionLevel = 2 // Building understanding
+	SectionLevel_SECTION_LEVEL_MASTER      SectionLevel = 3 // Deep proficiency
+)
+
+// Enum value maps for SectionLevel.
+var (
+	SectionLevel_name = map[int32]string{
+		0: "SECTION_LEVEL_UNSPECIFIED",
+		1: "SECTION_LEVEL_INTRODUCE",
+		2: "SECTION_LEVEL_DEVELOP",
+		3: "SECTION_LEVEL_MASTER",
+	}
+	SectionLevel_value = map[string]int32{
+		"SECTION_LEVEL_UNSPECIFIED": 0,
+		"SECTION_LEVEL_INTRODUCE":   1,
+		"SECTION_LEVEL_DEVELOP":     2,
+		"SECTION_LEVEL_MASTER":      3,
+	}
+)
+
+func (x SectionLevel) Enum() *SectionLevel {
+	p := new(SectionLevel)
+	*p = x
+	return p
+}
+
+func (x SectionLevel) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SectionLevel) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_ai_generation_types_proto_enumTypes[4].Descriptor()
+}
+
+func (SectionLevel) Type() protoreflect.EnumType {
+	return &file_mirai_v1_ai_generation_types_proto_enumTypes[4]
+}
+
+func (x SectionLevel) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SectionLevel.Descriptor instead.
+func (SectionLevel) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{4}
+}
+
+// SectionIntent indicates the primary purpose of a section.
+type SectionIntent int32
+
+const (
+	SectionIntent_SECTION_INTENT_UNSPECIFIED SectionIntent = 0
+	SectionIntent_SECTION_INTENT_TEACH       SectionIntent = 1 // Primary instruction
+	SectionIntent_SECTION_INTENT_ASSESS      SectionIntent = 2 // Evaluation/testing
+	SectionIntent_SECTION_INTENT_REINFORCE   SectionIntent = 3 // Practice and reinforcement
+)
+
+// Enum value maps for SectionIntent.
+var (
+	SectionIntent_name = map[int32]string{
+		0: "SECTION_INTENT_UNSPECIFIED",
+		1: "SECTION_INTENT_TEACH",
+		2: "SECTION_INTENT_ASSESS",
+		3: "SECTION_INTENT_REINFORCE",
+	}
+	SectionIntent_value = map[string]int32{
+		"SECTION_INTENT_UNSPECIFIED": 0,
+		"SECTION_INTENT_TEACH":       1,
+		"SECTION_INTENT_ASSESS":      2,
+		"SECTION_INTENT_REINFORCE":   3,
+	}
+)
+
+func (x SectionIntent) Enum() *SectionIntent {
+	p := new(SectionIntent)
+	*p = x
+	return p
+}
+
+func (x SectionIntent) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SectionIntent) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_ai_generation_types_proto_enumTypes[5].Descriptor()
+}
+
+func (SectionIntent) Type() protoreflect.EnumType {
+	return &file_mirai_v1_ai_generation_types_proto_enumTypes[5]
+}
+
+func (x SectionIntent) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SectionIntent.Descriptor instead.
+func (SectionIntent) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{5}
+}
+
+// SectionEmphasis indicates relative importance of a section.
+type SectionEmphasis int32
+
+const (
+	SectionEmphasis_SECTION_EMPHASIS_UNSPECIFIED SectionEmphasis = 0
+	SectionEmphasis_SECTION_EMPHASIS_LOW         SectionEmphasis = 1
+	SectionEmphasis_SECTION_EMPHASIS_MEDIUM      SectionEmphasis = 2
+	SectionEmphasis_SECTION_EMPHASIS_HIGH        SectionEmphasis = 3
+)
+
+// Enum value maps for SectionEmphasis.
+var (
+	SectionEmphasis_name = map[int32]string{
+		0: "SECTION_EMPHASIS_UNSPECIFIED",
+		1: "SECTION_EMPHASIS_LOW",
+		2: "SECTION_EMPHASIS_MEDIUM",
+		3: "SECTION_EMPHASIS_HIGH",
+	}
+	SectionEmphasis_value = map[string]int32{
+		"SECTION_EMPHASIS_UNSPECIFIED": 0,
+		"SECTION_EMPHASIS_LOW":         1,
+		"SECTION_EMPHASIS_MEDIUM":      2,
+		"SECTION_EMPHASIS_HIGH":        3,
+	}
+)
+
+func (x SectionEmphasis) Enum() *SectionEmphasis {
+	p := new(SectionEmphasis)
+	*p = x
+	return p
+}
+
+func (x SectionEmphasis) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SectionEmphasis) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_ai_generation_types_proto_enumTypes[6].Descriptor()
+}
+
+func (SectionEmphasis) Type() protoreflect.EnumType {
+	return &file_mirai_v1_ai_generation_types_proto_enumTypes[6]
+}
+
+func (x SectionEmphasis) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SectionEmphasis.Descriptor instead.
+func (SectionEmphasis) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{6}
+}
+
 // GenerationJob represents an AI generation job.
 type GenerationJob struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -555,8 +714,15 @@ type OutlineSection struct {
 	Lessons        []*OutlineLesson       `protobuf:"bytes,5,rep,name=lessons,proto3" json:"lessons,omitempty"`
 	IsFirstSection bool                   `protobuf:"varint,6,opt,name=is_first_section,json=isFirstSection,proto3" json:"is_first_section,omitempty"`
 	IsLastSection  bool                   `protobuf:"varint,7,opt,name=is_last_section,json=isLastSection,proto3" json:"is_last_section,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Section metadata for curriculum planning
+	MappedOutcomeIds     []string        `protobuf:"bytes,10,rep,name=mapped_outcome_ids,json=mappedOutcomeIds,proto3" json:"mapped_outcome_ids,omitempty"`             // IDs of outcomes this section addresses
+	Level                SectionLevel    `protobuf:"varint,11,opt,name=level,proto3,enum=mirai.v1.SectionLevel" json:"level,omitempty"`                                 // Learning level (introduce/develop/master)
+	Intent               SectionIntent   `protobuf:"varint,12,opt,name=intent,proto3,enum=mirai.v1.SectionIntent" json:"intent,omitempty"`                              // Primary intent (teach/assess/reinforce)
+	Emphasis             SectionEmphasis `protobuf:"varint,13,opt,name=emphasis,proto3,enum=mirai.v1.SectionEmphasis" json:"emphasis,omitempty"`                        // Relative importance
+	GroundingScore       float32         `protobuf:"fixed32,14,opt,name=grounding_score,json=groundingScore,proto3" json:"grounding_score,omitempty"`                   // How grounded in knowledge sources (0.0-1.0)
+	ContributingChunkIds []string        `protobuf:"bytes,15,rep,name=contributing_chunk_ids,json=contributingChunkIds,proto3" json:"contributing_chunk_ids,omitempty"` // IDs of RAG chunks that informed this section
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *OutlineSection) Reset() {
@@ -636,6 +802,48 @@ func (x *OutlineSection) GetIsLastSection() bool {
 		return x.IsLastSection
 	}
 	return false
+}
+
+func (x *OutlineSection) GetMappedOutcomeIds() []string {
+	if x != nil {
+		return x.MappedOutcomeIds
+	}
+	return nil
+}
+
+func (x *OutlineSection) GetLevel() SectionLevel {
+	if x != nil {
+		return x.Level
+	}
+	return SectionLevel_SECTION_LEVEL_UNSPECIFIED
+}
+
+func (x *OutlineSection) GetIntent() SectionIntent {
+	if x != nil {
+		return x.Intent
+	}
+	return SectionIntent_SECTION_INTENT_UNSPECIFIED
+}
+
+func (x *OutlineSection) GetEmphasis() SectionEmphasis {
+	if x != nil {
+		return x.Emphasis
+	}
+	return SectionEmphasis_SECTION_EMPHASIS_UNSPECIFIED
+}
+
+func (x *OutlineSection) GetGroundingScore() float32 {
+	if x != nil {
+		return x.GroundingScore
+	}
+	return 0
+}
+
+func (x *OutlineSection) GetContributingChunkIds() []string {
+	if x != nil {
+		return x.ContributingChunkIds
+	}
+	return nil
 }
 
 // OutlineLesson represents a lesson in the outline.
@@ -1155,7 +1363,7 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x13approved_by_user_id\x18\t \x01(\tH\x02R\x10approvedByUserId\x88\x01\x01B\x13\n" +
 	"\x11_rejection_reasonB\x0e\n" +
 	"\f_approved_atB\x16\n" +
-	"\x14_approved_by_user_id\"\xf3\x01\n" +
+	"\x14_approved_by_user_id\"\x96\x04\n" +
 	"\x0eOutlineSection\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -1163,7 +1371,14 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x05order\x18\x04 \x01(\x05R\x05order\x121\n" +
 	"\alessons\x18\x05 \x03(\v2\x17.mirai.v1.OutlineLessonR\alessons\x12(\n" +
 	"\x10is_first_section\x18\x06 \x01(\bR\x0eisFirstSection\x12&\n" +
-	"\x0fis_last_section\x18\a \x01(\bR\risLastSection\"\xcb\x03\n" +
+	"\x0fis_last_section\x18\a \x01(\bR\risLastSection\x12,\n" +
+	"\x12mapped_outcome_ids\x18\n" +
+	" \x03(\tR\x10mappedOutcomeIds\x12,\n" +
+	"\x05level\x18\v \x01(\x0e2\x16.mirai.v1.SectionLevelR\x05level\x12/\n" +
+	"\x06intent\x18\f \x01(\x0e2\x17.mirai.v1.SectionIntentR\x06intent\x125\n" +
+	"\bemphasis\x18\r \x01(\x0e2\x19.mirai.v1.SectionEmphasisR\bemphasis\x12'\n" +
+	"\x0fgrounding_score\x18\x0e \x01(\x02R\x0egroundingScore\x124\n" +
+	"\x16contributing_chunk_ids\x18\x0f \x03(\tR\x14contributingChunkIds\"\xcb\x03\n" +
 	"\rOutlineLesson\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -1236,7 +1451,22 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x18JOB_EVENT_TYPE_COMPLETED\x10\x03\x12\x19\n" +
 	"\x15JOB_EVENT_TYPE_FAILED\x10\x04\x12\x1c\n" +
 	"\x18JOB_EVENT_TYPE_CANCELLED\x10\x05\x12\x1c\n" +
-	"\x18JOB_EVENT_TYPE_KEEPALIVE\x10\x06B\x9c\x01\n" +
+	"\x18JOB_EVENT_TYPE_KEEPALIVE\x10\x06*\x7f\n" +
+	"\fSectionLevel\x12\x1d\n" +
+	"\x19SECTION_LEVEL_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17SECTION_LEVEL_INTRODUCE\x10\x01\x12\x19\n" +
+	"\x15SECTION_LEVEL_DEVELOP\x10\x02\x12\x18\n" +
+	"\x14SECTION_LEVEL_MASTER\x10\x03*\x82\x01\n" +
+	"\rSectionIntent\x12\x1e\n" +
+	"\x1aSECTION_INTENT_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14SECTION_INTENT_TEACH\x10\x01\x12\x19\n" +
+	"\x15SECTION_INTENT_ASSESS\x10\x02\x12\x1c\n" +
+	"\x18SECTION_INTENT_REINFORCE\x10\x03*\x85\x01\n" +
+	"\x0fSectionEmphasis\x12 \n" +
+	"\x1cSECTION_EMPHASIS_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14SECTION_EMPHASIS_LOW\x10\x01\x12\x1b\n" +
+	"\x17SECTION_EMPHASIS_MEDIUM\x10\x02\x12\x19\n" +
+	"\x15SECTION_EMPHASIS_HIGH\x10\x03B\x9c\x01\n" +
 	"\fcom.mirai.v1B\x16AiGenerationTypesProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -1251,47 +1481,53 @@ func file_mirai_v1_ai_generation_types_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_ai_generation_types_proto_rawDescData
 }
 
-var file_mirai_v1_ai_generation_types_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_mirai_v1_ai_generation_types_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
 var file_mirai_v1_ai_generation_types_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_mirai_v1_ai_generation_types_proto_goTypes = []any{
 	(GenerationJobType)(0),            // 0: mirai.v1.GenerationJobType
 	(GenerationJobStatus)(0),          // 1: mirai.v1.GenerationJobStatus
 	(OutlineApprovalStatus)(0),        // 2: mirai.v1.OutlineApprovalStatus
 	(JobEventType)(0),                 // 3: mirai.v1.JobEventType
-	(*GenerationJob)(nil),             // 4: mirai.v1.GenerationJob
-	(*CourseOutline)(nil),             // 5: mirai.v1.CourseOutline
-	(*OutlineSection)(nil),            // 6: mirai.v1.OutlineSection
-	(*OutlineLesson)(nil),             // 7: mirai.v1.OutlineLesson
-	(*GeneratedLesson)(nil),           // 8: mirai.v1.GeneratedLesson
-	(*LessonComponent)(nil),           // 9: mirai.v1.LessonComponent
-	(*ComponentAlignment)(nil),        // 10: mirai.v1.ComponentAlignment
-	(*ComponentAlignmentTargets)(nil), // 11: mirai.v1.ComponentAlignmentTargets
-	(*CourseGenerationInput)(nil),     // 12: mirai.v1.CourseGenerationInput
-	(*timestamppb.Timestamp)(nil),     // 13: google.protobuf.Timestamp
-	(*KnowledgeCitation)(nil),         // 14: mirai.v1.KnowledgeCitation
-	(LessonComponentType)(0),          // 15: mirai.v1.LessonComponentType
+	(SectionLevel)(0),                 // 4: mirai.v1.SectionLevel
+	(SectionIntent)(0),                // 5: mirai.v1.SectionIntent
+	(SectionEmphasis)(0),              // 6: mirai.v1.SectionEmphasis
+	(*GenerationJob)(nil),             // 7: mirai.v1.GenerationJob
+	(*CourseOutline)(nil),             // 8: mirai.v1.CourseOutline
+	(*OutlineSection)(nil),            // 9: mirai.v1.OutlineSection
+	(*OutlineLesson)(nil),             // 10: mirai.v1.OutlineLesson
+	(*GeneratedLesson)(nil),           // 11: mirai.v1.GeneratedLesson
+	(*LessonComponent)(nil),           // 12: mirai.v1.LessonComponent
+	(*ComponentAlignment)(nil),        // 13: mirai.v1.ComponentAlignment
+	(*ComponentAlignmentTargets)(nil), // 14: mirai.v1.ComponentAlignmentTargets
+	(*CourseGenerationInput)(nil),     // 15: mirai.v1.CourseGenerationInput
+	(*timestamppb.Timestamp)(nil),     // 16: google.protobuf.Timestamp
+	(*KnowledgeCitation)(nil),         // 17: mirai.v1.KnowledgeCitation
+	(LessonComponentType)(0),          // 18: mirai.v1.LessonComponentType
 }
 var file_mirai_v1_ai_generation_types_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.GenerationJob.type:type_name -> mirai.v1.GenerationJobType
 	1,  // 1: mirai.v1.GenerationJob.status:type_name -> mirai.v1.GenerationJobStatus
-	13, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
-	13, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
-	13, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
-	6,  // 5: mirai.v1.CourseOutline.sections:type_name -> mirai.v1.OutlineSection
+	16, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
+	16, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
+	16, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
+	9,  // 5: mirai.v1.CourseOutline.sections:type_name -> mirai.v1.OutlineSection
 	2,  // 6: mirai.v1.CourseOutline.approval_status:type_name -> mirai.v1.OutlineApprovalStatus
-	13, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
-	13, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
-	7,  // 9: mirai.v1.OutlineSection.lessons:type_name -> mirai.v1.OutlineLesson
-	14, // 10: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
-	9,  // 11: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
-	13, // 12: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
-	15, // 13: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
-	10, // 14: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	16, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
+	16, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
+	10, // 9: mirai.v1.OutlineSection.lessons:type_name -> mirai.v1.OutlineLesson
+	4,  // 10: mirai.v1.OutlineSection.level:type_name -> mirai.v1.SectionLevel
+	5,  // 11: mirai.v1.OutlineSection.intent:type_name -> mirai.v1.SectionIntent
+	6,  // 12: mirai.v1.OutlineSection.emphasis:type_name -> mirai.v1.SectionEmphasis
+	17, // 13: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
+	12, // 14: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
+	16, // 15: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
+	18, // 16: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
+	13, // 17: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_ai_generation_types_proto_init() }
@@ -1311,7 +1547,7 @@ func file_mirai_v1_ai_generation_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_ai_generation_types_proto_rawDesc), len(file_mirai_v1_ai_generation_types_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      7,
 			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,

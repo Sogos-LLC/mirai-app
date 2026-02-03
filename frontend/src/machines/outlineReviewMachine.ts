@@ -4,6 +4,11 @@ import type {
   CourseOutline,
   OutlineSection,
 } from '@/gen/mirai/v1/ai_generation_types_pb';
+import {
+  SectionLevel,
+  SectionIntent,
+  SectionEmphasis,
+} from '@/gen/mirai/v1/ai_generation_types_pb';
 import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 // ============================================================
@@ -32,6 +37,7 @@ export type OutlineReviewEvent =
   | { type: 'REGENERATE_OUTLINE' }
   | { type: 'UPDATE_SECTION_TITLE'; sectionIndex: number; title: string }
   | { type: 'UPDATE_LESSON'; sectionIndex: number; lessonIndex: number; title: string; description: string }
+  | { type: 'UPDATE_SECTION_METADATA'; sectionIndex: number; level: SectionLevel; intent: SectionIntent; emphasis: SectionEmphasis; mappedOutcomeIds: string[] }
   // Lesson generation
   | { type: 'DISMISS_LESSON_GENERATION' }
   // Common
@@ -401,6 +407,24 @@ export const outlineReviewMachine = createMachine({
                   };
                 }
                 sections[event.sectionIndex] = { ...section, lessons };
+              }
+              return { ...context.outline, sections };
+            },
+          }),
+        },
+        UPDATE_SECTION_METADATA: {
+          actions: assign({
+            outline: ({ context, event }) => {
+              if (!context.outline?.sections) return context.outline;
+              const sections = [...context.outline.sections];
+              if (sections[event.sectionIndex]) {
+                sections[event.sectionIndex] = {
+                  ...sections[event.sectionIndex],
+                  level: event.level,
+                  intent: event.intent,
+                  emphasis: event.emphasis,
+                  mappedOutcomeIds: event.mappedOutcomeIds,
+                };
               }
               return { ...context.outline, sections };
             },

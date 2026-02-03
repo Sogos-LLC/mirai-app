@@ -14,6 +14,12 @@ type sectionOutline struct {
 	Title        string   `json:"title"`
 	Description  string   `json:"description"`
 	LessonTitles []string `json:"lesson_titles"`
+
+	// Section metadata for curriculum planning
+	Level                string `json:"level"`                  // "introduce", "develop", "master"
+	Intent               string `json:"intent"`                 // "teach", "assess", "reinforce"
+	Emphasis             string `json:"emphasis"`               // "low", "medium", "high"
+	MappedOutcomeIndices []int  `json:"mapped_outcome_indices"` // Indices of course outcomes addressed
 }
 
 type sectionLessonsResponse struct {
