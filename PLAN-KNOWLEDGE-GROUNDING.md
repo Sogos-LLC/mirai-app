@@ -6,19 +6,22 @@ Implement a knowledge-grounded course generation system with RAG orchestration, 
 
 **Key Architecture Decisions:**
 1. **Provenance embedded in S3CourseContent** - NOT a separate database table (follows existing MinIO-first pattern)
-2. **Knowledge selection as Step 1** - Before course name, auto-skips if no sources exist
+2. **Knowledge selection via modal** - Rich modal accessible from "Add Knowledge" button in step 1 (Course Name)
 3. **Curriculum map as separate artifact** - With staleness detection and whole-map approval
 4. **RAG config via YAML** - With optional database overrides for A/B testing
 
 ---
 
-## Session 1: Knowledge Selection Wizard Step ✅ COMPLETED
+## Session 1: Knowledge Selection Modal ✅ COMPLETED (REVISED)
 
-**Goal:** Add dedicated first wizard step for knowledge source selection with scope locking.
+**Goal:** Add rich modal for knowledge source selection accessible from Course Name step.
+
+**Initial Approach (Deprecated):** Separate wizard step for knowledge selection
+**Final Approach:** Modal accessible from "Add Knowledge" button in Course Name step
 
 **Deliverables:**
-- [x] New wizard step 1 for selecting team/global knowledge
-- [x] Wizard becomes 6 steps total
+- [x] Rich modal for selecting team/global knowledge sources + uploading files
+- [x] Wizard remains 5 steps (courseName → titleDescription → smeSelection → audienceSelection → toneSelection)
 - [x] Selected knowledge IDs persisted in WizardStepData
 - [x] Backend filters RAG to only selected sources (stored in wizardData)
 
@@ -28,7 +31,7 @@ Implement a knowledge-grounded course generation system with RAG orchestration, 
 
 Added to `WizardStepData`:
 ```protobuf
-// Knowledge selection (Step 1)
+// Knowledge selection (via modal)
 repeated string selected_team_doc_ids = 15;
 repeated string selected_global_doc_ids = 16;
 int64 estimated_team_tokens = 17;
@@ -39,61 +42,56 @@ int64 estimated_global_tokens = 18;
 
 **File:** `frontend/src/machines/courseWizardMachine.ts`
 
-New step order:
-1. `knowledgeSelection` (NEW) - Select existing team/global knowledge
-2. `courseName` - Enter course name + upload additional files + generate outcomes
-3. `titleDescription` - Review AI-generated title/description
-4. `smeSelection` - Select SME personas
-5. `audienceSelection` - Select audience personas
-6. `toneSelection` - Select tone + additional context
+5-step wizard:
+1. `courseName` - Enter course name + select knowledge via modal + generate outcomes
+2. `titleDescription` - Review AI-generated title/description
+3. `smeSelection` - Select SME personas
+4. `audienceSelection` - Select audience personas
+5. `toneSelection` - Select tone + additional context
 
-New context fields added:
+Context fields:
 - `availableTeamDocs`, `availableGlobalDocs`
 - `selectedTeamDocIds`, `selectedGlobalDocIds`
 
-New events added:
+Events (available from courseName state):
 - `SET_AVAILABLE_KNOWLEDGE`, `TOGGLE_TEAM_DOC`, `TOGGLE_GLOBAL_DOC`
 - `SELECT_ALL_TEAM_DOCS`, `DESELECT_ALL_TEAM_DOCS`
 - `SELECT_ALL_GLOBAL_DOCS`, `DESELECT_ALL_GLOBAL_DOCS`
-- `APPROVE_KNOWLEDGE_SELECTION`, `SKIP_KNOWLEDGE_SELECTION`
 
-Auto-skip logic implemented: If no knowledge sources exist, wizard skips to step 2.
+### 1.3 Frontend: Knowledge Sources Modal ✅
 
-### 1.3 Frontend: Knowledge Selection Component ✅
+**File:** `frontend/src/components/wizard/modals/KnowledgeSourcesModal.tsx`
 
-**File:** `frontend/src/components/wizard/steps/KnowledgeSelectionStep.tsx`
-
-UI Features:
-- Two sections: "Team Knowledge" and "Global Knowledge"
-- Each source shows: name, status badge, token count, summary preview
-- Checkbox multi-select with "Select All" / "Deselect All"
-- Total tokens selected indicator
-- "Continue without knowledge" link for explicit skip
-- Warning banner if sources exist but none selected
+Rich modal with two tabs:
+1. **Existing Sources** - Select from team/global knowledge
+   - Search/filter functionality
+   - Checkbox multi-select with "Select All" / "Deselect All"
+   - Token count display
+   - Source summaries
+2. **Upload Files** - Upload new documents
+   - Drag & drop file upload
+   - Processing status indicators
+   - Indexed file list
 
 ### 1.4 CourseWizard.tsx Updates ✅
 
 - Loads global knowledge sources on mount
-- Passes available sources to state machine
-- Renders KnowledgeSelectionStep for new step
+- Opens KnowledgeSourcesModal when "Add Knowledge" clicked
 - Passes selected knowledge IDs through generateOutlineActor to wizardData
 
 ### 1.5 WizardProgress Updates ✅
 
-- Added BookOpen icon for knowledgeSelection step
-- Updated to show 6 steps
+- 5 steps displayed (removed knowledgeSelection icon)
 
 ### 1.6 Verification ✅
 
-- [x] Wizard shows 6 steps when team/global knowledge exists
-- [x] Wizard auto-skips to step 2 when no knowledge exists
-- [x] Can select/deselect team documents via checkboxes
-- [x] Can toggle global knowledge sources
+- [x] Wizard shows 5 steps
+- [x] "Add Knowledge" button opens rich modal
+- [x] Can select/deselect team and global documents
+- [x] Can upload new files from modal
 - [x] Token counts update dynamically
 - [x] Selection persists in wizardData
-- [x] Warning shown if sources exist but none selected
-- [x] "Skip" link allows proceeding with no selection
-- [x] `buf lint`, `buf generate`, `go build`, `npm run build` all pass
+- [x] `npm run build` passes
 
 ---
 

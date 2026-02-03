@@ -30,7 +30,6 @@ import { useListKnowledgeSources, KnowledgeSourceStatus } from '@/hooks/useTeamK
 import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
-import KnowledgeSelectionStep from './steps/KnowledgeSelectionStep';
 import CourseNameStep from './steps/CourseNameStep';
 import TitleDescriptionStep from './steps/TitleDescriptionStep';
 import SMEPersonasStep from './steps/SMEPersonasStep';
@@ -40,14 +39,10 @@ import GeneratingStep from './steps/GeneratingStep';
 import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import {
-  KnowledgeUploadModal,
-  KnowledgeVerificationModal,
+  KnowledgeSourcesModal,
   type PendingFile,
   type ProcessedSource,
 } from './modals';
-
-// Modal state types
-type KnowledgeModalState = 'closed' | 'upload' | 'verification';
 
 // Generate session ID for pre-course knowledge sources
 function generateSessionId(): string {
@@ -58,7 +53,7 @@ export default function CourseWizard() {
   const router = useRouter();
 
   // Knowledge modal state
-  const [knowledgeModalState, setKnowledgeModalState] = useState<KnowledgeModalState>('closed');
+  const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [processedSources, setProcessedSources] = useState<ProcessedSource[]>([]);
   const [sessionId] = useState(() => generateSessionId());
@@ -347,18 +342,16 @@ export default function CourseWizard() {
 
   // Knowledge modal handlers
   const handleOpenKnowledgeModal = useCallback(() => {
-    setKnowledgeModalState('upload');
+    setIsKnowledgeModalOpen(true);
   }, []);
 
   const handleCloseKnowledgeModal = useCallback(() => {
-    // When closing, move successfully uploaded files to processedSources
+    // When closing, clear the done files from pending list
     const successfulFiles = pendingFiles.filter(f => f.status === 'done');
     if (successfulFiles.length > 0) {
-      // Note: The actual processed source data was added via handleUploadFile
-      // We just clear the pending files that are done
       setPendingFiles(prev => prev.filter(f => f.status !== 'done'));
     }
-    setKnowledgeModalState('closed');
+    setIsKnowledgeModalOpen(false);
   }, [pendingFiles]);
 
   const handleAddFiles = useCallback((files: PendingFile[]) => {
@@ -407,14 +400,6 @@ export default function CourseWizard() {
     return processed;
   }, [sessionId, uploadAndProcess]);
 
-  const handleVerificationClose = useCallback(() => {
-    setKnowledgeModalState('closed');
-  }, []);
-
-  const handleAddMoreFiles = useCallback(() => {
-    // Transition back to upload modal
-    setKnowledgeModalState('upload');
-  }, []);
 
   // Loading state while checking for saved state or loading knowledge
   if (state.matches('checkingSavedState') || getSavedState.isLoading || globalKnowledgeLoading) {
@@ -587,25 +572,6 @@ export default function CourseWizard() {
       <WizardProgress currentStep={context.currentStep} />
       {renderError()}
 
-      {state.matches('knowledgeSelection') && (
-        <KnowledgeSelectionStep
-          teamDocs={context.availableTeamDocs}
-          globalDocs={context.availableGlobalDocs}
-          selectedTeamDocIds={context.selectedTeamDocIds}
-          selectedGlobalDocIds={context.selectedGlobalDocIds}
-          onToggleTeamDoc={(docId) => send({ type: 'TOGGLE_TEAM_DOC', docId })}
-          onToggleGlobalDoc={(docId) => send({ type: 'TOGGLE_GLOBAL_DOC', docId })}
-          onSelectAllTeamDocs={() => send({ type: 'SELECT_ALL_TEAM_DOCS' })}
-          onDeselectAllTeamDocs={() => send({ type: 'DESELECT_ALL_TEAM_DOCS' })}
-          onSelectAllGlobalDocs={() => send({ type: 'SELECT_ALL_GLOBAL_DOCS' })}
-          onDeselectAllGlobalDocs={() => send({ type: 'DESELECT_ALL_GLOBAL_DOCS' })}
-          onNext={() => send({ type: 'APPROVE_KNOWLEDGE_SELECTION' })}
-          onSkip={() => send({ type: 'SKIP_KNOWLEDGE_SELECTION' })}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-        />
-      )}
-
       {state.matches('courseName') && (
         <CourseNameStep
           courseName={context.courseName}
@@ -614,11 +580,6 @@ export default function CourseWizard() {
           onDesiredOutcomesChange={(outcomes) => send({ type: 'SET_DESIRED_OUTCOMES', outcomes })}
           onGenerateOutcomes={() => send({ type: 'GENERATE_OUTCOMES' })}
           onNext={() => send({ type: 'SUBMIT_COURSE_NAME' })}
-          onBack={
-            context.availableTeamDocs.length > 0 || context.availableGlobalDocs.length > 0
-              ? () => send({ type: 'GO_BACK' })
-              : undefined
-          }
           onCancel={handleCancel}
           isLoading={isLoading}
           isGeneratingOutcomes={state.matches('generatingOutcomes')}
@@ -700,23 +661,26 @@ export default function CourseWizard() {
         />
       )}
 
-      {/* Knowledge Source Modals */}
-      <KnowledgeUploadModal
-        isOpen={knowledgeModalState === 'upload'}
+      {/* Knowledge Sources Modal */}
+      <KnowledgeSourcesModal
+        isOpen={isKnowledgeModalOpen}
         onClose={handleCloseKnowledgeModal}
+        teamDocs={context.availableTeamDocs}
+        globalDocs={context.availableGlobalDocs}
+        selectedTeamDocIds={context.selectedTeamDocIds}
+        selectedGlobalDocIds={context.selectedGlobalDocIds}
+        onToggleTeamDoc={(docId) => send({ type: 'TOGGLE_TEAM_DOC', docId })}
+        onToggleGlobalDoc={(docId) => send({ type: 'TOGGLE_GLOBAL_DOC', docId })}
+        onSelectAllTeamDocs={() => send({ type: 'SELECT_ALL_TEAM_DOCS' })}
+        onDeselectAllTeamDocs={() => send({ type: 'DESELECT_ALL_TEAM_DOCS' })}
+        onSelectAllGlobalDocs={() => send({ type: 'SELECT_ALL_GLOBAL_DOCS' })}
+        onDeselectAllGlobalDocs={() => send({ type: 'DESELECT_ALL_GLOBAL_DOCS' })}
         onUploadFile={handleUploadFile}
         pendingFiles={pendingFiles}
         onAddFiles={handleAddFiles}
         onRemoveFile={handleRemoveFile}
         onUpdateFileStatus={handleUpdateFileStatus}
         processedSources={processedSources}
-      />
-
-      <KnowledgeVerificationModal
-        isOpen={knowledgeModalState === 'verification'}
-        onClose={handleVerificationClose}
-        onAddMore={handleAddMoreFiles}
-        sources={processedSources}
       />
     </>
   );
