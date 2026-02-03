@@ -314,23 +314,27 @@ func ChunkText(text string, chunkSize, overlap int) []string {
 		log.Printf("[ChunkText] Text fits in single chunk, returning")
 		return []string{text}
 	}
-	log.Printf("[ChunkText] Will create multiple chunks")
+	log.Printf("[ChunkText] Will create multiple chunks (textLen=%d, chunkSize=%d)", len(text), chunkSize)
 
 	var chunks []string
 	start := 0
 
 	for start < len(text) {
 		end := start + chunkSize
-		if end > len(text) {
+		if end >= len(text) {
+			// This is the last chunk - process it and exit
 			end = len(text)
+			chunk := strings.TrimSpace(text[start:end])
+			if len(chunk) > 0 {
+				chunks = append(chunks, chunk)
+			}
+			break
 		}
 
 		// Try to break at sentence boundary
-		if end < len(text) {
-			lastPeriod := strings.LastIndex(text[start:end], ". ")
-			if lastPeriod > chunkSize/2 {
-				end = start + lastPeriod + 1
-			}
+		lastPeriod := strings.LastIndex(text[start:end], ". ")
+		if lastPeriod > chunkSize/2 {
+			end = start + lastPeriod + 1
 		}
 
 		chunk := strings.TrimSpace(text[start:end])
@@ -338,15 +342,14 @@ func ChunkText(text string, chunkSize, overlap int) []string {
 			chunks = append(chunks, chunk)
 		}
 
+		// Move start forward with overlap
 		start = end - overlap
 		if start < 0 {
 			start = 0
 		}
-		if start >= len(text) {
-			break
-		}
 	}
 
+	log.Printf("[ChunkText] Completed: created %d chunks", len(chunks))
 	return chunks
 }
 
