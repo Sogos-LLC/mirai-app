@@ -502,7 +502,7 @@ UPDATE knowledge_sources SET
     status = $1,
     error_message = $2,
     chunk_count = $3,
-    processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
+    processed_at = CASE WHEN $1::text = 'ready' THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $4
 RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id
@@ -657,7 +657,7 @@ UPDATE knowledge_sources SET
     chunk_count = $3,
     summary = $4,
     token_count = $5,
-    processed_at = CASE WHEN $1 = 'ready' THEN NOW() ELSE processed_at END,
+    processed_at = CASE WHEN $1::text = 'ready' THEN NOW() ELSE processed_at END,
     updated_at = NOW()
 WHERE id = $6
 RETURNING id, tenant_id, course_id, type, status, name, file_path, mime_type, file_size_bytes, chunk_count, error_message, video_urls, created_at, updated_at, processed_at, session_id, summary, token_count, document_index, team_id
