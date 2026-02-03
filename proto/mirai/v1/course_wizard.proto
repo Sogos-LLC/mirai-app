@@ -124,6 +124,9 @@ service CourseWizardService {
 // GenerateTitleRequest contains the user's initial course name.
 message GenerateTitleRequest {
   string course_name = 1 [(buf.validate.field).string.min_len = 1];
+  // Selected knowledge sources for RAG context
+  repeated string selected_team_doc_ids = 2;
+  repeated string selected_global_doc_ids = 3;
 }
 
 // GenerateTitleResponse contains the AI-improved title and description.
@@ -137,6 +140,9 @@ message GenerateOutcomesRequest {
   string course_name = 1 [(buf.validate.field).string.min_len = 1];
   // Optional session ID for RAG context from uploaded knowledge sources
   optional string session_id = 2;
+  // Selected knowledge sources for RAG context
+  repeated string selected_team_doc_ids = 3;
+  repeated string selected_global_doc_ids = 4;
 }
 
 // GenerateOutcomesResponse contains AI-generated course outcomes.
@@ -158,6 +164,9 @@ message KnowledgeCitation {
 message GenerateSMEPersonasRequest {
   string title = 1 [(buf.validate.field).string.min_len = 1];
   string description = 2 [(buf.validate.field).string.min_len = 1];
+  // Selected knowledge sources for RAG context
+  repeated string selected_team_doc_ids = 3;
+  repeated string selected_global_doc_ids = 4;
 }
 
 // GenerateSMEPersonasResponse contains 3 diverse SME personas.
@@ -170,6 +179,9 @@ message GenerateAudiencePersonasRequest {
   string title = 1 [(buf.validate.field).string.min_len = 1];
   string description = 2 [(buf.validate.field).string.min_len = 1];
   repeated SMEPersona selected_smes = 3;
+  // Selected knowledge sources for RAG context
+  repeated string selected_team_doc_ids = 4;
+  repeated string selected_global_doc_ids = 5;
 }
 
 // GenerateAudiencePersonasResponse contains 3 diverse audience personas.
@@ -182,6 +194,9 @@ message GenerateToneOptionsRequest {
   string title = 1 [(buf.validate.field).string.min_len = 1];
   string description = 2 [(buf.validate.field).string.min_len = 1];
   repeated AudiencePersona selected_audiences = 3;
+  // Selected knowledge sources for RAG context
+  repeated string selected_team_doc_ids = 4;
+  repeated string selected_global_doc_ids = 5;
 }
 
 // GenerateToneOptionsResponse contains 3 tone options.

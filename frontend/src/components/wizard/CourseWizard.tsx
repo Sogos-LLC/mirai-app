@@ -151,28 +151,37 @@ export default function CourseWizard() {
   const machineWithActors = useMemo(() => {
     return courseWizardMachine.provide({
       actors: {
-        generateTitleActor: fromPromise(async ({ input }: { input: { courseName: string } }) => {
-          const result = await generateTitle.mutate(input.courseName);
+        generateTitleActor: fromPromise(async ({ input }: { input: { courseName: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] } }) => {
+          const result = await generateTitle.mutate({
+            courseName: input.courseName,
+            selectedTeamDocIds: input.selectedTeamDocIds,
+            selectedGlobalDocIds: input.selectedGlobalDocIds,
+          });
           return {
             improvedTitle: result.improvedTitle,
             description: result.description,
           };
         }),
-        generateOutcomesActor: fromPromise(async ({ input }: { input: { courseName: string } }) => {
+        generateOutcomesActor: fromPromise(async ({ input }: { input: { courseName: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] } }) => {
           // Pass sessionId for RAG context if knowledge sources were uploaded
+          // Also pass selected team/global doc IDs for existing knowledge sources
           const result = await generateOutcomes.mutate({
             courseName: input.courseName,
             sessionId: processedSources.length > 0 ? sessionId : undefined,
+            selectedTeamDocIds: input.selectedTeamDocIds,
+            selectedGlobalDocIds: input.selectedGlobalDocIds,
           });
           return {
             outcomes: result.outcomes,
           };
         }),
         generateSMEPersonasActor: fromPromise(
-          async ({ input }: { input: { title: string; description: string } }) => {
+          async ({ input }: { input: { title: string; description: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] } }) => {
             const result = await generateSMEPersonas.mutate({
               title: input.title,
               description: input.description,
+              selectedTeamDocIds: input.selectedTeamDocIds,
+              selectedGlobalDocIds: input.selectedGlobalDocIds,
             });
             return { personas: result.personas };
           }
@@ -181,12 +190,14 @@ export default function CourseWizard() {
           async ({
             input,
           }: {
-            input: { title: string; description: string; selectedSmes: SMEPersona[] };
+            input: { title: string; description: string; selectedSmes: SMEPersona[]; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] };
           }) => {
             const result = await generateAudiencePersonas.mutate({
               title: input.title,
               description: input.description,
               selectedSmes: input.selectedSmes,
+              selectedTeamDocIds: input.selectedTeamDocIds,
+              selectedGlobalDocIds: input.selectedGlobalDocIds,
             });
             return { personas: result.personas };
           }
@@ -195,12 +206,14 @@ export default function CourseWizard() {
           async ({
             input,
           }: {
-            input: { title: string; description: string; selectedAudiences: AudiencePersona[] };
+            input: { title: string; description: string; selectedAudiences: AudiencePersona[]; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] };
           }) => {
             const result = await generateToneOptions.mutate({
               title: input.title,
               description: input.description,
               selectedAudiences: input.selectedAudiences,
+              selectedTeamDocIds: input.selectedTeamDocIds,
+              selectedGlobalDocIds: input.selectedGlobalDocIds,
             });
             return { options: result.options };
           }

@@ -57,8 +57,16 @@ export function useGenerateTitle() {
   const mutation = useMutation(generateTitle);
 
   return {
-    mutate: async (courseName: string) => {
-      const request = create(GenerateTitleRequestSchema, { courseName });
+    mutate: async (params: {
+      courseName: string;
+      selectedTeamDocIds?: string[];
+      selectedGlobalDocIds?: string[];
+    }) => {
+      const request = create(GenerateTitleRequestSchema, {
+        courseName: params.courseName,
+        selectedTeamDocIds: params.selectedTeamDocIds ?? [],
+        selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],
+      });
       return mutation.mutateAsync(request);
     },
     isPending: mutation.isPending,
@@ -69,16 +77,23 @@ export function useGenerateTitle() {
 
 /**
  * Generate desired course outcomes from course name (magic wand feature)
- * If sessionId is provided, RAG context from uploaded knowledge sources will be used.
+ * Uses RAG context from selected knowledge sources (team + global) and uploaded files (sessionId).
  */
 export function useGenerateOutcomes() {
   const mutation = useMutation(generateOutcomes);
 
   return {
-    mutate: async (params: { courseName: string; sessionId?: string }) => {
+    mutate: async (params: {
+      courseName: string;
+      sessionId?: string;
+      selectedTeamDocIds?: string[];
+      selectedGlobalDocIds?: string[];
+    }) => {
       const request = create(GenerateOutcomesRequestSchema, {
         courseName: params.courseName,
         sessionId: params.sessionId,
+        selectedTeamDocIds: params.selectedTeamDocIds ?? [],
+        selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],
       });
       return mutation.mutateAsync(request);
     },
@@ -90,13 +105,24 @@ export function useGenerateOutcomes() {
 
 /**
  * Generate SME personas based on title and description
+ * Uses RAG context from selected knowledge sources.
  */
 export function useGenerateSMEPersonas() {
   const mutation = useMutation(generateSMEPersonas);
 
   return {
-    mutate: async (params: { title: string; description: string }) => {
-      const request = create(GenerateSMEPersonasRequestSchema, params);
+    mutate: async (params: {
+      title: string;
+      description: string;
+      selectedTeamDocIds?: string[];
+      selectedGlobalDocIds?: string[];
+    }) => {
+      const request = create(GenerateSMEPersonasRequestSchema, {
+        title: params.title,
+        description: params.description,
+        selectedTeamDocIds: params.selectedTeamDocIds ?? [],
+        selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],
+      });
       return mutation.mutateAsync(request);
     },
     isPending: mutation.isPending,
@@ -107,6 +133,7 @@ export function useGenerateSMEPersonas() {
 
 /**
  * Generate audience personas based on course info and selected SMEs
+ * Uses RAG context from selected knowledge sources.
  */
 export function useGenerateAudiencePersonas() {
   const mutation = useMutation(generateAudiencePersonas);
@@ -116,6 +143,8 @@ export function useGenerateAudiencePersonas() {
       title: string;
       description: string;
       selectedSmes: SMEPersona[];
+      selectedTeamDocIds?: string[];
+      selectedGlobalDocIds?: string[];
     }) => {
       const request = create(GenerateAudiencePersonasRequestSchema, {
         title: params.title,
@@ -123,6 +152,8 @@ export function useGenerateAudiencePersonas() {
         selectedSmes: params.selectedSmes.map(sme =>
           create(SMEPersonaSchema, sme)
         ),
+        selectedTeamDocIds: params.selectedTeamDocIds ?? [],
+        selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],
       });
       return mutation.mutateAsync(request);
     },
@@ -134,6 +165,7 @@ export function useGenerateAudiencePersonas() {
 
 /**
  * Generate tone options based on course info and selected audiences
+ * Uses RAG context from selected knowledge sources.
  */
 export function useGenerateToneOptions() {
   const mutation = useMutation(generateToneOptions);
@@ -143,6 +175,8 @@ export function useGenerateToneOptions() {
       title: string;
       description: string;
       selectedAudiences: AudiencePersona[];
+      selectedTeamDocIds?: string[];
+      selectedGlobalDocIds?: string[];
     }) => {
       const request = create(GenerateToneOptionsRequestSchema, {
         title: params.title,
@@ -150,6 +184,8 @@ export function useGenerateToneOptions() {
         selectedAudiences: params.selectedAudiences.map(audience =>
           create(AudiencePersonaSchema, audience)
         ),
+        selectedTeamDocIds: params.selectedTeamDocIds ?? [],
+        selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],
       });
       return mutation.mutateAsync(request);
     },

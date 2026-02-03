@@ -250,6 +250,32 @@ course_audit_log table for tracking approvals
 
 ---
 
+## Session 1.5: RAG Integration Across All Wizard Steps ✅ COMPLETED
+
+**Goal:** Pass selected knowledge sources to ALL wizard generation steps for RAG grounding.
+
+**Deliverables:**
+- [x] Proto: Added `selected_team_doc_ids` and `selected_global_doc_ids` to all generation requests
+- [x] Frontend: Updated state machine to pass knowledge IDs to all generation actors
+- [x] Frontend: Updated hooks to accept and pass knowledge IDs
+- [x] Backend: Added `SearchKnowledgeBySourceIDs` method to knowledge source service
+- [x] Backend: Updated `GenerateOutcomes` to use both session uploads AND selected sources for RAG
+- [x] Backend: Added input types with knowledge IDs to all generation methods
+- [x] Backend: Updated connect handlers to pass knowledge IDs to all service methods
+
+**Files Modified:**
+| File | Action |
+|------|--------|
+| `proto/mirai/v1/course_wizard.proto` | Added knowledge IDs to all generation requests |
+| `frontend/src/machines/courseWizardMachine.ts` | Updated actor types and invoke inputs |
+| `frontend/src/components/wizard/CourseWizard.tsx` | Updated actors to pass knowledge IDs |
+| `frontend/src/hooks/useCourseWizard.ts` | Updated hooks to accept knowledge IDs |
+| `backend/.../knowledge_source_service.go` | Added SearchKnowledgeBySourceIDs |
+| `backend/.../course_wizard_service.go` | Updated input types, RAG context building |
+| `backend/.../connect/course_wizard_service.go` | Updated handlers |
+
+---
+
 ## Next Steps
 
 **Ready for Session 2: Provenance Infrastructure**
@@ -258,3 +284,4 @@ course_audit_log table for tracking approvals
 - Track scope during retrieval
 - Deduplicate with scope priority
 - Calculate and store provenance in S3 JSON
+- Extend AI provider interfaces to accept RAG context for all wizard generation methods

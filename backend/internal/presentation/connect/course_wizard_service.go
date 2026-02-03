@@ -48,7 +48,11 @@ func (s *CourseWizardServiceServer) GenerateTitle(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	result, err := s.wizardService.GenerateTitle(ctx, kratosID, req.Msg.CourseName)
+	result, err := s.wizardService.GenerateTitle(ctx, kratosID, service.GenerateTitleInput{
+		CourseName:           req.Msg.CourseName,
+		SelectedTeamDocIDs:   req.Msg.SelectedTeamDocIds,
+		SelectedGlobalDocIDs: req.Msg.SelectedGlobalDocIds,
+	})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -76,9 +80,11 @@ func (s *CourseWizardServiceServer) GenerateOutcomes(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// Build input with optional session ID for RAG context
+	// Build input with optional session ID and selected knowledge source IDs for RAG context
 	input := service.GenerateOutcomesInput{
-		CourseName: req.Msg.CourseName,
+		CourseName:           req.Msg.CourseName,
+		SelectedTeamDocIDs:   req.Msg.SelectedTeamDocIds,
+		SelectedGlobalDocIDs: req.Msg.SelectedGlobalDocIds,
 	}
 	if req.Msg.SessionId != nil {
 		input.SessionID = *req.Msg.SessionId
@@ -121,7 +127,12 @@ func (s *CourseWizardServiceServer) GenerateSMEPersonas(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	result, err := s.wizardService.GenerateSMEPersonas(ctx, kratosID, req.Msg.Title, req.Msg.Description)
+	result, err := s.wizardService.GenerateSMEPersonas(ctx, kratosID, service.GenerateSMEPersonasInput{
+		Title:                req.Msg.Title,
+		Description:          req.Msg.Description,
+		SelectedTeamDocIDs:   req.Msg.SelectedTeamDocIds,
+		SelectedGlobalDocIDs: req.Msg.SelectedGlobalDocIds,
+	})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -159,9 +170,11 @@ func (s *CourseWizardServiceServer) GenerateAudiencePersonas(
 	}
 
 	result, err := s.wizardService.GenerateAudiencePersonas(ctx, kratosID, service.GenerateAudiencePersonasRequest{
-		Title:       req.Msg.Title,
-		Description: req.Msg.Description,
-		SMEPersonas: smePersonas,
+		Title:                req.Msg.Title,
+		Description:          req.Msg.Description,
+		SMEPersonas:          smePersonas,
+		SelectedTeamDocIDs:   req.Msg.SelectedTeamDocIds,
+		SelectedGlobalDocIDs: req.Msg.SelectedGlobalDocIds,
 	})
 	if err != nil {
 		return nil, toConnectError(err)
@@ -200,9 +213,11 @@ func (s *CourseWizardServiceServer) GenerateToneOptions(
 	}
 
 	result, err := s.wizardService.GenerateToneOptions(ctx, kratosID, service.GenerateToneOptionsRequest{
-		Title:            req.Msg.Title,
-		Description:      req.Msg.Description,
-		AudiencePersonas: audiencePersonas,
+		Title:                req.Msg.Title,
+		Description:          req.Msg.Description,
+		AudiencePersonas:     audiencePersonas,
+		SelectedTeamDocIDs:   req.Msg.SelectedTeamDocIds,
+		SelectedGlobalDocIDs: req.Msg.SelectedGlobalDocIds,
 	})
 	if err != nil {
 		return nil, toConnectError(err)

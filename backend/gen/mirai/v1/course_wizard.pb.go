@@ -566,10 +566,13 @@ func (x *WizardState) GetUpdatedAt() *timestamppb.Timestamp {
 
 // GenerateTitleRequest contains the user's initial course name.
 type GenerateTitleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CourseName    string                 `protobuf:"bytes,1,opt,name=course_name,json=courseName,proto3" json:"course_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CourseName string                 `protobuf:"bytes,1,opt,name=course_name,json=courseName,proto3" json:"course_name,omitempty"`
+	// Selected knowledge sources for RAG context
+	SelectedTeamDocIds   []string `protobuf:"bytes,2,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`
+	SelectedGlobalDocIds []string `protobuf:"bytes,3,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GenerateTitleRequest) Reset() {
@@ -607,6 +610,20 @@ func (x *GenerateTitleRequest) GetCourseName() string {
 		return x.CourseName
 	}
 	return ""
+}
+
+func (x *GenerateTitleRequest) GetSelectedTeamDocIds() []string {
+	if x != nil {
+		return x.SelectedTeamDocIds
+	}
+	return nil
+}
+
+func (x *GenerateTitleRequest) GetSelectedGlobalDocIds() []string {
+	if x != nil {
+		return x.SelectedGlobalDocIds
+	}
+	return nil
 }
 
 // GenerateTitleResponse contains the AI-improved title and description.
@@ -667,9 +684,12 @@ type GenerateOutcomesRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	CourseName string                 `protobuf:"bytes,1,opt,name=course_name,json=courseName,proto3" json:"course_name,omitempty"`
 	// Optional session ID for RAG context from uploaded knowledge sources
-	SessionId     *string `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	SessionId *string `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3,oneof" json:"session_id,omitempty"`
+	// Selected knowledge sources for RAG context
+	SelectedTeamDocIds   []string `protobuf:"bytes,3,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`
+	SelectedGlobalDocIds []string `protobuf:"bytes,4,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GenerateOutcomesRequest) Reset() {
@@ -714,6 +734,20 @@ func (x *GenerateOutcomesRequest) GetSessionId() string {
 		return *x.SessionId
 	}
 	return ""
+}
+
+func (x *GenerateOutcomesRequest) GetSelectedTeamDocIds() []string {
+	if x != nil {
+		return x.SelectedTeamDocIds
+	}
+	return nil
+}
+
+func (x *GenerateOutcomesRequest) GetSelectedGlobalDocIds() []string {
+	if x != nil {
+		return x.SelectedGlobalDocIds
+	}
+	return nil
 }
 
 // GenerateOutcomesResponse contains AI-generated course outcomes.
@@ -841,11 +875,14 @@ func (x *KnowledgeCitation) GetRelevanceScore() float32 {
 
 // GenerateSMEPersonasRequest contains context for SME generation.
 type GenerateSMEPersonasRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Title       string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	Description string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	// Selected knowledge sources for RAG context
+	SelectedTeamDocIds   []string `protobuf:"bytes,3,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`
+	SelectedGlobalDocIds []string `protobuf:"bytes,4,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GenerateSMEPersonasRequest) Reset() {
@@ -890,6 +927,20 @@ func (x *GenerateSMEPersonasRequest) GetDescription() string {
 		return x.Description
 	}
 	return ""
+}
+
+func (x *GenerateSMEPersonasRequest) GetSelectedTeamDocIds() []string {
+	if x != nil {
+		return x.SelectedTeamDocIds
+	}
+	return nil
+}
+
+func (x *GenerateSMEPersonasRequest) GetSelectedGlobalDocIds() []string {
+	if x != nil {
+		return x.SelectedGlobalDocIds
+	}
+	return nil
 }
 
 // GenerateSMEPersonasResponse contains 3 diverse SME personas.
@@ -939,12 +990,15 @@ func (x *GenerateSMEPersonasResponse) GetPersonas() []*SMEPersona {
 
 // GenerateAudiencePersonasRequest contains context for audience generation.
 type GenerateAudiencePersonasRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	SelectedSmes  []*SMEPersona          `protobuf:"bytes,3,rep,name=selected_smes,json=selectedSmes,proto3" json:"selected_smes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Title        string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	Description  string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	SelectedSmes []*SMEPersona          `protobuf:"bytes,3,rep,name=selected_smes,json=selectedSmes,proto3" json:"selected_smes,omitempty"`
+	// Selected knowledge sources for RAG context
+	SelectedTeamDocIds   []string `protobuf:"bytes,4,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`
+	SelectedGlobalDocIds []string `protobuf:"bytes,5,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GenerateAudiencePersonasRequest) Reset() {
@@ -994,6 +1048,20 @@ func (x *GenerateAudiencePersonasRequest) GetDescription() string {
 func (x *GenerateAudiencePersonasRequest) GetSelectedSmes() []*SMEPersona {
 	if x != nil {
 		return x.SelectedSmes
+	}
+	return nil
+}
+
+func (x *GenerateAudiencePersonasRequest) GetSelectedTeamDocIds() []string {
+	if x != nil {
+		return x.SelectedTeamDocIds
+	}
+	return nil
+}
+
+func (x *GenerateAudiencePersonasRequest) GetSelectedGlobalDocIds() []string {
+	if x != nil {
+		return x.SelectedGlobalDocIds
 	}
 	return nil
 }
@@ -1049,8 +1117,11 @@ type GenerateToneOptionsRequest struct {
 	Title             string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
 	Description       string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
 	SelectedAudiences []*AudiencePersona     `protobuf:"bytes,3,rep,name=selected_audiences,json=selectedAudiences,proto3" json:"selected_audiences,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Selected knowledge sources for RAG context
+	SelectedTeamDocIds   []string `protobuf:"bytes,4,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`
+	SelectedGlobalDocIds []string `protobuf:"bytes,5,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GenerateToneOptionsRequest) Reset() {
@@ -1100,6 +1171,20 @@ func (x *GenerateToneOptionsRequest) GetDescription() string {
 func (x *GenerateToneOptionsRequest) GetSelectedAudiences() []*AudiencePersona {
 	if x != nil {
 		return x.SelectedAudiences
+	}
+	return nil
+}
+
+func (x *GenerateToneOptionsRequest) GetSelectedTeamDocIds() []string {
+	if x != nil {
+		return x.SelectedTeamDocIds
+	}
+	return nil
+}
+
+func (x *GenerateToneOptionsRequest) GetSelectedGlobalDocIds() []string {
+	if x != nil {
+		return x.SelectedGlobalDocIds
 	}
 	return nil
 }
@@ -1574,18 +1659,22 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"@\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xaa\x01\n" +
 	"\x14GenerateTitleRequest\x12(\n" +
 	"\vcourse_name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\n" +
-	"courseName\"`\n" +
+	"courseName\x121\n" +
+	"\x15selected_team_doc_ids\x18\x02 \x03(\tR\x12selectedTeamDocIds\x125\n" +
+	"\x17selected_global_doc_ids\x18\x03 \x03(\tR\x14selectedGlobalDocIds\"`\n" +
 	"\x15GenerateTitleResponse\x12%\n" +
 	"\x0eimproved_title\x18\x01 \x01(\tR\rimprovedTitle\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\"v\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\"\xe0\x01\n" +
 	"\x17GenerateOutcomesRequest\x12(\n" +
 	"\vcourse_name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\n" +
 	"courseName\x12\"\n" +
 	"\n" +
-	"session_id\x18\x02 \x01(\tH\x00R\tsessionId\x88\x01\x01B\r\n" +
+	"session_id\x18\x02 \x01(\tH\x00R\tsessionId\x88\x01\x01\x121\n" +
+	"\x15selected_team_doc_ids\x18\x03 \x03(\tR\x12selectedTeamDocIds\x125\n" +
+	"\x17selected_global_doc_ids\x18\x04 \x03(\tR\x14selectedGlobalDocIdsB\r\n" +
 	"\v_session_id\"q\n" +
 	"\x18GenerateOutcomesResponse\x12\x1a\n" +
 	"\boutcomes\x18\x01 \x01(\tR\boutcomes\x129\n" +
@@ -1595,22 +1684,28 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\vsource_name\x18\x02 \x01(\tR\n" +
 	"sourceName\x12\x18\n" +
 	"\aexcerpt\x18\x03 \x01(\tR\aexcerpt\x12'\n" +
-	"\x0frelevance_score\x18\x04 \x01(\x02R\x0erelevanceScore\"f\n" +
+	"\x0frelevance_score\x18\x04 \x01(\x02R\x0erelevanceScore\"\xd0\x01\n" +
 	"\x1aGenerateSMEPersonasRequest\x12\x1d\n" +
 	"\x05title\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12)\n" +
-	"\vdescription\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\"O\n" +
+	"\vdescription\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x121\n" +
+	"\x15selected_team_doc_ids\x18\x03 \x03(\tR\x12selectedTeamDocIds\x125\n" +
+	"\x17selected_global_doc_ids\x18\x04 \x03(\tR\x14selectedGlobalDocIds\"O\n" +
 	"\x1bGenerateSMEPersonasResponse\x120\n" +
-	"\bpersonas\x18\x01 \x03(\v2\x14.mirai.v1.SMEPersonaR\bpersonas\"\xa6\x01\n" +
+	"\bpersonas\x18\x01 \x03(\v2\x14.mirai.v1.SMEPersonaR\bpersonas\"\x90\x02\n" +
 	"\x1fGenerateAudiencePersonasRequest\x12\x1d\n" +
 	"\x05title\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12)\n" +
 	"\vdescription\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x129\n" +
-	"\rselected_smes\x18\x03 \x03(\v2\x14.mirai.v1.SMEPersonaR\fselectedSmes\"Y\n" +
+	"\rselected_smes\x18\x03 \x03(\v2\x14.mirai.v1.SMEPersonaR\fselectedSmes\x121\n" +
+	"\x15selected_team_doc_ids\x18\x04 \x03(\tR\x12selectedTeamDocIds\x125\n" +
+	"\x17selected_global_doc_ids\x18\x05 \x03(\tR\x14selectedGlobalDocIds\"Y\n" +
 	" GenerateAudiencePersonasResponse\x125\n" +
-	"\bpersonas\x18\x01 \x03(\v2\x19.mirai.v1.AudiencePersonaR\bpersonas\"\xb0\x01\n" +
+	"\bpersonas\x18\x01 \x03(\v2\x19.mirai.v1.AudiencePersonaR\bpersonas\"\x9a\x02\n" +
 	"\x1aGenerateToneOptionsRequest\x12\x1d\n" +
 	"\x05title\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12)\n" +
 	"\vdescription\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x12H\n" +
-	"\x12selected_audiences\x18\x03 \x03(\v2\x19.mirai.v1.AudiencePersonaR\x11selectedAudiences\"M\n" +
+	"\x12selected_audiences\x18\x03 \x03(\v2\x19.mirai.v1.AudiencePersonaR\x11selectedAudiences\x121\n" +
+	"\x15selected_team_doc_ids\x18\x04 \x03(\tR\x12selectedTeamDocIds\x125\n" +
+	"\x17selected_global_doc_ids\x18\x05 \x03(\tR\x14selectedGlobalDocIds\"M\n" +
 	"\x1bGenerateToneOptionsResponse\x12.\n" +
 	"\aoptions\x18\x01 \x03(\v2\x14.mirai.v1.ToneOptionR\aoptions\"r\n" +
 	"\x16SaveWizardStateRequest\x12*\n" +

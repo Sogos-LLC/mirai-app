@@ -201,6 +201,66 @@ func (s *KnowledgeSourceService) SearchKnowledgeBySession(
 	return chunks, nil
 }
 
+// SearchKnowledgeBySourceIDs performs semantic search across specific knowledge sources.
+// sourceIDs is a list of knowledge source IDs to search within.
+func (s *KnowledgeSourceService) SearchKnowledgeBySourceIDs(
+	ctx context.Context,
+	sourceIDs []string,
+	query string,
+	topK int,
+) ([]*entity.RetrievedChunk, error) {
+	if s.embeddingClient == nil || s.vectorClient == nil {
+		return nil, fmt.Errorf("embedding or vector client not configured")
+	}
+
+	if len(sourceIDs) == 0 {
+		return nil, nil // No sources to search
+	}
+
+	// Generate query embedding
+	queryVector, err := s.embeddingClient.EmbedSingle(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to embed query: %w", err)
+	}
+
+	// Build filter for source IDs (OR condition - match any of the IDs)
+	shouldConditions := make([]map[string]interface{}, len(sourceIDs))
+	for i, sourceID := range sourceIDs {
+		shouldConditions[i] = map[string]interface{}{
+			"key":   "source_id",
+			"match": map[string]interface{}{"value": sourceID},
+		}
+	}
+
+	filter := map[string]interface{}{
+		"should": shouldConditions,
+	}
+
+	// Search vectors
+	results, err := s.vectorClient.Search(ctx, VectorCollectionName, queryVector, topK, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search vectors: %w", err)
+	}
+
+	// Convert to domain entities
+	chunks := make([]*entity.RetrievedChunk, len(results))
+	for i, r := range results {
+		sourceID, _ := uuid.Parse(getStringPayload(r.Payload, "source_id"))
+		chunkIndex := getIntPayload(r.Payload, "chunk_index")
+
+		chunks[i] = &entity.RetrievedChunk{
+			ID:              r.ID,
+			SourceID:        sourceID,
+			SourceName:      getStringPayload(r.Payload, "source_name"),
+			Content:         getStringPayload(r.Payload, "content"),
+			SimilarityScore: r.Score,
+			ChunkIndex:      &chunkIndex,
+		}
+	}
+
+	return chunks, nil
+}
+
 // ProcessAndIndex processes document content and stores vectors in the vector DB.
 // Returns chunk count and token count for the processed document.
 func (s *KnowledgeSourceService) ProcessAndIndex(

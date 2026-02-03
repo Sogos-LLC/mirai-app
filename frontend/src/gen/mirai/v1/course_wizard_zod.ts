@@ -59,6 +59,8 @@ export type ToneOption = z.infer<typeof ToneOptionSchema>;
  */
 export const GenerateTitleRequestSchema = z.object({
   courseName: z.string().min(1),
+  selectedTeamDocIds: z.array(z.string()),
+  selectedGlobalDocIds: z.array(z.string()),
 });
 
 export type GenerateTitleRequest = z.infer<typeof GenerateTitleRequestSchema>;
@@ -70,6 +72,8 @@ export type GenerateTitleRequest = z.infer<typeof GenerateTitleRequestSchema>;
 export const GenerateOutcomesRequestSchema = z.object({
   courseName: z.string().min(1),
   sessionId: z.string().optional(),
+  selectedTeamDocIds: z.array(z.string()),
+  selectedGlobalDocIds: z.array(z.string()),
 });
 
 export type GenerateOutcomesRequest = z.infer<typeof GenerateOutcomesRequestSchema>;
@@ -94,6 +98,8 @@ export type KnowledgeCitation = z.infer<typeof KnowledgeCitationSchema>;
 export const GenerateSMEPersonasRequestSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
+  selectedTeamDocIds: z.array(z.string()),
+  selectedGlobalDocIds: z.array(z.string()),
 });
 
 export type GenerateSMEPersonasRequest = z.infer<typeof GenerateSMEPersonasRequestSchema>;
@@ -124,6 +130,8 @@ export const GenerateAudiencePersonasRequestSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   selectedSmes: z.array(SMEPersonaSchema),
+  selectedTeamDocIds: z.array(z.string()),
+  selectedGlobalDocIds: z.array(z.string()),
 });
 
 export type GenerateAudiencePersonasRequest = z.infer<typeof GenerateAudiencePersonasRequestSchema>;
@@ -136,6 +144,8 @@ export const GenerateToneOptionsRequestSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   selectedAudiences: z.array(AudiencePersonaSchema),
+  selectedTeamDocIds: z.array(z.string()),
+  selectedGlobalDocIds: z.array(z.string()),
 });
 
 export type GenerateToneOptionsRequest = z.infer<typeof GenerateToneOptionsRequestSchema>;

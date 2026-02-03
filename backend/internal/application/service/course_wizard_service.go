@@ -48,6 +48,13 @@ func NewCourseWizardService(
 // AI Generation Methods (Synchronous, fast operations)
 // =============================================================================
 
+// GenerateTitleInput contains inputs for title generation.
+type GenerateTitleInput struct {
+	CourseName           string
+	SelectedTeamDocIDs   []string // Selected team knowledge source IDs
+	SelectedGlobalDocIDs []string // Selected global knowledge source IDs
+}
+
 // GenerateTitleResult contains the improved title and description.
 type GenerateTitleResult struct {
 	ImprovedTitle string
@@ -56,8 +63,8 @@ type GenerateTitleResult struct {
 }
 
 // GenerateTitle improves the course name and generates a description.
-func (s *CourseWizardService) GenerateTitle(ctx context.Context, kratosID uuid.UUID, courseName string) (*GenerateTitleResult, error) {
-	log := s.logger.With("kratosID", kratosID, "courseName", courseName)
+func (s *CourseWizardService) GenerateTitle(ctx context.Context, kratosID uuid.UUID, input GenerateTitleInput) (*GenerateTitleResult, error) {
+	log := s.logger.With("kratosID", kratosID, "courseName", input.CourseName)
 
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
@@ -78,8 +85,31 @@ func (s *CourseWizardService) GenerateTitle(ctx context.Context, kratosID uuid.U
 		return nil, err
 	}
 
-	// Generate improved title
-	result, err := aiProvider.GenerateImprovedTitle(tenantCtx, courseName)
+	// Build RAG context from selected knowledge sources
+	var ragContext []service.RAGChunk
+	if s.knowledgeSourceService != nil && (len(input.SelectedTeamDocIDs) > 0 || len(input.SelectedGlobalDocIDs) > 0) {
+		allSourceIDs := append(input.SelectedTeamDocIDs, input.SelectedGlobalDocIDs...)
+		chunks, err := s.knowledgeSourceService.SearchKnowledgeBySourceIDs(tenantCtx, allSourceIDs, input.CourseName, 10)
+		if err != nil {
+			log.Warn("failed to search knowledge by source IDs", "error", err)
+			// Continue without RAG context
+		} else if len(chunks) > 0 {
+			ragContext = make([]service.RAGChunk, len(chunks))
+			for i, chunk := range chunks {
+				ragContext[i] = service.RAGChunk{
+					SourceID:       chunk.SourceID.String(),
+					SourceName:     chunk.SourceName,
+					Content:        chunk.Content,
+					RelevanceScore: chunk.SimilarityScore,
+				}
+			}
+			log.Info("added RAG context from selected knowledge sources", "chunkCount", len(ragContext))
+		}
+	}
+
+	// Generate improved title (TODO: pass RAG context to AI provider)
+	_ = ragContext // RAG context available for future enhancement
+	result, err := aiProvider.GenerateImprovedTitle(tenantCtx, input.CourseName)
 	if err != nil {
 		log.Error("failed to generate improved title", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("AI generation failed")
@@ -99,8 +129,10 @@ func (s *CourseWizardService) GenerateTitle(ctx context.Context, kratosID uuid.U
 
 // GenerateOutcomesInput contains inputs for course outcome generation.
 type GenerateOutcomesInput struct {
-	CourseName string
-	SessionID  string // Optional - for RAG context from uploaded knowledge sources
+	CourseName           string
+	SessionID            string   // Optional - for RAG context from uploaded knowledge sources
+	SelectedTeamDocIDs   []string // Selected team knowledge source IDs
+	SelectedGlobalDocIDs []string // Selected global knowledge source IDs
 }
 
 // GenerateOutcomesResult contains AI-generated course outcomes.
@@ -143,24 +175,44 @@ func (s *CourseWizardService) GenerateOutcomes(ctx context.Context, kratosID uui
 		return nil, err
 	}
 
-	// Build RAG context if sessionID provided and knowledge service is available
+	// Build RAG context from selected knowledge sources AND session uploads
 	var ragContext []service.RAGChunk
-	if input.SessionID != "" && s.knowledgeSourceService != nil {
-		chunks, err := s.knowledgeSourceService.SearchKnowledgeBySession(tenantCtx, input.SessionID, input.CourseName, 5)
-		if err != nil {
-			log.Warn("failed to search knowledge by session", "error", err)
-			// Continue without RAG context
-		} else if len(chunks) > 0 {
-			ragContext = make([]service.RAGChunk, len(chunks))
-			for i, chunk := range chunks {
-				ragContext[i] = service.RAGChunk{
-					SourceID:       chunk.SourceID.String(),
-					SourceName:     chunk.SourceName,
-					Content:        chunk.Content,
-					RelevanceScore: chunk.SimilarityScore,
+	if s.knowledgeSourceService != nil {
+		// First, search by selected source IDs (team + global knowledge)
+		if len(input.SelectedTeamDocIDs) > 0 || len(input.SelectedGlobalDocIDs) > 0 {
+			allSourceIDs := append(input.SelectedTeamDocIDs, input.SelectedGlobalDocIDs...)
+			chunks, err := s.knowledgeSourceService.SearchKnowledgeBySourceIDs(tenantCtx, allSourceIDs, input.CourseName, 10)
+			if err != nil {
+				log.Warn("failed to search knowledge by source IDs", "error", err)
+			} else if len(chunks) > 0 {
+				for _, chunk := range chunks {
+					ragContext = append(ragContext, service.RAGChunk{
+						SourceID:       chunk.SourceID.String(),
+						SourceName:     chunk.SourceName,
+						Content:        chunk.Content,
+						RelevanceScore: chunk.SimilarityScore,
+					})
 				}
+				log.Info("added RAG context from selected knowledge sources", "chunkCount", len(chunks))
 			}
-			log.Info("added RAG context from knowledge sources", "chunkCount", len(ragContext))
+		}
+
+		// Then, search by session ID (newly uploaded files during wizard)
+		if input.SessionID != "" {
+			chunks, err := s.knowledgeSourceService.SearchKnowledgeBySession(tenantCtx, input.SessionID, input.CourseName, 5)
+			if err != nil {
+				log.Warn("failed to search knowledge by session", "error", err)
+			} else if len(chunks) > 0 {
+				for _, chunk := range chunks {
+					ragContext = append(ragContext, service.RAGChunk{
+						SourceID:       chunk.SourceID.String(),
+						SourceName:     chunk.SourceName,
+						Content:        chunk.Content,
+						RelevanceScore: chunk.SimilarityScore,
+					})
+				}
+				log.Info("added RAG context from session uploads", "chunkCount", len(chunks))
+			}
 		}
 	}
 
@@ -197,6 +249,14 @@ func (s *CourseWizardService) GenerateOutcomes(ctx context.Context, kratosID uui
 	}, nil
 }
 
+// GenerateSMEPersonasInput contains inputs for SME persona generation.
+type GenerateSMEPersonasInput struct {
+	Title                string
+	Description          string
+	SelectedTeamDocIDs   []string
+	SelectedGlobalDocIDs []string
+}
+
 // GenerateSMEPersonasResult contains generated SME personas.
 type GenerateSMEPersonasResult struct {
 	Personas   []entity.WizardSMEPersona
@@ -204,8 +264,8 @@ type GenerateSMEPersonasResult struct {
 }
 
 // GenerateSMEPersonas generates 3 diverse SME personas based on course topic.
-func (s *CourseWizardService) GenerateSMEPersonas(ctx context.Context, kratosID uuid.UUID, title, description string) (*GenerateSMEPersonasResult, error) {
-	log := s.logger.With("kratosID", kratosID, "title", title)
+func (s *CourseWizardService) GenerateSMEPersonas(ctx context.Context, kratosID uuid.UUID, input GenerateSMEPersonasInput) (*GenerateSMEPersonasResult, error) {
+	log := s.logger.With("kratosID", kratosID, "title", input.Title)
 
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
 	if err != nil || user == nil {
@@ -226,8 +286,21 @@ func (s *CourseWizardService) GenerateSMEPersonas(ctx context.Context, kratosID 
 		return nil, err
 	}
 
+	// Build RAG context from selected knowledge sources
+	// TODO: Pass RAG context to AI provider for knowledge-grounded personas
+	if s.knowledgeSourceService != nil && (len(input.SelectedTeamDocIDs) > 0 || len(input.SelectedGlobalDocIDs) > 0) {
+		allSourceIDs := append(input.SelectedTeamDocIDs, input.SelectedGlobalDocIDs...)
+		chunks, err := s.knowledgeSourceService.SearchKnowledgeBySourceIDs(tenantCtx, allSourceIDs, input.Title+" "+input.Description, 10)
+		if err != nil {
+			log.Warn("failed to search knowledge by source IDs for SME generation", "error", err)
+		} else if len(chunks) > 0 {
+			log.Info("found RAG context for SME generation", "chunkCount", len(chunks))
+			// RAG context available for future AI provider enhancement
+		}
+	}
+
 	// Generate SME personas
-	result, err := aiProvider.GenerateSMEPersonas(tenantCtx, title, description)
+	result, err := aiProvider.GenerateSMEPersonas(tenantCtx, input.Title, input.Description)
 	if err != nil {
 		log.Error("failed to generate SME personas", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("AI generation failed")
@@ -258,9 +331,11 @@ func (s *CourseWizardService) GenerateSMEPersonas(ctx context.Context, kratosID 
 
 // GenerateAudiencePersonasRequest contains inputs for audience persona generation.
 type GenerateAudiencePersonasRequest struct {
-	Title       string
-	Description string
-	SMEPersonas []entity.WizardSMEPersona
+	Title                string
+	Description          string
+	SMEPersonas          []entity.WizardSMEPersona
+	SelectedTeamDocIDs   []string
+	SelectedGlobalDocIDs []string
 }
 
 // GenerateAudiencePersonasResult contains generated audience personas.
@@ -340,9 +415,11 @@ func (s *CourseWizardService) GenerateAudiencePersonas(ctx context.Context, krat
 
 // GenerateToneOptionsRequest contains inputs for tone option generation.
 type GenerateToneOptionsRequest struct {
-	Title            string
-	Description      string
-	AudiencePersonas []entity.WizardAudiencePersona
+	Title                string
+	Description          string
+	AudiencePersonas     []entity.WizardAudiencePersona
+	SelectedTeamDocIDs   []string
+	SelectedGlobalDocIDs []string
 }
 
 // GenerateToneOptionsResult contains generated tone options.

@@ -244,48 +244,55 @@ export const initialContext: CourseWizardContext = {
 
 /**
  * Generate improved title and description
+ * Uses RAG context from selected knowledge sources.
  */
-export const generateTitleActor = fromPromise<GenerateTitleResponse, { courseName: string }>(
-  async () => {
-    throw new NetworkError('generateTitleActor must be provided by the component');
-  }
-);
+export const generateTitleActor = fromPromise<
+  GenerateTitleResponse,
+  { courseName: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] }
+>(async () => {
+  throw new NetworkError('generateTitleActor must be provided by the component');
+});
 
 /**
  * Generate desired course outcomes
+ * Uses RAG context from selected knowledge sources.
  */
-export const generateOutcomesActor = fromPromise<GenerateOutcomesResponse, { courseName: string }>(
-  async () => {
-    throw new NetworkError('generateOutcomesActor must be provided by the component');
-  }
-);
+export const generateOutcomesActor = fromPromise<
+  GenerateOutcomesResponse,
+  { courseName: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] }
+>(async () => {
+  throw new NetworkError('generateOutcomesActor must be provided by the component');
+});
 
 /**
  * Generate SME personas
+ * Uses RAG context from selected knowledge sources.
  */
 export const generateSMEPersonasActor = fromPromise<
   GenerateSMEPersonasResponse,
-  { title: string; description: string }
+  { title: string; description: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] }
 >(async () => {
   throw new NetworkError('generateSMEPersonasActor must be provided by the component');
 });
 
 /**
  * Generate audience personas
+ * Uses RAG context from selected knowledge sources.
  */
 export const generateAudiencePersonasActor = fromPromise<
   GenerateAudiencePersonasResponse,
-  { title: string; description: string; selectedSmes: SMEPersona[] }
+  { title: string; description: string; selectedSmes: SMEPersona[]; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] }
 >(async () => {
   throw new NetworkError('generateAudiencePersonasActor must be provided by the component');
 });
 
 /**
  * Generate tone options
+ * Uses RAG context from selected knowledge sources.
  */
 export const generateToneOptionsActor = fromPromise<
   GenerateToneOptionsResponse,
-  { title: string; description: string; selectedAudiences: AudiencePersona[] }
+  { title: string; description: string; selectedAudiences: AudiencePersona[]; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] }
 >(async () => {
   throw new NetworkError('generateToneOptionsActor must be provided by the component');
 });
@@ -579,7 +586,11 @@ export const courseWizardMachine = createMachine({
       invoke: {
         id: 'generateOutcomes',
         src: 'generateOutcomesActor',
-        input: ({ context }) => ({ courseName: context.courseName }),
+        input: ({ context }) => ({
+          courseName: context.courseName,
+          selectedTeamDocIds: context.selectedTeamDocIds,
+          selectedGlobalDocIds: context.selectedGlobalDocIds,
+        }),
         onDone: {
           target: 'courseName',
           actions: assign({
@@ -608,7 +619,11 @@ export const courseWizardMachine = createMachine({
       invoke: {
         id: 'generateTitle',
         src: 'generateTitleActor',
-        input: ({ context }) => ({ courseName: context.courseName }),
+        input: ({ context }) => ({
+          courseName: context.courseName,
+          selectedTeamDocIds: context.selectedTeamDocIds,
+          selectedGlobalDocIds: context.selectedGlobalDocIds,
+        }),
         onDone: {
           target: 'titleDescription',
           actions: assign({
@@ -670,6 +685,8 @@ export const courseWizardMachine = createMachine({
         input: ({ context }) => ({
           title: context.improvedTitle,
           description: context.description,
+          selectedTeamDocIds: context.selectedTeamDocIds,
+          selectedGlobalDocIds: context.selectedGlobalDocIds,
         }),
         onDone: {
           target: 'smeSelection',
@@ -755,6 +772,8 @@ export const courseWizardMachine = createMachine({
           title: context.improvedTitle,
           description: context.description,
           selectedSmes: context.smePersonas.filter((p) => context.selectedSMEIds.includes(p.id)),
+          selectedTeamDocIds: context.selectedTeamDocIds,
+          selectedGlobalDocIds: context.selectedGlobalDocIds,
         }),
         onDone: {
           target: 'audienceSelection',
@@ -844,6 +863,8 @@ export const courseWizardMachine = createMachine({
           selectedAudiences: context.audiencePersonas.filter((p) =>
             context.selectedAudienceIds.includes(p.id)
           ),
+          selectedTeamDocIds: context.selectedTeamDocIds,
+          selectedGlobalDocIds: context.selectedGlobalDocIds,
         }),
         onDone: {
           target: 'toneSelection',
