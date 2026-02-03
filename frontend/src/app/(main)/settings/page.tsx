@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Bell, Lock, Palette, Globe, CreditCard, Users, ChevronRight, Sparkles, AlertCircle } from 'lucide-react';
+import { User, Bell, Lock, Palette, Globe, CreditCard, Users, ChevronRight, Sparkles, AlertCircle, Database } from 'lucide-react';
 import BillingSettings from '@/components/settings/BillingSettings';
 import TeamSettings from '@/components/settings/TeamSettings';
+import TeamKnowledgeSettings from '@/components/settings/TeamKnowledgeSettings';
 import { AISettingsPanel } from '@/components/settings/AISettingsPanel';
 import AppearanceSettings from '@/components/settings/AppearanceSettings';
 import {
@@ -73,6 +74,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User, description: 'Name, email, and bio' },
     { id: 'team', label: 'Team', icon: Users, description: 'Manage members and invitations' },
+    { id: 'knowledge', label: 'Knowledge Base', icon: Database, description: 'Team knowledge sources' },
     { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Email and push settings' },
     { id: 'security', label: 'Security', icon: Lock, description: 'Password and 2FA' },
     { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme settings' },
@@ -233,6 +235,9 @@ export default function SettingsPage() {
 
       case 'team':
         return <TeamSettings />;
+
+      case 'knowledge':
+        return <TeamKnowledgeSettings />;
 
       case 'notifications':
         return (
