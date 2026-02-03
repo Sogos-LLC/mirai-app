@@ -268,6 +268,10 @@ func main() {
 	teamKnowledgeService := service.NewTeamKnowledgeService(teamKnowledgeRepo, embeddingClient, vectorClient)
 	logger.Info("team knowledge service initialized")
 
+	// Team Knowledge worker handler (for async processing)
+	teamKnowledgeHandler := worker.NewTeamKnowledgeHandler(teamKnowledgeService, baseStorage)
+	logger.Info("team knowledge handler initialized")
+
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
@@ -380,6 +384,7 @@ func main() {
 		logger,
 		crmProvider,
 		userRepo,
+		teamKnowledgeHandler,
 	)
 
 	// Start Asynq worker server in goroutine

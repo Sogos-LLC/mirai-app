@@ -8,14 +8,15 @@ import (
 
 // Task type constants
 const (
-	TypeStripeProvision  = "stripe:provision"
-	TypeStripeReconcile  = "stripe:reconcile" // Scheduled reconciliation for orphaned payments
-	TypeCleanupExpired   = "cleanup:expired"
-	TypeAIGeneration     = "ai:generation"
-	TypeAIGenerationPoll = "ai:generation:poll" // Scheduled polling task
-	TypeCourseExport     = "course:export"
-	TypeCourseExportPoll = "course:export:poll" // Scheduled polling task
-	TypeFeedbackSync     = "feedback:sync"      // Sync feedback to CRM
+	TypeStripeProvision        = "stripe:provision"
+	TypeStripeReconcile        = "stripe:reconcile"        // Scheduled reconciliation for orphaned payments
+	TypeCleanupExpired         = "cleanup:expired"
+	TypeAIGeneration           = "ai:generation"
+	TypeAIGenerationPoll       = "ai:generation:poll"       // Scheduled polling task
+	TypeCourseExport           = "course:export"
+	TypeCourseExportPoll       = "course:export:poll"       // Scheduled polling task
+	TypeFeedbackSync           = "feedback:sync"            // Sync feedback to CRM
+	TypeTeamKnowledgeIngestion = "team_knowledge:ingestion" // Process team knowledge uploads
 )
 
 // Queue names for priority handling
@@ -53,6 +54,14 @@ type FeedbackSyncPayload struct {
 	Message      string `json:"message"`
 	PageURL      string `json:"page_url"`
 	UserAgent    string `json:"user_agent"`
+}
+
+// TeamKnowledgeIngestionPayload contains data for processing team knowledge uploads
+type TeamKnowledgeIngestionPayload struct {
+	SourceID string `json:"source_id"`
+	TenantID string `json:"tenant_id"`
+	TeamID   string `json:"team_id"`
+	FilePath string `json:"file_path"`
 }
 
 // NewStripeProvisionTask creates a new Stripe provisioning task
@@ -119,4 +128,18 @@ func NewFeedbackSyncTask(payload FeedbackSyncPayload) (*asynq.Task, error) {
 		return nil, err
 	}
 	return asynq.NewTask(TypeFeedbackSync, data, asynq.Queue(QueueDefault), asynq.MaxRetry(5)), nil
+}
+
+// NewTeamKnowledgeIngestionTask creates a new team knowledge ingestion task
+func NewTeamKnowledgeIngestionTask(sourceID, tenantID, teamID, filePath string) (*asynq.Task, error) {
+	payload, err := json.Marshal(TeamKnowledgeIngestionPayload{
+		SourceID: sourceID,
+		TenantID: tenantID,
+		TeamID:   teamID,
+		FilePath: filePath,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TypeTeamKnowledgeIngestion, payload, asynq.Queue(QueueDefault), asynq.MaxRetry(3)), nil
 }

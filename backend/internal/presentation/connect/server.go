@@ -165,7 +165,7 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	// TeamKnowledgeService - Team-level knowledge management
 	if cfg.TeamKnowledgeService != nil && cfg.TeamService != nil && cfg.BaseStorage != nil {
 		path, handler = miraiv1connect.NewTeamKnowledgeServiceHandler(
-			NewTeamKnowledgeServiceServer(cfg.TeamKnowledgeService, cfg.TeamService, cfg.BaseStorage),
+			NewTeamKnowledgeServiceServer(cfg.TeamKnowledgeService, cfg.TeamService, cfg.BaseStorage, cfg.WorkerClient),
 			interceptors,
 		)
 		mux.Handle(path, handler)

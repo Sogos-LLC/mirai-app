@@ -12,11 +12,12 @@ import (
 
 // Server wraps the Asynq server and scheduler for background job processing.
 type Server struct {
-	server    *asynq.Server
-	scheduler *asynq.Scheduler
-	mux       *asynq.ServeMux
-	handlers  *Handlers
-	logger    domainservice.Logger
+	server               *asynq.Server
+	scheduler            *asynq.Scheduler
+	mux                  *asynq.ServeMux
+	handlers             *Handlers
+	teamKnowledgeHandler *TeamKnowledgeHandler
+	logger               domainservice.Logger
 }
 
 // NewServer creates a new Asynq worker server with all handlers registered.
@@ -30,6 +31,7 @@ func NewServer(
 	logger domainservice.Logger,
 	crmProvider domainservice.CRMProvider,
 	userRepo UserCRMRepository,
+	teamKnowledgeHandler *TeamKnowledgeHandler,
 ) *Server {
 	// Configure the Asynq server
 	server := asynq.NewServer(
@@ -84,12 +86,19 @@ func NewServer(
 	mux.HandleFunc(worker.TypeCourseExportPoll, handlers.HandleCourseExportPoll)
 	mux.HandleFunc(worker.TypeFeedbackSync, handlers.HandleFeedbackSync)
 
+	// Register team knowledge handler if provided
+	if teamKnowledgeHandler != nil {
+		mux.HandleFunc(worker.TypeTeamKnowledgeIngestion, teamKnowledgeHandler.HandleTeamKnowledgeIngestion)
+		logger.Info("registered team knowledge ingestion handler")
+	}
+
 	return &Server{
-		server:    server,
-		scheduler: scheduler,
-		mux:       mux,
-		handlers:  handlers,
-		logger:    logger,
+		server:               server,
+		scheduler:            scheduler,
+		mux:                  mux,
+		handlers:             handlers,
+		teamKnowledgeHandler: teamKnowledgeHandler,
+		logger:               logger,
 	}
 }
 

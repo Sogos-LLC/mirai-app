@@ -17,12 +17,18 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 )
 
+// TeamKnowledgeTaskEnqueuer defines the interface for enqueueing team knowledge tasks.
+type TeamKnowledgeTaskEnqueuer interface {
+	EnqueueTeamKnowledgeIngestion(sourceID, tenantID, teamID, filePath string) error
+}
+
 // TeamKnowledgeServiceServer implements the TeamKnowledgeService Connect handler.
 type TeamKnowledgeServiceServer struct {
 	miraiv1connect.UnimplementedTeamKnowledgeServiceHandler
 	teamKnowledgeService *service.TeamKnowledgeService
 	teamService          *service.TeamService
 	storageClient        StorageAdapter
+	taskEnqueuer         TeamKnowledgeTaskEnqueuer
 }
 
 // NewTeamKnowledgeServiceServer creates a new TeamKnowledgeServiceServer.
@@ -30,12 +36,14 @@ func NewTeamKnowledgeServiceServer(
 	teamKnowledgeService *service.TeamKnowledgeService,
 	teamService *service.TeamService,
 	storageClient StorageAdapter,
+	taskEnqueuer TeamKnowledgeTaskEnqueuer,
 ) *TeamKnowledgeServiceServer {
 	log.Printf("[TeamKnowledgeService] Handler initialized")
 	return &TeamKnowledgeServiceServer{
 		teamKnowledgeService: teamKnowledgeService,
 		teamService:          teamService,
 		storageClient:        storageClient,
+		taskEnqueuer:         taskEnqueuer,
 	}
 }
 
@@ -97,8 +105,26 @@ func (s *TeamKnowledgeServiceServer) UploadTeamKnowledge(
 	}
 	log.Printf("[TeamKnowledge.Upload] DB record created: sourceID=%s", source.ID)
 
-	// Step 5: For now, return pending status. Processing will happen via worker (Phase 4).
-	log.Printf("[TeamKnowledge.Upload] Step 5: Returning response (processing will happen async)")
+	// Step 5: Enqueue worker task for async processing
+	log.Printf("[TeamKnowledge.Upload] Step 5: Enqueueing worker task")
+	if s.taskEnqueuer != nil {
+		if err := s.taskEnqueuer.EnqueueTeamKnowledgeIngestion(
+			source.ID.String(),
+			tenantID.String(),
+			team.ID.String(),
+			filePath,
+		); err != nil {
+			log.Printf("[TeamKnowledge.Upload] ERROR: Failed to enqueue task: %v", err)
+			// Don't fail the request - the source is created, worker poll can pick it up
+		} else {
+			log.Printf("[TeamKnowledge.Upload] Worker task enqueued successfully")
+		}
+	} else {
+		log.Printf("[TeamKnowledge.Upload] WARNING: No task enqueuer configured, processing will not happen")
+	}
+
+	// Step 6: Return response
+	log.Printf("[TeamKnowledge.Upload] Step 6: Returning response")
 
 	// Generate a stub summary for now
 	summary := fmt.Sprintf("Document '%s' uploaded successfully. Processing will begin shortly.", req.Msg.Filename)
