@@ -17,6 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
+// ErrObjectNotFound is returned when an object does not exist in storage.
+var ErrObjectNotFound = errors.New("object not found")
+
 // S3Storage implements StorageAdapter using S3-compatible object storage.
 // Works with MinIO locally and AWS S3 in production - same API.
 type S3Storage struct {
@@ -147,6 +150,15 @@ func (s *S3Storage) ReadJSON(ctx context.Context, p string, v interface{}) error
 		Key:    aws.String(s.fullKey(p)),
 	})
 	if err != nil {
+		// Check for not-found errors and return a sentinel error
+		var notFound *types.NotFound
+		if errors.As(err, &notFound) {
+			return ErrObjectNotFound
+		}
+		var noSuchKey *types.NoSuchKey
+		if errors.As(err, &noSuchKey) {
+			return ErrObjectNotFound
+		}
 		return err
 	}
 	defer result.Body.Close()

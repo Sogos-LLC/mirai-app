@@ -96,17 +96,34 @@ export function formatFileSize(bytes: bigint): string {
 }
 
 /**
+ * Options for useListKnowledgeSources hook.
+ */
+interface ListKnowledgeSourcesOptions {
+  /** Whether the query should be enabled. Defaults to true for global, true only when teamId is defined for team-specific. */
+  enabled?: boolean;
+}
+
+/**
  * Hook to list knowledge sources.
  * @param teamId - Optional team ID. If omitted, lists global knowledge (tenant-level).
  *                 If provided, lists team-specific knowledge.
+ * @param options - Optional configuration including enabled flag.
  * Refetches periodically when there are pending/processing sources.
  */
-export function useListKnowledgeSources(teamId?: string) {
+export function useListKnowledgeSources(teamId?: string, options?: ListKnowledgeSourcesOptions) {
+  // Determine if query should be enabled:
+  // - For global knowledge (no teamId): always enabled unless explicitly disabled
+  // - For team knowledge (with teamId): only enabled if teamId is defined
+  const isTeamSpecific = teamId !== undefined;
+  const shouldEnable = options?.enabled ?? (isTeamSpecific ? !!teamId : true);
+
   const request = create(ListTeamKnowledgeSourcesRequestSchema, {
     teamId: teamId,
   });
 
-  const query = useQuery(listTeamKnowledgeSources, request);
+  const query = useQuery(listTeamKnowledgeSources, shouldEnable ? request : undefined, {
+    enabled: shouldEnable,
+  });
 
   // Check if any sources are still processing
   const hasActiveProcessing = query.data?.sources?.some(

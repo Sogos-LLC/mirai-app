@@ -15,15 +15,18 @@ export default function ContentLibrary() {
   const router = useRouter();
   const isMobile = useIsMobile();
 
-  // Connect-query hooks
-  const { data: folders, isLoading: foldersLoading, refetch: refetchFolders } = useGetFolderHierarchy(true);
-  const { data: courses, isLoading: coursesLoading } = useListCourses();
-
   // Local UI state only
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
   const [searchQuery, setSearchQuery] = useState('');
-  const [folderFilteredCourses, setFolderFilteredCourses] = useState<LibraryEntry[] | null>(null);
+
+  // Connect-query hooks - use folder filter directly for better caching
+  const { data: folders, isLoading: foldersLoading, refetch: refetchFolders } = useGetFolderHierarchy(true);
+  // Fetch courses with folder filter - React Query will cache per folder automatically
+  const { data: courses, isLoading: coursesLoading } = useListCourses({
+    folder: selectedFolderId || undefined,
+    limit: 100, // Reasonable limit for content library
+  });
   const [isFolderSheetOpen, setIsFolderSheetOpen] = useState(false);
 
   // Folder creation state
@@ -49,25 +52,8 @@ export default function ContentLibrary() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showFolderMenu]);
 
-  // Load courses for selected folder using connect-rpc
-  useEffect(() => {
-    const loadFolderCourses = async () => {
-      if (!selectedFolderId) {
-        setFolderFilteredCourses(null);
-        return;
-      }
-
-      try {
-        // Use listCourses with folder filter - returns LibraryEntry[] directly
-        const result = await courseClient.listCourses({ folder: selectedFolderId });
-        setFolderFilteredCourses(result);
-      } catch (error) {
-        console.error('Failed to load folder courses:', error);
-      }
-    };
-
-    loadFolderCourses();
-  }, [selectedFolderId]);
+  // Courses are now fetched via useListCourses with folder filter
+  // React Query handles caching automatically based on the folder parameter
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders((prev) => {
@@ -362,10 +348,8 @@ export default function ContentLibrary() {
     );
   };
 
-  // Use folder-filtered courses if a folder is selected, otherwise use all courses from Redux
-  const displayCourses = folderFilteredCourses || courses;
-
-  const filteredCourses = displayCourses.filter(course => {
+  // Courses are already filtered by folder via React Query
+  const filteredCourses = courses.filter(course => {
     if (!searchQuery) return true;
 
     const query = searchQuery.toLowerCase();

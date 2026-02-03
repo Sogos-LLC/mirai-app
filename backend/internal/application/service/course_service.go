@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -404,26 +405,17 @@ func (s *CourseService) GetCourse(ctx context.Context, kratosID uuid.UUID, id st
 		return nil, domainerrors.ErrNotFound.WithMessage("course not found")
 	}
 
-	// Check if content exists in MinIO/S3 before attempting to read
-	exists, err := s.storage.CourseContentExists(ctx, course.TenantID, course.ID)
-	if err != nil {
-		s.logger.Error("failed to check course content existence",
-			"courseID", id,
-			"tenantID", course.TenantID,
-			"error", err)
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-	if !exists {
-		s.logger.Error("course content not found in storage",
-			"courseID", id,
-			"tenantID", course.TenantID,
-			"contentPath", course.ContentPath)
-		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
-	}
-
-	// Get content from S3
+	// Get content from S3 (single request instead of checking existence first)
 	var s3Content S3CourseContent
 	if err := s.storage.ReadCourseContent(ctx, course.TenantID, course.ID, &s3Content); err != nil {
+		// Check if content doesn't exist
+		if errors.Is(err, storage.ErrObjectNotFound) {
+			s.logger.Error("course content not found in storage",
+				"courseID", id,
+				"tenantID", course.TenantID,
+				"contentPath", course.ContentPath)
+			return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
+		}
 		s.logger.Error("failed to read course content from S3", "courseID", id, "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
@@ -626,22 +618,15 @@ func (s *CourseService) UpdateCourse(ctx context.Context, kratosID uuid.UUID, id
 		return nil, domainerrors.ErrNotFound.WithMessage("course not found")
 	}
 
-	// Check if content exists in MinIO/S3 before attempting to read
-	exists, err := s.storage.CourseContentExists(ctx, course.TenantID, course.ID)
-	if err != nil {
-		log.Error("failed to check course content existence", "error", err)
-		return nil, domainerrors.ErrInternal.WithCause(err)
-	}
-	if !exists {
-		log.Error("course content not found - cannot update",
-			"tenantID", course.TenantID,
-			"contentPath", course.ContentPath)
-		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
-	}
-
-	// Load existing S3 content
+	// Load existing S3 content (single request instead of checking existence first)
 	var s3Content S3CourseContent
 	if err := s.storage.ReadCourseContent(ctx, course.TenantID, course.ID, &s3Content); err != nil {
+		if errors.Is(err, storage.ErrObjectNotFound) {
+			log.Error("course content not found - cannot update",
+				"tenantID", course.TenantID,
+				"contentPath", course.ContentPath)
+			return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
+		}
 		log.Error("failed to read course content from S3", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
