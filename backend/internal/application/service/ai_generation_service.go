@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -340,11 +341,13 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 						}
 						seenChunks[chunk.ID] = true
 						outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
+							ChunkID:         chunk.ID,
 							SourceID:        chunk.SourceID.String(),
 							SourceName:      chunk.SourceName,
 							Content:         chunk.Content,
 							ChunkIndex:      int(*chunk.ChunkIndex),
 							SimilarityScore: chunk.SimilarityScore,
+							Scope:           "course",
 						})
 					}
 				}
@@ -390,11 +393,13 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 						}
 						seenTeamChunks[chunkKey] = true
 						outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
+							ChunkID:         chunk.ID,
 							SourceID:        chunk.SourceID.String(),
-							SourceName:      chunk.SourceName + " (Team Knowledge)",
+							SourceName:      chunk.SourceName,
 							Content:         chunk.Content,
 							ChunkIndex:      int(*chunk.ChunkIndex),
 							SimilarityScore: chunk.SimilarityScore,
+							Scope:           "team",
 						})
 					}
 				}
@@ -787,11 +792,13 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 							chunkIndex = int(*chunk.ChunkIndex)
 						}
 						ragContext = append(ragContext, service.RAGChunkInput{
+							ChunkID:         chunk.ID,
 							SourceID:        chunk.SourceID.String(),
 							SourceName:      chunk.SourceName,
 							Content:         chunk.Content,
 							ChunkIndex:      chunkIndex,
 							SimilarityScore: chunk.SimilarityScore,
+							Scope:           "course",
 						})
 					}
 				}
@@ -845,11 +852,13 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 							chunkIndex = int(*chunk.ChunkIndex)
 						}
 						ragContext = append(ragContext, service.RAGChunkInput{
+							ChunkID:         chunk.ID,
 							SourceID:        chunk.SourceID.String(),
-							SourceName:      chunk.SourceName + " (Team Knowledge)",
+							SourceName:      chunk.SourceName,
 							Content:         chunk.Content,
 							ChunkIndex:      chunkIndex,
 							SimilarityScore: chunk.SimilarityScore,
+							Scope:           "team",
 						})
 					}
 				}
@@ -2145,4 +2154,128 @@ func (s *AIGenerationService) RunBackground(ctx context.Context, interval time.D
 			}
 		}
 	}
+}
+
+// =============================================================================
+// Provenance Tracking Helpers
+// =============================================================================
+
+// scopePriority returns priority for deduplication (lower = higher priority).
+func scopePriority(scope string) int {
+	switch scope {
+	case "course":
+		return 0
+	case "team":
+		return 1
+	case "global":
+		return 2
+	default:
+		return 3
+	}
+}
+
+// deduplicateChunksWithScopePriority removes duplicate chunks, keeping the one
+// with highest scope priority (course > team > global).
+func deduplicateChunksWithScopePriority(chunks []service.RAGChunkInput) []service.RAGChunkInput {
+	if len(chunks) == 0 {
+		return chunks
+	}
+
+	// Sort by scope priority (lower = higher priority)
+	sort.SliceStable(chunks, func(i, j int) bool {
+		return scopePriority(chunks[i].Scope) < scopePriority(chunks[j].Scope)
+	})
+
+	// Deduplicate by content hash, keeping first occurrence (highest priority)
+	seenContent := make(map[string]bool)
+	result := make([]service.RAGChunkInput, 0, len(chunks))
+
+	for _, chunk := range chunks {
+		// Use first 100 chars as content hash
+		hash := chunk.Content
+		if len(hash) > 100 {
+			hash = hash[:100]
+		}
+		if !seenContent[hash] {
+			seenContent[hash] = true
+			result = append(result, chunk)
+		}
+	}
+
+	return result
+}
+
+// buildProvenance creates ComponentProvenance from RAG chunks used in generation.
+func buildProvenance(chunks []service.RAGChunkInput, queries []string) *ComponentProvenance {
+	prov := &ComponentProvenance{
+		SourceChunks: make([]ProvenanceChunk, 0, len(chunks)),
+		Queries:      queries,
+		GeneratedAt:  time.Now(),
+	}
+
+	for _, chunk := range chunks {
+		prov.SourceChunks = append(prov.SourceChunks, ProvenanceChunk{
+			ChunkID:         chunk.ChunkID,
+			SourceID:        chunk.SourceID,
+			SourceName:      chunk.SourceName,
+			Excerpt:         truncateExcerpt(chunk.Content, 200),
+			SimilarityScore: chunk.SimilarityScore,
+			Scope:           chunk.Scope,
+		})
+
+		// Estimate tokens (roughly 4 chars per token)
+		tokens := int32(len(chunk.Content) / 4)
+		prov.TotalTokens += tokens
+
+		switch chunk.Scope {
+		case "course":
+			prov.CourseTokens += tokens
+		case "team":
+			prov.TeamTokens += tokens
+		case "global":
+			prov.GlobalTokens += tokens
+		}
+	}
+
+	return prov
+}
+
+// aggregateLessonProvenance aggregates provenance from all components in a lesson.
+func aggregateLessonProvenance(components []S3LessonComponent) *LessonProvenance {
+	prov := &LessonProvenance{}
+
+	sourceIDs := make(map[string]bool)
+	for _, comp := range components {
+		if comp.Provenance == nil {
+			continue
+		}
+
+		prov.CourseTokens += comp.Provenance.CourseTokens
+		prov.TeamTokens += comp.Provenance.TeamTokens
+		prov.GlobalTokens += comp.Provenance.GlobalTokens
+		prov.TotalTokens += comp.Provenance.TotalTokens
+
+		for _, chunk := range comp.Provenance.SourceChunks {
+			sourceIDs[chunk.SourceID] = true
+		}
+	}
+
+	prov.SourceCount = int32(len(sourceIDs))
+
+	// Calculate grounding score
+	groundedTokens := prov.CourseTokens + prov.TeamTokens + prov.GlobalTokens
+	if prov.TotalTokens > 0 {
+		prov.GroundingScore = float32(groundedTokens) / float32(prov.TotalTokens)
+		prov.UngroundedTokens = prov.TotalTokens - groundedTokens
+	}
+
+	return prov
+}
+
+// truncateExcerpt truncates content to maxLen characters, adding ellipsis if needed.
+func truncateExcerpt(content string, maxLen int) string {
+	if len(content) <= maxLen {
+		return content
+	}
+	return content[:maxLen-3] + "..."
 }

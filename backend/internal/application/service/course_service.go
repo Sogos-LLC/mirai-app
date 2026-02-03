@@ -109,24 +109,26 @@ type S3CourseContent struct {
 
 // S3GeneratedLesson represents a generated lesson stored in content.json.
 type S3GeneratedLesson struct {
-	ID              string              `json:"id"`
-	SectionID       string              `json:"sectionId"`
-	OutlineLessonID string              `json:"outlineLessonId"`
-	Title           string              `json:"title"`
-	SegueText       *string             `json:"segueText,omitempty"`
-	Components      []S3LessonComponent `json:"components"`
-	GeneratedAt     time.Time           `json:"generatedAt"`
+	ID                  string              `json:"id"`
+	SectionID           string              `json:"sectionId"`
+	OutlineLessonID     string              `json:"outlineLessonId"`
+	Title               string              `json:"title"`
+	SegueText           *string             `json:"segueText,omitempty"`
+	Components          []S3LessonComponent `json:"components"`
+	GeneratedAt         time.Time           `json:"generatedAt"`
+	AggregateProvenance *LessonProvenance   `json:"aggregateProvenance,omitempty"` // Aggregated provenance across all components
 }
 
 // S3LessonComponent represents a lesson component stored in content.json.
 type S3LessonComponent struct {
-	ID                   string          `json:"id"`
-	Type                 string          `json:"type"` // LessonComponentType string value (e.g., "text", "heading", "image")
-	Order                int32           `json:"order"`
-	ContentJSON          json.RawMessage `json:"contentJson"`
-	LearningObjectiveIDs []string        `json:"learningObjectiveIds,omitempty"`
-	CreatedAt            time.Time       `json:"createdAt"`
-	UpdatedAt            time.Time       `json:"updatedAt"`
+	ID                   string               `json:"id"`
+	Type                 string               `json:"type"` // LessonComponentType string value (e.g., "text", "heading", "image")
+	Order                int32                `json:"order"`
+	ContentJSON          json.RawMessage      `json:"contentJson"`
+	LearningObjectiveIDs []string             `json:"learningObjectiveIds,omitempty"`
+	CreatedAt            time.Time            `json:"createdAt"`
+	UpdatedAt            time.Time            `json:"updatedAt"`
+	Provenance           *ComponentProvenance `json:"provenance,omitempty"` // Knowledge source attribution
 }
 
 // S3WizardData stores wizard selections for AI context and realignment.
@@ -168,6 +170,42 @@ type S3ToneOption struct {
 	Name          string `json:"name"`
 	Description   string `json:"description"`
 	LevelOfDetail string `json:"levelOfDetail"`
+}
+
+// =============================================================================
+// Provenance Tracking Types
+// =============================================================================
+
+// ProvenanceChunk represents a knowledge chunk that contributed to generated content.
+type ProvenanceChunk struct {
+	ChunkID         string  `json:"chunkId"`
+	SourceID        string  `json:"sourceId"`
+	SourceName      string  `json:"sourceName"`
+	Excerpt         string  `json:"excerpt"`         // First 200 chars of content
+	SimilarityScore float32 `json:"similarityScore"` // Relevance score from vector search
+	Scope           string  `json:"scope"`           // "course", "team", or "global"
+}
+
+// ComponentProvenance tracks which knowledge sources contributed to a component.
+type ComponentProvenance struct {
+	SourceChunks []ProvenanceChunk `json:"sourceChunks"`
+	Queries      []string          `json:"queries,omitempty"` // Search queries used
+	TeamTokens   int32             `json:"teamTokens"`        // Tokens from team sources
+	GlobalTokens int32             `json:"globalTokens"`      // Tokens from global sources
+	CourseTokens int32             `json:"courseTokens"`      // Tokens from course sources
+	TotalTokens  int32             `json:"totalTokens"`       // Total tokens used
+	GeneratedAt  time.Time         `json:"generatedAt"`
+}
+
+// LessonProvenance aggregates provenance across all components in a lesson.
+type LessonProvenance struct {
+	GroundingScore   float32 `json:"groundingScore"`   // 0.0 - 1.0, ratio of grounded content
+	TeamTokens       int32   `json:"teamTokens"`       // Tokens from team sources
+	GlobalTokens     int32   `json:"globalTokens"`     // Tokens from global sources
+	CourseTokens     int32   `json:"courseTokens"`     // Tokens from course sources
+	UngroundedTokens int32   `json:"ungroundedTokens"` // Tokens not from RAG
+	TotalTokens      int32   `json:"totalTokens"`      // Total tokens in lesson
+	SourceCount      int32   `json:"sourceCount"`      // Number of unique sources
 }
 
 // LibraryEntry represents a course listing (metadata only).

@@ -506,11 +506,13 @@ type DocumentIndexInput struct {
 
 // RAGChunkInput represents a retrieved knowledge chunk for content generation.
 type RAGChunkInput struct {
+	ChunkID         string  // Unique chunk identifier for provenance tracking
 	SourceID        string  // Knowledge source ID for citation
 	SourceName      string  // Document name for citation
 	Content         string  // The actual chunk content
 	ChunkIndex      int     // Position in original document
 	SimilarityScore float32 // Relevance score from vector search
+	Scope           string  // Source scope: "course", "team", or "global"
 }
 
 // SMEKnowledgeInput represents knowledge from an SME.
