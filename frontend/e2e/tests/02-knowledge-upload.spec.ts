@@ -194,10 +194,39 @@ test.describe('Knowledge Upload to Acme Test Team', () => {
     if (await fileInput.count() > 0 && fs.existsSync(ACME_HANDBOOK_PATH)) {
       await fileInput.first().setInputFiles(ACME_HANDBOOK_PATH);
 
-      // Wait for modal to appear (it opens immediately after file selection)
-      await page.waitForTimeout(1000);
+      // Wait for modal to appear (duplicate check or upload modal)
+      await page.waitForTimeout(2000);
 
       // Take screenshot of modal appearing
+      await page.screenshot({
+        path: `${SCREENSHOT_DIR}/05-modal-initial.png`,
+        fullPage: true
+      });
+
+      // Check for duplicate warning modal first (file may already exist)
+      const duplicateModal = page.locator('h3:has-text("Duplicate File Detected")');
+      const hasDuplicateWarning = await duplicateModal.isVisible({ timeout: 3000 }).catch(() => false);
+
+      if (hasDuplicateWarning) {
+        console.log('  ⚠️ Duplicate file detected - clicking Upload Anyway');
+
+        // Screenshot of duplicate modal
+        await page.screenshot({
+          path: `${SCREENSHOT_DIR}/05-duplicate-modal.png`,
+          fullPage: true
+        });
+
+        // Click "Upload Anyway" to proceed with upload modal
+        const uploadAnywayBtn = page.locator('button:has-text("Upload Anyway")');
+        if (await uploadAnywayBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await uploadAnywayBtn.click();
+          await page.waitForTimeout(1000);
+          console.log('  ✅ Clicked Upload Anyway');
+        }
+      }
+
+      // Now check for the upload progress modal
+      await page.waitForTimeout(1000);
       await page.screenshot({
         path: `${SCREENSHOT_DIR}/05-upload-modal-processing.png`,
         fullPage: true
