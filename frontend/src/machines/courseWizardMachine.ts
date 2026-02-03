@@ -27,16 +27,14 @@ import { NetworkError, createAuthError, type AuthError } from './shared/types';
 
 /**
  * Wizard step identifiers matching backend wizard state
- * 6-step wizard:
- * 1. knowledgeSelection - Select team/global knowledge sources (auto-skips if none exist)
- * 2. courseName - Enter course name + generate outcomes
- * 3. titleDescription - Review AI-generated title/description
- * 4. smeSelection - Select SME personas
- * 5. audienceSelection - Select audience personas
- * 6. toneSelection - Select tone + additional context
+ * 5-step wizard:
+ * 1. courseName - Enter course name + add knowledge (via button) + generate outcomes
+ * 2. titleDescription - Review AI-generated title/description
+ * 3. smeSelection - Select SME personas
+ * 4. audienceSelection - Select audience personas
+ * 5. toneSelection - Select tone + additional context
  */
 export type WizardStep =
-  | 'knowledgeSelection'
   | 'courseName'
   | 'titleDescription'
   | 'smeSelection'
@@ -366,7 +364,7 @@ export const courseWizardMachine = createMachine({
           }),
         },
         START_FRESH: {
-          target: 'knowledgeSelection',
+          target: 'courseName',
           actions: assign({
             flowStartedAt: () => Date.now(),
           }),
@@ -383,7 +381,7 @@ export const courseWizardMachine = createMachine({
           target: 'resuming',
         },
         START_FRESH: {
-          target: 'knowledgeSelection',
+          target: 'courseName',
           actions: assign({
             ...initialContext,
             flowStartedAt: () => Date.now(),
@@ -398,18 +396,11 @@ export const courseWizardMachine = createMachine({
     resuming: {
       always: [
         {
-          target: 'knowledgeSelection',
-          guard: ({ context }) => context.savedState?.currentStep === 'knowledgeSelection',
-          actions: assign(({ context }) => ({
-            selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
-            selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
-            currentStep: 'knowledgeSelection' as const,
-            flowStartedAt: Date.now(),
-          })),
-        },
-        {
+          // Handle old saved states that had knowledgeSelection - map to courseName
           target: 'courseName',
-          guard: ({ context }) => context.savedState?.currentStep === 'courseName',
+          guard: ({ context }) =>
+            context.savedState?.currentStep === 'knowledgeSelection' ||
+            context.savedState?.currentStep === 'courseName',
           actions: assign(({ context }) => ({
             selectedTeamDocIds: context.savedState?.data?.selectedTeamDocIds ?? [],
             selectedGlobalDocIds: context.savedState?.data?.selectedGlobalDocIds ?? [],
@@ -489,7 +480,7 @@ export const courseWizardMachine = createMachine({
         },
         {
           // Default: start from beginning
-          target: 'knowledgeSelection',
+          target: 'courseName',
           actions: assign({
             flowStartedAt: () => Date.now(),
           }),
@@ -498,25 +489,27 @@ export const courseWizardMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Step 1: Knowledge Source Selection
-    // Select team and global knowledge sources to ground the course
-    // Auto-skips to courseName if no knowledge sources are available
+    // Step 1: Course Name Entry
+    // Knowledge sources can be added via the "Add Knowledge" button
     // --------------------------------------------------------
-    knowledgeSelection: {
+    courseName: {
       entry: assign({
-        currentStep: 'knowledgeSelection' as const,
+        currentStep: 'courseName' as const,
       }),
-      // Auto-skip if no knowledge sources available
-      always: [
-        {
-          target: 'courseName',
-          guard: ({ context }) =>
-            context.availableTeamDocs.length === 0 &&
-            context.availableGlobalDocs.length === 0,
-        },
-      ],
       on: {
-        // Load available knowledge sources
+        // Course name events
+        SET_COURSE_NAME: {
+          actions: assign({
+            courseName: ({ event }) => event.name,
+            error: null,
+          }),
+        },
+        SET_DESIRED_OUTCOMES: {
+          actions: assign({
+            desiredOutcomes: ({ event }) => event.outcomes,
+          }),
+        },
+        // Knowledge source events (handled via modal in CourseNameStep)
         SET_AVAILABLE_KNOWLEDGE: {
           actions: assign({
             availableTeamDocs: ({ event }) => event.teamDocs,
@@ -562,48 +555,6 @@ export const courseWizardMachine = createMachine({
             selectedGlobalDocIds: () => [],
           }),
         },
-        // Internal Data Only mode
-        SET_INTERNAL_DATA_ONLY: {
-          actions: assign({
-            internalDataOnly: ({ event }) => event.enabled,
-          }),
-        },
-        // Proceed to course name step
-        APPROVE_KNOWLEDGE_SELECTION: {
-          target: 'courseName',
-        },
-        // Skip knowledge selection entirely (proceed with no sources)
-        SKIP_KNOWLEDGE_SELECTION: {
-          target: 'courseName',
-          actions: assign({
-            selectedTeamDocIds: () => [],
-            selectedGlobalDocIds: () => [],
-          }),
-        },
-        CANCEL: 'cancelled',
-      },
-    },
-
-    // --------------------------------------------------------
-    // Step 2: Course Name Entry
-    // --------------------------------------------------------
-    courseName: {
-      entry: assign({
-        currentStep: 'courseName' as const,
-      }),
-      on: {
-        // Course name events
-        SET_COURSE_NAME: {
-          actions: assign({
-            courseName: ({ event }) => event.name,
-            error: null,
-          }),
-        },
-        SET_DESIRED_OUTCOMES: {
-          actions: assign({
-            desiredOutcomes: ({ event }) => event.outcomes,
-          }),
-        },
         // Knowledge sources (added via modal for course-specific uploads)
         ADD_FILES: {
           actions: assign({
@@ -629,7 +580,7 @@ export const courseWizardMachine = createMachine({
           target: 'generatingTitle',
           guard: ({ context }) => context.courseName.trim().length > 0,
         },
-        GO_BACK: 'knowledgeSelection',
+        // No GO_BACK - this is the first step
         CANCEL: 'cancelled',
       },
     },
@@ -1081,12 +1032,11 @@ export const courseWizardMachine = createMachine({
  */
 export function getStepNumber(step: WizardStep): number {
   const stepMap: Record<WizardStep, number> = {
-    knowledgeSelection: 1,
-    courseName: 2,
-    titleDescription: 3,
-    smeSelection: 4,
-    audienceSelection: 5,
-    toneSelection: 6,
+    courseName: 1,
+    titleDescription: 2,
+    smeSelection: 3,
+    audienceSelection: 4,
+    toneSelection: 5,
     outlineJobQueued: 6, // Same as toneSelection since it's a confirmation
   };
   return stepMap[step];
@@ -1097,7 +1047,6 @@ export function getStepNumber(step: WizardStep): number {
  */
 export function getStepLabel(step: WizardStep): string {
   const labelMap: Record<WizardStep, string> = {
-    knowledgeSelection: 'Knowledge Sources',
     courseName: 'Course Name',
     titleDescription: 'Title & Description',
     smeSelection: 'SME Personas',
@@ -1113,7 +1062,6 @@ export function getStepLabel(step: WizardStep): string {
  */
 export function getAllSteps(): WizardStep[] {
   return [
-    'knowledgeSelection',
     'courseName',
     'titleDescription',
     'smeSelection',
@@ -1144,7 +1092,7 @@ export function isGenerating(stateValue: unknown): boolean {
  */
 export function canGoBack(stateValue: unknown): boolean {
   if (typeof stateValue === 'string') {
-    return !['knowledgeSelection', 'checkingSavedState', 'promptResume', 'resuming', 'complete', 'cancelled'].includes(
+    return !['courseName', 'checkingSavedState', 'promptResume', 'resuming', 'complete', 'cancelled'].includes(
       stateValue
     );
   }

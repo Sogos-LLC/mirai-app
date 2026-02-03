@@ -31,7 +31,6 @@ import { useListTeams } from '@/hooks/useTeams';
 import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
-import KnowledgeSelectionStep from './steps/KnowledgeSelectionStep';
 import CourseNameStep from './steps/CourseNameStep';
 import TitleDescriptionStep from './steps/TitleDescriptionStep';
 import SMEPersonasStep from './steps/SMEPersonasStep';
@@ -458,8 +457,8 @@ export default function CourseWizard() {
   }, [sessionId, uploadAndProcess]);
 
 
-  // Loading state while checking for saved state or loading knowledge
-  if (state.matches('checkingSavedState') || getSavedState.isLoading || globalKnowledgeLoading || teamKnowledgeLoading) {
+  // Loading state only while checking for saved state - don't block on knowledge loading
+  if (state.matches('checkingSavedState') || getSavedState.isLoading) {
     return (
       <GeneratingStep
         title="Loading..."
@@ -628,25 +627,6 @@ export default function CourseWizard() {
     <>
       <WizardProgress currentStep={context.currentStep} />
       {renderError()}
-
-      {state.matches('knowledgeSelection') && (
-        <KnowledgeSelectionStep
-          teamDocs={context.availableTeamDocs}
-          globalDocs={context.availableGlobalDocs}
-          selectedTeamDocIds={context.selectedTeamDocIds}
-          selectedGlobalDocIds={context.selectedGlobalDocIds}
-          onToggleTeamDoc={(docId) => send({ type: 'TOGGLE_TEAM_DOC', docId })}
-          onToggleGlobalDoc={(docId) => send({ type: 'TOGGLE_GLOBAL_DOC', docId })}
-          onSelectAllTeamDocs={() => send({ type: 'SELECT_ALL_TEAM_DOCS' })}
-          onDeselectAllTeamDocs={() => send({ type: 'DESELECT_ALL_TEAM_DOCS' })}
-          onSelectAllGlobalDocs={() => send({ type: 'SELECT_ALL_GLOBAL_DOCS' })}
-          onDeselectAllGlobalDocs={() => send({ type: 'DESELECT_ALL_GLOBAL_DOCS' })}
-          onNext={() => send({ type: 'APPROVE_KNOWLEDGE_SELECTION' })}
-          onSkip={() => send({ type: 'SKIP_KNOWLEDGE_SELECTION' })}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-        />
-      )}
 
       {state.matches('courseName') && (
         <CourseNameStep

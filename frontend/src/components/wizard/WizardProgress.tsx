@@ -11,7 +11,6 @@ interface WizardProgressProps {
 }
 
 const stepIcons: Record<WizardStep, React.ComponentType<{ className?: string }>> = {
-  knowledgeSelection: BookOpen,
   courseName: FileText,
   titleDescription: Sparkles,
   smeSelection: Users,
