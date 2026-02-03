@@ -161,6 +161,22 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 		mux.Handle(path, handler)
 	}
 
+	// TeamKnowledgeService - team-level knowledge management with async ingestion
+	if cfg.KnowledgeSourceService != nil && cfg.TeamService != nil && cfg.BaseStorage != nil && cfg.WorkerClient != nil && cfg.NotificationSubscriber != nil {
+		path, handler = miraiv1connect.NewTeamKnowledgeServiceHandler(
+			NewTeamKnowledgeServiceServer(
+				cfg.KnowledgeSourceService,
+				cfg.TeamService,
+				cfg.UserRepo,
+				cfg.BaseStorage,
+				cfg.WorkerClient,
+				cfg.NotificationSubscriber,
+			),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
 	// FeedbackService - user feedback collection
 	if cfg.UserService != nil && cfg.WorkerClient != nil {
 		path, handler = miraiv1connect.NewFeedbackServiceHandler(
