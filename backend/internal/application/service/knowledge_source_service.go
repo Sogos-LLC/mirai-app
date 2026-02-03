@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 
@@ -303,18 +302,14 @@ func DetectVideoURLs(content string) []string {
 
 // ChunkText splits text into overlapping chunks.
 func ChunkText(text string, chunkSize, overlap int) []string {
-	log.Printf("[ChunkText] Starting: textLen=%d, chunkSize=%d, overlap=%d", len(text), chunkSize, overlap)
 	text = strings.TrimSpace(text)
 	if len(text) == 0 {
-		log.Printf("[ChunkText] Empty after trim, returning nil")
 		return nil
 	}
 
 	if len(text) <= chunkSize {
-		log.Printf("[ChunkText] Text fits in single chunk, returning")
 		return []string{text}
 	}
-	log.Printf("[ChunkText] Will create multiple chunks (textLen=%d, chunkSize=%d)", len(text), chunkSize)
 
 	var chunks []string
 	start := 0
@@ -349,7 +344,6 @@ func ChunkText(text string, chunkSize, overlap int) []string {
 		}
 	}
 
-	log.Printf("[ChunkText] Completed: created %d chunks", len(chunks))
 	return chunks
 }
 

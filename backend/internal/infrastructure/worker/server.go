@@ -37,8 +37,8 @@ func NewServer(
 	server := asynq.NewServer(
 		asynq.RedisClientOpt{Addr: redisAddr},
 		asynq.Config{
-			// Process up to 2 tasks concurrently per pod (reduced from 10 due to OOM)
-			Concurrency: 2,
+			// Process up to 10 tasks concurrently per pod
+			Concurrency: 10,
 			// Priority queues - higher number = higher priority
 			Queues: map[string]int{
 				worker.QueueCritical: 6, // Provisioning gets most workers
