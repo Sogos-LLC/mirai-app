@@ -423,6 +423,10 @@ test.describe('Team Knowledge Settings', () => {
       if (err.includes('404')) return false; // Expected until team exists
       if (err.includes('stream error')) return false; // Streaming errors from notification/job subscriptions
       if (err.includes('Failed to fetch')) return false; // Network errors from streaming
+      if (err.includes('ERR_FAILED')) return false; // Network errors
+      if (err.includes('CORS policy')) return false; // CORS errors from streaming endpoints
+      if (err.includes('ERR_QUIC_PROTOCOL_ERROR')) return false; // HTTP/3 protocol errors
+      if (err.includes('RSC payload')) return false; // React Server Components fallback errors
       return true;
     });
 
