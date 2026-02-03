@@ -86,6 +86,9 @@ type TeamRepository interface {
 	// GetByID retrieves a team by its ID.
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Team, error)
 
+	// GetByTenantID retrieves the first team for a tenant.
+	GetByTenantID(ctx context.Context, tenantID uuid.UUID) (*entity.Team, error)
+
 	// ListByCompanyID retrieves all teams in a company.
 	ListByCompanyID(ctx context.Context, companyID uuid.UUID) ([]*entity.Team, error)
 

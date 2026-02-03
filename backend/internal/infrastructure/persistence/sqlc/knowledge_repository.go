@@ -322,10 +322,17 @@ func toKnowledgeSourceEntity(ks *gen.KnowledgeSource) *entity.KnowledgeSource {
 		courseID = &ks.CourseID.UUID
 	}
 
+	// Handle optional TeamID (for team-level knowledge sources)
+	var teamID *uuid.UUID
+	if ks.TeamID.Valid {
+		teamID = &ks.TeamID.UUID
+	}
+
 	return &entity.KnowledgeSource{
 		ID:            ks.ID,
 		TenantID:      ks.TenantID,
 		CourseID:      courseID,
+		TeamID:        teamID,
 		SessionID:     fromNullStringPtr(ks.SessionID),
 		Type:          sourceType,
 		Status:        status,

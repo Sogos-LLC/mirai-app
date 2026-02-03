@@ -110,6 +110,29 @@ func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error) {
 	return i, err
 }
 
+const getTeamByTenantID = `-- name: GetTeamByTenantID :one
+SELECT id, tenant_id, company_id, name, description, created_at, updated_at FROM teams
+WHERE tenant_id = $1
+ORDER BY created_at ASC
+LIMIT 1
+`
+
+// Get the first team for a tenant (most tenants have one team)
+func (q *Queries) GetTeamByTenantID(ctx context.Context, tenantID uuid.UUID) (Team, error) {
+	row := q.db.QueryRowContext(ctx, getTeamByTenantID, tenantID)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CompanyID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getTeamMember = `-- name: GetTeamMember :one
 SELECT id, tenant_id, team_id, user_id, role, created_at FROM team_members
 WHERE team_id = $1 AND user_id = $2

@@ -372,3 +372,15 @@ func (s *TeamService) RemoveMember(ctx context.Context, kratosID uuid.UUID, team
 	log.Info("team member removed")
 	return nil
 }
+
+// GetTeamByTenant retrieves the first team for a tenant.
+// This is a simplified method that doesn't require user authentication,
+// useful for internal services that already have tenant context.
+func (s *TeamService) GetTeamByTenant(ctx context.Context, tenantID uuid.UUID) (*entity.Team, error) {
+	team, err := s.teamRepo.GetByTenantID(ctx, tenantID)
+	if err != nil {
+		s.logger.Error("failed to get team by tenant", "tenantID", tenantID, "error", err)
+		return nil, err
+	}
+	return team, nil
+}

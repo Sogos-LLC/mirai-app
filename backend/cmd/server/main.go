@@ -88,6 +88,7 @@ func main() {
 	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
 	wizardStateRepo := sqlc.NewWizardStateRepository(db.DB)
 	knowledgeRepo := sqlc.NewKnowledgeSourceRepository(db.DB)
+	teamKnowledgeRepo := sqlc.NewTeamKnowledgeRepository(db.DB)
 
 	// Initialize shared HTTP client
 	httpClient := httputil.NewClient()
@@ -263,6 +264,10 @@ func main() {
 	knowledgeSourceService := service.NewKnowledgeSourceService(knowledgeRepo, embeddingClient, vectorClient)
 	logger.Info("knowledge source service initialized")
 
+	// Team Knowledge service (for team-level RAG knowledge)
+	teamKnowledgeService := service.NewTeamKnowledgeService(teamKnowledgeRepo, embeddingClient, vectorClient)
+	logger.Info("team knowledge service initialized")
+
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
@@ -329,6 +334,7 @@ func main() {
 		AIGenerationService:    aiGenerationService,
 		CourseWizardService:    courseWizardService,
 		KnowledgeSourceService: knowledgeSourceService,
+		TeamKnowledgeService:   teamKnowledgeService,
 		BaseStorage:            baseStorage,
 		PendingRegRepo:         pendingRegRepo,
 		UserRepo:               userRepo,               // For tenant context in auth interceptor

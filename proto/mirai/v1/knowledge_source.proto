@@ -69,6 +69,9 @@ message KnowledgeSource {
   // Structured index of document contents for AI navigation
   // Used for "Internal Data Only" mode course planning
   optional DocumentIndex document_index = 19;
+
+  // Team ID for team-level knowledge sources (shared across all team courses)
+  optional string team_id = 20;
 }
 
 // DocumentIndex provides a structured outline of document contents for AI navigation.

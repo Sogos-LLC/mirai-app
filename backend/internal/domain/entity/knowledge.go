@@ -13,6 +13,7 @@ type KnowledgeSource struct {
 	TenantID  uuid.UUID
 	CourseID  *uuid.UUID // Optional - nil for pre-course session sources
 	SessionID *string    // For pre-course wizard flow
+	TeamID    *uuid.UUID // For team-level knowledge sources (shared across all team courses)
 
 	Type   valueobject.KnowledgeSourceType
 	Status valueobject.KnowledgeSourceStatus

@@ -58,6 +58,20 @@ func (r *TeamRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Tea
 	return toTeamEntity(&result), nil
 }
 
+// GetByTenantID retrieves the first team for a tenant.
+func (r *TeamRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUID) (*entity.Team, error) {
+	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.Team, error) {
+		return q.GetTeamByTenantID(ctx, tenantID)
+	})
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get team by tenant: %w", err)
+	}
+	return toTeamEntity(&result), nil
+}
+
 // ListByCompanyID retrieves all teams in a company.
 func (r *TeamRepository) ListByCompanyID(ctx context.Context, companyID uuid.UUID) ([]*entity.Team, error) {
 	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.Team, error) {

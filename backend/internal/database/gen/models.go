@@ -640,6 +640,8 @@ type KnowledgeSource struct {
 	TokenCount  sql.NullInt32         `db:"token_count" json:"token_count"`
 	// Structured index of document contents: main_topics, key_concepts, estimated_lesson_count. Used by AI for course planning.
 	DocumentIndex pqtype.NullRawMessage `db:"document_index" json:"document_index"`
+	// Team ID for team-level knowledge sources (shared across all team courses)
+	TeamID uuid.NullUUID `db:"team_id" json:"team_id"`
 }
 
 type Lesson struct {

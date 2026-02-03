@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "buf/validate/validate.proto";
+import "mirai/v1/knowledge_source.proto";
+
+// =============================================================================
+// TEAM KNOWLEDGE SERVICE - RPC definitions for team-level knowledge operations
+// =============================================================================
+//
+// Team knowledge sources are shared across all courses for a team.
+// This differs from course-level knowledge which is specific to a single course.
+//
+// To regenerate after changes: cd proto && buf generate
+// =============================================================================
+
+// TeamKnowledgeService handles team-level knowledge source operations.
+service TeamKnowledgeService {
+  // UploadTeamKnowledge uploads a file and processes it for team-wide RAG.
+  // The file is stored in MinIO and indexed for semantic search.
+  rpc UploadTeamKnowledge(UploadTeamKnowledgeRequest) returns (UploadTeamKnowledgeResponse);
+
+  // ListTeamKnowledgeSources returns all team-level knowledge sources.
+  rpc ListTeamKnowledgeSources(ListTeamKnowledgeSourcesRequest) returns (ListTeamKnowledgeSourcesResponse);
+
+  // GetTeamKnowledgeSource returns a single team knowledge source by ID.
+  rpc GetTeamKnowledgeSource(GetTeamKnowledgeSourceRequest) returns (GetTeamKnowledgeSourceResponse);
+
+  // DeleteTeamKnowledgeSource removes a team knowledge source and its vectors.
+  rpc DeleteTeamKnowledgeSource(DeleteTeamKnowledgeSourceRequest) returns (DeleteTeamKnowledgeSourceResponse);
+
+  // SearchTeamKnowledge performs semantic search across team knowledge.
+  rpc SearchTeamKnowledge(SearchTeamKnowledgeRequest) returns (SearchTeamKnowledgeResponse);
+}
+
+// UploadTeamKnowledgeRequest for uploading a file to team knowledge.
+message UploadTeamKnowledgeRequest {
+  // Filename for display and MIME type detection
+  string filename = 1 [(buf.validate.field).string.min_len = 1];
+
+  // Content type (e.g., "text/plain", "text/markdown")
+  string content_type = 2 [(buf.validate.field).string.min_len = 1];
+
+  // File content as bytes
+  bytes file_content = 3 [(buf.validate.field).bytes.min_len = 1];
+}
+
+message UploadTeamKnowledgeResponse {
+  // The created knowledge source
+  KnowledgeSource source = 1;
+
+  // AI-generated summary of the document
+  string rag_summary = 2;
+}
+
+// ListTeamKnowledgeSourcesRequest for listing team sources.
+// Team ID is derived from the authenticated user's team membership.
+message ListTeamKnowledgeSourcesRequest {}
+
+message ListTeamKnowledgeSourcesResponse {
+  // All knowledge sources for the team
+  repeated KnowledgeSource sources = 1;
+
+  // Total number of sources
+  int32 total_sources = 2;
+
+  // Total tokens across all ready sources
+  int64 total_tokens = 3;
+}
+
+// GetTeamKnowledgeSourceRequest for fetching a single source.
+message GetTeamKnowledgeSourceRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message GetTeamKnowledgeSourceResponse {
+  KnowledgeSource source = 1;
+}
+
+// DeleteTeamKnowledgeSourceRequest to remove a source.
+message DeleteTeamKnowledgeSourceRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message DeleteTeamKnowledgeSourceResponse {
+  bool success = 1;
+}
+
+// SearchTeamKnowledgeRequest for semantic search across team knowledge.
+message SearchTeamKnowledgeRequest {
+  // Search query
+  string query = 1 [(buf.validate.field).string.min_len = 1];
+
+  // Number of results to return (default 5, max 20)
+  int32 top_k = 2;
+}
+
+message SearchTeamKnowledgeResponse {
+  // Retrieved chunks with similarity scores
+  repeated RetrievedChunk chunks = 1;
+}

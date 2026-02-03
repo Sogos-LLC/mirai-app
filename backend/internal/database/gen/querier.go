@@ -33,6 +33,8 @@ type Querier interface {
 	CountExportsByStatus(ctx context.Context, courseID uuid.UUID) (CountExportsByStatusRow, error)
 	CountKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) (int32, error)
 	CountKnowledgeSourcesBySession(ctx context.Context, sessionID sql.NullString) (int32, error)
+	// Count sources for a team
+	CountKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.NullUUID) (int32, error)
 	CountNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
 	CountPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) (int32, error)
 	CountUnreadNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
@@ -70,6 +72,10 @@ type Querier interface {
 	// Team and TeamMember CRUD operations
 	// Schema: teams and team_members tables with RLS isolation by tenant_id
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
+	// Team knowledge source operations
+	// Schema: knowledge_sources table with team_id for team-level knowledge
+	// Create a team-level knowledge source
+	CreateTeamKnowledgeSource(ctx context.Context, arg CreateTeamKnowledgeSourceParams) (KnowledgeSource, error)
 	// Tenant CRUD operations
 	// Schema: tenants table
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
@@ -83,6 +89,8 @@ type Querier interface {
 	DeleteFolder(ctx context.Context, id uuid.UUID) error
 	DeleteKnowledgeSource(ctx context.Context, id uuid.UUID) error
 	DeleteKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) error
+	// Delete all knowledge sources for a team
+	DeleteKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.NullUUID) error
 	DeleteNotification(ctx context.Context, id uuid.UUID) error
 	DeletePendingRegistration(ctx context.Context, id uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
@@ -111,6 +119,8 @@ type Querier interface {
 	GetInvitationByID(ctx context.Context, id uuid.UUID) (Invitation, error)
 	GetInvitationByToken(ctx context.Context, token string) (Invitation, error)
 	GetKnowledgeSourceByID(ctx context.Context, id uuid.UUID) (KnowledgeSource, error)
+	// Get a knowledge source by ID (used for team knowledge operations)
+	GetKnowledgeSourceByIDForTeam(ctx context.Context, id uuid.UUID) (KnowledgeSource, error)
 	GetNotificationByID(ctx context.Context, id uuid.UUID) (Notification, error)
 	// Note: This looks for 'admin' role instead of deprecated 'owner'
 	GetOwnerByCompanyID(ctx context.Context, companyID uuid.NullUUID) (User, error)
@@ -122,8 +132,12 @@ type Querier interface {
 	GetReadySourcesByCourse(ctx context.Context, courseID uuid.NullUUID) ([]KnowledgeSource, error)
 	// Get only ready sources for a session
 	GetReadySourcesBySession(ctx context.Context, sessionID sql.NullString) ([]KnowledgeSource, error)
+	// Get only ready sources for a team
+	GetReadySourcesByTeam(ctx context.Context, teamID uuid.NullUUID) ([]KnowledgeSource, error)
 	GetSharedFolder(ctx context.Context, tenantID uuid.UUID) (Folder, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
+	// Get the first team for a tenant (most tenants have one team)
+	GetTeamByTenantID(ctx context.Context, tenantID uuid.UUID) (Team, error)
 	GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamMember, error)
 	// Tenant AI Settings CRUD operations
 	// Schema: tenant_ai_settings table with RLS isolation by tenant_id
@@ -155,6 +169,8 @@ type Querier interface {
 	ListKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) ([]KnowledgeSource, error)
 	// List all sources for a session (pre-course wizard flow)
 	ListKnowledgeSourcesBySession(ctx context.Context, sessionID sql.NullString) ([]KnowledgeSource, error)
+	// List all knowledge sources for a team
+	ListKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.NullUUID) ([]KnowledgeSource, error)
 	ListNotificationsByUserID(ctx context.Context, arg ListNotificationsByUserIDParams) ([]Notification, error)
 	ListPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
 	ListPendingKnowledgeSources(ctx context.Context, limit int32) ([]KnowledgeSource, error)
@@ -170,6 +186,8 @@ type Querier interface {
 	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error
 	MarkNotificationsAsRead(ctx context.Context, arg MarkNotificationsAsReadParams) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
+	// Sum token count for all ready sources in a team
+	SumTokenCountByTeam(ctx context.Context, teamID uuid.NullUUID) (int64, error)
 	UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error)
 	UpdateCompanyStripeFields(ctx context.Context, arg UpdateCompanyStripeFieldsParams) error
 	UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Course, error)

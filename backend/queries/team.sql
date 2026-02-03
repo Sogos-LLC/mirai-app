@@ -41,3 +41,10 @@ ORDER BY created_at DESC;
 -- name: GetTeamMember :one
 SELECT * FROM team_members
 WHERE team_id = $1 AND user_id = $2;
+
+-- name: GetTeamByTenantID :one
+-- Get the first team for a tenant (most tenants have one team)
+SELECT * FROM teams
+WHERE tenant_id = $1
+ORDER BY created_at ASC
+LIMIT 1;
