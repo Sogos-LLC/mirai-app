@@ -105,6 +105,7 @@ type S3CourseContent struct {
 	Content            CourseContent       `json:"content"`
 	Exports            []map[string]any    `json:"exports,omitempty"`
 	GeneratedLessons   []S3GeneratedLesson `json:"generatedLessons,omitempty"`
+	CurriculumMap      *S3CurriculumMap    `json:"curriculumMap,omitempty"`
 }
 
 // S3GeneratedLesson represents a generated lesson stored in content.json.
@@ -170,6 +171,48 @@ type S3ToneOption struct {
 	Name          string `json:"name"`
 	Description   string `json:"description"`
 	LevelOfDetail string `json:"levelOfDetail"`
+}
+
+// S3CurriculumMap represents the curriculum coverage matrix stored in S3.
+type S3CurriculumMap struct {
+	ID                      string                       `json:"id"`
+	OutlineVersionHash      string                       `json:"outlineVersionHash"`
+	Rows                    []S3CurriculumRow            `json:"rows"`
+	Issues                  []S3CurriculumValidationIssue `json:"issues"`
+	Status                  string                       `json:"status"` // "pending", "valid", "warnings", "approved", "stale"
+	GeneratedAt             time.Time                    `json:"generatedAt"`
+	ApprovedAt              *time.Time                   `json:"approvedAt,omitempty"`
+	ApprovedByUserID        *string                      `json:"approvedByUserId,omitempty"`
+	AggregateGroundingScore float32                      `json:"aggregateGroundingScore"`
+	TotalSourceCount        int32                        `json:"totalSourceCount"`
+}
+
+// S3CurriculumRow represents a section row in the curriculum matrix.
+type S3CurriculumRow struct {
+	SectionID    string             `json:"sectionId"`
+	SectionTitle string             `json:"sectionTitle"`
+	SectionOrder int32              `json:"sectionOrder"`
+	Cells        []S3CurriculumCell `json:"cells"`
+}
+
+// S3CurriculumCell represents a coverage cell (section x outcome intersection).
+type S3CurriculumCell struct {
+	OutcomeID   string   `json:"outcomeId"`
+	OutcomeText string   `json:"outcomeText"`
+	Intent      string   `json:"intent"` // "teach", "assess", "reinforce"
+	Level       string   `json:"level"`  // "introduce", "develop", "master"
+	Emphasis    int32    `json:"emphasis"`
+	LessonIDs   []string `json:"lessonIds"`
+	Confidence  float32  `json:"confidence"`
+}
+
+// S3CurriculumValidationIssue represents a validation issue in the curriculum.
+type S3CurriculumValidationIssue struct {
+	Rule      string  `json:"rule"`
+	Severity  string  `json:"severity"` // "error", "warning", "info"
+	Message   string  `json:"message"`
+	OutcomeID *string `json:"outcomeId,omitempty"`
+	SectionID *string `json:"sectionId,omitempty"`
 }
 
 // =============================================================================

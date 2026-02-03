@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// CURRICULUM MAP - Coverage Matrix and Validation
+// =============================================================================
+//
+// The curriculum map provides a bird's-eye view of how course sections
+// address desired outcomes, enabling validation of coverage and sequencing.
+//
+// To regenerate after changes: cd proto && buf generate
+// =============================================================================
+
+// CurriculumMapStatus indicates the overall state of the curriculum map.
+enum CurriculumMapStatus {
+  CURRICULUM_MAP_STATUS_UNSPECIFIED = 0;
+  CURRICULUM_MAP_STATUS_PENDING = 1;     // Needs review
+  CURRICULUM_MAP_STATUS_VALID = 2;       // Passes all checks
+  CURRICULUM_MAP_STATUS_WARNINGS = 3;    // Has warnings but no errors
+  CURRICULUM_MAP_STATUS_APPROVED = 4;    // User approved (may have acknowledged warnings)
+  CURRICULUM_MAP_STATUS_STALE = 5;       // Outline changed, needs regeneration
+}
+
+// CoverageIntent indicates how a section addresses an outcome.
+enum CoverageIntent {
+  COVERAGE_INTENT_UNSPECIFIED = 0;
+  COVERAGE_INTENT_TEACH = 1;      // Primary instruction
+  COVERAGE_INTENT_ASSESS = 2;     // Evaluation/testing
+  COVERAGE_INTENT_REINFORCE = 3;  // Practice/reinforcement
+}
+
+// CoverageLevel indicates the depth of coverage.
+enum CoverageLevel {
+  COVERAGE_LEVEL_UNSPECIFIED = 0;
+  COVERAGE_LEVEL_INTRODUCE = 1;  // First exposure
+  COVERAGE_LEVEL_DEVELOP = 2;    // Building understanding
+  COVERAGE_LEVEL_MASTER = 3;     // Deep proficiency
+}
+
+// IssueSeverity indicates the severity of a validation issue.
+enum IssueSeverity {
+  ISSUE_SEVERITY_UNSPECIFIED = 0;
+  ISSUE_SEVERITY_ERROR = 1;    // Blocks approval
+  ISSUE_SEVERITY_WARNING = 2;  // Requires acknowledgment
+  ISSUE_SEVERITY_INFO = 3;     // Informational only
+}
+
+// CurriculumMap represents the coverage matrix for a course.
+message CurriculumMap {
+  string id = 1;
+  string course_id = 2;
+  string outline_version_hash = 3;  // Hash to detect staleness
+  repeated CoverageRow rows = 4;
+  repeated CurriculumValidationIssue issues = 5;
+  CurriculumMapStatus status = 6;
+  google.protobuf.Timestamp generated_at = 7;
+  optional google.protobuf.Timestamp approved_at = 8;
+  optional string approved_by_user_id = 9;
+  // Aggregate grounding score across all sections
+  float aggregate_grounding_score = 10;
+  int32 total_source_count = 11;
+}
+
+// CoverageRow represents a section in the coverage matrix.
+message CoverageRow {
+  string section_id = 1;
+  string section_title = 2;
+  int32 section_order = 3;
+  repeated CoverageCell cells = 4;
+}
+
+// CoverageCell represents the intersection of a section and an outcome.
+message CoverageCell {
+  string outcome_id = 1;        // ID or index of the outcome
+  string outcome_text = 2;      // The outcome text for display
+  CoverageIntent intent = 3;    // How the section addresses this outcome
+  CoverageLevel level = 4;      // Depth of coverage
+  int32 emphasis = 5;           // Emphasis level 0-100
+  repeated string lesson_ids = 6;  // Lessons that contribute to this coverage
+  float confidence = 7;         // AI confidence score (0.0-1.0)
+}
+
+// CurriculumValidationIssue represents a validation problem.
+message CurriculumValidationIssue {
+  string rule = 1;              // Rule identifier (e.g., "uncovered_outcome")
+  IssueSeverity severity = 2;
+  string message = 3;           // Human-readable description
+  optional string outcome_id = 4;   // Affected outcome (if applicable)
+  optional string section_id = 5;   // Affected section (if applicable)
+}
+
+// CurriculumService handles curriculum map operations.
+service CurriculumService {
+  // GetCurriculumMap retrieves the curriculum map for a course.
+  rpc GetCurriculumMap(GetCurriculumMapRequest) returns (GetCurriculumMapResponse);
+
+  // GenerateCurriculumMap generates or regenerates the curriculum map.
+  rpc GenerateCurriculumMap(GenerateCurriculumMapRequest) returns (GenerateCurriculumMapResponse);
+
+  // ApproveCurriculumMap approves the curriculum map (with optional warning acknowledgment).
+  rpc ApproveCurriculumMap(ApproveCurriculumMapRequest) returns (ApproveCurriculumMapResponse);
+
+  // UpdateCoverageCell allows manual adjustment of coverage mappings.
+  rpc UpdateCoverageCell(UpdateCoverageCellRequest) returns (UpdateCoverageCellResponse);
+}
+
+// GetCurriculumMapRequest retrieves the curriculum map for a course.
+message GetCurriculumMapRequest {
+  string course_id = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// GetCurriculumMapResponse contains the curriculum map.
+message GetCurriculumMapResponse {
+  optional CurriculumMap curriculum_map = 1;  // null if not generated yet
+}
+
+// GenerateCurriculumMapRequest triggers curriculum map generation.
+message GenerateCurriculumMapRequest {
+  string course_id = 1 [(buf.validate.field).string.min_len = 1];
+  bool force_regenerate = 2;  // Regenerate even if map exists
+}
+
+// GenerateCurriculumMapResponse contains the generated curriculum map.
+message GenerateCurriculumMapResponse {
+  CurriculumMap curriculum_map = 1;
+}
+
+// ApproveCurriculumMapRequest approves the curriculum map.
+message ApproveCurriculumMapRequest {
+  string course_id = 1 [(buf.validate.field).string.min_len = 1];
+  bool acknowledge_warnings = 2;  // Must be true if warnings exist
+}
+
+// ApproveCurriculumMapResponse confirms approval.
+message ApproveCurriculumMapResponse {
+  CurriculumMap curriculum_map = 1;
+}
+
+// UpdateCoverageCellRequest updates a specific coverage cell.
+message UpdateCoverageCellRequest {
+  string course_id = 1 [(buf.validate.field).string.min_len = 1];
+  string section_id = 2 [(buf.validate.field).string.min_len = 1];
+  string outcome_id = 3 [(buf.validate.field).string.min_len = 1];
+  CoverageIntent intent = 4;
+  CoverageLevel level = 5;
+  int32 emphasis = 6;
+}
+
+// UpdateCoverageCellResponse contains the updated curriculum map.
+message UpdateCoverageCellResponse {
+  CurriculumMap curriculum_map = 1;
+}

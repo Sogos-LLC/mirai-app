@@ -38,6 +38,7 @@ type ServerConfig struct {
 	CourseWizardService    *service.CourseWizardService
 	KnowledgeSourceService *service.KnowledgeSourceService
 	TeamKnowledgeService   *service.TeamKnowledgeService
+	CurriculumService      *service.CurriculumService
 	BaseStorage            StorageAdapter // For knowledge source presigned URLs
 
 	PendingRegRepo         repository.PendingRegistrationRepository
@@ -166,6 +167,15 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	if cfg.TeamKnowledgeService != nil && cfg.TeamService != nil && cfg.BaseStorage != nil {
 		path, handler = miraiv1connect.NewTeamKnowledgeServiceHandler(
 			NewTeamKnowledgeServiceServer(cfg.TeamKnowledgeService, cfg.TeamService, cfg.BaseStorage, cfg.WorkerClient),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// CurriculumService - curriculum map and validation
+	if cfg.CurriculumService != nil {
+		path, handler = miraiv1connect.NewCurriculumServiceHandler(
+			NewCurriculumServiceServer(cfg.CurriculumService),
 			interceptors,
 		)
 		mux.Handle(path, handler)

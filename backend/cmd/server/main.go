@@ -276,6 +276,7 @@ func main() {
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
 	var courseWizardService *service.CourseWizardService
+	var curriculumService *service.CurriculumService
 	if encryptor != nil {
 		tenantSettingsService = service.NewTenantSettingsService(userRepo, aiSettingsRepo, encryptor, logger)
 
@@ -318,6 +319,9 @@ func main() {
 			logger,
 		)
 
+		// Curriculum service (curriculum map and validation)
+		curriculumService = service.NewCurriculumService(aiGenerationService, userRepo)
+
 		logger.Info("AI services initialized")
 	} else {
 		logger.Warn("AI services not initialized (encryption key required)")
@@ -343,6 +347,7 @@ func main() {
 		CourseWizardService:    courseWizardService,
 		KnowledgeSourceService: knowledgeSourceService,
 		TeamKnowledgeService:   teamKnowledgeService,
+		CurriculumService:      curriculumService,
 		BaseStorage:            baseStorage,
 		PendingRegRepo:         pendingRegRepo,
 		UserRepo:               userRepo,               // For tenant context in auth interceptor
