@@ -136,6 +136,10 @@ message CourseSettings {
   string destination_folder = 3;
   repeated string category_tags = 4;
   string data_source = 5;
+
+  // Knowledge grounding controls
+  // When true, knowledge selection is locked and cannot be changed after outline approval
+  bool knowledge_locked = 6;
 }
 
 // CourseMetadata contains metadata about the course.

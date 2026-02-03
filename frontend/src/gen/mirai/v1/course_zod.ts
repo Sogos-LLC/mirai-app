@@ -103,6 +103,7 @@ export const CourseSettingsSchema = z.object({
   destinationFolder: z.string(),
   categoryTags: z.array(z.string()),
   dataSource: z.string(),
+  knowledgeLocked: z.boolean(),
 });
 
 export type CourseSettings = z.infer<typeof CourseSettingsSchema>;

@@ -961,8 +961,11 @@ type CourseSettings struct {
 	DestinationFolder string                 `protobuf:"bytes,3,opt,name=destination_folder,json=destinationFolder,proto3" json:"destination_folder,omitempty"`
 	CategoryTags      []string               `protobuf:"bytes,4,rep,name=category_tags,json=categoryTags,proto3" json:"category_tags,omitempty"`
 	DataSource        string                 `protobuf:"bytes,5,opt,name=data_source,json=dataSource,proto3" json:"data_source,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Knowledge grounding controls
+	// When true, knowledge selection is locked and cannot be changed after outline approval
+	KnowledgeLocked bool `protobuf:"varint,6,opt,name=knowledge_locked,json=knowledgeLocked,proto3" json:"knowledge_locked,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CourseSettings) Reset() {
@@ -1028,6 +1031,13 @@ func (x *CourseSettings) GetDataSource() string {
 		return x.DataSource
 	}
 	return ""
+}
+
+func (x *CourseSettings) GetKnowledgeLocked() bool {
+	if x != nil {
+		return x.KnowledgeLocked
+	}
+	return false
 }
 
 // CourseMetadata contains metadata about the course.
@@ -2974,7 +2984,7 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x10progress_percent\x18\b \x01(\x05R\x0fprogressPercent\x12.\n" +
 	"\x10progress_message\x18\t \x01(\tH\x01R\x0fprogressMessage\x88\x01\x01B\x10\n" +
 	"\x0e_error_messageB\x13\n" +
-	"\x11_progress_message\"\xd9\x01\n" +
+	"\x11_progress_message\"\x84\x02\n" +
 	"\x0eCourseSettings\x12 \n" +
 	"\x05title\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05title\x120\n" +
@@ -2982,7 +2992,8 @@ const file_mirai_v1_course_proto_rawDesc = "" +
 	"\x12destination_folder\x18\x03 \x01(\tR\x11destinationFolder\x12#\n" +
 	"\rcategory_tags\x18\x04 \x03(\tR\fcategoryTags\x12\x1f\n" +
 	"\vdata_source\x18\x05 \x01(\tR\n" +
-	"dataSource\"\x95\x02\n" +
+	"dataSource\x12)\n" +
+	"\x10knowledge_locked\x18\x06 \x01(\bR\x0fknowledgeLocked\"\x95\x02\n" +
 	"\x0eCourseMetadata\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x05R\aversion\x12.\n" +
