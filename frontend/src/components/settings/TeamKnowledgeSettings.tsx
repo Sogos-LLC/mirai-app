@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import {
   useListKnowledgeSources,
-  useUploadKnowledge,
   useDeleteKnowledgeSource,
   useCheckDuplicateKnowledge,
   computeFileHash,
@@ -28,6 +27,7 @@ import {
   type KnowledgeSource,
   type DuplicateCheckResult,
 } from '@/hooks/useTeamKnowledge';
+import { KnowledgeUploadModal } from './KnowledgeUploadModal';
 
 // =============================================================================
 // Types
@@ -228,13 +228,13 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{
     file: File;
     hash: string;
     duplicate: DuplicateCheckResult;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { mutate: uploadFile, isLoading: isUploading } = useUploadKnowledge(teamId);
   const { checkDuplicate } = useCheckDuplicateKnowledge();
 
   const acceptedTypes = ['.txt', '.md'];
@@ -254,8 +254,8 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
     return null;
   };
 
-  const handleUpload = useCallback(
-    async (file: File, skipDuplicateCheck = false) => {
+  const handleFileSelection = useCallback(
+    async (file: File) => {
       setUploadError(null);
 
       const validationError = validateFile(file);
@@ -265,45 +265,51 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
       }
 
       try {
-        // Compute file hash
+        // Compute file hash and check for duplicate
         setIsCheckingDuplicate(true);
         const hash = await computeFileHash(file);
 
-        // Check for duplicate (unless skipping)
-        if (!skipDuplicateCheck) {
-          const duplicateResult = await checkDuplicate(hash);
-          if (duplicateResult.exists) {
-            setIsCheckingDuplicate(false);
-            setDuplicateWarning({ file, hash, duplicate: duplicateResult });
-            return;
-          }
-        }
+        const duplicateResult = await checkDuplicate(hash);
         setIsCheckingDuplicate(false);
 
-        // Proceed with upload
-        await uploadFile(file, hash);
-        onSuccess();
+        if (duplicateResult.exists) {
+          setDuplicateWarning({ file, hash, duplicate: duplicateResult });
+          return;
+        }
+
+        // Open modal for upload with progress
+        setSelectedFile(file);
       } catch (err) {
         setIsCheckingDuplicate(false);
         if (err instanceof Error) {
           setUploadError(err.message);
         } else {
-          setUploadError('Upload failed. Please try again.');
+          setUploadError('Failed to check file. Please try again.');
         }
       }
     },
-    [uploadFile, checkDuplicate, onSuccess]
+    [checkDuplicate]
   );
 
-  const handleConfirmDuplicate = useCallback(async () => {
+  const handleConfirmDuplicate = useCallback(() => {
     if (!duplicateWarning) return;
     setDuplicateWarning(null);
-    await handleUpload(duplicateWarning.file, true);
-  }, [duplicateWarning, handleUpload]);
+    // Open modal for upload with progress (skip duplicate check already done)
+    setSelectedFile(duplicateWarning.file);
+  }, [duplicateWarning]);
 
   const handleCancelDuplicate = useCallback(() => {
     setDuplicateWarning(null);
   }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedFile(null);
+  }, []);
+
+  const handleUploadSuccess = useCallback(() => {
+    setSelectedFile(null);
+    onSuccess();
+  }, [onSuccess]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -312,10 +318,10 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
 
       const file = e.dataTransfer.files[0];
       if (file) {
-        handleUpload(file);
+        handleFileSelection(file);
       }
     },
-    [handleUpload]
+    [handleFileSelection]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -332,17 +338,15 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-        handleUpload(file);
+        handleFileSelection(file);
       }
       // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     },
-    [handleUpload]
+    [handleFileSelection]
   );
-
-  const isProcessing = isUploading || isCheckingDuplicate;
 
   return (
     <div className="space-y-2">
@@ -350,12 +354,12 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={() => !isProcessing && fileInputRef.current?.click()}
+        onClick={() => !isCheckingDuplicate && fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
           isDragOver
             ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
             : 'border-gray-300 dark:border-dark-border hover:border-primary-400 dark:hover:border-primary-600'
-        } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+        } ${isCheckingDuplicate ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input
           ref={fileInputRef}
@@ -363,14 +367,14 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
           accept={acceptedTypes.join(',')}
           onChange={handleFileSelect}
           className="hidden"
-          disabled={isProcessing}
+          disabled={isCheckingDuplicate}
         />
 
-        {isProcessing ? (
+        {isCheckingDuplicate ? (
           <>
             <Loader2 className="w-10 h-10 text-primary-600 dark:text-primary-400 mx-auto mb-3 animate-spin" />
             <p className="font-medium text-gray-900 dark:text-white">
-              {isCheckingDuplicate ? 'Checking for duplicates...' : 'Uploading...'}
+              Checking for duplicates...
             </p>
           </>
         ) : (
@@ -401,6 +405,16 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
           location={duplicateWarning.duplicate.location || 'Unknown'}
           onConfirm={handleConfirmDuplicate}
           onCancel={handleCancelDuplicate}
+        />
+      )}
+
+      {/* Upload Progress Modal */}
+      {selectedFile && (
+        <KnowledgeUploadModal
+          file={selectedFile}
+          teamId={teamId}
+          onClose={handleCloseModal}
+          onSuccess={handleUploadSuccess}
         />
       )}
     </div>
