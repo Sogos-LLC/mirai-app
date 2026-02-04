@@ -566,17 +566,20 @@ func protoToWizardStepData(data *v1.WizardStepData) *entity.WizardStepData {
 	}
 
 	return &entity.WizardStepData{
-		CourseName:          data.CourseName,
-		ImprovedTitle:       data.ImprovedTitle,
-		Description:         data.Description,
-		SMEPersonas:         smePersonas,
-		SelectedSMEIDs:      data.SelectedSmeIds,
-		AudiencePersonas:    audiencePersonas,
-		SelectedAudienceIDs: data.SelectedAudienceIds,
-		ToneOptions:         toneOptions,
-		SelectedToneID:      data.SelectedToneId,
-		AdditionalContext:   data.AdditionalContext,
-		DesiredOutcomes:     data.DesiredOutcomes,
+		CourseName:           data.CourseName,
+		ImprovedTitle:        data.ImprovedTitle,
+		Description:          data.Description,
+		SMEPersonas:          smePersonas,
+		SelectedSMEIDs:       data.SelectedSmeIds,
+		AudiencePersonas:     audiencePersonas,
+		SelectedAudienceIDs:  data.SelectedAudienceIds,
+		ToneOptions:          toneOptions,
+		SelectedToneID:       data.SelectedToneId,
+		AdditionalContext:    data.AdditionalContext,
+		DesiredOutcomes:      data.DesiredOutcomes,
+		SelectedTeamDocIDs:   data.SelectedTeamDocIds,
+		SelectedGlobalDocIDs: data.SelectedGlobalDocIds,
+		InternalDataOnly:     data.InternalDataOnly,
 	}
 }
 
@@ -627,12 +630,15 @@ func wizardStepDataToS3WizardData(data *entity.WizardStepData) *service.S3Wizard
 	}
 
 	return &service.S3WizardData{
-		SMEPersonas:         smePersonas,
-		SelectedSMEIDs:      data.SelectedSMEIDs,
-		AudiencePersonas:    audiencePersonas,
-		SelectedAudienceIDs: data.SelectedAudienceIDs,
-		SelectedTone:        selectedTone,
-		AdditionalContext:   data.AdditionalContext,
-		DesiredOutcomes:     data.DesiredOutcomes,
+		SMEPersonas:          smePersonas,
+		SelectedSMEIDs:       data.SelectedSMEIDs,
+		AudiencePersonas:     audiencePersonas,
+		SelectedAudienceIDs:  data.SelectedAudienceIDs,
+		SelectedTone:         selectedTone,
+		AdditionalContext:    data.AdditionalContext,
+		DesiredOutcomes:      data.DesiredOutcomes,
+		InternalDataOnly:     data.InternalDataOnly,
+		SelectedTeamDocIDs:   data.SelectedTeamDocIDs,
+		SelectedGlobalDocIDs: data.SelectedGlobalDocIDs,
 	}
 }

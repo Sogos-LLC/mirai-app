@@ -237,6 +237,9 @@ export function useSaveWizardState() {
         toneOptions: params.data.toneOptions?.map(t => create(ToneOptionSchema, t)) ?? [],
         selectedToneId: params.data.selectedToneId ?? '',
         additionalContext: params.data.additionalContext ?? '',
+        selectedTeamDocIds: params.data.selectedTeamDocIds ?? [],
+        selectedGlobalDocIds: params.data.selectedGlobalDocIds ?? [],
+        internalDataOnly: params.data.internalDataOnly ?? false,
       });
 
       const request = create(SaveWizardStateRequestSchema, {
@@ -318,6 +321,9 @@ export function useCreateCourseFromOutline() {
         toneOptions: params.wizardData.toneOptions?.map(t => create(ToneOptionSchema, t)) ?? [],
         selectedToneId: params.wizardData.selectedToneId ?? '',
         additionalContext: params.wizardData.additionalContext ?? '',
+        selectedTeamDocIds: params.wizardData.selectedTeamDocIds ?? [],
+        selectedGlobalDocIds: params.wizardData.selectedGlobalDocIds ?? [],
+        internalDataOnly: params.wizardData.internalDataOnly ?? false,
       });
 
       const request = create(CreateCourseFromOutlineRequestSchema, {

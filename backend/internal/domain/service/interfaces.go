@@ -491,6 +491,21 @@ type GenerateOutlineRequest struct {
 	InternalDataOnly bool                   // When true, use only RAG content
 	DocumentIndices  []DocumentIndexInput   // Structured indices of uploaded documents
 	RAGContext       []RAGChunkInput        // Retrieved chunks from knowledge sources
+
+	// Constraints derived from knowledge scope (when available)
+	Constraints *CourseConstraintsInput // Hard bounds AI must respect
+}
+
+// CourseConstraintsInput provides deterministic bounds for outline generation.
+// When provided, the AI MUST generate within these constraints.
+type CourseConstraintsInput struct {
+	MinSections          int
+	MaxSections          int
+	MinLessonsPerSection int
+	MaxLessonsPerSection int
+	MinTotalLessons      int
+	MaxTotalLessons      int
+	RecommendedDepth     string // "basic", "intermediate", "advanced"
 }
 
 // DocumentIndexInput represents a document's structured index for AI navigation.

@@ -18,6 +18,8 @@ export interface SectionMetadataBadgesProps {
   contributingChunkIds?: string[];
   /** Compact mode shows fewer badges */
   compact?: boolean;
+  /** Handler for viewing source evidence */
+  onShowSources?: () => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function SectionMetadataBadges({
   groundingScore,
   contributingChunkIds,
   compact = false,
+  onShowSources,
 }: SectionMetadataBadgesProps) {
   // Level badge configuration
   const levelConfig: Record<SectionLevel, { label: string; icon: React.ReactNode; className: string }> = {
@@ -140,6 +143,7 @@ export default function SectionMetadataBadges({
           groundingScore={groundingScore}
           variant="compact"
           sourceCount={hasSources ? contributingChunkIds.length : undefined}
+          onClick={hasSources ? onShowSources : undefined}
         />
       )}
     </div>

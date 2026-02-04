@@ -8,7 +8,7 @@ import (
 )
 
 func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
-	// Use Internal Data Only prompt if that mode is enabled
+	// Use Internal Data Only prompt if that mode is enabled (strict no-synthesis mode)
 	if req.InternalDataOnly && (len(req.RAGContext) > 0 || len(req.DocumentIndices) > 0) {
 		return buildInternalDataOnlySectionsPrompt(req)
 	}
@@ -16,6 +16,11 @@ func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
 	var sb strings.Builder
 
 	sb.WriteString("You are an expert instructional designer creating a course outline.\n\n")
+
+	// Inject constraints at the top if provided
+	if req.Constraints != nil {
+		sb.WriteString(buildConstraintsSection(req.Constraints))
+	}
 	sb.WriteString("## Course Information\n")
 	sb.WriteString(fmt.Sprintf("**Title:** %s\n", req.CourseTitle))
 	sb.WriteString(fmt.Sprintf("**Desired Outcome:** %s\n\n", req.DesiredOutcome))
@@ -36,6 +41,65 @@ func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
 		sb.WriteString(fmt.Sprintf("**Industry Context:** %s\n", req.TargetAudience.IndustryContext))
 	}
 	sb.WriteString("\n")
+
+	// CRITICAL: Include RAG context when knowledge sources are selected
+	// This enables knowledge-grounded generation in normal mode (AI can expand but should be grounded)
+	if len(req.RAGContext) > 0 || len(req.DocumentIndices) > 0 {
+		sb.WriteString("## Knowledge Sources\n")
+		sb.WriteString("**IMPORTANT**: The following reference materials have been provided by the user.\n")
+		sb.WriteString("Use this content as the foundation for your course structure. The course should:\n")
+		sb.WriteString("- Prioritize topics and concepts from the source materials\n")
+		sb.WriteString("- Structure sections around the key themes in the documents\n")
+		sb.WriteString("- Align lesson content with what the sources actually cover\n")
+		sb.WriteString("- You may add supplementary context to connect concepts, but the core content should come from the sources\n\n")
+
+		// Include document indices if available
+		if len(req.DocumentIndices) > 0 {
+			sb.WriteString("### Available Documents Overview\n")
+			for _, doc := range req.DocumentIndices {
+				sb.WriteString(fmt.Sprintf("**%s**", doc.SourceName))
+				if doc.Title != "" {
+					sb.WriteString(fmt.Sprintf(" - %s", doc.Title))
+				}
+				sb.WriteString("\n")
+				if len(doc.MainTopics) > 0 {
+					sb.WriteString(fmt.Sprintf("  Topics: %s\n", strings.Join(doc.MainTopics, ", ")))
+				}
+				if len(doc.KeyConcepts) > 0 {
+					sb.WriteString(fmt.Sprintf("  Concepts: %s\n", strings.Join(doc.KeyConcepts, ", ")))
+				}
+				if doc.EstimatedLessonCount > 0 {
+					sb.WriteString(fmt.Sprintf("  Estimated lesson depth: %d lessons\n", doc.EstimatedLessonCount))
+				}
+			}
+			sb.WriteString("\n")
+		}
+
+		// Include RAG content chunks
+		if len(req.RAGContext) > 0 {
+			sb.WriteString("### Source Content Excerpts\n")
+			sb.WriteString("Key passages from the uploaded documents:\n\n")
+
+			// Group chunks by source for better organization
+			sourceChunks := make(map[string][]service.RAGChunkInput)
+			for _, chunk := range req.RAGContext {
+				sourceChunks[chunk.SourceName] = append(sourceChunks[chunk.SourceName], chunk)
+			}
+
+			for sourceName, chunks := range sourceChunks {
+				sb.WriteString(fmt.Sprintf("**From: %s**\n", sourceName))
+				for _, chunk := range chunks {
+					// Truncate long chunks for the outline phase
+					content := chunk.Content
+					if len(content) > 500 {
+						content = content[:500] + "..."
+					}
+					sb.WriteString(fmt.Sprintf("> %s\n\n", content))
+				}
+			}
+		}
+		sb.WriteString("\n")
+	}
 
 	sb.WriteString("## Subject Matter Expert Knowledge\n")
 	for _, sme := range req.SMEKnowledge {
@@ -62,7 +126,15 @@ func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
 
 	sb.WriteString("## Instructions\n")
 	sb.WriteString("Create a high-level course outline with sections and lesson titles.\n")
-	sb.WriteString("Each section should have a clear theme and 2-5 lessons.\n\n")
+	if len(req.RAGContext) > 0 || len(req.DocumentIndices) > 0 {
+		sb.WriteString("**Base your course structure on the provided knowledge sources.** The course length and depth should reflect the available source material.\n")
+	}
+	if req.Constraints != nil {
+		sb.WriteString(fmt.Sprintf("Each section should have a clear theme and %d-%d lessons (as specified in constraints above).\n\n",
+			req.Constraints.MinLessonsPerSection, req.Constraints.MaxLessonsPerSection))
+	} else {
+		sb.WriteString("Each section should have a clear theme and 2-5 lessons.\n\n")
+	}
 	sb.WriteString("For each section, provide:\n")
 	sb.WriteString("- Section title and description\n")
 	sb.WriteString("- List of lesson titles (2-5 lessons)\n")
@@ -87,6 +159,11 @@ func buildInternalDataOnlySectionsPrompt(req service.GenerateOutlineRequest) str
 	var sb strings.Builder
 
 	sb.WriteString("You are an expert instructional designer creating a course outline.\n\n")
+
+	// Inject constraints at the top if provided (before Internal Data Only instructions)
+	if req.Constraints != nil {
+		sb.WriteString(buildConstraintsSection(req.Constraints))
+	}
 
 	// CRITICAL: Internal Data Only instructions
 	sb.WriteString("## CRITICAL CONSTRAINT: INTERNAL DATA ONLY MODE\n")
@@ -157,7 +234,12 @@ func buildInternalDataOnlySectionsPrompt(req service.GenerateOutlineRequest) str
 	sb.WriteString("Based STRICTLY on the source content above, create a course outline:\n")
 	sb.WriteString("1. Analyze the available content and identify teachable topics\n")
 	sb.WriteString("2. Create sections that group related topics from the source material\n")
-	sb.WriteString("3. Each section should have 1-4 lessons (scale to available content)\n")
+	if req.Constraints != nil {
+		sb.WriteString(fmt.Sprintf("3. Each section should have %d-%d lessons (as specified in constraints)\n",
+			req.Constraints.MinLessonsPerSection, req.Constraints.MaxLessonsPerSection))
+	} else {
+		sb.WriteString("3. Each section should have 1-4 lessons (scale to available content)\n")
+	}
 	sb.WriteString("4. Lesson titles should reflect actual content from the documents\n")
 	sb.WriteString("5. If content is limited, create fewer sections/lessons - do NOT invent content\n")
 	sb.WriteString("6. Every lesson must be supportable by the provided source material\n\n")
@@ -264,6 +346,24 @@ func buildInternalDataOnlyLessonsPrompt(req service.GenerateOutlineRequest, sect
 	sb.WriteString("- Include 1-3 learning objectives that are supportable by the source\n")
 	sb.WriteString("- If insufficient content, create a shorter, focused lesson\n")
 	sb.WriteString("- Reference source document names in descriptions where helpful\n")
+
+	return sb.String()
+}
+
+// buildConstraintsSection creates the mandatory constraints section for prompts.
+// This section instructs the AI on hard bounds derived from knowledge sources.
+func buildConstraintsSection(c *service.CourseConstraintsInput) string {
+	var sb strings.Builder
+
+	sb.WriteString("## MANDATORY COURSE STRUCTURE CONSTRAINTS\n")
+	sb.WriteString("**CRITICAL: These are HARD requirements derived from available source material.**\n\n")
+	sb.WriteString(fmt.Sprintf("- **Section Count**: EXACTLY %d to %d sections\n", c.MinSections, c.MaxSections))
+	sb.WriteString(fmt.Sprintf("- **Lessons Per Section**: EXACTLY %d to %d lessons per section\n", c.MinLessonsPerSection, c.MaxLessonsPerSection))
+	sb.WriteString(fmt.Sprintf("- **Total Lessons**: EXACTLY %d to %d total lessons across all sections\n", c.MinTotalLessons, c.MaxTotalLessons))
+	if c.RecommendedDepth != "" {
+		sb.WriteString(fmt.Sprintf("- **Content Depth**: Target %s level content\n", c.RecommendedDepth))
+	}
+	sb.WriteString("\n**Your response will be REJECTED if it violates these constraints.**\n\n")
 
 	return sb.String()
 }

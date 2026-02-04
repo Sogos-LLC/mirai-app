@@ -93,10 +93,11 @@ type AIGenerationService struct {
 	imageStorage           ImageStorage
 	contentStorage         *storage.TenantAwareStorage
 	jobEventPublisher      JobEventPublisher
-	knowledgeSearcher      KnowledgeSearcher     // For course-level RAG queries
+	knowledgeSearcher         KnowledgeSearcher         // For course-level RAG queries
 	teamKnowledgeSearcher     TeamKnowledgeSearcher     // For team-level RAG queries
 	teamResolver              TeamResolver              // Resolves team for tenant
 	knowledgeSettingsProvider KnowledgeSettingsProvider // For tenant knowledge settings
+	ragPipeline               *StagedRAGPipeline        // Composable RAG retrieval with provenance
 	logger                    service.Logger
 }
 
@@ -152,6 +153,11 @@ func (s *AIGenerationService) SetJobEventPublisher(publisher JobEventPublisher) 
 // SetKnowledgeSettingsProvider sets the provider for tenant knowledge settings.
 func (s *AIGenerationService) SetKnowledgeSettingsProvider(provider KnowledgeSettingsProvider) {
 	s.knowledgeSettingsProvider = provider
+}
+
+// SetRAGPipeline sets the composable RAG pipeline for knowledge retrieval.
+func (s *AIGenerationService) SetRAGPipeline(pipeline *StagedRAGPipeline) {
+	s.ragPipeline = pipeline
 }
 
 // GenerateCourseOutlineRequest contains the inputs for outline generation.
@@ -302,128 +308,288 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 		AdditionalContext: additionalContext,
 	}
 
-	// Handle Internal Data Only mode - fetch RAG context
-	if content.WizardData != nil && content.WizardData.InternalDataOnly {
-		outlineRequest.InternalDataOnly = true
-		log.Info("Internal Data Only mode enabled, fetching RAG context")
+	// Track KnowledgeScope for constraint validation after generation
+	var knowledgeScope *valueobject.KnowledgeScope
 
-		if s.knowledgeSearcher != nil {
-			// Fetch knowledge sources for the course to get document indices
-			sources, err := s.knowledgeSearcher.ListByCourse(ctx, *job.CourseID)
-			if err != nil {
-				log.Warn("failed to list knowledge sources", "error", err)
-			} else {
-				// Build document indices from sources
-				for _, src := range sources {
-					if src.DocumentIndex != nil {
-						outlineRequest.DocumentIndices = append(outlineRequest.DocumentIndices, service.DocumentIndexInput{
-							SourceID:             src.ID.String(),
-							SourceName:           src.Name,
-							Title:                src.DocumentIndex.Title,
-							MainTopics:           src.DocumentIndex.MainTopics,
-							KeyConcepts:          src.DocumentIndex.KeyConcepts,
-							EstimatedLessonCount: src.DocumentIndex.EstimatedLessonCount,
-							ContentDepth:         src.DocumentIndex.ContentDepth,
-						})
-					}
-				}
+	// Check if knowledge sources were selected in the wizard
+	// CRITICAL: We now ALWAYS use selected knowledge for grounding, not just in InternalDataOnly mode
+	// InternalDataOnly mode means: use ONLY knowledge (no AI synthesis beyond sources)
+	// Normal mode means: use knowledge for grounding, but AI can expand on it
+	var selectedDocIDs []string
+	hasSelectedKnowledge := false
+	if content.WizardData != nil {
+		selectedDocIDs = append(selectedDocIDs, content.WizardData.SelectedTeamDocIDs...)
+		selectedDocIDs = append(selectedDocIDs, content.WizardData.SelectedGlobalDocIDs...)
+		hasSelectedKnowledge = len(selectedDocIDs) > 0
+		outlineRequest.InternalDataOnly = content.WizardData.InternalDataOnly
+	}
 
-				// Perform RAG search for course content
-				// Use course title and desired outcomes as initial queries
-				queries := []string{
-					content.Settings.Title,
-					content.Settings.DesiredOutcome,
-				}
-				if additionalContext != "" {
-					queries = append(queries, additionalContext)
-				}
+	log.Info("[AI.RAG] Knowledge context check",
+		"hasSelectedKnowledge", hasSelectedKnowledge,
+		"selectedDocCount", len(selectedDocIDs),
+		"internalDataOnly", outlineRequest.InternalDataOnly,
+	)
 
-				seenChunks := make(map[string]bool)
-				for _, query := range queries {
-					chunks, err := s.knowledgeSearcher.SearchKnowledge(ctx, *job.CourseID, query, 10)
-					if err != nil {
-						log.Warn("RAG search failed", "query", query, "error", err)
-						continue
-					}
-					for _, chunk := range chunks {
-						// Deduplicate chunks
-						if seenChunks[chunk.ID] {
-							continue
-						}
-						seenChunks[chunk.ID] = true
-						outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
-							ChunkID:         chunk.ID,
-							SourceID:        chunk.SourceID.String(),
-							SourceName:      chunk.SourceName,
-							Content:         chunk.Content,
-							ChunkIndex:      int(*chunk.ChunkIndex),
-							SimilarityScore: chunk.SimilarityScore,
-							Scope:           "course",
-						})
-					}
-				}
-				log.Info("RAG context retrieved", "documentIndices", len(outlineRequest.DocumentIndices), "chunks", len(outlineRequest.RAGContext))
-			}
+	// Fetch RAG context when knowledge sources are selected
+	// This enables knowledge-grounded generation in ALL modes
+	if hasSelectedKnowledge && s.knowledgeSearcher != nil {
+		log.Info("[AI.RAG] Fetching RAG context from selected knowledge sources")
+
+		// Fetch knowledge sources for the course to get document indices
+		sources, err := s.knowledgeSearcher.ListByCourse(ctx, *job.CourseID)
+		if err != nil {
+			log.Warn("failed to list knowledge sources", "error", err)
 		} else {
-			log.Warn("Internal Data Only mode enabled but no knowledge searcher configured")
-		}
+			// Build a set of selected source IDs for filtering
+			selectedSet := make(map[string]bool)
+			for _, id := range selectedDocIDs {
+				selectedSet[id] = true
+			}
 
-		// Also search team-level knowledge if available
-		if s.teamKnowledgeSearcher != nil && s.teamResolver != nil {
-			team, err := s.teamResolver.GetTeamByTenant(ctx, job.TenantID)
-			if err != nil {
-				log.Warn("failed to resolve team for tenant", "error", err)
-			} else if team != nil {
-				log.Info("[AI.RAG] Searching team knowledge", "teamID", team.ID)
-
-				// Search team knowledge with the same queries
-				teamQueries := []string{
-					content.Settings.Title,
-					content.Settings.DesiredOutcome,
+			// Build document indices from sources (only from selected sources)
+			for _, src := range sources {
+				if !selectedSet[src.ID.String()] {
+					continue // Skip sources not selected in wizard
 				}
-				if additionalContext != "" {
-					teamQueries = append(teamQueries, additionalContext)
+				if src.DocumentIndex != nil {
+					outlineRequest.DocumentIndices = append(outlineRequest.DocumentIndices, service.DocumentIndexInput{
+						SourceID:             src.ID.String(),
+						SourceName:           src.Name,
+						Title:                src.DocumentIndex.Title,
+						MainTopics:           src.DocumentIndex.MainTopics,
+						KeyConcepts:          src.DocumentIndex.KeyConcepts,
+						EstimatedLessonCount: src.DocumentIndex.EstimatedLessonCount,
+						ContentDepth:         src.DocumentIndex.ContentDepth,
+					})
 				}
+			}
 
-				seenTeamChunks := make(map[string]bool)
-				// Copy existing chunk IDs to avoid duplicates across course and team
-				for _, chunk := range outlineRequest.RAGContext {
-					seenTeamChunks[chunk.SourceID+"-"+fmt.Sprintf("%d", chunk.ChunkIndex)] = true
+			// Build KnowledgeScope and calculate constraints
+			var scopeErr error
+			knowledgeScope, scopeErr = BuildKnowledgeScope(sources, selectedDocIDs, job.CreatedByUserID)
+			if scopeErr != nil {
+				log.Warn("failed to build knowledge scope", "error", scopeErr)
+			} else if knowledgeScope != nil {
+				// Calculate constraints from scope
+				constraints, constraintErr := valueobject.CalculateCourseConstraints(
+					knowledgeScope,
+					outlineRequest.InternalDataOnly,
+					valueobject.DefaultConstraintsConfig(),
+				)
+				if constraintErr != nil {
+					log.Warn("failed to calculate constraints", "error", constraintErr)
+				} else {
+					outlineRequest.Constraints = &service.CourseConstraintsInput{
+						MinSections:          constraints.MinSections,
+						MaxSections:          constraints.MaxSections,
+						MinLessonsPerSection: constraints.MinLessonsPerSection,
+						MaxLessonsPerSection: constraints.MaxLessonsPerSection,
+						MinTotalLessons:      constraints.MinTotalLessons,
+						MaxTotalLessons:      constraints.MaxTotalLessons,
+						RecommendedDepth:     constraints.RecommendedDepth,
+					}
+					log.Info("[AI.Constraints] Course constraints calculated from knowledge scope",
+						"minSections", constraints.MinSections,
+						"maxSections", constraints.MaxSections,
+						"minLessons", constraints.MinTotalLessons,
+						"maxLessons", constraints.MaxTotalLessons,
+						"estimatedFromDocs", constraints.CalculatedFromDocs,
+						"estimatedLessons", constraints.EstimatedLessons,
+					)
 				}
+			}
 
-				for _, query := range teamQueries {
-					chunks, err := s.teamKnowledgeSearcher.SearchByTeam(ctx, team.ID, query, 10)
-					if err != nil {
-						log.Warn("Team RAG search failed", "query", query, "error", err)
+			// Perform RAG search for course content
+			// Use course title and desired outcomes as initial queries
+			queries := []string{
+				content.Settings.Title,
+				content.Settings.DesiredOutcome,
+			}
+			if additionalContext != "" {
+				queries = append(queries, additionalContext)
+			}
+
+			seenChunks := make(map[string]bool)
+			for _, query := range queries {
+				chunks, err := s.knowledgeSearcher.SearchKnowledge(ctx, *job.CourseID, query, 15)
+				if err != nil {
+					log.Warn("RAG search failed", "query", query, "error", err)
+					continue
+				}
+				for _, chunk := range chunks {
+					// Only include chunks from selected sources
+					if !selectedSet[chunk.SourceID.String()] {
 						continue
 					}
-					for _, chunk := range chunks {
-						chunkKey := chunk.SourceID.String() + "-" + fmt.Sprintf("%d", *chunk.ChunkIndex)
-						if seenTeamChunks[chunkKey] {
-							continue
-						}
-						seenTeamChunks[chunkKey] = true
-						outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
-							ChunkID:         chunk.ID,
-							SourceID:        chunk.SourceID.String(),
-							SourceName:      chunk.SourceName,
-							Content:         chunk.Content,
-							ChunkIndex:      int(*chunk.ChunkIndex),
-							SimilarityScore: chunk.SimilarityScore,
-							Scope:           "team",
-						})
+					// Deduplicate chunks
+					if seenChunks[chunk.ID] {
+						continue
 					}
+					seenChunks[chunk.ID] = true
+					outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
+						ChunkID:         chunk.ID,
+						SourceID:        chunk.SourceID.String(),
+						SourceName:      chunk.SourceName,
+						Content:         chunk.Content,
+						ChunkIndex:      int(*chunk.ChunkIndex),
+						SimilarityScore: chunk.SimilarityScore,
+						Scope:           "course",
+					})
 				}
-				log.Info("[AI.RAG] Added team knowledge context", "totalChunks", len(outlineRequest.RAGContext))
 			}
+			log.Info("[AI.RAG] Course knowledge context retrieved",
+				"documentIndices", len(outlineRequest.DocumentIndices),
+				"chunks", len(outlineRequest.RAGContext),
+			)
 		}
 	}
 
-	// Generate outline with AI
-	outlineResult, err := aiProvider.GenerateCourseOutline(ctx, outlineRequest)
-	if err != nil {
-		log.Error("AI outline generation failed", "error", err)
-		return s.failJob(ctx, job, fmt.Sprintf("AI generation failed: %v", err))
+	// Also search team-level knowledge if available and sources were selected
+	if hasSelectedKnowledge && s.teamKnowledgeSearcher != nil && s.teamResolver != nil {
+		team, err := s.teamResolver.GetTeamByTenant(ctx, job.TenantID)
+		if err != nil {
+			log.Warn("failed to resolve team for tenant", "error", err)
+		} else if team != nil {
+			log.Info("[AI.RAG] Searching team knowledge", "teamID", team.ID)
+
+			// Build a set of selected source IDs for filtering
+			selectedSet := make(map[string]bool)
+			for _, id := range selectedDocIDs {
+				selectedSet[id] = true
+			}
+
+			// Search team knowledge with the same queries
+			teamQueries := []string{
+				content.Settings.Title,
+				content.Settings.DesiredOutcome,
+			}
+			if additionalContext != "" {
+				teamQueries = append(teamQueries, additionalContext)
+			}
+
+			seenTeamChunks := make(map[string]bool)
+			// Copy existing chunk IDs to avoid duplicates across course and team
+			for _, chunk := range outlineRequest.RAGContext {
+				seenTeamChunks[chunk.SourceID+"-"+fmt.Sprintf("%d", chunk.ChunkIndex)] = true
+			}
+
+			for _, query := range teamQueries {
+				chunks, err := s.teamKnowledgeSearcher.SearchByTeam(ctx, team.ID, query, 15)
+				if err != nil {
+					log.Warn("Team RAG search failed", "query", query, "error", err)
+					continue
+				}
+				for _, chunk := range chunks {
+					// Only include chunks from selected sources
+					if !selectedSet[chunk.SourceID.String()] {
+						continue
+					}
+					chunkKey := chunk.SourceID.String() + "-" + fmt.Sprintf("%d", *chunk.ChunkIndex)
+					if seenTeamChunks[chunkKey] {
+						continue
+					}
+					seenTeamChunks[chunkKey] = true
+					outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
+						ChunkID:         chunk.ID,
+						SourceID:        chunk.SourceID.String(),
+						SourceName:      chunk.SourceName,
+						Content:         chunk.Content,
+						ChunkIndex:      int(*chunk.ChunkIndex),
+						SimilarityScore: chunk.SimilarityScore,
+						Scope:           "team",
+					})
+				}
+			}
+			log.Info("[AI.RAG] Added team knowledge context", "totalChunks", len(outlineRequest.RAGContext))
+		}
+	}
+
+	// Log final RAG context summary
+	if len(outlineRequest.RAGContext) > 0 {
+		log.Info("[AI.RAG] Final outline generation context",
+			"totalChunks", len(outlineRequest.RAGContext),
+			"documentIndices", len(outlineRequest.DocumentIndices),
+			"internalDataOnly", outlineRequest.InternalDataOnly,
+		)
+	} else if hasSelectedKnowledge {
+		log.Warn("[AI.RAG] Knowledge sources selected but no RAG context retrieved - check vector DB and embeddings")
+	}
+
+	// Generate outline with AI, with retry on constraint violations
+	const maxConstraintRetries = 2
+	var outlineResult *service.GenerateOutlineResult
+	var lastViolations []valueobject.ConstraintViolation
+
+	for attempt := 0; attempt <= maxConstraintRetries; attempt++ {
+		if attempt > 0 {
+			log.Info("[AI.Constraints] Retrying outline generation after constraint violations",
+				"attempt", attempt+1,
+				"maxAttempts", maxConstraintRetries+1,
+			)
+			// Strengthen the prompt with violation feedback
+			outlineRequest.AdditionalContext = buildConstraintRetryContext(
+				outlineRequest.AdditionalContext,
+				lastViolations,
+				outlineRequest.Constraints,
+			)
+		}
+
+		var genErr error
+		outlineResult, genErr = aiProvider.GenerateCourseOutline(ctx, outlineRequest)
+		if genErr != nil {
+			log.Error("AI outline generation failed", "error", genErr, "attempt", attempt+1)
+			return s.failJob(ctx, job, fmt.Sprintf("AI generation failed: %v", genErr))
+		}
+
+		// Validate against constraints if provided
+		if outlineRequest.Constraints == nil || knowledgeScope == nil {
+			break // No constraints to validate
+		}
+
+		constraints, _ := valueobject.CalculateCourseConstraints(
+			knowledgeScope,
+			outlineRequest.InternalDataOnly,
+			valueobject.DefaultConstraintsConfig(),
+		)
+		if constraints == nil {
+			break
+		}
+
+		// Count sections and lessons
+		sectionCount := len(outlineResult.Sections)
+		totalLessons := 0
+		lessonCountsPerSection := make([]int, sectionCount)
+		for i, section := range outlineResult.Sections {
+			lessonCountsPerSection[i] = len(section.Lessons)
+			totalLessons += len(section.Lessons)
+		}
+
+		// Validate
+		lastViolations = constraints.Validate(sectionCount, totalLessons, lessonCountsPerSection)
+		if len(lastViolations) == 0 {
+			log.Info("[AI.Constraints] Generated outline passes all constraints",
+				"sectionCount", sectionCount,
+				"totalLessons", totalLessons,
+				"attempt", attempt+1,
+			)
+			break // Success!
+		}
+
+		// Log violations
+		log.Warn("[AI.Constraints] Generated outline violates constraints",
+			"violations", len(lastViolations),
+			"sectionCount", sectionCount,
+			"totalLessons", totalLessons,
+			"attempt", attempt+1,
+		)
+		for _, v := range lastViolations {
+			log.Warn("[AI.Constraints] Violation", "field", v.Field, "expected", v.Expected, "actual", v.Actual)
+		}
+
+		// If this was the last attempt, proceed with the violated result
+		if attempt == maxConstraintRetries {
+			log.Warn("[AI.Constraints] Max retries reached, proceeding with constraint violations")
+		}
 	}
 
 	// Update progress
@@ -435,20 +601,38 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 
 	// Calculate section grounding scores based on RAG context
 	// If RAG chunks were provided, distribute a baseline grounding score across sections
+	// This now works for ALL modes when knowledge is selected, not just InternalDataOnly
 	var sectionGroundingScores []float32
-	if len(outlineRequest.RAGContext) > 0 && outlineRequest.InternalDataOnly {
+	if len(outlineRequest.RAGContext) > 0 {
 		// Calculate grounding score based on RAG coverage
 		// More chunks = higher grounding, but cap at reasonable max
 		chunksPerSection := float32(len(outlineRequest.RAGContext)) / float32(len(outlineResult.Sections))
 		for range outlineResult.Sections {
-			// Base score starts at 0.4 with RAG, scales up based on chunk density
-			// 10+ chunks per section = 0.8+ grounding
-			score := float32(0.4) + (chunksPerSection / 25.0)
+			// Base score calculation:
+			// - With InternalDataOnly: higher base (0.5) since content is strictly from sources
+			// - Without InternalDataOnly: lower base (0.3) since AI can synthesize beyond sources
+			var baseScore float32
+			if outlineRequest.InternalDataOnly {
+				baseScore = 0.5
+			} else {
+				baseScore = 0.3
+			}
+			score := baseScore + (chunksPerSection / 20.0)
 			if score > 0.95 {
 				score = 0.95
 			}
 			sectionGroundingScores = append(sectionGroundingScores, score)
 		}
+		log.Info("[AI.RAG] Calculated section grounding scores",
+			"avgScore", func() float32 {
+				var sum float32
+				for _, s := range sectionGroundingScores {
+					sum += s
+				}
+				return sum / float32(len(sectionGroundingScores))
+			}(),
+			"sectionCount", len(sectionGroundingScores),
+		)
 	} else {
 		// No RAG context = 0 grounding (fully synthesized)
 		for range outlineResult.Sections {
@@ -456,8 +640,16 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 		}
 	}
 
-	// Collect contributing chunk IDs per section (distribute evenly for now)
-	var sectionChunkIDs [][]string
+	// Build section provenance with detailed chunk attribution
+	type sectionProvenance struct {
+		ChunkIDs     []string            `json:"chunkIds"`
+		SourceChunks []ProvenanceChunk   `json:"sourceChunks"`
+		TeamTokens   int32               `json:"teamTokens"`
+		GlobalTokens int32               `json:"globalTokens"`
+		CourseTokens int32               `json:"courseTokens"`
+	}
+	var sectionProvenances []sectionProvenance
+
 	if len(outlineRequest.RAGContext) > 0 {
 		chunksPerSection := len(outlineRequest.RAGContext) / len(outlineResult.Sections)
 		if chunksPerSection < 1 {
@@ -470,18 +662,44 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 				end = len(outlineRequest.RAGContext)
 			}
 			if i == len(outlineResult.Sections)-1 {
-				// Last section gets remaining chunks
 				end = len(outlineRequest.RAGContext)
 			}
-			var chunkIDs []string
+
+			prov := sectionProvenance{}
 			for j := start; j < end && j < len(outlineRequest.RAGContext); j++ {
-				chunkIDs = append(chunkIDs, outlineRequest.RAGContext[j].ChunkID)
+				chunk := outlineRequest.RAGContext[j]
+				prov.ChunkIDs = append(prov.ChunkIDs, chunk.ChunkID)
+
+				// Build detailed source chunk
+				excerpt := chunk.Content
+				if len(excerpt) > 200 {
+					excerpt = excerpt[:200] + "..."
+				}
+				prov.SourceChunks = append(prov.SourceChunks, ProvenanceChunk{
+					ChunkID:         chunk.ChunkID,
+					SourceID:        chunk.SourceID,
+					SourceName:      chunk.SourceName,
+					Excerpt:         excerpt,
+					SimilarityScore: chunk.SimilarityScore,
+					Scope:           chunk.Scope,
+				})
+
+				// Estimate tokens (rough: 4 chars per token)
+				tokenCount := int32(len(chunk.Content) / 4)
+				switch chunk.Scope {
+				case "team":
+					prov.TeamTokens += tokenCount
+				case "global":
+					prov.GlobalTokens += tokenCount
+				case "course":
+					prov.CourseTokens += tokenCount
+				}
 			}
-			sectionChunkIDs = append(sectionChunkIDs, chunkIDs)
+			sectionProvenances = append(sectionProvenances, prov)
 		}
 	} else {
 		for range outlineResult.Sections {
-			sectionChunkIDs = append(sectionChunkIDs, nil)
+			sectionProvenances = append(sectionProvenances, sectionProvenance{})
 		}
 	}
 
@@ -508,6 +726,8 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 			totalLessons++
 		}
 
+		// Build provenance for this section
+		prov := sectionProvenances[sIdx]
 		section := map[string]any{
 			"id":                   uuid.New().String(),
 			"title":                sectionResult.Title,
@@ -519,13 +739,55 @@ func (s *AIGenerationService) ProcessOutlineGenerationJob(ctx context.Context, j
 			"emphasis":             sectionResult.Emphasis,
 			"mappedOutcomeIndices": sectionResult.MappedOutcomeIndices,
 			"groundingScore":       sectionGrounding,
-			"contributingChunkIds": sectionChunkIDs[sIdx],
+			"contributingChunkIds": prov.ChunkIDs,
+			"provenance": map[string]any{
+				"sourceChunks": prov.SourceChunks,
+				"teamTokens":   prov.TeamTokens,
+				"globalTokens": prov.GlobalTokens,
+				"courseTokens": prov.CourseTokens,
+			},
 		}
 		sections = append(sections, section)
 	}
 
-	// Update content with generated outline
+	// Calculate outline-level aggregate provenance
+	outlineProvenance := &OutlineProvenance{
+		GeneratedAt:        time.Now().UTC(),
+		ConstraintsApplied: outlineRequest.Constraints != nil,
+		ConstraintsMet:     len(lastViolations) == 0,
+	}
+	uniqueSources := make(map[string]bool)
+	for _, prov := range sectionProvenances {
+		outlineProvenance.TotalChunks += len(prov.ChunkIDs)
+		outlineProvenance.TeamTokens += prov.TeamTokens
+		outlineProvenance.GlobalTokens += prov.GlobalTokens
+		outlineProvenance.CourseTokens += prov.CourseTokens
+		for _, sc := range prov.SourceChunks {
+			uniqueSources[sc.SourceID] = true
+		}
+	}
+	outlineProvenance.TotalSources = len(uniqueSources)
+
+	// Calculate aggregate grounding score
+	if len(sectionGroundingScores) > 0 {
+		var sum float32
+		for _, s := range sectionGroundingScores {
+			sum += s
+		}
+		outlineProvenance.GroundingScore = sum / float32(len(sectionGroundingScores))
+	}
+
+	log.Info("[AI.Provenance] Outline provenance calculated",
+		"totalSources", outlineProvenance.TotalSources,
+		"totalChunks", outlineProvenance.TotalChunks,
+		"groundingScore", outlineProvenance.GroundingScore,
+		"constraintsApplied", outlineProvenance.ConstraintsApplied,
+		"constraintsMet", outlineProvenance.ConstraintsMet,
+	)
+
+	// Update content with generated outline and provenance
 	content.Content.Sections = sections
+	content.OutlineProvenance = outlineProvenance
 
 	// Write updated content back to MinIO
 	if err := s.writeCourseContent(ctx, job.TenantID, *job.CourseID, content); err != nil {
@@ -1525,6 +1787,38 @@ func (s *AIGenerationService) processNextJob(ctx context.Context) error {
 	default:
 		return s.failJob(tenantCtx, job, fmt.Sprintf("unknown job type: %s", job.Type))
 	}
+}
+
+// buildConstraintRetryContext appends violation feedback to the additional context
+// to help the AI correct its output on retry.
+func buildConstraintRetryContext(
+	existingContext string,
+	violations []valueobject.ConstraintViolation,
+	constraints *service.CourseConstraintsInput,
+) string {
+	var sb strings.Builder
+
+	if existingContext != "" {
+		sb.WriteString(existingContext)
+		sb.WriteString("\n\n")
+	}
+
+	sb.WriteString("**IMPORTANT CORRECTION REQUIRED**\n")
+	sb.WriteString("Your previous response violated the mandatory constraints. Please correct:\n\n")
+
+	for _, v := range violations {
+		sb.WriteString(fmt.Sprintf("- %s: You provided %s, but must be %s\n", v.Field, v.Actual, v.Expected))
+	}
+
+	sb.WriteString("\n**Reminder of constraints:**\n")
+	if constraints != nil {
+		sb.WriteString(fmt.Sprintf("- Sections: %d to %d\n", constraints.MinSections, constraints.MaxSections))
+		sb.WriteString(fmt.Sprintf("- Lessons per section: %d to %d\n", constraints.MinLessonsPerSection, constraints.MaxLessonsPerSection))
+		sb.WriteString(fmt.Sprintf("- Total lessons: %d to %d\n", constraints.MinTotalLessons, constraints.MaxTotalLessons))
+	}
+
+	sb.WriteString("\nPlease regenerate the outline within these bounds.")
+	return sb.String()
 }
 
 func (s *AIGenerationService) failJob(ctx context.Context, job *entity.GenerationJob, errMsg string) error {

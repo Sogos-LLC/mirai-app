@@ -20,6 +20,8 @@ export interface GroundingIndicatorProps {
   warningThreshold?: number;
   /** Show source count */
   sourceCount?: number;
+  /** Click handler for drill-down */
+  onClick?: () => void;
 }
 
 /**
@@ -36,6 +38,7 @@ export default function GroundingIndicator({
   variant = 'compact',
   warningThreshold = 0.6,
   sourceCount,
+  onClick,
 }: GroundingIndicatorProps) {
   const percentage = Math.round(groundingScore * 100);
   const isLowGrounding = groundingScore < warningThreshold;
@@ -76,10 +79,18 @@ export default function GroundingIndicator({
   ].filter(Boolean).join('\n');
 
   if (variant === 'compact') {
+    const isClickable = !!onClick;
     return (
-      <div
-        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium cursor-help ${levelColors[level]}`}
-        title={tooltipText}
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!isClickable}
+        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${levelColors[level]} ${
+          isClickable
+            ? 'cursor-pointer hover:opacity-80 transition-opacity'
+            : 'cursor-help'
+        }`}
+        title={isClickable ? `${tooltipText}\n\nClick to view sources` : tooltipText}
       >
         {isLowGrounding ? (
           <AlertTriangle size={14} />
@@ -87,7 +98,7 @@ export default function GroundingIndicator({
           <Info size={14} />
         )}
         <span>{percentage}% grounded</span>
-      </div>
+      </button>
     );
   }
 

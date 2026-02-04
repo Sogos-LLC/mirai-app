@@ -87,15 +87,24 @@ export default function CourseWizard() {
   // For team knowledge, we need to fetch from each team the user belongs to
   // We'll use individual hooks for the first few teams (React hooks limitation)
   // In practice, most users belong to 1-3 teams
-  const team0Id = userTeams[0]?.id;
-  const team1Id = userTeams[1]?.id;
-  const team2Id = userTeams[2]?.id;
+  //
+  // CRITICAL FIX: Only extract team IDs after teams have finished loading.
+  // Previously, we accessed userTeams[0]?.id before teams loaded, which returned undefined.
+  // The useListKnowledgeSources hook treated undefined teamId as "global query",
+  // causing team knowledge to never be fetched - only global knowledge was loaded.
+  // By checking !teamsLoading first, we ensure team IDs are only used when available.
+  const team0Id = !teamsLoading ? userTeams[0]?.id : undefined;
+  const team1Id = !teamsLoading ? userTeams[1]?.id : undefined;
+  const team2Id = !teamsLoading ? userTeams[2]?.id : undefined;
 
-  const { sources: team0Sources, isLoading: team0Loading } = useListKnowledgeSources(team0Id);
-  const { sources: team1Sources, isLoading: team1Loading } = useListKnowledgeSources(team1Id);
-  const { sources: team2Sources, isLoading: team2Loading } = useListKnowledgeSources(team2Id);
+  // Pass enabled option to prevent querying until teams are loaded and teamId is available
+  // This ensures we don't make a "global" query when we actually want team-specific data
+  const { sources: team0Sources, isLoading: team0Loading } = useListKnowledgeSources(team0Id, { enabled: !!team0Id });
+  const { sources: team1Sources, isLoading: team1Loading } = useListKnowledgeSources(team1Id, { enabled: !!team1Id });
+  const { sources: team2Sources, isLoading: team2Loading } = useListKnowledgeSources(team2Id, { enabled: !!team2Id });
 
   // Combine team knowledge loading state
+  // Include teamsLoading to ensure we wait for teams before considering team knowledge "loaded"
   const teamKnowledgeLoading = teamsLoading ||
     (team0Id && team0Loading) ||
     (team1Id && team1Loading) ||

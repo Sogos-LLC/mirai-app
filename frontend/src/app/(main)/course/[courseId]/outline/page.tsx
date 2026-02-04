@@ -58,6 +58,8 @@ import Button from '@/components/ui/Button';
 import { useIsTouchDevice } from '@/hooks/useBreakpoint';
 import { useGetCourse } from '@/hooks/useCourses';
 import type { Course } from '@/gen/mirai/v1/course_pb';
+import GroundingIndicator from '@/components/ui/GroundingIndicator';
+import SourceEvidencePanel, { type SourceChunk } from '@/components/ui/SourceEvidencePanel';
 
 // Inline edit state type
 interface EditState {
@@ -88,6 +90,8 @@ export default function OutlineReviewPage() {
   const [feedbackSectionIndex, setFeedbackSectionIndex] = useState<number | null>(null);
   // Source panel open state (tracks which lesson's panel is open)
   const [openSourcePanel, setOpenSourcePanel] = useState<{ sectionIndex: number; lessonIndex: number } | null>(null);
+  // Section evidence panel state
+  const [sectionEvidenceIndex, setSectionEvidenceIndex] = useState<number | null>(null);
 
   // Fetch course data for metadata header
   const courseQuery = useGetCourse(courseId);
@@ -310,6 +314,44 @@ export default function OutlineReviewPage() {
     return [...new Set(allObjectives)].slice(0, 5);
   }, [context.outline]);
 
+  // Calculate aggregate grounding metrics from all sections
+  const aggregateGrounding = useMemo(() => {
+    if (!context.outline?.sections || context.outline.sections.length === 0) {
+      return null;
+    }
+
+    let totalScore = 0;
+    let totalChunks = 0;
+    const uniqueSources = new Set<string>();
+
+    for (const section of context.outline.sections) {
+      if (section.groundingScore) {
+        totalScore += section.groundingScore;
+      }
+      if (section.contributingChunkIds) {
+        totalChunks += section.contributingChunkIds.length;
+        // Extract source IDs from chunk IDs (assuming format contains sourceId)
+        section.contributingChunkIds.forEach((chunkId) => {
+          // Chunk IDs may contain source info - count unique chunks as proxy for sources
+          uniqueSources.add(chunkId.split('-')[0] || chunkId);
+        });
+      }
+    }
+
+    const avgScore = totalScore / context.outline.sections.length;
+
+    // Only show if there's meaningful grounding data
+    if (avgScore === 0 && totalChunks === 0) {
+      return null;
+    }
+
+    return {
+      groundingScore: avgScore,
+      totalChunks,
+      sourceCount: Math.min(uniqueSources.size, totalChunks), // Approximate unique sources
+    };
+  }, [context.outline]);
+
   // Convert learning outcomes to selectable format for feedback controls
   const availableOutcomesForFeedback = useMemo(() => {
     return learningOutcomes.map((outcome, idx) => ({
@@ -317,6 +359,23 @@ export default function OutlineReviewPage() {
       text: outcome,
     }));
   }, [learningOutcomes]);
+
+  // Get section source evidence data
+  const getSectionSourceEvidence = (sectionIndex: number): SourceChunk[] => {
+    const section = context.outline?.sections?.[sectionIndex];
+    if (!section?.contributingChunkIds) return [];
+
+    // Create SourceChunk objects from chunk IDs
+    // Note: Full excerpts would require fetching from backend
+    return section.contributingChunkIds.map((chunkId, idx) => ({
+      chunkId,
+      sourceId: chunkId.split('-')[0] || chunkId,
+      sourceName: `Source ${idx + 1}`,
+      excerpt: 'Knowledge source chunk contributed to this section.',
+      similarityScore: section.groundingScore || 0.7,
+      scope: 'course' as const,
+    }));
+  };
 
   // Handle section feedback save
   const handleSaveSectionFeedback = (sectionIndex: number, data: SectionFeedbackData) => {
@@ -551,6 +610,17 @@ export default function OutlineReviewPage() {
               </Button>
             </div>
 
+            {/* Aggregate Grounding Indicator */}
+            {aggregateGrounding && (
+              <div className="pt-4 border-t">
+                <GroundingIndicator
+                  groundingScore={aggregateGrounding.groundingScore}
+                  variant="detailed"
+                  sourceCount={aggregateGrounding.sourceCount}
+                />
+              </div>
+            )}
+
             {learningOutcomes.length > 0 && (
               <div className="pt-4 border-t">
                 <h3 className="text-sm font-semibold text-primary mb-2">
@@ -686,6 +756,7 @@ export default function OutlineReviewPage() {
                                 groundingScore={section.groundingScore}
                                 contributingChunkIds={section.contributingChunkIds}
                                 compact={false}
+                                onShowSources={() => setSectionEvidenceIndex(sectionIndex)}
                               />
                               {/* Feedback button */}
                               <button
@@ -896,6 +967,17 @@ export default function OutlineReviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Section Source Evidence Panel */}
+      {sectionEvidenceIndex !== null && context.outline?.sections?.[sectionEvidenceIndex] && (
+        <SourceEvidencePanel
+          chunks={getSectionSourceEvidence(sectionEvidenceIndex)}
+          groundingScore={context.outline.sections[sectionEvidenceIndex].groundingScore}
+          title={`Sources: ${context.outline.sections[sectionEvidenceIndex].title || `Section ${sectionEvidenceIndex + 1}`}`}
+          isOpen={true}
+          onClose={() => setSectionEvidenceIndex(null)}
+        />
+      )}
     </div>
   );
 }

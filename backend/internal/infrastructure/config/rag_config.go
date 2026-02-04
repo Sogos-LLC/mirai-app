@@ -11,6 +11,7 @@ type RAGConfig struct {
 type RAGStageConfig struct {
 	TopK          int
 	MinSimilarity float32
+	ScopeOrder    []string // Priority order for scopes: ["course", "team", "global"]
 }
 
 // DefaultRAGConfig returns the default RAG configuration.
@@ -22,38 +23,47 @@ func DefaultRAGConfig() *RAGConfig {
 			"outcomes": {
 				TopK:          20,
 				MinSimilarity: 0.6,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 			"sme_persona": {
 				TopK:          5,
 				MinSimilarity: 0.65,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 			"audience_persona": {
 				TopK:          10,
 				MinSimilarity: 0.6,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 			"outline": {
 				TopK:          30,
 				MinSimilarity: 0.55,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 			"section": {
 				TopK:          15,
 				MinSimilarity: 0.6,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 			"lesson": {
 				TopK:          10,
 				MinSimilarity: 0.65,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 			"component_text": {
 				TopK:          10,
 				MinSimilarity: 0.6,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 			"component_quiz": {
 				TopK:          15,
 				MinSimilarity: 0.55,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 			"component_media": {
 				TopK:          5,
 				MinSimilarity: 0.7,
+				ScopeOrder:    []string{"course", "team", "global"},
 			},
 		},
 	}
@@ -69,5 +79,6 @@ func (c *RAGConfig) GetStageConfig(stage string) RAGStageConfig {
 	return RAGStageConfig{
 		TopK:          10,
 		MinSimilarity: 0.6,
+		ScopeOrder:    []string{"course", "team", "global"},
 	}
 }

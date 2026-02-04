@@ -98,15 +98,29 @@ type CourseContent struct {
 
 // S3CourseContent is stored in S3 - the heavy content payload.
 type S3CourseContent struct {
-	Settings           CourseSettings      `json:"settings"`
-	WizardData         *S3WizardData       `json:"wizardData,omitempty"`
-	Personas           []map[string]any    `json:"personas"`
-	LearningObjectives []map[string]any    `json:"learningObjectives"`
-	AssessmentSettings map[string]any      `json:"assessmentSettings"`
-	Content            CourseContent       `json:"content"`
-	Exports            []map[string]any    `json:"exports,omitempty"`
-	GeneratedLessons   []S3GeneratedLesson `json:"generatedLessons,omitempty"`
-	CurriculumMap      *S3CurriculumMap    `json:"curriculumMap,omitempty"`
+	Settings           CourseSettings       `json:"settings"`
+	WizardData         *S3WizardData        `json:"wizardData,omitempty"`
+	Personas           []map[string]any     `json:"personas"`
+	LearningObjectives []map[string]any     `json:"learningObjectives"`
+	AssessmentSettings map[string]any       `json:"assessmentSettings"`
+	Content            CourseContent        `json:"content"`
+	Exports            []map[string]any     `json:"exports,omitempty"`
+	GeneratedLessons   []S3GeneratedLesson  `json:"generatedLessons,omitempty"`
+	CurriculumMap      *S3CurriculumMap     `json:"curriculumMap,omitempty"`
+	OutlineProvenance  *OutlineProvenance   `json:"outlineProvenance,omitempty"` // Aggregate provenance for outline generation
+}
+
+// OutlineProvenance tracks aggregate knowledge source attribution for outline generation.
+type OutlineProvenance struct {
+	TotalSources       int             `json:"totalSources"`       // Number of unique knowledge sources
+	TotalChunks        int             `json:"totalChunks"`        // Total chunks used
+	TeamTokens         int32           `json:"teamTokens"`         // Tokens from team sources
+	GlobalTokens       int32           `json:"globalTokens"`       // Tokens from global sources
+	CourseTokens       int32           `json:"courseTokens"`       // Tokens from course sources
+	GroundingScore     float32         `json:"groundingScore"`     // Aggregate grounding 0.0-1.0
+	GeneratedAt        time.Time       `json:"generatedAt"`        // When outline was generated
+	ConstraintsApplied bool            `json:"constraintsApplied"` // Whether constraints were enforced
+	ConstraintsMet     bool            `json:"constraintsMet"`     // Whether output met constraints
 }
 
 // S3GeneratedLesson represents a generated lesson stored in content.json.
@@ -146,6 +160,12 @@ type S3WizardData struct {
 	// InternalDataOnly: When true, course content is generated exclusively from
 	// uploaded knowledge sources. AI will not add external information.
 	InternalDataOnly bool `json:"internalDataOnly"`
+	// SelectedTeamDocIDs contains the IDs of team-level knowledge sources selected for this course.
+	// These are used for RAG during outline and lesson generation.
+	SelectedTeamDocIDs []string `json:"selectedTeamDocIds,omitempty"`
+	// SelectedGlobalDocIDs contains the IDs of global/tenant-level knowledge sources selected for this course.
+	// These are used for RAG during outline and lesson generation.
+	SelectedGlobalDocIDs []string `json:"selectedGlobalDocIds,omitempty"`
 }
 
 // S3SMEPersona represents an SME (Subject Matter Expert) persona stored in wizard data.
