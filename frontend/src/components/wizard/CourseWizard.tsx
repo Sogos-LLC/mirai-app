@@ -4,13 +4,13 @@ import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import { useMachine } from '@xstate/react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, X } from 'lucide-react';
-import { fromPromise } from 'xstate';
 import {
   courseWizardMachine,
   isGenerating,
   type CourseWizardContext,
-  type WizardKnowledgeSource,
 } from '@/machines/courseWizardMachine';
+import { createCourseWizardActors } from '@/machines/courseWizardActors';
+import { useKnowledgeLoader } from '@/hooks/useKnowledgeLoader';
 import {
   useGenerateTitle,
   useGenerateOutcomes,
@@ -26,9 +26,7 @@ import {
 } from '@/hooks/useAIGeneration';
 import { useCreateCourse } from '@/hooks/useCourses';
 import { useUploadAndProcess, useLinkSessionToCourse } from '@/hooks/useKnowledgeSources';
-import { useListKnowledgeSources, KnowledgeSourceStatus } from '@/hooks/useTeamKnowledge';
-import { useListTeams } from '@/hooks/useTeams';
-import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
+import type { SMEPersona, AudiencePersona } from '@/gen/mirai/v1/course_wizard_pb';
 
 import WizardProgress from './WizardProgress';
 import CourseNameStep from './steps/CourseNameStep';
@@ -78,267 +76,26 @@ export default function CourseWizard() {
   const uploadAndProcess = useUploadAndProcess();
   const linkSessionToCourse = useLinkSessionToCourse();
 
-  // Fetch global knowledge (no teamId = global/tenant-level knowledge)
-  const { sources: globalKnowledgeSources, isLoading: globalKnowledgeLoading } = useListKnowledgeSources();
-
-  // Fetch all teams the user is a member/lead of
-  const { data: userTeams, isLoading: teamsLoading } = useListTeams();
-
-  // For team knowledge, we need to fetch from each team the user belongs to
-  // We'll use individual hooks for the first few teams (React hooks limitation)
-  // In practice, most users belong to 1-3 teams
-  //
-  // CRITICAL FIX: Only extract team IDs after teams have finished loading.
-  // Previously, we accessed userTeams[0]?.id before teams loaded, which returned undefined.
-  // The useListKnowledgeSources hook treated undefined teamId as "global query",
-  // causing team knowledge to never be fetched - only global knowledge was loaded.
-  // By checking !teamsLoading first, we ensure team IDs are only used when available.
-  const team0Id = !teamsLoading ? userTeams[0]?.id : undefined;
-  const team1Id = !teamsLoading ? userTeams[1]?.id : undefined;
-  const team2Id = !teamsLoading ? userTeams[2]?.id : undefined;
-
-  // Pass enabled option to prevent querying until teams are loaded and teamId is available
-  // This ensures we don't make a "global" query when we actually want team-specific data
-  const { sources: team0Sources, isLoading: team0Loading } = useListKnowledgeSources(team0Id, { enabled: !!team0Id });
-  const { sources: team1Sources, isLoading: team1Loading } = useListKnowledgeSources(team1Id, { enabled: !!team1Id });
-  const { sources: team2Sources, isLoading: team2Loading } = useListKnowledgeSources(team2Id, { enabled: !!team2Id });
-
-  // Combine team knowledge loading state
-  // Include teamsLoading to ensure we wait for teams before considering team knowledge "loaded"
-  const teamKnowledgeLoading = teamsLoading ||
-    (team0Id && team0Loading) ||
-    (team1Id && team1Loading) ||
-    (team2Id && team2Loading);
-
-  // Filter to only ready sources
-  const readyGlobalKnowledge = globalKnowledgeSources.filter(
-    (source) => source.status === KnowledgeSourceStatus.READY
-  );
-
-  // Combine all team sources and filter to ready
-  const allTeamSources = useMemo(() => {
-    const sources = [
-      ...team0Sources,
-      ...team1Sources,
-      ...team2Sources,
-    ];
-    // Dedupe by ID in case same source appears in multiple teams
-    const seen = new Set<string>();
-    return sources.filter((source) => {
-      if (seen.has(source.id)) return false;
-      seen.add(source.id);
-      return source.status === KnowledgeSourceStatus.READY;
-    });
-  }, [team0Sources, team1Sources, team2Sources]);
-
-  // Convert to wizard format
-  const availableGlobalDocs: WizardKnowledgeSource[] = readyGlobalKnowledge.map((source) => ({
-    id: source.id,
-    name: source.name,
-    tokenCount: source.tokenCount ?? 0,
-    summary: source.summary ?? undefined,
-    scope: 'global' as const,
-  }));
-
-  // Convert team knowledge to wizard format
-  const availableTeamDocs: WizardKnowledgeSource[] = allTeamSources.map((source) => ({
-    id: source.id,
-    name: source.name,
-    tokenCount: source.tokenCount ?? 0,
-    summary: source.summary ?? undefined,
-    scope: 'team' as const,
-  }));
-
-  // Calculate totals for display in CourseNameStep
-  const totalKnowledgeCount = availableTeamDocs.length + availableGlobalDocs.length;
-  const totalKnowledgeTokens = [...availableTeamDocs, ...availableGlobalDocs].reduce(
-    (sum, doc) => sum + doc.tokenCount,
-    0
-  );
+  // Load team + global knowledge sources
+  const { teamDocs: availableTeamDocs, globalDocs: availableGlobalDocs, isLoading: knowledgeLoading } = useKnowledgeLoader();
 
   // Create machine with provided actors
   const machineWithActors = useMemo(() => {
     return courseWizardMachine.provide({
-      actors: {
-        generateTitleActor: fromPromise(async ({ input }: { input: { courseName: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] } }) => {
-          const result = await generateTitle.mutate({
-            courseName: input.courseName,
-            selectedTeamDocIds: input.selectedTeamDocIds,
-            selectedGlobalDocIds: input.selectedGlobalDocIds,
-          });
-          return {
-            improvedTitle: result.improvedTitle,
-            description: result.description,
-          };
-        }),
-        generateOutcomesActor: fromPromise(async ({ input }: { input: { courseName: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] } }) => {
-          // Pass sessionId for RAG context if knowledge sources were uploaded
-          // Also pass selected team/global doc IDs for existing knowledge sources
-          const result = await generateOutcomes.mutate({
-            courseName: input.courseName,
-            sessionId: processedSources.length > 0 ? sessionId : undefined,
-            selectedTeamDocIds: input.selectedTeamDocIds,
-            selectedGlobalDocIds: input.selectedGlobalDocIds,
-          });
-          return {
-            outcomes: result.outcomes,
-          };
-        }),
-        generateSMEPersonasActor: fromPromise(
-          async ({ input }: { input: { title: string; description: string; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] } }) => {
-            const result = await generateSMEPersonas.mutate({
-              title: input.title,
-              description: input.description,
-              selectedTeamDocIds: input.selectedTeamDocIds,
-              selectedGlobalDocIds: input.selectedGlobalDocIds,
-            });
-            return { personas: result.personas };
-          }
-        ),
-        generateAudiencePersonasActor: fromPromise(
-          async ({
-            input,
-          }: {
-            input: { title: string; description: string; selectedSmes: SMEPersona[]; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] };
-          }) => {
-            const result = await generateAudiencePersonas.mutate({
-              title: input.title,
-              description: input.description,
-              selectedSmes: input.selectedSmes,
-              selectedTeamDocIds: input.selectedTeamDocIds,
-              selectedGlobalDocIds: input.selectedGlobalDocIds,
-            });
-            return { personas: result.personas };
-          }
-        ),
-        generateToneOptionsActor: fromPromise(
-          async ({
-            input,
-          }: {
-            input: { title: string; description: string; selectedAudiences: AudiencePersona[]; selectedTeamDocIds: string[]; selectedGlobalDocIds: string[] };
-          }) => {
-            const result = await generateToneOptions.mutate({
-              title: input.title,
-              description: input.description,
-              selectedAudiences: input.selectedAudiences,
-              selectedTeamDocIds: input.selectedTeamDocIds,
-              selectedGlobalDocIds: input.selectedGlobalDocIds,
-            });
-            return { options: result.options };
-          }
-        ),
-        generateOutlineActor: fromPromise(
-          async ({
-            input,
-          }: {
-            input: {
-              title: string;
-              description: string;
-              smePersonas: SMEPersona[];
-              audiencePersonas: AudiencePersona[];
-              toneOption: ToneOption | undefined;
-              additionalContext: string;
-              internalDataOnly: boolean;
-              selectedTeamDocIds: string[];
-              selectedGlobalDocIds: string[];
-            };
-          }) => {
-            // Step 1: Create a course with wizard data for AI generation context
-            const courseResult = await createCourse.mutate({
-              settings: {
-                title: input.title,
-                desiredOutcome: input.description,
-              },
-              // Include wizard data so it's stored with the course
-              // This enables persona-aware outline generation and realignment features
-              wizardData: {
-                improvedTitle: input.title,
-                description: input.description,
-                smePersonas: input.smePersonas,
-                selectedSmeIds: input.smePersonas.map(p => p.id),
-                audiencePersonas: input.audiencePersonas,
-                selectedAudienceIds: input.audiencePersonas.map(p => p.id),
-                toneOptions: input.toneOption ? [input.toneOption] : [],
-                selectedToneId: input.toneOption?.id ?? '',
-                additionalContext: input.additionalContext,
-                internalDataOnly: input.internalDataOnly,
-                selectedTeamDocIds: input.selectedTeamDocIds,
-                selectedGlobalDocIds: input.selectedGlobalDocIds,
-              },
-            });
-
-            // DEBUG: Track courseID through the system
-            console.log('[DEBUG-COURSEID] Wizard: createCourse returned', {
-              courseId: courseResult.course?.id,
-              title: courseResult.course?.settings?.title,
-              hasWizardData: true,
-              selectedKnowledge: {
-                teamDocs: input.selectedTeamDocIds.length,
-                globalDocs: input.selectedGlobalDocIds.length,
-              },
-            });
-
-            if (!courseResult.course?.id) {
-              throw new Error('Failed to create course');
-            }
-
-            const courseId = courseResult.course.id;
-
-            // Link any knowledge sources from the wizard session to the course
-            if (processedSources.length > 0) {
-              try {
-                const linkResult = await linkSessionToCourse.mutate({
-                  sessionId,
-                  courseId,
-                });
-                console.log('[Knowledge] Linked session sources to course:', linkResult.linkedCount);
-              } catch (linkError) {
-                console.error('[Knowledge] Failed to link session sources:', linkError);
-                // Continue anyway - outline generation should still work
-              }
-            }
-
-            // DEBUG: Track courseID through the system
-            console.log('[DEBUG-COURSEID] Wizard: calling generateCourseOutline with courseId:', courseId);
-
-            // Step 2: Generate the course outline (starts background job)
-            // The job will read wizard data from the course to generate persona-aware content
-            const outlineResult = await generateCourseOutline.mutate({
-              courseId,
-              desiredOutcome: input.description,
-              additionalContext: input.additionalContext || undefined,
-            });
-
-            if (!outlineResult.job?.id) {
-              throw new Error('Failed to start outline generation');
-            }
-
-            // Return courseId and job info - wizard will offer wait/background choice
-            return {
-              courseId,
-              job: {
-                id: outlineResult.job.id,
-              },
-            };
-          }
-        ),
-        saveWizardStateActor: fromPromise(
-          async ({
-            input,
-          }: {
-            input: { currentStep: string; data: Record<string, unknown> };
-          }) => {
-            const result = await saveWizardState.mutate({
-              currentStep: input.currentStep,
-              data: input.data,
-            });
-            return { state: result.state };
-          }
-        ),
-        deleteWizardStateActor: fromPromise(async () => {
-          await deleteWizardState.mutate();
-        }),
-      },
+      actors: createCourseWizardActors({
+        generateTitle,
+        generateOutcomes,
+        generateSMEPersonas,
+        generateAudiencePersonas,
+        generateToneOptions,
+        createCourse,
+        generateCourseOutline,
+        saveWizardState,
+        deleteWizardState,
+        linkSessionToCourse,
+        sessionId,
+        processedSources,
+      }),
     });
   }, [
     generateTitle,
@@ -372,7 +129,7 @@ export default function CourseWizard() {
 
   // Load available knowledge sources into state machine when ready
   useEffect(() => {
-    if (!globalKnowledgeLoading && !teamKnowledgeLoading && !knowledgeLoaded) {
+    if (!knowledgeLoading && !knowledgeLoaded) {
       send({
         type: 'SET_AVAILABLE_KNOWLEDGE',
         teamDocs: availableTeamDocs,
@@ -380,13 +137,11 @@ export default function CourseWizard() {
       });
       setKnowledgeLoaded(true);
     }
-  }, [globalKnowledgeLoading, teamKnowledgeLoading, knowledgeLoaded, availableTeamDocs, availableGlobalDocs, send]);
+  }, [knowledgeLoading, knowledgeLoaded, availableTeamDocs, availableGlobalDocs, send]);
 
   // Handle redirect to outline page after job is queued
   useEffect(() => {
     if (state.matches('outlineJobQueued') && context.courseId) {
-      // Pass the jobId so the outline page can poll for it directly
-      // This avoids race conditions with job discovery via listJobsByCourse
       const url = context.outlineJobId
         ? `/course/${context.courseId}/outline?jobId=${context.outlineJobId}`
         : `/course/${context.courseId}/outline`;
@@ -411,7 +166,6 @@ export default function CourseWizard() {
   }, []);
 
   const handleCloseKnowledgeModal = useCallback(() => {
-    // When closing, clear the done files from pending list
     const successfulFiles = pendingFiles.filter(f => f.status === 'done');
     if (successfulFiles.length > 0) {
       setPendingFiles(prev => prev.filter(f => f.status !== 'done'));
@@ -421,13 +175,11 @@ export default function CourseWizard() {
 
   const handleAddFiles = useCallback((files: PendingFile[]) => {
     setPendingFiles((prev) => [...prev, ...files]);
-    // Also send to state machine for persistence
     send({ type: 'ADD_FILES', files });
   }, [send]);
 
   const handleRemoveFile = useCallback((fileId: string) => {
     setPendingFiles((prev) => prev.filter((f) => f.id !== fileId));
-    // Also send to state machine for persistence
     send({ type: 'REMOVE_FILE', fileId });
   }, [send]);
 
@@ -440,7 +192,6 @@ export default function CourseWizard() {
   }, []);
 
   const handleUploadFile = useCallback(async (file: PendingFile): Promise<ProcessedSource> => {
-    // Read file content as Uint8Array
     const arrayBuffer = await file.file.arrayBuffer();
     const fileContent = new Uint8Array(arrayBuffer);
 
@@ -459,14 +210,11 @@ export default function CourseWizard() {
       tokenCount: result.tokenCount,
     };
 
-    // Add to processed sources
     setProcessedSources((prev) => [...prev, processed]);
-
     return processed;
   }, [sessionId, uploadAndProcess]);
 
-
-  // Loading state only while checking for saved state - don't block on knowledge loading
+  // Loading state only while checking for saved state
   if (state.matches('checkingSavedState') || getSavedState.isLoading) {
     return (
       <GeneratingStep
@@ -618,7 +366,6 @@ export default function CourseWizard() {
     );
   }
 
-  // Outline job queued - redirecting to outline page
   if (state.matches('outlineJobQueued') || (typeof stateValue === 'object' && 'outlineJobQueued' in stateValue)) {
     return (
       <>

@@ -3,23 +3,14 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useMachine } from '@xstate/react';
-import { fromPromise } from 'xstate';
 import {
   ClipboardList,
   RefreshCw,
-  BookOpen,
-  ChevronDown,
-  ChevronRight,
   ArrowLeft,
   Loader2,
   AlertCircle,
-  Pencil,
-  Check,
-  X,
   Copy,
   CheckCheck,
-  FileText,
-  Settings2,
 } from 'lucide-react';
 import {
   outlineReviewMachine,
@@ -27,6 +18,7 @@ import {
   isPollingOutline,
   isPollingLessons,
 } from '@/machines/outlineReviewMachine';
+import { createOutlineReviewActors } from '@/machines/outlineReviewActors';
 import {
   useApproveCourseOutline,
   useGenerateAllLessons,
@@ -34,68 +26,41 @@ import {
 } from '@/hooks/useAIGeneration';
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/lib/connect';
-import {
-  GenerationJobStatus,
-  GenerationJobType,
-  SectionLevel,
-  SectionIntent,
-  SectionEmphasis,
-  type CourseOutline,
-  type OutlineSection,
-} from '@/gen/mirai/v1/ai_generation_types_pb';
-import SectionMetadataBadges from '@/components/outline/SectionMetadataBadges';
-import SectionFeedbackControls, { type SectionFeedbackData } from '@/components/outline/SectionFeedbackControls';
-import { LessonSourcePanel } from '@/components/lessons/LessonSourcePanel';
-import {
-  AIGenerationService,
-  GetJobRequestSchema,
-  GetCourseOutlineRequestSchema,
-  ListJobsRequestSchema,
-} from '@/gen/mirai/v1/ai_generation_service_pb';
-import { create } from '@bufbuild/protobuf';
+import type { CourseOutline } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { AIGenerationService } from '@/gen/mirai/v1/ai_generation_service_pb';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useIsTouchDevice } from '@/hooks/useBreakpoint';
 import { useGetCourse } from '@/hooks/useCourses';
+import { useGetCurriculumMap, isCurriculumMapApproved } from '@/hooks/useCurriculumMap';
 import type { Course } from '@/gen/mirai/v1/course_pb';
 import GroundingIndicator from '@/components/ui/GroundingIndicator';
 import SourceEvidencePanel, { type SourceChunk } from '@/components/ui/SourceEvidencePanel';
-
-// Inline edit state type
-interface EditState {
-  type: 'section' | 'lesson';
-  sectionIndex: number;
-  lessonIndex?: number;
-  title: string;
-  description?: string;
-}
+import { OutlineSectionCard } from '@/components/outline/OutlineSectionCard';
+import type { SectionFeedbackData } from '@/components/outline/SectionFeedbackControls';
 
 export default function OutlineReviewPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const courseId = params.courseId as string;
-  // Get jobId from URL params if provided (passed from wizard to avoid race condition)
   const initialJobId = searchParams.get('jobId');
   const isTouch = useIsTouchDevice();
 
-  // DEBUG: Track courseID through the system
   console.log('[DEBUG-COURSEID] OutlinePage: courseId from URL params:', courseId, 'initialJobId:', initialJobId);
 
-  // Inline editing state
-  const [editState, setEditState] = useState<EditState | null>(null);
   // Copy success state
   const [copied, setCopied] = useState(false);
-  // Section feedback editing state
-  const [feedbackSectionIndex, setFeedbackSectionIndex] = useState<number | null>(null);
-  // Source panel open state (tracks which lesson's panel is open)
-  const [openSourcePanel, setOpenSourcePanel] = useState<{ sectionIndex: number; lessonIndex: number } | null>(null);
   // Section evidence panel state
   const [sectionEvidenceIndex, setSectionEvidenceIndex] = useState<number | null>(null);
 
   // Fetch course data for metadata header
   const courseQuery = useGetCourse(courseId);
   const course = courseQuery.data;
+
+  // Check curriculum map approval status
+  const curriculumMapQuery = useGetCurriculumMap(courseId);
+  const isApproved = isCurriculumMapApproved(curriculumMapQuery.data?.curriculumMap);
 
   // API hooks
   const approveCourseOutline = useApproveCourseOutline();
@@ -107,156 +72,13 @@ export default function OutlineReviewPage() {
 
   // Create machine with provided actors
   const machineWithActors = useMemo(() => {
-    return outlineReviewMachine.provide({
-      actors: {
-        loadOutlineActor: fromPromise(async ({ input }: { input: { courseId: string; initialJobId?: string } }) => {
-          // DEBUG: Track courseID through the system
-          console.log('[OutlinePage] loadOutlineActor START', { courseId: input.courseId, initialJobId: input.initialJobId });
-
-          // Step 1: Try to get the outline
-          try {
-            console.log('[OutlinePage] Attempting to fetch outline via connect client...');
-            const outlineRequest = create(GetCourseOutlineRequestSchema, { courseId: input.courseId });
-            const outlineResponse = await aiClient.getCourseOutline(outlineRequest);
-            if (outlineResponse.outline) {
-              console.log('[OutlinePage] Outline found!', {
-                outlineId: outlineResponse.outline.id,
-                sectionsCount: outlineResponse.outline.sections?.length,
-              });
-              return { outline: outlineResponse.outline, job: null };
-            }
-            console.log('[OutlinePage] getCourseOutline returned no outline');
-          } catch (err) {
-            console.log('[OutlinePage] getCourseOutline threw error (expected if outline not ready):', err instanceof Error ? err.message : err);
-          }
-
-          // Step 2: If we have an initial job ID from the wizard, use it directly
-          if (input.initialJobId) {
-            console.log('[OutlinePage] Attempting to fetch job by initialJobId via connect client:', input.initialJobId);
-            try {
-              const jobRequest = create(GetJobRequestSchema, { jobId: input.initialJobId });
-              const jobResponse = await aiClient.getJob(jobRequest);
-              const job = jobResponse.job;
-              console.log('[OutlinePage] GetJob response:', {
-                jobId: job?.id,
-                status: job?.status,
-                statusName: job?.status !== undefined ? GenerationJobStatus[job.status] : 'undefined',
-                progress: job?.progressPercent,
-                errorMessage: job?.errorMessage,
-              });
-
-              if (job && (job.status === GenerationJobStatus.QUEUED || job.status === GenerationJobStatus.PROCESSING)) {
-                console.log('[OutlinePage] Job is active (QUEUED or PROCESSING), returning job for polling');
-                return {
-                  outline: null,
-                  job: {
-                    id: job.id,
-                    status: job.status,
-                    progressPercent: job.progressPercent ?? 0,
-                    progressMessage: job.progressMessage,
-                  },
-                };
-              } else {
-                console.log('[OutlinePage] Job exists but not in active state, status:', job?.status, GenerationJobStatus[job?.status ?? 0]);
-              }
-            } catch (err) {
-              console.error('[OutlinePage] Failed to get job by initialJobId:', err instanceof Error ? err.message : err);
-            }
-          } else {
-            console.log('[OutlinePage] No initialJobId provided');
-          }
-
-          // Step 3: Fallback - list jobs by courseId
-          console.log('[OutlinePage] Falling back to listJobs via connect client...');
-          try {
-            const listRequest = create(ListJobsRequestSchema, { courseId: input.courseId });
-            const listResponse = await aiClient.listJobs(listRequest);
-            const jobs = listResponse.jobs ?? [];
-            console.log('[OutlinePage] listJobs returned', jobs.length, 'jobs');
-            jobs.forEach((job, i) => {
-              console.log(`[OutlinePage] Job ${i}:`, {
-                id: job.id,
-                status: job.status,
-                statusName: GenerationJobStatus[job.status],
-                courseId: job.courseId,
-              });
-            });
-
-            const activeOutlineJob = jobs.find(
-              (job) =>
-                job.status === GenerationJobStatus.QUEUED ||
-                job.status === GenerationJobStatus.PROCESSING
-            );
-
-            if (activeOutlineJob) {
-              console.log('[OutlinePage] Found active job via list:', activeOutlineJob.id);
-              return {
-                outline: null,
-                job: {
-                  id: activeOutlineJob.id,
-                  status: activeOutlineJob.status,
-                  progressPercent: activeOutlineJob.progressPercent ?? 0,
-                  progressMessage: activeOutlineJob.progressMessage,
-                },
-              };
-            } else {
-              console.log('[OutlinePage] No active job found in list');
-            }
-          } catch (err) {
-            console.error('[OutlinePage] listJobs failed:', err instanceof Error ? err.message : err);
-          }
-
-          // No outline and no active job - will trigger error state
-          console.log('[OutlinePage] loadOutlineActor END - returning null outline and null job (will show error)');
-          return { outline: null, job: null };
-        }),
-        pollJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
-          const jobRequest = create(GetJobRequestSchema, { jobId: input.jobId });
-          const jobResponse = await aiClient.getJob(jobRequest);
-          return { job: jobResponse.job };
-        }),
-        pollLessonJobActor: fromPromise(async ({ input }: { input: { jobId: string } }) => {
-          const jobRequest = create(GetJobRequestSchema, { jobId: input.jobId });
-          const jobResponse = await aiClient.getJob(jobRequest);
-          return { job: jobResponse.job };
-        }),
-        getOutlineActor: fromPromise(async ({ input }: { input: { courseId: string } }) => {
-          const outlineRequest = create(GetCourseOutlineRequestSchema, { courseId: input.courseId });
-          const outlineResponse = await aiClient.getCourseOutline(outlineRequest);
-          if (!outlineResponse.outline) {
-            throw new Error('Outline not found');
-          }
-          return { outline: outlineResponse.outline };
-        }),
-        approveOutlineActor: fromPromise(
-          async ({ input }: { input: { courseId: string; outlineId: string } }) => {
-            const result = await approveCourseOutline.mutate(input.courseId, input.outlineId);
-            return { outline: result.outline! };
-          }
-        ),
-        regenerateOutlineActor: fromPromise(
-          async ({ input }: { input: { courseId: string } }) => {
-            const result = await generateCourseOutline.mutate({
-              courseId: input.courseId,
-              desiredOutcome: '', // Will use existing course settings
-            });
-            return { job: result.job! };
-          }
-        ),
-        generateLessonsActor: fromPromise(
-          async ({ input }: { input: { courseId: string } }) => {
-            // DEBUG: Track courseID through the system
-            console.log('[DEBUG-COURSEID] OutlinePage generateLessonsActor: calling generateAllLessons with courseId:', input.courseId);
-            const result = await generateAllLessons.mutate(input.courseId);
-            console.log('[DEBUG-COURSEID] OutlinePage generateLessonsActor: job created', {
-              jobId: result.job?.id,
-              courseId: input.courseId,
-            });
-            return { job: result.job! };
-          }
-        ),
-      },
-    });
+    const actors = createOutlineReviewActors(
+      aiClient,
+      approveCourseOutline,
+      generateCourseOutline,
+      generateAllLessons,
+    );
+    return outlineReviewMachine.provide({ actors });
   }, [aiClient, approveCourseOutline, generateAllLessons, generateCourseOutline]);
 
   // Initialize machine with courseId and optional jobId from URL
@@ -310,7 +132,6 @@ export default function OutlineReviewPage() {
     const allObjectives = context.outline.sections.flatMap((section) =>
       section.lessons?.flatMap((lesson) => lesson.learningObjectives || []) || []
     );
-    // Deduplicate and limit to top 5
     return [...new Set(allObjectives)].slice(0, 5);
   }, [context.outline]);
 
@@ -330,9 +151,7 @@ export default function OutlineReviewPage() {
       }
       if (section.contributingChunkIds) {
         totalChunks += section.contributingChunkIds.length;
-        // Extract source IDs from chunk IDs (assuming format contains sourceId)
         section.contributingChunkIds.forEach((chunkId) => {
-          // Chunk IDs may contain source info - count unique chunks as proxy for sources
           uniqueSources.add(chunkId.split('-')[0] || chunkId);
         });
       }
@@ -340,7 +159,6 @@ export default function OutlineReviewPage() {
 
     const avgScore = totalScore / context.outline.sections.length;
 
-    // Only show if there's meaningful grounding data
     if (avgScore === 0 && totalChunks === 0) {
       return null;
     }
@@ -348,7 +166,7 @@ export default function OutlineReviewPage() {
     return {
       groundingScore: avgScore,
       totalChunks,
-      sourceCount: Math.min(uniqueSources.size, totalChunks), // Approximate unique sources
+      sourceCount: Math.min(uniqueSources.size, totalChunks),
     };
   }, [context.outline]);
 
@@ -365,8 +183,6 @@ export default function OutlineReviewPage() {
     const section = context.outline?.sections?.[sectionIndex];
     if (!section?.contributingChunkIds) return [];
 
-    // Create SourceChunk objects from chunk IDs
-    // Note: Full excerpts would require fetching from backend
     return section.contributingChunkIds.map((chunkId, idx) => ({
       chunkId,
       sourceId: chunkId.split('-')[0] || chunkId,
@@ -379,7 +195,6 @@ export default function OutlineReviewPage() {
 
   // Handle section feedback save
   const handleSaveSectionFeedback = (sectionIndex: number, data: SectionFeedbackData) => {
-    // Update section metadata via state machine
     send({
       type: 'UPDATE_SECTION_METADATA',
       sectionIndex,
@@ -388,16 +203,7 @@ export default function OutlineReviewPage() {
       emphasis: data.emphasis,
       mappedOutcomeIds: data.mappedOutcomeIds,
     });
-    setFeedbackSectionIndex(null);
   };
-
-  // Get initial feedback data for a section
-  const getSectionFeedbackData = (section: OutlineSection): SectionFeedbackData => ({
-    level: section.level ?? SectionLevel.UNSPECIFIED,
-    intent: section.intent ?? SectionIntent.UNSPECIFIED,
-    emphasis: section.emphasis ?? SectionEmphasis.UNSPECIFIED,
-    mappedOutcomeIds: section.mappedOutcomeIds ?? [],
-  });
 
   // Build outline text for clipboard
   const buildOutlineText = (
@@ -453,7 +259,6 @@ export default function OutlineReviewPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback to plain text
       await navigator.clipboard.writeText(content.plain);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -472,7 +277,7 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Polling outline state (user chose to wait)
+  // Polling outline state
   if (isPollingOutline(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -493,7 +298,7 @@ export default function OutlineReviewPage() {
     );
   }
 
-  // Polling lessons state - show progress while generating lessons
+  // Polling lessons state
   if (isPollingLessons(stateValue)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -671,258 +476,21 @@ export default function OutlineReviewPage() {
             {/* Outline */}
             {context.outline ? (
               <div className="border rounded-lg divide-y mb-6">
-                {context.outline.sections?.map((section, sectionIndex) => {
-                  const isEditingSection = editState?.type === 'section' && editState.sectionIndex === sectionIndex;
-
-                  return (
-                    <div key={sectionIndex} className="bg-surface">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleSection(sectionIndex)}
-                          className="flex-shrink-0 p-3 hover:bg-hover transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                        >
-                          {expandedSections.has(sectionIndex) ? (
-                            <ChevronDown className="w-5 h-5 text-muted" />
-                          ) : (
-                            <ChevronRight className="w-5 h-5 text-muted" />
-                          )}
-                        </button>
-
-                        {isEditingSection ? (
-                          <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 py-2 pr-2 sm:pr-4">
-                            <input
-                              type="text"
-                              value={editState.title}
-                              onChange={(e) => setEditState({ ...editState, title: e.target.value })}
-                              className="flex-1 px-3 py-2 text-sm font-semibold border rounded bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  send({ type: 'UPDATE_SECTION_TITLE', sectionIndex, title: editState.title });
-                                  setEditState(null);
-                                } else if (e.key === 'Escape') {
-                                  setEditState(null);
-                                }
-                              }}
-                            />
-                            <div className="flex gap-2 flex-shrink-0">
-                              <button
-                                onClick={() => {
-                                  send({ type: 'UPDATE_SECTION_TITLE', sectionIndex, title: editState.title });
-                                  setEditState(null);
-                                }}
-                                className="flex-1 sm:flex-none p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
-                              >
-                                <Check className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() => setEditState(null)}
-                                className="flex-1 sm:flex-none p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                              >
-                                <X className="w-5 h-5" />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex-1 py-3 pr-4 min-h-[44px] flex flex-col justify-center">
-                            <div
-                              className="cursor-pointer group"
-                              onClick={() => setEditState({
-                                type: 'section',
-                                sectionIndex,
-                                title: section.title || `Section ${sectionIndex + 1}`,
-                              })}
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm font-medium text-muted">
-                                  Section {sectionIndex + 1}
-                                </span>
-                                <span className="text-xs text-muted">
-                                  ({section.lessons?.length ?? 0} lessons)
-                                </span>
-                                <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
-                              </div>
-                              <h3 className="font-semibold text-primary">
-                                {section.title || `Section ${sectionIndex + 1}`}
-                              </h3>
-                            </div>
-
-                            {/* Section Metadata Badges */}
-                            <div className="flex items-center gap-2 mt-2">
-                              <SectionMetadataBadges
-                                level={section.level}
-                                intent={section.intent}
-                                emphasis={section.emphasis}
-                                groundingScore={section.groundingScore}
-                                contributingChunkIds={section.contributingChunkIds}
-                                compact={false}
-                                onShowSources={() => setSectionEvidenceIndex(sectionIndex)}
-                              />
-                              {/* Feedback button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFeedbackSectionIndex(sectionIndex);
-                                }}
-                                className={`p-1 rounded transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'} hover:bg-hover text-muted`}
-                                title="Edit section metadata"
-                              >
-                                <Settings2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Section Feedback Controls */}
-                      {feedbackSectionIndex === sectionIndex && (
-                        <div className="px-4 pb-3">
-                          <SectionFeedbackControls
-                            initialData={getSectionFeedbackData(section)}
-                            availableOutcomes={availableOutcomesForFeedback}
-                            sectionTitle={section.title || `Section ${sectionIndex + 1}`}
-                            onSave={(data) => handleSaveSectionFeedback(sectionIndex, data)}
-                            onCancel={() => setFeedbackSectionIndex(null)}
-                          />
-                        </div>
-                      )}
-
-                      {expandedSections.has(sectionIndex) && section.lessons && (
-                        <div className="px-2 sm:px-4 pb-3">
-                          <div className="ml-4 sm:ml-8 space-y-2">
-                            {section.lessons.map((lesson, lessonIndex) => {
-                              const isEditingLesson = editState?.type === 'lesson' &&
-                                editState.sectionIndex === sectionIndex &&
-                                editState.lessonIndex === lessonIndex;
-
-                              return (
-                                <div key={lessonIndex}>
-                                  {isEditingLesson ? (
-                                    <div className="p-3 border rounded bg-surface space-y-3">
-                                      <input
-                                        type="text"
-                                        value={editState.title}
-                                        onChange={(e) => setEditState({ ...editState, title: e.target.value })}
-                                        className="w-full px-3 py-2 text-sm font-medium border rounded bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[44px]"
-                                        placeholder="Lesson title"
-                                        autoFocus
-                                      />
-                                      <textarea
-                                        value={editState.description || ''}
-                                        onChange={(e) => setEditState({ ...editState, description: e.target.value })}
-                                        className="w-full px-3 py-2 text-sm border rounded bg-surface text-secondary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y min-h-[80px]"
-                                        placeholder="Lesson description (optional)"
-                                        rows={3}
-                                      />
-                                      <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
-                                        <button
-                                          onClick={() => setEditState(null)}
-                                          className="w-full sm:w-auto px-4 py-2 min-h-[44px] text-sm text-secondary hover:bg-hover rounded"
-                                        >
-                                          Cancel
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            send({
-                                              type: 'UPDATE_LESSON',
-                                              sectionIndex,
-                                              lessonIndex,
-                                              title: editState.title,
-                                              description: editState.description || '',
-                                            });
-                                            setEditState(null);
-                                          }}
-                                          className="w-full sm:w-auto px-4 py-2 min-h-[44px] text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                                        >
-                                          Save
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div
-                                      className="flex items-start gap-3 p-2 rounded hover:bg-hover cursor-pointer group min-h-[44px]"
-                                      onClick={() => setEditState({
-                                        type: 'lesson',
-                                        sectionIndex,
-                                        lessonIndex,
-                                        title: lesson.title || `Lesson ${lessonIndex + 1}`,
-                                        description: lesson.description || '',
-                                      })}
-                                    >
-                                      <BookOpen className="w-4 h-4 text-muted mt-0.5 flex-shrink-0" />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                          <p className="text-sm font-medium text-primary">
-                                            {lesson.title || `Lesson ${lessonIndex + 1}`}
-                                          </p>
-                                          <Pencil className={`w-3 h-3 text-muted transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'}`} />
-                                          {/* Grounding indicator */}
-                                          {lesson.groundingScore > 0 && (
-                                            <span
-                                              className={`px-1.5 py-0.5 text-xs rounded ${
-                                                lesson.groundingScore >= 0.8
-                                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                  : lesson.groundingScore >= 0.6
-                                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                              }`}
-                                              title={`${Math.round(lesson.groundingScore * 100)}% grounded in knowledge sources`}
-                                            >
-                                              {Math.round(lesson.groundingScore * 100)}%
-                                            </span>
-                                          )}
-                                          {/* Citation indicator with source panel */}
-                                          {lesson.citations && lesson.citations.length > 0 && (
-                                            <div className="relative" onClick={(e) => e.stopPropagation()}>
-                                              <button
-                                                onClick={() =>
-                                                  setOpenSourcePanel(
-                                                    openSourcePanel?.sectionIndex === sectionIndex &&
-                                                    openSourcePanel?.lessonIndex === lessonIndex
-                                                      ? null
-                                                      : { sectionIndex, lessonIndex }
-                                                  )
-                                                }
-                                                className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
-                                                title={`${lesson.citations.length} knowledge source${lesson.citations.length > 1 ? 's' : ''}`}
-                                              >
-                                                <FileText className="w-3 h-3" />
-                                                <span>{lesson.citations.length}</span>
-                                              </button>
-                                              <LessonSourcePanel
-                                                citations={lesson.citations.map((c: { sourceId: string; sourceName: string; excerpt: string; relevanceScore: number }) => ({
-                                                  sourceId: c.sourceId || '',
-                                                  sourceName: c.sourceName || '',
-                                                  excerpt: c.excerpt || '',
-                                                  relevanceScore: c.relevanceScore || 0,
-                                                }))}
-                                                groundingScore={lesson.groundingScore}
-                                                isOpen={
-                                                  openSourcePanel?.sectionIndex === sectionIndex &&
-                                                  openSourcePanel?.lessonIndex === lessonIndex
-                                                }
-                                                onClose={() => setOpenSourcePanel(null)}
-                                              />
-                                            </div>
-                                          )}
-                                        </div>
-                                        {lesson.description && (
-                                          <p className="text-xs text-secondary line-clamp-2">
-                                            {lesson.description}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {context.outline.sections?.map((section, sectionIndex) => (
+                  <OutlineSectionCard
+                    key={sectionIndex}
+                    section={section}
+                    sectionIndex={sectionIndex}
+                    isExpanded={expandedSections.has(sectionIndex)}
+                    isTouch={isTouch}
+                    availableOutcomes={availableOutcomesForFeedback}
+                    onToggle={() => toggleSection(sectionIndex)}
+                    onUpdateSectionTitle={(idx, title) => send({ type: 'UPDATE_SECTION_TITLE', sectionIndex: idx, title })}
+                    onUpdateLesson={(sIdx, lIdx, title, description) => send({ type: 'UPDATE_LESSON', sectionIndex: sIdx, lessonIndex: lIdx, title, description })}
+                    onSaveSectionFeedback={handleSaveSectionFeedback}
+                    onShowSectionSources={(idx) => setSectionEvidenceIndex(idx)}
+                  />
+                ))}
               </div>
             ) : (
               <div className="text-center py-12">
@@ -931,13 +499,22 @@ export default function OutlineReviewPage() {
             )}
 
             {/* Info box */}
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-6">
-              <p className="text-sm text-green-800 dark:text-green-200">
-                <strong>Ready to generate your course?</strong> Click &quot;Generate
-                Lessons&quot; to start creating lesson content. This process runs in the background
-                and you&apos;ll be notified when complete.
-              </p>
-            </div>
+            {isApproved ? (
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-6">
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  <strong>Ready to generate your course?</strong> Click &quot;Generate
+                  Lessons&quot; to start creating lesson content. This process runs in the background
+                  and you&apos;ll be notified when complete.
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg mb-6">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Curriculum map approval required.</strong> You must review and approve the
+                  curriculum map before generating lessons. This ensures coverage of all learning outcomes.
+                </p>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 sm:justify-end">
@@ -948,21 +525,32 @@ export default function OutlineReviewPage() {
               >
                 Cancel
               </Button>
-              <Button
-                variant="primary"
-                onClick={() => send({ type: 'APPROVE_OUTLINE' })}
-                disabled={loading || !context.outline}
-                className="w-full sm:w-auto min-h-[44px]"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  'Generate Lessons'
-                )}
-              </Button>
+              {isApproved ? (
+                <Button
+                  variant="primary"
+                  onClick={() => send({ type: 'APPROVE_OUTLINE' })}
+                  disabled={loading || !context.outline}
+                  className="w-full sm:w-auto min-h-[44px]"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Generate Lessons'
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={() => router.push(`/course/${courseId}/curriculum`)}
+                  disabled={loading || !context.outline}
+                  className="w-full sm:w-auto min-h-[44px]"
+                >
+                  Review Curriculum Map
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

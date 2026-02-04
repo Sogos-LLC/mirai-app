@@ -6,25 +6,13 @@ import {
   ArrowLeft,
   Eye,
   Plus,
-  GripVertical,
   Loader2,
   ChevronDown,
   ChevronRight,
-  ChevronUp,
   BookOpen,
   FileText,
-  Image,
-  HelpCircle,
-  Code,
-  AlertCircle,
-  Heading,
-  Trash2,
   Menu,
   Download,
-  Check,
-  MoreVertical,
-  Pencil,
-  Target,
   Cloud,
   CloudOff,
 } from 'lucide-react';
@@ -43,255 +31,22 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, LessonComponentType } from '@/hooks/useAIGeneration';
-import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 import { EditModal } from '@/components/course/modals/EditModal';
 import { AddComponentModal } from '@/components/course/modals/AddComponentModal';
 import { RealignmentModal, type RealignParams, type RealignResult, type LearningObjective } from '@/components/course/modals/RealignmentModal';
 import { useCourseEditorStore, setOnSaveCallback, setOnPersistCallback, setOnPersistSuccessCallback } from '@/store/zustand/courseEditorStore';
 import type { LessonComponent, GeneratedLesson, OutlineSection } from '@/gen/mirai/v1/ai_generation_types_pb';
-import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
-import {
-  useExportCourse,
-  useGetExportStatus,
-  useDownloadExport,
-  ExportFormat,
-  ExportStatus,
-} from '@/hooks/useExport';
-
-interface SortableComponentProps {
-  component: LessonComponent;
-  index: number;
-  totalCount: number;
-  onClick: () => void;
-  isDragging: boolean;
-  onOpenRealignment?: (component: LessonComponent) => void;
-  onDelete: (id: string) => void;
-  onMoveUp: (index: number) => void;
-  onMoveDown: (index: number) => void;
-}
-
-function SortableComponent({
-  component,
-  index,
-  totalCount,
-  onClick,
-  isDragging,
-  onOpenRealignment,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-}: SortableComponentProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: component.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [menuOpen]);
-
-  // Check if this component type supports realignment
-  const supportsRealignment = [
-    LessonComponentType.TEXT,
-    LessonComponentType.STATEMENT,
-    LessonComponentType.QUOTE,
-    LessonComponentType.LIST,
-    LessonComponentType.CALLOUT,
-  ].includes(component.type);
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`group relative ${isDragging ? 'opacity-0' : ''}`}
-    >
-      {/* Main content area with actions */}
-      <div className="flex items-stretch">
-        {/* Drag handle - left gutter */}
-        <button
-          {...attributes}
-          {...listeners}
-          className="flex-shrink-0 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="w-4 h-4 text-muted" />
-        </button>
-
-        {/* Component content - clickable to edit */}
-        <div
-          className="flex-1 min-w-0 cursor-pointer rounded-lg transition-all group-hover:bg-purple-50/50 dark:group-hover:bg-purple-900/10"
-          onClick={onClick}
-        >
-          <ComponentRenderer
-            component={component}
-            isEditing={false}
-          />
-        </div>
-
-        {/* Actions menu - right edge */}
-        <div className="flex-shrink-0 w-10 flex items-start justify-center pt-2 relative" ref={menuRef}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(!menuOpen);
-            }}
-            className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-            aria-label="Component actions"
-          >
-            <MoreVertical className="w-4 h-4 text-muted" />
-          </button>
-
-          {/* Dropdown menu */}
-          {menuOpen && (
-            <div className="absolute right-0 top-10 z-50 w-48 bg-white dark:bg-dark-surface-elevated rounded-lg shadow-lg border border-default py-1 animate-fadeIn">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(false);
-                  onClick();
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <Pencil className="w-4 h-4 text-muted" />
-                <span className="text-primary">Edit</span>
-              </button>
-
-              {supportsRealignment && onOpenRealignment && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuOpen(false);
-                    onOpenRealignment(component);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Target className="w-4 h-4 text-muted" />
-                  <span className="text-primary">Realign to objectives</span>
-                </button>
-              )}
-
-              <div className="h-px bg-gray-100 dark:bg-gray-800 my-1" />
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(false);
-                  onMoveUp(index);
-                }}
-                disabled={index === 0}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ChevronUp className="w-4 h-4 text-muted" />
-                <span className="text-primary">Move up</span>
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(false);
-                  onMoveDown(index);
-                }}
-                disabled={index === totalCount - 1}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ChevronDown className="w-4 h-4 text-muted" />
-                <span className="text-primary">Move down</span>
-              </button>
-
-              <div className="h-px bg-gray-100 dark:bg-gray-800 my-1" />
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(false);
-                  onDelete(component.id);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// "Add between" divider component
-interface AddBetweenProps {
-  onAdd: () => void;
-}
-
-function AddBetween({ onAdd }: AddBetweenProps) {
-  return (
-    <div className="group/add relative h-4 -my-1">
-      {/* Hover area - larger than visual */}
-      <div className="absolute inset-x-0 -inset-y-2 flex items-center justify-center">
-        {/* Line that appears on hover */}
-        <div className="absolute inset-x-8 h-px bg-purple-300 dark:bg-purple-700 opacity-0 group-hover/add:opacity-100 transition-opacity" />
-
-        {/* Add button */}
-        <button
-          onClick={onAdd}
-          className="relative z-10 flex items-center gap-2 px-3 py-1 text-xs font-medium text-purple-600 dark:text-purple-400 bg-white dark:bg-dark-surface rounded-full border border-purple-200 dark:border-purple-800 opacity-0 group-hover/add:opacity-100 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all shadow-sm"
-        >
-          <Plus className="w-3 h-3" />
-          Add
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Preview component for drag overlay - renders outside DOM flow for smooth dragging
-function DragPreview({ component }: { component: LessonComponent }) {
-  return (
-    <div className="relative bg-surface rounded-lg border-2 border-purple-400 shadow-2xl cursor-grabbing">
-      {/* Drag handle visible during drag */}
-      <div className="absolute left-0 top-0 bottom-0 w-10 flex items-center justify-center -translate-x-full">
-        <GripVertical className="w-5 h-5 text-purple-400" />
-      </div>
-      <div className="p-4">
-        <ComponentRenderer component={component} isEditing={false} />
-      </div>
-    </div>
-  );
-}
-
-// Export modal states
-type ExportModalState = 'idle' | 'starting' | 'processing' | 'completed' | 'failed';
+import { SortableComponent, AddBetween, DragPreview } from '@/components/editor/SortableComponent';
+import { ExportModal } from '@/components/editor/ExportModal';
+import { useExportWorkflow } from '@/hooks/useExportWorkflow';
+import { useAutoSave } from '@/hooks/useAutoSave';
 
 export default function CourseEditorPage() {
   const params = useParams();
@@ -299,7 +54,6 @@ export default function CourseEditorPage() {
   const searchParams = useSearchParams();
   const courseId = params.courseId as string;
   const lessonIdFromUrl = searchParams.get('lessonId');
-  const isMobile = useIsMobile();
 
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(lessonIdFromUrl);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
@@ -310,20 +64,9 @@ export default function CourseEditorPage() {
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [deletingComponentId, setDeletingComponentId] = useState<string | null>(null);
 
-  // Export state
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportModalState, setExportModalState] = useState<ExportModalState>('idle');
-  const [exportId, setExportId] = useState<string | undefined>(undefined);
-  const [exportError, setExportError] = useState<string | null>(null);
-
   // Realignment state
   const [realignmentComponent, setRealignmentComponent] = useState<LessonComponent | null>(null);
   const [isRealigning, setIsRealigning] = useState(false);
-
-  // Auto-save state
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const saveStatusTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
@@ -335,10 +78,19 @@ export default function CourseEditorPage() {
   // Mutation for saving components
   const { mutate: saveComponents, isLoading: isSaving } = useUpdateLessonComponents();
 
-  // Export hooks
-  const { mutate: startExport, isLoading: isStarting, error: startError, reset: resetStart } = useExportCourse();
-  const { data: exportStatus } = useGetExportStatus(exportId, { enabled: !!exportId });
-  const { mutate: getDownload, isLoading: isGettingDownload } = useDownloadExport();
+  // Export workflow
+  const {
+    showExportModal,
+    exportModalState,
+    exportError,
+    exportProgress,
+    isStarting,
+    isGettingDownload,
+    openExportModal,
+    closeExportModal,
+    startExport,
+    downloadExport,
+  } = useExportWorkflow(courseId);
 
   // Realignment hook
   const { mutate: regenerateComponent, isLoading: isRegenerating } = useRegenerateComponent();
@@ -361,33 +113,6 @@ export default function CourseEditorPage() {
     localComponentsRef.current = localComponents;
   }, [localComponents]);
 
-  // Update export modal state based on export status
-  useEffect(() => {
-    if (!exportStatus) return;
-
-    switch (exportStatus.status) {
-      case ExportStatus.PENDING:
-      case ExportStatus.PROCESSING:
-        setExportModalState('processing');
-        break;
-      case ExportStatus.COMPLETED:
-        setExportModalState('completed');
-        break;
-      case ExportStatus.FAILED:
-        setExportModalState('failed');
-        setExportError(exportStatus.errorMessage || 'Export failed. Please try again.');
-        break;
-    }
-  }, [exportStatus]);
-
-  // Handle start error
-  useEffect(() => {
-    if (startError) {
-      setExportModalState('failed');
-      setExportError(startError.message || 'Failed to start export. Please try again.');
-    }
-  }, [startError]);
-
   // Build lesson list from outline
   const lessonsList = useMemo(() => {
     if (!outline?.sections) return [];
@@ -409,11 +134,9 @@ export default function CourseEditorPage() {
   // Auto-select first lesson with generated content when none selected
   useEffect(() => {
     if (!selectedLessonId && lessonsList.length > 0) {
-      // Find first lesson with generated content
       const firstWithContent = lessonsList.find((l) => !!l.generated);
       if (firstWithContent) {
         setSelectedLessonId(firstWithContent.id);
-        // Expand the section containing this lesson
         setExpandedSections((prev) => new Set(prev).add(firstWithContent.sectionIndex));
       }
     }
@@ -470,7 +193,6 @@ export default function CourseEditorPage() {
         throw new Error('Cannot persist: no lesson selected or no components');
       }
 
-      // Update the specific component in the list and save all
       const updatedComponents = components.map((c) =>
         c.id === componentId ? { ...c, contentJson } : c
       );
@@ -514,66 +236,28 @@ export default function CourseEditorPage() {
     }
   }, [currentLesson?.generated?.components, selectedLessonId]);
 
-  // Auto-save effect - debounced save when changes occur
-  useEffect(() => {
-    if (!hasChanges || isSaving) return;
-
+  // Auto-save: build the save function
+  const autoSaveFn = useCallback(async () => {
     const generatedLessonId = currentLessonRef.current?.generated?.id;
     if (!generatedLessonId || localComponentsRef.current.length === 0) return;
 
-    // Clear any existing timer
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
+    await saveComponents({
+      courseId,
+      generatedLessonId,
+      components: localComponentsRef.current.map((c) => ({
+        id: c.id,
+        type: c.type as LessonComponentType,
+        order: c.order,
+        contentJson: c.contentJson,
+        alignment: c.alignment
+          ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
+          : undefined,
+      })),
+    });
+    setHasChanges(false);
+  }, [courseId, saveComponents]);
 
-    // Debounce save by 1.5 seconds
-    autoSaveTimerRef.current = setTimeout(async () => {
-      setSaveStatus('saving');
-
-      try {
-        await saveComponents({
-          courseId,
-          generatedLessonId,
-          components: localComponentsRef.current.map((c) => ({
-            id: c.id,
-            type: c.type as LessonComponentType,
-            order: c.order,
-            contentJson: c.contentJson,
-            alignment: c.alignment
-              ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
-              : undefined,
-          })),
-        });
-        setHasChanges(false);
-        setSaveStatus('saved');
-
-        // Clear "saved" status after 2 seconds
-        if (saveStatusTimerRef.current) {
-          clearTimeout(saveStatusTimerRef.current);
-        }
-        saveStatusTimerRef.current = setTimeout(() => {
-          setSaveStatus('idle');
-        }, 2000);
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-        setSaveStatus('error');
-      }
-    }, 1500);
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, [hasChanges, isSaving, courseId, saveComponents]);
-
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
-    };
-  }, []);
+  const { saveStatus } = useAutoSave(hasChanges, isSaving, autoSaveFn);
 
   const toggleSection = (sectionIndex: number) => {
     setExpandedSections((prev) => {
@@ -621,18 +305,13 @@ export default function CourseEditorPage() {
 
   // Called by AddComponentModal after user finishes editing the new component
   const handleAddComponent = useCallback((component: LessonComponent, contentJson: string) => {
-    // Update component with the final content
     const finalComponent = { ...component, contentJson };
-
-    // Insert at the specified position and reorder
     const insertIndex = addComponentAfterIndex ?? localComponents.length - 1;
     const newComponents = [...localComponents];
     newComponents.splice(insertIndex + 1, 0, finalComponent);
-    // Update order for all components
     const reorderedComponents = newComponents.map((c, idx) => ({ ...c, order: idx }));
 
     setLocalComponents(reorderedComponents);
-    // Sync ref immediately so persist callback can access the new component
     localComponentsRef.current = reorderedComponents;
     setHasChanges(true);
   }, [addComponentAfterIndex, localComponents]);
@@ -649,7 +328,6 @@ export default function CourseEditorPage() {
     }
   };
 
-  // Move component up in the list
   const handleMoveUp = useCallback((index: number) => {
     if (index === 0) return;
     setLocalComponents((items) => {
@@ -659,7 +337,6 @@ export default function CourseEditorPage() {
     setHasChanges(true);
   }, []);
 
-  // Move component down in the list
   const handleMoveDown = useCallback((index: number) => {
     setLocalComponents((items) => {
       if (index >= items.length - 1) return items;
@@ -669,46 +346,14 @@ export default function CourseEditorPage() {
     setHasChanges(true);
   }, []);
 
-  // Export handlers
-  const handleExport = async () => {
-    setExportModalState('starting');
-    setExportError(null);
-    try {
-      const exportRecord = await startExport(courseId, ExportFormat.SCORM_2004);
-      if (exportRecord) {
-        setExportId(exportRecord.id);
-        setExportModalState('processing');
-      }
-    } catch {
-      // Error handled by useEffect above
-    }
-  };
-
-  const handleDownload = useCallback(async () => {
-    if (!exportId) return;
-    try {
-      const result = await getDownload(exportId);
-      if (result.downloadUrl) {
-        // Open download URL in new tab
-        window.open(result.downloadUrl, '_blank');
-      }
-    } catch (err) {
-      console.error('Failed to get download URL:', err);
-    }
-  }, [exportId, getDownload]);
-
-  const resetExportModal = useCallback(() => {
-    setExportId(undefined);
-    setExportModalState('idle');
-    setExportError(null);
-    resetStart();
-  }, [resetStart]);
-
-  const handleCloseExportModal = useCallback(() => {
-    setShowExportModal(false);
-    // Reset state after animation
-    setTimeout(resetExportModal, 300);
-  }, [resetExportModal]);
+  // Export retry handler
+  const handleExportRetry = useCallback(() => {
+    closeExportModal();
+    setTimeout(() => {
+      openExportModal();
+      startExport();
+    }, 350);
+  }, [closeExportModal, openExportModal, startExport]);
 
   // Realignment handlers
   const handleOpenRealignment = useCallback((component: LessonComponent) => {
@@ -735,11 +380,10 @@ export default function CourseEditorPage() {
           learningObjectiveIds: params.learningObjectiveIds,
         },
       });
-      // Return job info for SSE tracking - modal will wait for COMPLETED event
       return { job: result.job };
     } catch (error) {
       console.error('Failed to realign component:', error);
-      throw error; // Re-throw so the modal can show error state
+      throw error;
     } finally {
       setIsRealigning(false);
     }
@@ -819,7 +463,7 @@ export default function CourseEditorPage() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setShowExportModal(true)}
+            onClick={openExportModal}
           >
             <Download className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Export</span>
@@ -1100,126 +744,18 @@ export default function CourseEditorPage() {
       </ResponsiveModal>
 
       {/* Export Modal */}
-      <ResponsiveModal
+      <ExportModal
         isOpen={showExportModal}
-        onClose={handleCloseExportModal}
-        title={
-          exportModalState === 'completed' ? "Export Complete!" :
-          exportModalState === 'failed' ? "Export Failed" :
-          "Export Course"
-        }
-        size="md"
-        mobileHeight="auto"
-      >
-        {/* Idle state - initial format selection */}
-        {exportModalState === 'idle' && (
-          <>
-            <p className="text-secondary mb-6">
-              Export your course to SCORM 2004 format for use in your LMS (Docebo compatible).
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleCloseExportModal}
-                className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleExport}
-                disabled={isStarting}
-                className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-              >
-                Export SCORM
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Starting state - initiating export */}
-        {exportModalState === 'starting' && (
-          <div className="text-center py-6">
-            <Loader2 className="w-12 h-12 text-purple-600 dark:text-purple-400 animate-spin mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-primary mb-2">Starting Export...</h3>
-            <p className="text-secondary">Preparing your course for export.</p>
-          </div>
-        )}
-
-        {/* Processing state - export in progress */}
-        {exportModalState === 'processing' && (
-          <div className="text-center py-6">
-            <Loader2 className="w-12 h-12 text-purple-600 dark:text-purple-400 animate-spin mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-primary mb-2">Exporting Course...</h3>
-            {exportStatus && (
-              <>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2 mx-auto max-w-xs">
-                  <div
-                    className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${exportStatus.progressPercent}%` }}
-                  />
-                </div>
-                <p className="text-secondary text-sm">
-                  {exportStatus.progressMessage || `${exportStatus.progressPercent}% complete`}
-                </p>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Completed state - export finished */}
-        {exportModalState === 'completed' && (
-          <div className="text-center py-6">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-primary mb-2">Export Complete!</h3>
-            <p className="text-secondary mb-6">Your course has been exported successfully.</p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleCloseExportModal}
-                className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
-              >
-                Close
-              </button>
-              <button
-                onClick={handleDownload}
-                disabled={isGettingDownload}
-                className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Download size={18} />
-                {isGettingDownload ? 'Getting Download...' : 'Download SCORM'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Failed state - export error */}
-        {exportModalState === 'failed' && (
-          <div className="text-center py-6">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-primary mb-2">Export Failed</h3>
-            <p className="text-secondary mb-6">{exportError}</p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleCloseExportModal}
-                className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  resetExportModal();
-                  handleExport();
-                }}
-                className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        )}
-      </ResponsiveModal>
+        onClose={closeExportModal}
+        modalState={exportModalState}
+        exportError={exportError}
+        exportStatus={exportProgress}
+        isStarting={isStarting}
+        isGettingDownload={isGettingDownload}
+        onStartExport={startExport}
+        onDownload={downloadExport}
+        onRetry={handleExportRetry}
+      />
 
       {/* Realignment Modal */}
       <RealignmentModal
@@ -1235,4 +771,3 @@ export default function CourseEditorPage() {
     </div>
   );
 }
-
