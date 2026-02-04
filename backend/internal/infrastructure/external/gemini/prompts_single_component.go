@@ -82,9 +82,32 @@ func buildSingleComponentPromptWithPosition(req service.GenerateLessonRequest, p
 	}
 	sb.WriteString("\n")
 
+	// Learning objectives for scope enforcement
+	if len(req.LearningObjectives) > 0 {
+		sb.WriteString("## This Lesson's Learning Objectives (stay within scope)\n")
+		for i, obj := range req.LearningObjectives {
+			sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, obj))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Other lessons in section for deduplication
+	if len(req.PreviousLessonsInSection) > 0 {
+		sb.WriteString("## Other Lessons in This Section (DO NOT duplicate their content)\n")
+		for _, prev := range req.PreviousLessonsInSection {
+			sb.WriteString(fmt.Sprintf("- **%s**: ", prev.Title))
+			if len(prev.KeyPoints) > 0 {
+				sb.WriteString(strings.Join(prev.KeyPoints, "; "))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n")
+	}
+
 	// Previous components
 	if previousComponents != "" {
 		sb.WriteString("## Previously Generated Components in This Lesson\n")
+		sb.WriteString("Do NOT repeat content already covered. Build on what came before and advance to new points.\n")
 		sb.WriteString(previousComponents)
 		sb.WriteString("\n")
 	}

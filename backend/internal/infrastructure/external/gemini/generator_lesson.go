@@ -112,8 +112,8 @@ func (c *Client) GenerateLessonContent(ctx context.Context, req service.Generate
 			ContentJSON: contentJSON,
 		})
 
-		// Add summary to context for next component
-		previousComponentsContext.WriteString(fmt.Sprintf("- [%s] %s\n", planned.ComponentType, summary))
+		// Add rich summary to context for next component (includes purpose from plan)
+		previousComponentsContext.WriteString(fmt.Sprintf("- [%s] %s | Plan purpose: %s\n", planned.ComponentType, summary, planned.Purpose))
 	}
 
 	// Step 3: Generate segue text (for all lessons, including last one for course conclusion)

@@ -125,19 +125,21 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 	}
 	sb.WriteString("\n")
 
-	// Previously generated content in this section
+	// DEDUPLICATION: Show what other lessons in this section cover
 	if len(req.PreviousLessonsInSection) > 0 {
-		sb.WriteString("## Previously Completed Lessons in This Section\n")
+		sb.WriteString("## OTHER LESSONS IN THIS SECTION (DO NOT DUPLICATE)\n")
+		sb.WriteString("The following lessons exist alongside yours in this section. ")
+		sb.WriteString("Each lesson has its own UNIQUE scope. You MUST NOT cover topics that belong to these other lessons.\n\n")
 		for _, prev := range req.PreviousLessonsInSection {
-			sb.WriteString(fmt.Sprintf("**%s** (%d components)\n", prev.Title, prev.ComponentCount))
+			sb.WriteString(fmt.Sprintf("**Lesson: %s**\n", prev.Title))
 			if len(prev.KeyPoints) > 0 {
-				sb.WriteString("Key points covered:\n")
+				sb.WriteString("Topics/objectives RESERVED for this lesson (OFF-LIMITS to you):\n")
 				for _, point := range prev.KeyPoints {
 					sb.WriteString(fmt.Sprintf("  - %s\n", point))
 				}
 			}
+			sb.WriteString("\n")
 		}
-		sb.WriteString("\n")
 	}
 
 	// Navigation context
@@ -171,11 +173,28 @@ func buildComponentPlanPrompt(req service.GenerateLessonRequest) string {
 	// Inject component schemas based on context
 	sb.WriteString(BuildComponentSchemasPromptSection(relevantSchemas))
 
+	// SCOPE BOUNDARY ENFORCEMENT
+	sb.WriteString("## SCOPE BOUNDARY ENFORCEMENT (CRITICAL - READ CAREFULLY)\n")
+	sb.WriteString("This lesson has a SPECIFIC, UNIQUE role in the course curriculum. You MUST:\n\n")
+	sb.WriteString("1. **Focus ONLY on this lesson's learning objectives** - every component must directly serve one of the objectives listed above\n")
+	sb.WriteString("2. **Never duplicate content from other lessons** - if another lesson in this section covers a topic, DO NOT cover it again\n")
+	sb.WriteString("3. **Never restate the outline** - the course outline shows what exists; your job is to teach THIS lesson's unique content, not summarize the course\n")
+	sb.WriteString("4. **Each component must advance a SPECIFIC objective** - in the purpose field, state which learning objective it addresses\n")
+	sb.WriteString("5. **No generic filler** - avoid vague introductions like 'In this lesson we will learn about...' followed by listing topics from other lessons\n\n")
+
+	if len(req.LearningObjectives) > 0 {
+		sb.WriteString("**YOUR LESSON'S UNIQUE SCOPE (components must map to these):**\n")
+		for i, obj := range req.LearningObjectives {
+			sb.WriteString(fmt.Sprintf("  Objective %d: %s\n", i+1, obj))
+		}
+		sb.WriteString("\n")
+	}
+
 	// Instructions with position-aware guidance
 	sb.WriteString("## Component Planning Instructions\n")
 	sb.WriteString("Plan 8-12 components for this lesson using the component types above. For each component, specify:\n")
 	sb.WriteString("1. The type (from the available types listed above)\n")
-	sb.WriteString("2. A brief purpose describing what it will contain\n\n")
+	sb.WriteString("2. A brief purpose describing what it will contain AND which learning objective(s) it addresses (e.g., 'Explains X concept [Objective 2]')\n\n")
 
 	sb.WriteString("Required components:\n")
 	sb.WriteString("- Multiple headings (for structure and scannability)\n")

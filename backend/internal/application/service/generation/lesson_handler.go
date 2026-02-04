@@ -171,17 +171,54 @@ func (h *LessonHandler) Process(ctx context.Context, job *entity.GenerationJob) 
 		}
 	}
 
+	// Build full course outline context for deduplication and positioning
+	courseOutline := buildCourseOutlineSummary(content.Content.Sections)
+	sectionDesc := extractSectionDescription(section)
+	sectionOrder := lessonInfo.SectionIndex + 1
+	lessonOrder := lessonInfo.LessonIndex + 1
+
+	// Compute position flags
+	isFirstInSection := lessonInfo.LessonIndex == 0
+	isFirstSection := lessonInfo.SectionIndex == 0
+	isLastSection := lessonInfo.SectionIndex == len(content.Content.Sections)-1
+	isFirstInCourse := isFirstSection && isFirstInSection
+
+	// Build navigation context from outline
+	prevLessonTitle, prevLessonDesc := findAdjacentLesson(content.Content.Sections, lessonInfo.SectionIndex, lessonInfo.LessonIndex, -1)
+	nextLessonTitle, _ := findAdjacentLesson(content.Content.Sections, lessonInfo.SectionIndex, lessonInfo.LessonIndex, +1)
+	nextSectionTitle := ""
+	if isLastInSection && lessonInfo.SectionIndex+1 < len(content.Content.Sections) {
+		nextSectionTitle = extractSectionTitle(content.Content.Sections[lessonInfo.SectionIndex+1])
+	}
+
+	// Build summaries of other lessons in this section for deduplication context
+	otherLessonsInSection := buildOtherLessonsInSection(content.Content.Sections, lessonInfo.SectionIndex, lessonInfo.LessonIndex)
+
 	// Generate lesson content
 	lessonResult, err := aiProvider.GenerateLessonContent(ctx, service.GenerateLessonRequest{
 		CourseTitle:        content.Settings.Title,
+		CourseDescription:  content.Settings.DesiredOutcome,
+		CourseOutline:      courseOutline,
 		SectionTitle:       sectionTitle,
+		SectionDescription: sectionDesc,
+		SectionOrder:       sectionOrder,
+		IsFirstSection:     isFirstSection,
+		IsLastSection:      isLastSection,
 		LessonTitle:        lessonTitle,
 		LessonDescription:  lessonDesc,
+		LessonOrder:        lessonOrder,
 		LearningObjectives: learningObjectives,
+		IsFirstInSection:   isFirstInSection,
+		IsLastInSection:    isLastInSection,
+		IsFirstInCourse:    isFirstInCourse,
+		IsLastInCourse:     isLastInCourse,
+		PreviousLessonTitle:      prevLessonTitle,
+		PreviousLessonSummary:    prevLessonDesc,
+		NextLessonTitle:          nextLessonTitle,
+		NextSectionTitle:         nextSectionTitle,
+		PreviousLessonsInSection: otherLessonsInSection,
 		SMEKnowledge:       smeKnowledge,
 		TargetAudience:     targetAudience,
-		IsLastInSection:    isLastInSection,
-		IsLastInCourse:     isLastInCourse,
 		AdditionalContext:  lessonAdditionalContext,
 		InternalDataOnly:   internalDataOnly,
 		RAGContext:         ragContext,
@@ -522,6 +559,146 @@ func (h *LessonHandler) fetchLessonRAGContextWithTerms(
 	}
 
 	return ragContext
+}
+
+// buildCourseOutlineSummary extracts the full course outline from S3 section data
+// so each lesson has visibility into the entire course structure for deduplication.
+func buildCourseOutlineSummary(sections []map[string]any) []service.OutlineSectionSummary {
+	var outline []service.OutlineSectionSummary
+	for i, section := range sections {
+		sTitle, _ := section["title"].(string)
+		sDesc, _ := section["description"].(string)
+
+		var lessons []service.OutlineLessonSummary
+		if rawLessons, ok := section["lessons"].([]interface{}); ok {
+			for j, rawLesson := range rawLessons {
+				if lessonMap, ok := rawLesson.(map[string]interface{}); ok {
+					lTitle, _ := lessonMap["title"].(string)
+					lDesc, _ := lessonMap["description"].(string)
+					var objectives []string
+					if los, ok := lessonMap["learningObjectives"].([]interface{}); ok {
+						for _, lo := range los {
+							if s, ok := lo.(string); ok {
+								objectives = append(objectives, s)
+							}
+						}
+					}
+					lessons = append(lessons, service.OutlineLessonSummary{
+						Title:              lTitle,
+						Description:        lDesc,
+						Order:              j + 1,
+						LearningObjectives: objectives,
+					})
+				}
+			}
+		}
+
+		outline = append(outline, service.OutlineSectionSummary{
+			Title:       sTitle,
+			Description: sDesc,
+			Order:       i + 1,
+			LessonCount: len(lessons),
+			Lessons:     lessons,
+		})
+	}
+	return outline
+}
+
+// extractSectionDescription extracts the description from a section map.
+func extractSectionDescription(section map[string]any) string {
+	desc, _ := section["description"].(string)
+	return desc
+}
+
+// extractSectionTitle extracts the title from a section map.
+func extractSectionTitle(section map[string]any) string {
+	title, _ := section["title"].(string)
+	return title
+}
+
+// findAdjacentLesson finds the previous or next lesson relative to the given position.
+// direction: -1 for previous, +1 for next.
+// Returns (title, description) of the adjacent lesson.
+func findAdjacentLesson(sections []map[string]any, sectionIdx, lessonIdx, direction int) (string, string) {
+	targetLessonIdx := lessonIdx + direction
+	targetSectionIdx := sectionIdx
+
+	// Check within current section
+	if targetSectionIdx >= 0 && targetSectionIdx < len(sections) {
+		if rawLessons, ok := sections[targetSectionIdx]["lessons"].([]interface{}); ok {
+			if targetLessonIdx >= 0 && targetLessonIdx < len(rawLessons) {
+				if lessonMap, ok := rawLessons[targetLessonIdx].(map[string]interface{}); ok {
+					title, _ := lessonMap["title"].(string)
+					desc, _ := lessonMap["description"].(string)
+					return title, desc
+				}
+			}
+		}
+	}
+
+	// Cross section boundary
+	targetSectionIdx = sectionIdx + direction
+	if targetSectionIdx < 0 || targetSectionIdx >= len(sections) {
+		return "", ""
+	}
+	if rawLessons, ok := sections[targetSectionIdx]["lessons"].([]interface{}); ok && len(rawLessons) > 0 {
+		var idx int
+		if direction < 0 {
+			idx = len(rawLessons) - 1 // last lesson of previous section
+		}
+		if lessonMap, ok := rawLessons[idx].(map[string]interface{}); ok {
+			title, _ := lessonMap["title"].(string)
+			desc, _ := lessonMap["description"].(string)
+			return title, desc
+		}
+	}
+	return "", ""
+}
+
+// buildOtherLessonsInSection builds summaries of all other lessons in the same section
+// (excluding the current lesson) so the AI can see what sibling lessons cover and avoid overlap.
+func buildOtherLessonsInSection(sections []map[string]any, sectionIdx, currentLessonIdx int) []service.GeneratedLessonSummary {
+	if sectionIdx >= len(sections) {
+		return nil
+	}
+	section := sections[sectionIdx]
+	rawLessons, ok := section["lessons"].([]interface{})
+	if !ok {
+		return nil
+	}
+
+	var summaries []service.GeneratedLessonSummary
+	for i, rawLesson := range rawLessons {
+		if i == currentLessonIdx {
+			continue // skip ourselves
+		}
+		lessonMap, ok := rawLesson.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		title, _ := lessonMap["title"].(string)
+		desc, _ := lessonMap["description"].(string)
+
+		var keyPoints []string
+		// Use learning objectives as key points since actual content isn't generated yet (parallel)
+		if los, ok := lessonMap["learningObjectives"].([]interface{}); ok {
+			for _, lo := range los {
+				if s, ok := lo.(string); ok {
+					keyPoints = append(keyPoints, s)
+				}
+			}
+		}
+		// Also include description as context
+		if desc != "" {
+			keyPoints = append([]string{desc}, keyPoints...)
+		}
+
+		summaries = append(summaries, service.GeneratedLessonSummary{
+			Title:     title,
+			KeyPoints: keyPoints,
+		})
+	}
+	return summaries
 }
 
 func (h *LessonHandler) checkAndCompleteParentJob(ctx context.Context, parentJobID uuid.UUID) error {
