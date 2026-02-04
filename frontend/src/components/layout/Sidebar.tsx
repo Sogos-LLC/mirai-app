@@ -15,17 +15,12 @@ import {
   ChevronRight,
   Building2,
 } from 'lucide-react';
-import { useIsAdmin } from '@/hooks/useCurrentUser';
 
-// Base navigation items (always visible)
+// Navigation items
 export const menuItems = [
   { icon: LayoutDashboard, label: 'Content Library', path: '/content-library' },
   { icon: FileText, label: 'Templates', path: '/templates' },
   { icon: BookOpen, label: 'Tutorials', path: '/tutorials' },
-];
-
-// Admin-only navigation items
-export const adminMenuItems = [
   { icon: Building2, label: 'Teams', path: '/teams' },
 ];
 
@@ -33,6 +28,26 @@ export const bottomItems = [
   { icon: HelpCircle, label: 'Help and Support', path: '/help' },
   { icon: Bell, label: 'Product Updates', path: '/updates' },
 ];
+
+function NavLink({ item, isActive, showText }: {
+  item: (typeof menuItems)[number];
+  isActive?: boolean;
+  showText: boolean;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.path}
+      prefetch={true}
+      className={`menu-item ${isActive ? 'active' : ''}`}
+    >
+      <Icon className="menu-icon" />
+      <span className={`menu-label ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
+        {item.label}
+      </span>
+    </Link>
+  );
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -42,12 +57,6 @@ export default function Sidebar() {
   const closeMobileSidebar = useUIStore((s) => s.closeMobileSidebar);
   const [showText, setShowText] = useState(sidebarOpen);
   const isMobile = useIsMobile();
-  const { isAdmin } = useIsAdmin();
-
-  // Combine menu items based on user role
-  const visibleMenuItems = isAdmin
-    ? [...menuItems, ...adminMenuItems]
-    : menuItems;
 
   useEffect(() => {
     if (sidebarOpen) {
@@ -110,43 +119,15 @@ export default function Sidebar() {
         </button>
 
         <nav className="sidebar-menu">
-          {visibleMenuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.path;
-
-            return (
-              <Link
-                key={item.path}
-                href={item.path}
-                prefetch={true}
-                className={`menu-item ${isActive ? 'active' : ''}`}
-              >
-                <Icon className="menu-icon" />
-                <span className={`menu-label ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
+          {menuItems.map((item) => (
+            <NavLink key={item.path} item={item} isActive={pathname === item.path} showText={showText} />
+          ))}
         </nav>
 
         <div className="sidebar-bottom">
-          {bottomItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                href={item.path}
-                prefetch={true}
-                className="menu-item"
-              >
-                <Icon className="menu-icon" />
-                <span className={`menu-label ${showText ? 'animate-fadeIn' : 'animate-fadeOut'}`}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
+          {bottomItems.map((item) => (
+            <NavLink key={item.path} item={item} showText={showText} />
+          ))}
         </div>
       </aside>
     </>
