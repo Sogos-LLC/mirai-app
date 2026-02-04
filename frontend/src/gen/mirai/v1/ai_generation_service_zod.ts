@@ -200,3 +200,23 @@ export const SubscribeJobsRequestSchema = z.object({
 
 export type SubscribeJobsRequest = z.infer<typeof SubscribeJobsRequestSchema>;
 
+/**
+ * Zod schema for GetCoursePlanRequest
+ * @generated from message mirai.v1.GetCoursePlanRequest
+ */
+export const GetCoursePlanRequestSchema = z.object({
+  courseId: z.string(),
+});
+
+export type GetCoursePlanRequest = z.infer<typeof GetCoursePlanRequestSchema>;
+
+/**
+ * Zod schema for ApproveCoursePlanRequest
+ * @generated from message mirai.v1.ApproveCoursePlanRequest
+ */
+export const ApproveCoursePlanRequestSchema = z.object({
+  courseId: z.string(),
+});
+
+export type ApproveCoursePlanRequest = z.infer<typeof ApproveCoursePlanRequestSchema>;
+

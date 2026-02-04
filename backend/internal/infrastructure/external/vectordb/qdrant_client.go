@@ -201,6 +201,91 @@ func (c *QdrantClient) DeleteBySourceID(ctx context.Context, collection string, 
 	return c.DeleteByFilter(ctx, collection, filter)
 }
 
+// ScrollResult represents a point retrieved via scroll (no similarity score).
+type ScrollResult struct {
+	ID      string                 `json:"id"`
+	Payload map[string]interface{} `json:"payload"`
+}
+
+// ScrollByFilter retrieves all points matching a filter using Qdrant's scroll API.
+// Results are paginated internally and returned as a single slice.
+func (c *QdrantClient) ScrollByFilter(ctx context.Context, collection string, filter map[string]interface{}, limit int) ([]ScrollResult, error) {
+	var allResults []ScrollResult
+	var offset interface{} // nil for first page, then point ID string
+
+	pageSize := 100
+	if limit > 0 && limit < pageSize {
+		pageSize = limit
+	}
+
+	for {
+		payload := map[string]interface{}{
+			"filter":       filter,
+			"limit":        pageSize,
+			"with_payload": true,
+			"with_vector":  false,
+		}
+		if offset != nil {
+			payload["offset"] = offset
+		}
+
+		bodyBytes, _ := json.Marshal(payload)
+
+		url := fmt.Sprintf("%s/collections/%s/points/scroll", c.baseURL, collection)
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create scroll request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scroll points: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return nil, fmt.Errorf("scroll failed: %s", string(body))
+		}
+
+		var result struct {
+			Result struct {
+				Points []struct {
+					ID      interface{}            `json:"id"`
+					Payload map[string]interface{} `json:"payload"`
+				} `json:"points"`
+				NextPageOffset interface{} `json:"next_page_offset"`
+			} `json:"result"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode scroll response: %w", err)
+		}
+		resp.Body.Close()
+
+		for _, p := range result.Result.Points {
+			idStr := fmt.Sprintf("%v", p.ID)
+			allResults = append(allResults, ScrollResult{
+				ID:      idStr,
+				Payload: p.Payload,
+			})
+		}
+
+		// Check if we've hit the limit or no more pages
+		if limit > 0 && len(allResults) >= limit {
+			allResults = allResults[:limit]
+			break
+		}
+		if result.Result.NextPageOffset == nil || len(result.Result.Points) == 0 {
+			break
+		}
+		offset = result.Result.NextPageOffset
+	}
+
+	return allResults, nil
+}
+
 // Health checks if Qdrant is healthy.
 func (c *QdrantClient) Health(ctx context.Context) error {
 	url := fmt.Sprintf("%s/healthz", c.baseURL)

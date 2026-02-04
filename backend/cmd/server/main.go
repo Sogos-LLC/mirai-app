@@ -37,6 +37,7 @@ import (
 
 	// Application services
 	"github.com/sogos/mirai-backend/internal/application/service"
+	"github.com/sogos/mirai-backend/internal/application/service/generation"
 
 	// Presentation
 	connectserver "github.com/sogos/mirai-backend/internal/presentation/connect"
@@ -312,6 +313,21 @@ func main() {
 
 		// Set up knowledge settings provider for tenant-level configuration
 		aiGenerationService.SetKnowledgeSettingsProvider(tenantSettingsService)
+
+		// Set up plan handler for knowledge-grounded course planning
+		planHandler := generation.NewPlanHandler(
+			generationJobRepo,
+			aiSettingsRepo,
+			geminiProviderFactory,
+			tenantStorage,
+			jobEventAdapter,
+			logger,
+		)
+		planHandler.SetKnowledgeSearcher(knowledgeSourceService)
+		if vectorClient != nil {
+			planHandler.SetVectorDB(vectorClient)
+		}
+		aiGenerationService.SetPlanHandler(planHandler)
 
 		// Course Wizard service (AI-guided course creation with RAG support)
 		courseWizardService = service.NewCourseWizardService(

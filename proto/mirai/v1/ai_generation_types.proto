@@ -21,6 +21,7 @@ enum GenerationJobType {
   GENERATION_JOB_TYPE_LESSON_CONTENT = 3;
   GENERATION_JOB_TYPE_COMPONENT_REGEN = 4;
   GENERATION_JOB_TYPE_FULL_COURSE = 5;
+  GENERATION_JOB_TYPE_COURSE_PLANNING = 6;
 }
 
 // GenerationJobStatus represents job state.
@@ -165,6 +166,7 @@ message GeneratedLesson {
   int32 source_count = 10;          // Number of knowledge sources used
   int32 grounded_token_count = 11;  // Tokens from knowledge sources
   int32 total_token_count = 12;     // Total tokens in lesson
+  optional LessonProvenance aggregate_provenance = 13;
 }
 
 // LessonComponent represents a content component in a lesson.
@@ -174,11 +176,44 @@ message LessonComponent {
   int32 order = 3;
   string content_json = 4;  // JSON string matching component_content.proto types
   optional ComponentAlignment alignment = 5;
+  optional ComponentProvenance provenance = 6;
 }
 
 // ComponentAlignment tracks what knowledge/objectives a component addresses.
 message ComponentAlignment {
   repeated string learning_objective_ids = 2;
+}
+
+// ComponentProvenance tracks which knowledge sources contributed to a component.
+message ComponentProvenance {
+  repeated ProvenanceChunk source_chunks = 1;
+  repeated string queries = 2;
+  int32 team_tokens = 3;
+  int32 global_tokens = 4;
+  int32 course_tokens = 5;
+  int32 total_tokens = 6;
+  google.protobuf.Timestamp generated_at = 7;
+}
+
+// ProvenanceChunk represents a knowledge chunk that contributed to generated content.
+message ProvenanceChunk {
+  string chunk_id = 1;
+  string source_id = 2;
+  string source_name = 3;
+  string excerpt = 4;
+  float similarity_score = 5;
+  string scope = 6;  // "course", "team", "global"
+}
+
+// LessonProvenance aggregates provenance across all components in a lesson.
+message LessonProvenance {
+  float grounding_score = 1;
+  int32 team_tokens = 2;
+  int32 global_tokens = 3;
+  int32 course_tokens = 4;
+  int32 ungrounded_tokens = 5;
+  int32 total_tokens = 6;
+  int32 source_count = 7;
 }
 
 // ComponentAlignmentTargets for content regeneration alignment.
@@ -192,4 +227,54 @@ message CourseGenerationInput {
   string course_id = 1;
   string desired_outcome = 4;
   optional string additional_context = 5;
+}
+
+// =============================================================================
+// COURSE PLAN - Knowledge-grounded planning pipeline
+// =============================================================================
+
+// CoursePlan is the AI-generated course structure plan based on document analysis.
+message CoursePlan {
+  repeated DocumentAnalysis document_analyses = 1;
+  repeated PlannedSection planned_sections = 2;
+  string status = 3; // "pending_review", "approved"
+  google.protobuf.Timestamp generated_at = 4;
+  optional google.protobuf.Timestamp approved_at = 5;
+  int64 tokens_used = 6;
+}
+
+// DocumentAnalysis is Gemini's structured summary of one knowledge source.
+message DocumentAnalysis {
+  string source_id = 1;
+  string source_name = 2;
+  string summary = 3;
+  repeated string main_topics = 4;
+  repeated string key_facts = 5;
+  string content_depth = 6;
+  repeated SectionHint section_hints = 7;
+}
+
+// SectionHint is a suggested course section derived from analyzing a document.
+message SectionHint {
+  string topic_name = 1;
+  repeated string search_terms = 2;
+  repeated string key_points = 3;
+}
+
+// PlannedSection is a planned course section with targeted RAG search terms.
+message PlannedSection {
+  string title = 1;
+  string description = 2;
+  repeated string search_terms = 3;
+  repeated string source_ids = 4;
+  repeated PlannedLesson lessons = 5;
+  string rationale = 6;
+}
+
+// PlannedLesson is a planned lesson with its own search terms for targeted RAG.
+message PlannedLesson {
+  string title = 1;
+  string description = 2;
+  repeated string search_terms = 3;
+  repeated string learning_goals = 4;
 }

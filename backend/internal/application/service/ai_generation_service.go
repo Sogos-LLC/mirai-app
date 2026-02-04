@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/sogos/mirai-backend/internal/application/service/generation"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	domainerrors "github.com/sogos/mirai-backend/internal/domain/errors"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
@@ -98,6 +99,7 @@ type AIGenerationService struct {
 	teamResolver              TeamResolver              // Resolves team for tenant
 	knowledgeSettingsProvider KnowledgeSettingsProvider // For tenant knowledge settings
 	ragPipeline               *StagedRAGPipeline        // Composable RAG retrieval with provenance
+	planHandler               *generation.PlanHandler   // Handles course planning jobs
 	logger                    service.Logger
 }
 
@@ -160,6 +162,11 @@ func (s *AIGenerationService) SetRAGPipeline(pipeline *StagedRAGPipeline) {
 	s.ragPipeline = pipeline
 }
 
+// SetPlanHandler sets the plan handler for course planning jobs.
+func (s *AIGenerationService) SetPlanHandler(handler *generation.PlanHandler) {
+	s.planHandler = handler
+}
+
 // GenerateCourseOutlineRequest contains the inputs for outline generation.
 type GenerateCourseOutlineRequest struct {
 	CourseID          uuid.UUID
@@ -174,6 +181,8 @@ type GenerateCourseOutlineResult struct {
 }
 
 // GenerateCourseOutline starts a course outline generation job.
+// If knowledge sources are selected and no approved plan exists, it creates
+// a course_planning job instead to analyze documents before outline generation.
 func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosID uuid.UUID, req GenerateCourseOutlineRequest) (*GenerateCourseOutlineResult, error) {
 	log := s.logger.With("kratosID", kratosID, "courseID", req.CourseID)
 
@@ -186,11 +195,25 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 		return nil, domainerrors.ErrUserHasNoCompany
 	}
 
+	// Check if this course has knowledge sources and needs planning first
+	jobType := valueobject.GenerationJobTypeCourseOutline
+	if s.planHandler != nil {
+		content, err := s.readCourseContent(ctx, *user.TenantID, req.CourseID)
+		if err == nil && content.WizardData != nil {
+			hasKnowledgeSources := len(content.WizardData.SelectedTeamDocIDs) > 0 || len(content.WizardData.SelectedGlobalDocIDs) > 0
+			hasApprovedPlan := content.CoursePlan != nil && content.CoursePlan.Status == "approved"
+			if hasKnowledgeSources && !hasApprovedPlan {
+				jobType = valueobject.GenerationJobTypeCoursePlanning
+				log.Info("knowledge sources detected, creating planning job instead of outline")
+			}
+		}
+	}
+
 	// Create the job
 	job := &entity.GenerationJob{
 		ID:              uuid.New(),
 		TenantID:        *user.TenantID,
-		Type:            valueobject.GenerationJobTypeCourseOutline,
+		Type:            jobType,
 		Status:          valueobject.GenerationJobStatusQueued,
 		CourseID:        &req.CourseID,
 		ProgressPercent: 0,
@@ -205,7 +228,7 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 	}
 
 	s.publishJobEvent(ctx, "created", job)
-	log.Info("course outline generation job created", "jobID", job.ID)
+	log.Info("generation job created", "jobID", job.ID, "type", jobType)
 
 	// Enqueue for immediate processing
 	if s.taskEnqueuer != nil {
@@ -215,6 +238,128 @@ func (s *AIGenerationService) GenerateCourseOutline(ctx context.Context, kratosI
 	}
 
 	return &GenerateCourseOutlineResult{Job: job}, nil
+}
+
+// GenerateCoursePlanRequest contains the inputs for plan generation.
+type GenerateCoursePlanRequest struct {
+	CourseID uuid.UUID
+}
+
+// GenerateCoursePlanResult contains the created job.
+type GenerateCoursePlanResult struct {
+	Job *entity.GenerationJob
+}
+
+// GenerateCoursePlan starts a course planning job.
+func (s *AIGenerationService) GenerateCoursePlan(ctx context.Context, kratosID uuid.UUID, req GenerateCoursePlanRequest) (*GenerateCoursePlanResult, error) {
+	log := s.logger.With("kratosID", kratosID, "courseID", req.CourseID)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	job := &entity.GenerationJob{
+		ID:              uuid.New(),
+		TenantID:        *user.TenantID,
+		Type:            valueobject.GenerationJobTypeCoursePlanning,
+		Status:          valueobject.GenerationJobStatusQueued,
+		CourseID:        &req.CourseID,
+		ProgressPercent: 0,
+		MaxRetries:      3,
+		CreatedByUserID: user.ID,
+		CreatedAt:       time.Now(),
+	}
+
+	if err := s.jobRepo.Create(ctx, job); err != nil {
+		log.Error("failed to create planning job", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	s.publishJobEvent(ctx, "created", job)
+	log.Info("course planning job created", "jobID", job.ID)
+
+	if s.taskEnqueuer != nil {
+		if err := s.taskEnqueuer.EnqueueAIGeneration(job.ID.String(), string(job.Type)); err != nil {
+			log.Warn("failed to enqueue planning job, will be picked up by poll", "error", err)
+		}
+	}
+
+	return &GenerateCoursePlanResult{Job: job}, nil
+}
+
+// ProcessCoursePlanningJob processes a course planning job by delegating to the PlanHandler.
+func (s *AIGenerationService) ProcessCoursePlanningJob(ctx context.Context, job *entity.GenerationJob) error {
+	if s.planHandler == nil {
+		return s.failJob(ctx, job, "plan handler not configured")
+	}
+	return s.planHandler.Process(ctx, job)
+}
+
+// GetCoursePlanResult contains the course plan from S3.
+type GetCoursePlanResult struct {
+	Plan *S3CoursePlan
+}
+
+// GetCoursePlan retrieves the course plan from S3.
+func (s *AIGenerationService) GetCoursePlan(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*GetCoursePlanResult, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	return &GetCoursePlanResult{Plan: content.CoursePlan}, nil
+}
+
+// ApproveCoursePlanResult contains the approved course plan.
+type ApproveCoursePlanResult struct {
+	Plan *S3CoursePlan
+}
+
+// ApproveCoursePlan marks the course plan as approved.
+func (s *AIGenerationService) ApproveCoursePlan(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*ApproveCoursePlanResult, error) {
+	log := s.logger.With("kratosID", kratosID, "courseID", courseID)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	if content.CoursePlan == nil {
+		return nil, domainerrors.ErrNotFound
+	}
+
+	now := time.Now()
+	content.CoursePlan.Status = "approved"
+	content.CoursePlan.ApprovedAt = &now
+
+	if err := s.writeCourseContent(ctx, *user.TenantID, courseID, content); err != nil {
+		log.Error("failed to write approved plan", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	log.Info("course plan approved", "sections", len(content.CoursePlan.PlannedSections))
+	return &ApproveCoursePlanResult{Plan: content.CoursePlan}, nil
 }
 
 // ProcessOutlineGenerationJob processes an outline generation job.
@@ -1111,6 +1256,7 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 	// Check if Internal Data Only mode is enabled
 	var internalDataOnly bool
 	var ragContext []service.RAGChunkInput
+	var searchQueries []string
 	if content.WizardData != nil && content.WizardData.InternalDataOnly {
 		internalDataOnly = true
 		log.Info("Internal Data Only mode enabled, fetching RAG context for lesson",
@@ -1119,7 +1265,7 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		// Fetch RAG context for the lesson using learning objectives as queries
 		if s.knowledgeSearcher != nil && job.CourseID != nil {
 			// Build search query from lesson title and learning objectives
-			searchQueries := []string{lessonTitle + " " + lessonDesc}
+			searchQueries = []string{lessonTitle + " " + lessonDesc}
 			for _, obj := range learningObjectives {
 				searchQueries = append(searchQueries, obj)
 			}
@@ -1247,6 +1393,9 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 	job.TokensUsed = lessonResult.TokensUsed
 	_ = s.jobRepo.Update(ctx, job)
 
+	// Build provenance from RAG context
+	provenance := buildProvenance(ragContext, searchQueries)
+
 	// Build S3 lesson with components
 	now := time.Now()
 	s3Components := make([]S3LessonComponent, len(lessonResult.Components))
@@ -1259,6 +1408,7 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 			LearningObjectiveIDs: []string{},
 			CreatedAt:            now,
 			UpdatedAt:            now,
+			Provenance:           provenance,
 		}
 	}
 
@@ -1270,6 +1420,7 @@ func (s *AIGenerationService) ProcessLessonGenerationJob(ctx context.Context, jo
 		Components:      s3Components,
 		GeneratedAt:     now,
 	}
+	s3Lesson.AggregateProvenance = aggregateLessonProvenance(s3Components)
 	if lessonResult.SegueText != "" {
 		s3Lesson.SegueText = &lessonResult.SegueText
 	}
@@ -1753,6 +1904,8 @@ func (s *AIGenerationService) ProcessJobByID(ctx context.Context, jobID string) 
 	tenantCtx := tenant.WithTenantID(adminCtx, job.TenantID)
 
 	switch job.Type {
+	case valueobject.GenerationJobTypeCoursePlanning:
+		return s.ProcessCoursePlanningJob(tenantCtx, job)
 	case valueobject.GenerationJobTypeCourseOutline:
 		return s.ProcessOutlineGenerationJob(tenantCtx, job)
 	case valueobject.GenerationJobTypeLessonContent:
@@ -1778,6 +1931,8 @@ func (s *AIGenerationService) processNextJob(ctx context.Context) error {
 	tenantCtx := tenant.WithTenantID(adminCtx, job.TenantID)
 
 	switch job.Type {
+	case valueobject.GenerationJobTypeCoursePlanning:
+		return s.ProcessCoursePlanningJob(tenantCtx, job)
 	case valueobject.GenerationJobTypeCourseOutline:
 		return s.ProcessOutlineGenerationJob(tenantCtx, job)
 	case valueobject.GenerationJobTypeLessonContent:
@@ -2236,7 +2391,7 @@ func (s *AIGenerationService) ListGeneratedLessons(ctx context.Context, kratosID
 
 		for i, comp := range s3Lesson.Components {
 			compID, _ := uuid.Parse(comp.ID)
-			lesson.Components[i] = entity.LessonComponent{
+			entComp := entity.LessonComponent{
 				ID:          compID,
 				TenantID:    tenantID,
 				LessonID:    lessonID,
@@ -2244,6 +2399,19 @@ func (s *AIGenerationService) ListGeneratedLessons(ctx context.Context, kratosID
 				Position:    comp.Order,
 				ContentJSON: comp.ContentJSON,
 			}
+			if comp.Provenance != nil {
+				entComp.Provenance = s3ComponentProvenanceToEntity(comp.Provenance)
+			}
+			lesson.Components[i] = entComp
+		}
+
+		// Map aggregate provenance
+		if s3Lesson.AggregateProvenance != nil {
+			lesson.AggregateProvenance = s3LessonProvenanceToEntity(s3Lesson.AggregateProvenance)
+			lesson.GroundingScore = s3Lesson.AggregateProvenance.GroundingScore
+			lesson.SourceCount = s3Lesson.AggregateProvenance.SourceCount
+			lesson.GroundedTokens = s3Lesson.AggregateProvenance.CourseTokens + s3Lesson.AggregateProvenance.TeamTokens + s3Lesson.AggregateProvenance.GlobalTokens
+			lesson.TotalTokens = s3Lesson.AggregateProvenance.TotalTokens
 		}
 
 		lessons = append(lessons, lesson)
@@ -2296,6 +2464,34 @@ func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uui
 			Description: sectionDesc,
 			Position:    int32(sIdx + 1),
 			Lessons:     []entity.OutlineLesson{},
+		}
+
+		// Extract section metadata
+		if level, ok := section["level"].(string); ok {
+			sec.Level = level
+		}
+		if intent, ok := section["intent"].(string); ok {
+			sec.Intent = intent
+		}
+		if emphasis, ok := section["emphasis"].(string); ok {
+			sec.Emphasis = emphasis
+		}
+		if gs, ok := section["groundingScore"].(float64); ok {
+			sec.GroundingScore = float32(gs)
+		}
+		if chunks, ok := section["contributingChunkIds"].([]interface{}); ok {
+			for _, c := range chunks {
+				if str, ok := c.(string); ok {
+					sec.ContributingChunkIDs = append(sec.ContributingChunkIDs, str)
+				}
+			}
+		}
+		if outcomes, ok := section["mappedOutcomeIds"].([]interface{}); ok {
+			for _, o := range outcomes {
+				if str, ok := o.(string); ok {
+					sec.MappedOutcomeIDs = append(sec.MappedOutcomeIDs, str)
+				}
+			}
 		}
 
 		var lessons []interface{}
@@ -2381,8 +2577,102 @@ func (s *AIGenerationService) RejectCourseOutline(ctx context.Context, kratosID 
 
 // UpdateCourseOutline updates an existing outline in MinIO.
 func (s *AIGenerationService) UpdateCourseOutline(ctx context.Context, kratosID uuid.UUID, courseID, outlineID uuid.UUID, sections []UpdateCourseOutlineSection) (*entity.CourseOutline, error) {
-	// For now, return not implemented
-	return nil, domainerrors.ErrNotFound.WithMessage("update outline not yet implemented for MinIO-only storage")
+	log := s.logger.With("kratosID", kratosID, "courseID", courseID)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
+	if err != nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
+	}
+
+	if len(content.Content.Sections) == 0 {
+		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
+	}
+
+	// Build a map of existing sections by ID for fast lookup
+	existingSections := make(map[string]map[string]any)
+	for _, sec := range content.Content.Sections {
+		if id, ok := sec["id"].(string); ok {
+			existingSections[id] = sec
+		}
+	}
+
+	// Apply updates to the sections
+	updatedSections := make([]map[string]any, 0, len(sections))
+	for _, update := range sections {
+		sectionID := update.ID.String()
+		existing, found := existingSections[sectionID]
+		if !found {
+			continue
+		}
+
+		// Update basic fields
+		existing["title"] = update.Title
+		existing["description"] = update.Description
+
+		// Update metadata fields
+		if update.Level != "" {
+			existing["level"] = update.Level
+		}
+		if update.Intent != "" {
+			existing["intent"] = update.Intent
+		}
+		if update.Emphasis != "" {
+			existing["emphasis"] = update.Emphasis
+		}
+		if len(update.MappedOutcomeIDs) > 0 {
+			existing["mappedOutcomeIds"] = update.MappedOutcomeIDs
+		}
+
+		// Update lessons
+		if existingLessons, ok := existing["lessons"].([]interface{}); ok && len(update.Lessons) > 0 {
+			lessonMap := make(map[string]interface{})
+			for _, l := range existingLessons {
+				if lm, ok := l.(map[string]interface{}); ok {
+					if lid, ok := lm["id"].(string); ok {
+						lessonMap[lid] = lm
+					}
+				}
+			}
+
+			updatedLessons := make([]interface{}, 0)
+			for _, ul := range update.Lessons {
+				lid := ul.ID.String()
+				if existingLesson, ok := lessonMap[lid]; ok {
+					if lm, ok := existingLesson.(map[string]interface{}); ok {
+						lm["title"] = ul.Title
+						lm["description"] = ul.Description
+						if ul.LearningObjectives != nil {
+							lm["learningObjectives"] = ul.LearningObjectives
+						}
+						updatedLessons = append(updatedLessons, lm)
+					}
+				}
+			}
+			existing["lessons"] = updatedLessons
+		}
+
+		updatedSections = append(updatedSections, existing)
+	}
+
+	content.Content.Sections = updatedSections
+
+	if err := s.writeCourseContent(ctx, *user.TenantID, courseID, content); err != nil {
+		log.Error("failed to write updated outline", "error", err)
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	log.Info("outline updated in S3", "sections", len(updatedSections))
+
+	// Return the updated outline
+	return s.GetCourseOutline(ctx, kratosID, courseID)
 }
 
 // UpdateCourseOutlineSection represents a section in the update request.
@@ -2392,6 +2682,11 @@ type UpdateCourseOutlineSection struct {
 	Description string
 	Order       int32
 	Lessons     []UpdateCourseOutlineLesson
+	// Section metadata for curriculum alignment
+	MappedOutcomeIDs []string
+	Level            string
+	Intent           string
+	Emphasis         string
 }
 
 // UpdateCourseOutlineLesson represents a lesson in the update request.
@@ -2663,4 +2958,46 @@ func truncateExcerpt(content string, maxLen int) string {
 		return content
 	}
 	return content[:maxLen-3] + "..."
+}
+
+// s3ComponentProvenanceToEntity converts S3 ComponentProvenance to entity type.
+func s3ComponentProvenanceToEntity(prov *ComponentProvenance) *entity.ComponentProvenance {
+	if prov == nil {
+		return nil
+	}
+	entProv := &entity.ComponentProvenance{
+		Queries:      prov.Queries,
+		TeamTokens:   prov.TeamTokens,
+		GlobalTokens: prov.GlobalTokens,
+		CourseTokens: prov.CourseTokens,
+		TotalTokens:  prov.TotalTokens,
+		GeneratedAt:  prov.GeneratedAt,
+	}
+	for _, chunk := range prov.SourceChunks {
+		entProv.SourceChunks = append(entProv.SourceChunks, entity.ProvenanceChunk{
+			ChunkID:         chunk.ChunkID,
+			SourceID:        chunk.SourceID,
+			SourceName:      chunk.SourceName,
+			Excerpt:         chunk.Excerpt,
+			SimilarityScore: chunk.SimilarityScore,
+			Scope:           chunk.Scope,
+		})
+	}
+	return entProv
+}
+
+// s3LessonProvenanceToEntity converts S3 LessonProvenance to entity type.
+func s3LessonProvenanceToEntity(prov *LessonProvenance) *entity.LessonProvenance {
+	if prov == nil {
+		return nil
+	}
+	return &entity.LessonProvenance{
+		GroundingScore:   prov.GroundingScore,
+		TeamTokens:       prov.TeamTokens,
+		GlobalTokens:     prov.GlobalTokens,
+		CourseTokens:     prov.CourseTokens,
+		UngroundedTokens: prov.UngroundedTokens,
+		TotalTokens:      prov.TotalTokens,
+		SourceCount:      prov.SourceCount,
+	}
 }

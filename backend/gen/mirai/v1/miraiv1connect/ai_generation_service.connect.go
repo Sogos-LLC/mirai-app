@@ -81,6 +81,12 @@ const (
 	// AIGenerationServiceSubscribeJobsProcedure is the fully-qualified name of the
 	// AIGenerationService's SubscribeJobs RPC.
 	AIGenerationServiceSubscribeJobsProcedure = "/mirai.v1.AIGenerationService/SubscribeJobs"
+	// AIGenerationServiceGetCoursePlanProcedure is the fully-qualified name of the
+	// AIGenerationService's GetCoursePlan RPC.
+	AIGenerationServiceGetCoursePlanProcedure = "/mirai.v1.AIGenerationService/GetCoursePlan"
+	// AIGenerationServiceApproveCoursePlanProcedure is the fully-qualified name of the
+	// AIGenerationService's ApproveCoursePlan RPC.
+	AIGenerationServiceApproveCoursePlanProcedure = "/mirai.v1.AIGenerationService/ApproveCoursePlan"
 )
 
 // AIGenerationServiceClient is a client for the mirai.v1.AIGenerationService service.
@@ -101,6 +107,8 @@ type AIGenerationServiceClient interface {
 	GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error)
 	UpdateLessonComponents(context.Context, *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error)
 	SubscribeJobs(context.Context, *connect.Request[v1.SubscribeJobsRequest]) (*connect.ServerStreamForClient[v1.SubscribeJobsResponse], error)
+	GetCoursePlan(context.Context, *connect.Request[v1.GetCoursePlanRequest]) (*connect.Response[v1.GetCoursePlanResponse], error)
+	ApproveCoursePlan(context.Context, *connect.Request[v1.ApproveCoursePlanRequest]) (*connect.Response[v1.ApproveCoursePlanResponse], error)
 }
 
 // NewAIGenerationServiceClient constructs a client for the mirai.v1.AIGenerationService service. By
@@ -210,6 +218,18 @@ func NewAIGenerationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(aIGenerationServiceMethods.ByName("SubscribeJobs")),
 			connect.WithClientOptions(opts...),
 		),
+		getCoursePlan: connect.NewClient[v1.GetCoursePlanRequest, v1.GetCoursePlanResponse](
+			httpClient,
+			baseURL+AIGenerationServiceGetCoursePlanProcedure,
+			connect.WithSchema(aIGenerationServiceMethods.ByName("GetCoursePlan")),
+			connect.WithClientOptions(opts...),
+		),
+		approveCoursePlan: connect.NewClient[v1.ApproveCoursePlanRequest, v1.ApproveCoursePlanResponse](
+			httpClient,
+			baseURL+AIGenerationServiceApproveCoursePlanProcedure,
+			connect.WithSchema(aIGenerationServiceMethods.ByName("ApproveCoursePlan")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -231,6 +251,8 @@ type aIGenerationServiceClient struct {
 	generateComponentImage *connect.Client[v1.GenerateComponentImageRequest, v1.GenerateComponentImageResponse]
 	updateLessonComponents *connect.Client[v1.UpdateLessonComponentsRequest, v1.UpdateLessonComponentsResponse]
 	subscribeJobs          *connect.Client[v1.SubscribeJobsRequest, v1.SubscribeJobsResponse]
+	getCoursePlan          *connect.Client[v1.GetCoursePlanRequest, v1.GetCoursePlanResponse]
+	approveCoursePlan      *connect.Client[v1.ApproveCoursePlanRequest, v1.ApproveCoursePlanResponse]
 }
 
 // GenerateCourseOutline calls mirai.v1.AIGenerationService.GenerateCourseOutline.
@@ -313,6 +335,16 @@ func (c *aIGenerationServiceClient) SubscribeJobs(ctx context.Context, req *conn
 	return c.subscribeJobs.CallServerStream(ctx, req)
 }
 
+// GetCoursePlan calls mirai.v1.AIGenerationService.GetCoursePlan.
+func (c *aIGenerationServiceClient) GetCoursePlan(ctx context.Context, req *connect.Request[v1.GetCoursePlanRequest]) (*connect.Response[v1.GetCoursePlanResponse], error) {
+	return c.getCoursePlan.CallUnary(ctx, req)
+}
+
+// ApproveCoursePlan calls mirai.v1.AIGenerationService.ApproveCoursePlan.
+func (c *aIGenerationServiceClient) ApproveCoursePlan(ctx context.Context, req *connect.Request[v1.ApproveCoursePlanRequest]) (*connect.Response[v1.ApproveCoursePlanResponse], error) {
+	return c.approveCoursePlan.CallUnary(ctx, req)
+}
+
 // AIGenerationServiceHandler is an implementation of the mirai.v1.AIGenerationService service.
 type AIGenerationServiceHandler interface {
 	GenerateCourseOutline(context.Context, *connect.Request[v1.GenerateCourseOutlineRequest]) (*connect.Response[v1.GenerateCourseOutlineResponse], error)
@@ -331,6 +363,8 @@ type AIGenerationServiceHandler interface {
 	GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error)
 	UpdateLessonComponents(context.Context, *connect.Request[v1.UpdateLessonComponentsRequest]) (*connect.Response[v1.UpdateLessonComponentsResponse], error)
 	SubscribeJobs(context.Context, *connect.Request[v1.SubscribeJobsRequest], *connect.ServerStream[v1.SubscribeJobsResponse]) error
+	GetCoursePlan(context.Context, *connect.Request[v1.GetCoursePlanRequest]) (*connect.Response[v1.GetCoursePlanResponse], error)
+	ApproveCoursePlan(context.Context, *connect.Request[v1.ApproveCoursePlanRequest]) (*connect.Response[v1.ApproveCoursePlanResponse], error)
 }
 
 // NewAIGenerationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -436,6 +470,18 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 		connect.WithSchema(aIGenerationServiceMethods.ByName("SubscribeJobs")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aIGenerationServiceGetCoursePlanHandler := connect.NewUnaryHandler(
+		AIGenerationServiceGetCoursePlanProcedure,
+		svc.GetCoursePlan,
+		connect.WithSchema(aIGenerationServiceMethods.ByName("GetCoursePlan")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIGenerationServiceApproveCoursePlanHandler := connect.NewUnaryHandler(
+		AIGenerationServiceApproveCoursePlanProcedure,
+		svc.ApproveCoursePlan,
+		connect.WithSchema(aIGenerationServiceMethods.ByName("ApproveCoursePlan")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.AIGenerationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIGenerationServiceGenerateCourseOutlineProcedure:
@@ -470,6 +516,10 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 			aIGenerationServiceUpdateLessonComponentsHandler.ServeHTTP(w, r)
 		case AIGenerationServiceSubscribeJobsProcedure:
 			aIGenerationServiceSubscribeJobsHandler.ServeHTTP(w, r)
+		case AIGenerationServiceGetCoursePlanProcedure:
+			aIGenerationServiceGetCoursePlanHandler.ServeHTTP(w, r)
+		case AIGenerationServiceApproveCoursePlanProcedure:
+			aIGenerationServiceApproveCoursePlanHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -541,4 +591,12 @@ func (UnimplementedAIGenerationServiceHandler) UpdateLessonComponents(context.Co
 
 func (UnimplementedAIGenerationServiceHandler) SubscribeJobs(context.Context, *connect.Request[v1.SubscribeJobsRequest], *connect.ServerStream[v1.SubscribeJobsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.SubscribeJobs is not implemented"))
+}
+
+func (UnimplementedAIGenerationServiceHandler) GetCoursePlan(context.Context, *connect.Request[v1.GetCoursePlanRequest]) (*connect.Response[v1.GetCoursePlanResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.GetCoursePlan is not implemented"))
+}
+
+func (UnimplementedAIGenerationServiceHandler) ApproveCoursePlan(context.Context, *connect.Request[v1.ApproveCoursePlanRequest]) (*connect.Response[v1.ApproveCoursePlanResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.ApproveCoursePlan is not implemented"))
 }

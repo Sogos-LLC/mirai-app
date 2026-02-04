@@ -145,6 +145,14 @@ type OutlineSection struct {
 	IsFirstSection bool
 	IsLastSection  bool
 
+	// Section metadata for curriculum alignment
+	MappedOutcomeIDs    []string // IDs of learning outcomes this section addresses
+	Level               string   // "introduce", "develop", "master"
+	Intent              string   // "teach", "assess", "reinforce"
+	Emphasis            string   // "low", "medium", "high"
+	GroundingScore      float32  // 0.0-1.0, how grounded in knowledge sources
+	ContributingChunkIDs []string // RAG chunk IDs that informed this section
+
 	Lessons []OutlineLesson // Loaded separately or populated
 
 	CreatedAt time.Time
@@ -186,6 +194,45 @@ type GeneratedLesson struct {
 	SegueText *string // Transition to next lesson
 
 	GeneratedAt time.Time
+
+	// Provenance tracking
+	GroundingScore    float32
+	SourceCount       int32
+	GroundedTokens    int32
+	TotalTokens       int32
+	AggregateProvenance *LessonProvenance
+}
+
+// LessonProvenance aggregates provenance across all components in a lesson.
+type LessonProvenance struct {
+	GroundingScore   float32
+	TeamTokens       int32
+	GlobalTokens     int32
+	CourseTokens     int32
+	UngroundedTokens int32
+	TotalTokens      int32
+	SourceCount      int32
+}
+
+// ComponentProvenance tracks which knowledge sources contributed to a component.
+type ComponentProvenance struct {
+	SourceChunks []ProvenanceChunk
+	Queries      []string
+	TeamTokens   int32
+	GlobalTokens int32
+	CourseTokens int32
+	TotalTokens  int32
+	GeneratedAt  time.Time
+}
+
+// ProvenanceChunk represents a knowledge chunk that contributed to generated content.
+type ProvenanceChunk struct {
+	ChunkID         string
+	SourceID        string
+	SourceName      string
+	Excerpt         string
+	SimilarityScore float32
+	Scope           string // "course", "team", "global"
 }
 
 // LessonComponent represents a content component in a lesson.
@@ -203,6 +250,9 @@ type LessonComponent struct {
 	// Alignment metadata
 	SMEChunkIDs          []uuid.UUID
 	LearningObjectiveIDs []string
+
+	// Provenance tracking
+	Provenance *ComponentProvenance
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

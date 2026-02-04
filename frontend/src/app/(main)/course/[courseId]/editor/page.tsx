@@ -15,6 +15,10 @@ import {
   Download,
   Cloud,
   CloudOff,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  X,
 } from 'lucide-react';
 import {
   DndContext,
@@ -67,6 +71,9 @@ export default function CourseEditorPage() {
   // Realignment state
   const [realignmentComponent, setRealignmentComponent] = useState<LessonComponent | null>(null);
   const [isRealigning, setIsRealigning] = useState(false);
+
+  // Provenance panel state
+  const [showProvenance, setShowProvenance] = useState(false);
 
   // Zustand store for modal editing
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
@@ -577,6 +584,7 @@ export default function CourseEditorPage() {
                           {sectionLessons.map((lesson) => {
                             const isActive = lesson.id === selectedLessonId;
                             const hasContent = !!lesson.generated;
+                            const gScore = lesson.generated?.groundingScore ?? 0;
 
                             return (
                               <button
@@ -590,7 +598,15 @@ export default function CourseEditorPage() {
                                 `}
                               >
                                 <FileText className="w-3 h-3 flex-shrink-0" />
-                                <span className="truncate">{lesson.title}</span>
+                                <span className="truncate flex-1">{lesson.title}</span>
+                                {hasContent && gScore > 0 && (
+                                  <span
+                                    className={`flex-shrink-0 w-2 h-2 rounded-full ${
+                                      gScore >= 0.6 ? 'bg-green-500' : gScore >= 0.3 ? 'bg-amber-500' : 'bg-red-500'
+                                    }`}
+                                    title={`${Math.round(gScore * 100)}% grounded`}
+                                  />
+                                )}
                               </button>
                             );
                           })}
@@ -609,7 +625,100 @@ export default function CourseEditorPage() {
           {selectedLessonId && currentLesson ? (
             <Card>
               <CardHeader className="py-4 border-b">
-                <CardTitle as="h2">{currentLesson.title}</CardTitle>
+                <div className="flex items-center justify-between gap-4">
+                  <CardTitle as="h2">{currentLesson.title}</CardTitle>
+                  {currentLesson.generated?.aggregateProvenance && (
+                    <button
+                      onClick={() => setShowProvenance(!showProvenance)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        (currentLesson.generated.aggregateProvenance.groundingScore ?? 0) >= 0.6
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : (currentLesson.generated.aggregateProvenance.groundingScore ?? 0) >= 0.3
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      }`}
+                      title={`${Math.round((currentLesson.generated.aggregateProvenance.groundingScore ?? 0) * 100)}% grounded in knowledge sources`}
+                    >
+                      {(currentLesson.generated.aggregateProvenance.groundingScore ?? 0) >= 0.6 ? (
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                      ) : (currentLesson.generated.aggregateProvenance.groundingScore ?? 0) >= 0.3 ? (
+                        <Shield className="w-3.5 h-3.5" />
+                      ) : (
+                        <ShieldAlert className="w-3.5 h-3.5" />
+                      )}
+                      {Math.round((currentLesson.generated.aggregateProvenance.groundingScore ?? 0) * 100)}% grounded
+                    </button>
+                  )}
+                </div>
+                {/* Provenance detail panel */}
+                {showProvenance && currentLesson.generated?.aggregateProvenance && (
+                  <div className="mt-3 p-3 bg-hover rounded-lg border border-subtle">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-primary">Knowledge Source Attribution</span>
+                      <button onClick={() => setShowProvenance(false)} className="text-muted hover:text-primary">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <span className="text-muted block">Sources</span>
+                        <span className="text-primary font-medium">{currentLesson.generated.aggregateProvenance.sourceCount ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted block">Course tokens</span>
+                        <span className="text-primary font-medium">{currentLesson.generated.aggregateProvenance.courseTokens ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted block">Team tokens</span>
+                        <span className="text-primary font-medium">{currentLesson.generated.aggregateProvenance.teamTokens ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted block">Ungrounded</span>
+                        <span className="text-primary font-medium">{currentLesson.generated.aggregateProvenance.ungroundedTokens ?? 0}</span>
+                      </div>
+                    </div>
+                    {/* Source chunks from first component's provenance */}
+                    {currentLesson.generated.components?.some(c => c.provenance?.sourceChunks?.length) && (
+                      <div className="mt-3 border-t border-subtle pt-2">
+                        <span className="text-xs font-medium text-primary block mb-1.5">Source Citations</span>
+                        <div className="max-h-40 overflow-y-auto space-y-1.5">
+                          {(() => {
+                            const seen = new Set<string>();
+                            return currentLesson.generated.components
+                              .flatMap(c => c.provenance?.sourceChunks ?? [])
+                              .filter(chunk => {
+                                if (seen.has(chunk.sourceId + chunk.excerpt)) return false;
+                                seen.add(chunk.sourceId + chunk.excerpt);
+                                return true;
+                              })
+                              .slice(0, 10)
+                              .map((chunk, i) => (
+                                <div key={i} className="text-xs p-2 bg-surface rounded border border-subtle">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium text-primary truncate">{chunk.sourceName || 'Unknown'}</span>
+                                    <span className={`flex-shrink-0 px-1.5 py-0.5 rounded ${
+                                      chunk.similarityScore >= 0.8
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                        : chunk.similarityScore >= 0.6
+                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                    }`}>
+                                      {Math.round(chunk.similarityScore * 100)}%
+                                    </span>
+                                  </div>
+                                  {chunk.excerpt && (
+                                    <p className="text-secondary mt-1 leading-relaxed line-clamp-2">
+                                      &ldquo;{chunk.excerpt}&rdquo;
+                                    </p>
+                                  )}
+                                </div>
+                              ));
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="py-6">
                 {localComponents.length > 0 ? (

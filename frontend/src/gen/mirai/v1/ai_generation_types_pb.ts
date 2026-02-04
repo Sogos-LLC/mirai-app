@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/ai_generation_types.proto.
  */
 export const file_mirai_v1_ai_generation_types: GenFile = /*@__PURE__*/
-  fileDesc("CiJtaXJhaS92MS9haV9nZW5lcmF0aW9uX3R5cGVzLnByb3RvEghtaXJhaS52MSK/BQoNR2VuZXJhdGlvbkpvYhIKCgJpZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSKQoEdHlwZRgDIAEoDjIbLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2JUeXBlEi0KBnN0YXR1cxgEIAEoDjIdLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2JTdGF0dXMSFgoJY291cnNlX2lkGAUgASgJSACIAQESFgoJbGVzc29uX2lkGAYgASgJSAGIAQESGAoQcHJvZ3Jlc3NfcGVyY2VudBgJIAEoBRIdChBwcm9ncmVzc19tZXNzYWdlGAogASgJSAKIAQESGAoLcmVzdWx0X3BhdGgYCyABKAlIA4gBARIaCg1lcnJvcl9tZXNzYWdlGAwgASgJSASIAQESEwoLdG9rZW5zX3VzZWQYDSABKAMSEwoLcmV0cnlfY291bnQYDiABKAUSEwoLbWF4X3JldHJpZXMYDyABKAUSGgoSY3JlYXRlZF9ieV91c2VyX2lkGBAgASgJEi4KCmNyZWF0ZWRfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKCnN0YXJ0ZWRfYXQYEiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAWIAQESNQoMY29tcGxldGVkX2F0GBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgGiAEBEhoKDXBhcmVudF9qb2JfaWQYFCABKAlIB4gBAUIMCgpfY291cnNlX2lkQgwKCl9sZXNzb25faWRCEwoRX3Byb2dyZXNzX21lc3NhZ2VCDgoMX3Jlc3VsdF9wYXRoQhAKDl9lcnJvcl9tZXNzYWdlQg0KC19zdGFydGVkX2F0Qg8KDV9jb21wbGV0ZWRfYXRCEAoOX3BhcmVudF9qb2JfaWQiiwMKDUNvdXJzZU91dGxpbmUSCgoCaWQYASABKAkSEQoJY291cnNlX2lkGAIgASgJEg8KB3ZlcnNpb24YAyABKAUSKgoIc2VjdGlvbnMYBCADKAsyGC5taXJhaS52MS5PdXRsaW5lU2VjdGlvbhI4Cg9hcHByb3ZhbF9zdGF0dXMYBSABKA4yHy5taXJhaS52MS5PdXRsaW5lQXBwcm92YWxTdGF0dXMSHQoQcmVqZWN0aW9uX3JlYXNvbhgGIAEoCUgAiAEBEjAKDGdlbmVyYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoLYXBwcm92ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESIAoTYXBwcm92ZWRfYnlfdXNlcl9pZBgJIAEoCUgCiAEBQhMKEV9yZWplY3Rpb25fcmVhc29uQg4KDF9hcHByb3ZlZF9hdEIWChRfYXBwcm92ZWRfYnlfdXNlcl9pZCL+AgoOT3V0bGluZVNlY3Rpb24SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDQoFb3JkZXIYBCABKAUSKAoHbGVzc29ucxgFIAMoCzIXLm1pcmFpLnYxLk91dGxpbmVMZXNzb24SGAoQaXNfZmlyc3Rfc2VjdGlvbhgGIAEoCBIXCg9pc19sYXN0X3NlY3Rpb24YByABKAgSGgoSbWFwcGVkX291dGNvbWVfaWRzGAogAygJEiUKBWxldmVsGAsgASgOMhYubWlyYWkudjEuU2VjdGlvbkxldmVsEicKBmludGVudBgMIAEoDjIXLm1pcmFpLnYxLlNlY3Rpb25JbnRlbnQSKwoIZW1waGFzaXMYDSABKA4yGS5taXJhaS52MS5TZWN0aW9uRW1waGFzaXMSFwoPZ3JvdW5kaW5nX3Njb3JlGA4gASgCEh4KFmNvbnRyaWJ1dGluZ19jaHVua19pZHMYDyADKAkiyAIKDU91dGxpbmVMZXNzb24SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDQoFb3JkZXIYBCABKAUSIgoaZXN0aW1hdGVkX2R1cmF0aW9uX21pbnV0ZXMYBSABKAUSGwoTbGVhcm5pbmdfb2JqZWN0aXZlcxgGIAMoCRIbChNpc19maXJzdF9pbl9zZWN0aW9uGAcgASgIEhoKEmlzX2xhc3RfaW5fc2VjdGlvbhgIIAEoCBIaChJpc19maXJzdF9pbl9jb3Vyc2UYCSABKAgSGQoRaXNfbGFzdF9pbl9jb3Vyc2UYCiABKAgSLgoJY2l0YXRpb25zGAsgAygLMhsubWlyYWkudjEuS25vd2xlZGdlQ2l0YXRpb24SFwoPZ3JvdW5kaW5nX3Njb3JlGAwgASgCIt8CCg9HZW5lcmF0ZWRMZXNzb24SCgoCaWQYASABKAkSEQoJY291cnNlX2lkGAIgASgJEhIKCnNlY3Rpb25faWQYAyABKAkSGQoRb3V0bGluZV9sZXNzb25faWQYBCABKAkSDQoFdGl0bGUYBSABKAkSLQoKY29tcG9uZW50cxgGIAMoCzIZLm1pcmFpLnYxLkxlc3NvbkNvbXBvbmVudBIXCgpzZWd1ZV90ZXh0GAcgASgJSACIAQESMAoMZ2VuZXJhdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9ncm91bmRpbmdfc2NvcmUYCSABKAISFAoMc291cmNlX2NvdW50GAogASgFEhwKFGdyb3VuZGVkX3Rva2VuX2NvdW50GAsgASgFEhkKEXRvdGFsX3Rva2VuX2NvdW50GAwgASgFQg0KC19zZWd1ZV90ZXh0IrMBCg9MZXNzb25Db21wb25lbnQSCgoCaWQYASABKAkSKwoEdHlwZRgCIAEoDjIdLm1pcmFpLnYxLkxlc3NvbkNvbXBvbmVudFR5cGUSDQoFb3JkZXIYAyABKAUSFAoMY29udGVudF9qc29uGAQgASgJEjQKCWFsaWdubWVudBgFIAEoCzIcLm1pcmFpLnYxLkNvbXBvbmVudEFsaWdubWVudEgAiAEBQgwKCl9hbGlnbm1lbnQiNAoSQ29tcG9uZW50QWxpZ25tZW50Eh4KFmxlYXJuaW5nX29iamVjdGl2ZV9pZHMYAiADKAkiUAoZQ29tcG9uZW50QWxpZ25tZW50VGFyZ2V0cxITCgtwZXJzb25hX2lkcxgBIAMoCRIeChZsZWFybmluZ19vYmplY3RpdmVfaWRzGAIgAygJInsKFUNvdXJzZUdlbmVyYXRpb25JbnB1dBIRCgljb3Vyc2VfaWQYASABKAkSFwoPZGVzaXJlZF9vdXRjb21lGAQgASgJEh8KEmFkZGl0aW9uYWxfY29udGV4dBgFIAEoCUgAiAEBQhUKE19hZGRpdGlvbmFsX2NvbnRleHQq1gEKEUdlbmVyYXRpb25Kb2JUeXBlEiMKH0dFTkVSQVRJT05fSk9CX1RZUEVfVU5TUEVDSUZJRUQQABImCiJHRU5FUkFUSU9OX0pPQl9UWVBFX0NPVVJTRV9PVVRMSU5FEAISJgoiR0VORVJBVElPTl9KT0JfVFlQRV9MRVNTT05fQ09OVEVOVBADEicKI0dFTkVSQVRJT05fSk9CX1RZUEVfQ09NUE9ORU5UX1JFR0VOEAQSIwofR0VORVJBVElPTl9KT0JfVFlQRV9GVUxMX0NPVVJTRRAFKvABChNHZW5lcmF0aW9uSm9iU3RhdHVzEiUKIUdFTkVSQVRJT05fSk9CX1NUQVRVU19VTlNQRUNJRklFRBAAEiAKHEdFTkVSQVRJT05fSk9CX1NUQVRVU19RVUVVRUQQARIkCiBHRU5FUkFUSU9OX0pPQl9TVEFUVVNfUFJPQ0VTU0lORxACEiMKH0dFTkVSQVRJT05fSk9CX1NUQVRVU19DT01QTEVURUQQAxIgChxHRU5FUkFUSU9OX0pPQl9TVEFUVVNfRkFJTEVEEAQSIwofR0VORVJBVElPTl9KT0JfU1RBVFVTX0NBTkNFTExFRBAFKugBChVPdXRsaW5lQXBwcm92YWxTdGF0dXMSJwojT1VUTElORV9BUFBST1ZBTF9TVEFUVVNfVU5TUEVDSUZJRUQQABIqCiZPVVRMSU5FX0FQUFJPVkFMX1NUQVRVU19QRU5ESU5HX1JFVklFVxABEiQKIE9VVExJTkVfQVBQUk9WQUxfU1RBVFVTX0FQUFJPVkVEEAISJAogT1VUTElORV9BUFBST1ZBTF9TVEFUVVNfUkVKRUNURUQQAxIuCipPVVRMSU5FX0FQUFJPVkFMX1NUQVRVU19SRVZJU0lPTl9SRVFVRVNURUQQBCrbAQoMSm9iRXZlbnRUeXBlEh4KGkpPQl9FVkVOVF9UWVBFX1VOU1BFQ0lGSUVEEAASGgoWSk9CX0VWRU5UX1RZUEVfQ1JFQVRFRBABEhoKFkpPQl9FVkVOVF9UWVBFX1VQREFURUQQAhIcChhKT0JfRVZFTlRfVFlQRV9DT01QTEVURUQQAxIZChVKT0JfRVZFTlRfVFlQRV9GQUlMRUQQBBIcChhKT0JfRVZFTlRfVFlQRV9DQU5DRUxMRUQQBRIcChhKT0JfRVZFTlRfVFlQRV9LRUVQQUxJVkUQBip/CgxTZWN0aW9uTGV2ZWwSHQoZU0VDVElPTl9MRVZFTF9VTlNQRUNJRklFRBAAEhsKF1NFQ1RJT05fTEVWRUxfSU5UUk9EVUNFEAESGQoVU0VDVElPTl9MRVZFTF9ERVZFTE9QEAISGAoUU0VDVElPTl9MRVZFTF9NQVNURVIQAyqCAQoNU2VjdGlvbkludGVudBIeChpTRUNUSU9OX0lOVEVOVF9VTlNQRUNJRklFRBAAEhgKFFNFQ1RJT05fSU5URU5UX1RFQUNIEAESGQoVU0VDVElPTl9JTlRFTlRfQVNTRVNTEAISHAoYU0VDVElPTl9JTlRFTlRfUkVJTkZPUkNFEAMqhQEKD1NlY3Rpb25FbXBoYXNpcxIgChxTRUNUSU9OX0VNUEhBU0lTX1VOU1BFQ0lGSUVEEAASGAoUU0VDVElPTl9FTVBIQVNJU19MT1cQARIbChdTRUNUSU9OX0VNUEhBU0lTX01FRElVTRACEhkKFVNFQ1RJT05fRU1QSEFTSVNfSElHSBADQpwBCgxjb20ubWlyYWkudjFCFkFpR2VuZXJhdGlvblR5cGVzUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_mirai_v1_component_enums, file_mirai_v1_course_wizard]);
+  fileDesc("CiJtaXJhaS92MS9haV9nZW5lcmF0aW9uX3R5cGVzLnByb3RvEghtaXJhaS52MSK/BQoNR2VuZXJhdGlvbkpvYhIKCgJpZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSKQoEdHlwZRgDIAEoDjIbLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2JUeXBlEi0KBnN0YXR1cxgEIAEoDjIdLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2JTdGF0dXMSFgoJY291cnNlX2lkGAUgASgJSACIAQESFgoJbGVzc29uX2lkGAYgASgJSAGIAQESGAoQcHJvZ3Jlc3NfcGVyY2VudBgJIAEoBRIdChBwcm9ncmVzc19tZXNzYWdlGAogASgJSAKIAQESGAoLcmVzdWx0X3BhdGgYCyABKAlIA4gBARIaCg1lcnJvcl9tZXNzYWdlGAwgASgJSASIAQESEwoLdG9rZW5zX3VzZWQYDSABKAMSEwoLcmV0cnlfY291bnQYDiABKAUSEwoLbWF4X3JldHJpZXMYDyABKAUSGgoSY3JlYXRlZF9ieV91c2VyX2lkGBAgASgJEi4KCmNyZWF0ZWRfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKCnN0YXJ0ZWRfYXQYEiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAWIAQESNQoMY29tcGxldGVkX2F0GBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgGiAEBEhoKDXBhcmVudF9qb2JfaWQYFCABKAlIB4gBAUIMCgpfY291cnNlX2lkQgwKCl9sZXNzb25faWRCEwoRX3Byb2dyZXNzX21lc3NhZ2VCDgoMX3Jlc3VsdF9wYXRoQhAKDl9lcnJvcl9tZXNzYWdlQg0KC19zdGFydGVkX2F0Qg8KDV9jb21wbGV0ZWRfYXRCEAoOX3BhcmVudF9qb2JfaWQiiwMKDUNvdXJzZU91dGxpbmUSCgoCaWQYASABKAkSEQoJY291cnNlX2lkGAIgASgJEg8KB3ZlcnNpb24YAyABKAUSKgoIc2VjdGlvbnMYBCADKAsyGC5taXJhaS52MS5PdXRsaW5lU2VjdGlvbhI4Cg9hcHByb3ZhbF9zdGF0dXMYBSABKA4yHy5taXJhaS52MS5PdXRsaW5lQXBwcm92YWxTdGF0dXMSHQoQcmVqZWN0aW9uX3JlYXNvbhgGIAEoCUgAiAEBEjAKDGdlbmVyYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoLYXBwcm92ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESIAoTYXBwcm92ZWRfYnlfdXNlcl9pZBgJIAEoCUgCiAEBQhMKEV9yZWplY3Rpb25fcmVhc29uQg4KDF9hcHByb3ZlZF9hdEIWChRfYXBwcm92ZWRfYnlfdXNlcl9pZCL+AgoOT3V0bGluZVNlY3Rpb24SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDQoFb3JkZXIYBCABKAUSKAoHbGVzc29ucxgFIAMoCzIXLm1pcmFpLnYxLk91dGxpbmVMZXNzb24SGAoQaXNfZmlyc3Rfc2VjdGlvbhgGIAEoCBIXCg9pc19sYXN0X3NlY3Rpb24YByABKAgSGgoSbWFwcGVkX291dGNvbWVfaWRzGAogAygJEiUKBWxldmVsGAsgASgOMhYubWlyYWkudjEuU2VjdGlvbkxldmVsEicKBmludGVudBgMIAEoDjIXLm1pcmFpLnYxLlNlY3Rpb25JbnRlbnQSKwoIZW1waGFzaXMYDSABKA4yGS5taXJhaS52MS5TZWN0aW9uRW1waGFzaXMSFwoPZ3JvdW5kaW5nX3Njb3JlGA4gASgCEh4KFmNvbnRyaWJ1dGluZ19jaHVua19pZHMYDyADKAkiyAIKDU91dGxpbmVMZXNzb24SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDQoFb3JkZXIYBCABKAUSIgoaZXN0aW1hdGVkX2R1cmF0aW9uX21pbnV0ZXMYBSABKAUSGwoTbGVhcm5pbmdfb2JqZWN0aXZlcxgGIAMoCRIbChNpc19maXJzdF9pbl9zZWN0aW9uGAcgASgIEhoKEmlzX2xhc3RfaW5fc2VjdGlvbhgIIAEoCBIaChJpc19maXJzdF9pbl9jb3Vyc2UYCSABKAgSGQoRaXNfbGFzdF9pbl9jb3Vyc2UYCiABKAgSLgoJY2l0YXRpb25zGAsgAygLMhsubWlyYWkudjEuS25vd2xlZGdlQ2l0YXRpb24SFwoPZ3JvdW5kaW5nX3Njb3JlGAwgASgCIrcDCg9HZW5lcmF0ZWRMZXNzb24SCgoCaWQYASABKAkSEQoJY291cnNlX2lkGAIgASgJEhIKCnNlY3Rpb25faWQYAyABKAkSGQoRb3V0bGluZV9sZXNzb25faWQYBCABKAkSDQoFdGl0bGUYBSABKAkSLQoKY29tcG9uZW50cxgGIAMoCzIZLm1pcmFpLnYxLkxlc3NvbkNvbXBvbmVudBIXCgpzZWd1ZV90ZXh0GAcgASgJSACIAQESMAoMZ2VuZXJhdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9ncm91bmRpbmdfc2NvcmUYCSABKAISFAoMc291cmNlX2NvdW50GAogASgFEhwKFGdyb3VuZGVkX3Rva2VuX2NvdW50GAsgASgFEhkKEXRvdGFsX3Rva2VuX2NvdW50GAwgASgFEj0KFGFnZ3JlZ2F0ZV9wcm92ZW5hbmNlGA0gASgLMhoubWlyYWkudjEuTGVzc29uUHJvdmVuYW5jZUgBiAEBQg0KC19zZWd1ZV90ZXh0QhcKFV9hZ2dyZWdhdGVfcHJvdmVuYW5jZSL6AQoPTGVzc29uQ29tcG9uZW50EgoKAmlkGAEgASgJEisKBHR5cGUYAiABKA4yHS5taXJhaS52MS5MZXNzb25Db21wb25lbnRUeXBlEg0KBW9yZGVyGAMgASgFEhQKDGNvbnRlbnRfanNvbhgEIAEoCRI0CglhbGlnbm1lbnQYBSABKAsyHC5taXJhaS52MS5Db21wb25lbnRBbGlnbm1lbnRIAIgBARI2Cgpwcm92ZW5hbmNlGAYgASgLMh0ubWlyYWkudjEuQ29tcG9uZW50UHJvdmVuYW5jZUgBiAEBQgwKCl9hbGlnbm1lbnRCDQoLX3Byb3ZlbmFuY2UiNAoSQ29tcG9uZW50QWxpZ25tZW50Eh4KFmxlYXJuaW5nX29iamVjdGl2ZV9pZHMYAiADKAki4wEKE0NvbXBvbmVudFByb3ZlbmFuY2USMAoNc291cmNlX2NodW5rcxgBIAMoCzIZLm1pcmFpLnYxLlByb3ZlbmFuY2VDaHVuaxIPCgdxdWVyaWVzGAIgAygJEhMKC3RlYW1fdG9rZW5zGAMgASgFEhUKDWdsb2JhbF90b2tlbnMYBCABKAUSFQoNY291cnNlX3Rva2VucxgFIAEoBRIUCgx0b3RhbF90b2tlbnMYBiABKAUSMAoMZ2VuZXJhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKFAQoPUHJvdmVuYW5jZUNodW5rEhAKCGNodW5rX2lkGAEgASgJEhEKCXNvdXJjZV9pZBgCIAEoCRITCgtzb3VyY2VfbmFtZRgDIAEoCRIPCgdleGNlcnB0GAQgASgJEhgKEHNpbWlsYXJpdHlfc2NvcmUYBSABKAISDQoFc2NvcGUYBiABKAkitQEKEExlc3NvblByb3ZlbmFuY2USFwoPZ3JvdW5kaW5nX3Njb3JlGAEgASgCEhMKC3RlYW1fdG9rZW5zGAIgASgFEhUKDWdsb2JhbF90b2tlbnMYAyABKAUSFQoNY291cnNlX3Rva2VucxgEIAEoBRIZChF1bmdyb3VuZGVkX3Rva2VucxgFIAEoBRIUCgx0b3RhbF90b2tlbnMYBiABKAUSFAoMc291cmNlX2NvdW50GAcgASgFIlAKGUNvbXBvbmVudEFsaWdubWVudFRhcmdldHMSEwoLcGVyc29uYV9pZHMYASADKAkSHgoWbGVhcm5pbmdfb2JqZWN0aXZlX2lkcxgCIAMoCSJ7ChVDb3Vyc2VHZW5lcmF0aW9uSW5wdXQSEQoJY291cnNlX2lkGAEgASgJEhcKD2Rlc2lyZWRfb3V0Y29tZRgEIAEoCRIfChJhZGRpdGlvbmFsX2NvbnRleHQYBSABKAlIAIgBAUIVChNfYWRkaXRpb25hbF9jb250ZXh0IpQCCgpDb3Vyc2VQbGFuEjUKEWRvY3VtZW50X2FuYWx5c2VzGAEgAygLMhoubWlyYWkudjEuRG9jdW1lbnRBbmFseXNpcxIyChBwbGFubmVkX3NlY3Rpb25zGAIgAygLMhgubWlyYWkudjEuUGxhbm5lZFNlY3Rpb24SDgoGc3RhdHVzGAMgASgJEjAKDGdlbmVyYXRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoLYXBwcm92ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESEwoLdG9rZW5zX3VzZWQYBiABKANCDgoMX2FwcHJvdmVkX2F0IrgBChBEb2N1bWVudEFuYWx5c2lzEhEKCXNvdXJjZV9pZBgBIAEoCRITCgtzb3VyY2VfbmFtZRgCIAEoCRIPCgdzdW1tYXJ5GAMgASgJEhMKC21haW5fdG9waWNzGAQgAygJEhEKCWtleV9mYWN0cxgFIAMoCRIVCg1jb250ZW50X2RlcHRoGAYgASgJEiwKDXNlY3Rpb25faGludHMYByADKAsyFS5taXJhaS52MS5TZWN0aW9uSGludCJLCgtTZWN0aW9uSGludBISCgp0b3BpY19uYW1lGAEgASgJEhQKDHNlYXJjaF90ZXJtcxgCIAMoCRISCgprZXlfcG9pbnRzGAMgAygJIpsBCg5QbGFubmVkU2VjdGlvbhINCgV0aXRsZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIUCgxzZWFyY2hfdGVybXMYAyADKAkSEgoKc291cmNlX2lkcxgEIAMoCRIoCgdsZXNzb25zGAUgAygLMhcubWlyYWkudjEuUGxhbm5lZExlc3NvbhIRCglyYXRpb25hbGUYBiABKAkiYQoNUGxhbm5lZExlc3NvbhINCgV0aXRsZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIUCgxzZWFyY2hfdGVybXMYAyADKAkSFgoObGVhcm5pbmdfZ29hbHMYBCADKAkq/wEKEUdlbmVyYXRpb25Kb2JUeXBlEiMKH0dFTkVSQVRJT05fSk9CX1RZUEVfVU5TUEVDSUZJRUQQABImCiJHRU5FUkFUSU9OX0pPQl9UWVBFX0NPVVJTRV9PVVRMSU5FEAISJgoiR0VORVJBVElPTl9KT0JfVFlQRV9MRVNTT05fQ09OVEVOVBADEicKI0dFTkVSQVRJT05fSk9CX1RZUEVfQ09NUE9ORU5UX1JFR0VOEAQSIwofR0VORVJBVElPTl9KT0JfVFlQRV9GVUxMX0NPVVJTRRAFEicKI0dFTkVSQVRJT05fSk9CX1RZUEVfQ09VUlNFX1BMQU5OSU5HEAYq8AEKE0dlbmVyYXRpb25Kb2JTdGF0dXMSJQohR0VORVJBVElPTl9KT0JfU1RBVFVTX1VOU1BFQ0lGSUVEEAASIAocR0VORVJBVElPTl9KT0JfU1RBVFVTX1FVRVVFRBABEiQKIEdFTkVSQVRJT05fSk9CX1NUQVRVU19QUk9DRVNTSU5HEAISIwofR0VORVJBVElPTl9KT0JfU1RBVFVTX0NPTVBMRVRFRBADEiAKHEdFTkVSQVRJT05fSk9CX1NUQVRVU19GQUlMRUQQBBIjCh9HRU5FUkFUSU9OX0pPQl9TVEFUVVNfQ0FOQ0VMTEVEEAUq6AEKFU91dGxpbmVBcHByb3ZhbFN0YXR1cxInCiNPVVRMSU5FX0FQUFJPVkFMX1NUQVRVU19VTlNQRUNJRklFRBAAEioKJk9VVExJTkVfQVBQUk9WQUxfU1RBVFVTX1BFTkRJTkdfUkVWSUVXEAESJAogT1VUTElORV9BUFBST1ZBTF9TVEFUVVNfQVBQUk9WRUQQAhIkCiBPVVRMSU5FX0FQUFJPVkFMX1NUQVRVU19SRUpFQ1RFRBADEi4KKk9VVExJTkVfQVBQUk9WQUxfU1RBVFVTX1JFVklTSU9OX1JFUVVFU1RFRBAEKtsBCgxKb2JFdmVudFR5cGUSHgoaSk9CX0VWRU5UX1RZUEVfVU5TUEVDSUZJRUQQABIaChZKT0JfRVZFTlRfVFlQRV9DUkVBVEVEEAESGgoWSk9CX0VWRU5UX1RZUEVfVVBEQVRFRBACEhwKGEpPQl9FVkVOVF9UWVBFX0NPTVBMRVRFRBADEhkKFUpPQl9FVkVOVF9UWVBFX0ZBSUxFRBAEEhwKGEpPQl9FVkVOVF9UWVBFX0NBTkNFTExFRBAFEhwKGEpPQl9FVkVOVF9UWVBFX0tFRVBBTElWRRAGKn8KDFNlY3Rpb25MZXZlbBIdChlTRUNUSU9OX0xFVkVMX1VOU1BFQ0lGSUVEEAASGwoXU0VDVElPTl9MRVZFTF9JTlRST0RVQ0UQARIZChVTRUNUSU9OX0xFVkVMX0RFVkVMT1AQAhIYChRTRUNUSU9OX0xFVkVMX01BU1RFUhADKoIBCg1TZWN0aW9uSW50ZW50Eh4KGlNFQ1RJT05fSU5URU5UX1VOU1BFQ0lGSUVEEAASGAoUU0VDVElPTl9JTlRFTlRfVEVBQ0gQARIZChVTRUNUSU9OX0lOVEVOVF9BU1NFU1MQAhIcChhTRUNUSU9OX0lOVEVOVF9SRUlORk9SQ0UQAyqFAQoPU2VjdGlvbkVtcGhhc2lzEiAKHFNFQ1RJT05fRU1QSEFTSVNfVU5TUEVDSUZJRUQQABIYChRTRUNUSU9OX0VNUEhBU0lTX0xPVxABEhsKF1NFQ1RJT05fRU1QSEFTSVNfTUVESVVNEAISGQoVU0VDVElPTl9FTVBIQVNJU19ISUdIEANCnAEKDGNvbS5taXJhaS52MUIWQWlHZW5lcmF0aW9uVHlwZXNQcm90b1ABWjNnaXRodWIuY29tL3NvZ29zL21pcmFpLWJhY2tlbmQvZ2VuL21pcmFpL3YxO21pcmFpdjGiAgNNWFiqAghNaXJhaS5WMcoCCE1pcmFpXFYx4gIUTWlyYWlcVjFcR1BCTWV0YWRhdGHqAglNaXJhaTo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_mirai_v1_component_enums, file_mirai_v1_course_wizard]);
 
 /**
  * GenerationJob represents an AI generation job.
@@ -427,6 +427,11 @@ export type GeneratedLesson = Message<"mirai.v1.GeneratedLesson"> & {
    * @generated from field: int32 total_token_count = 12;
    */
   totalTokenCount: number;
+
+  /**
+   * @generated from field: optional mirai.v1.LessonProvenance aggregate_provenance = 13;
+   */
+  aggregateProvenance?: LessonProvenance;
 };
 
 /**
@@ -468,6 +473,11 @@ export type LessonComponent = Message<"mirai.v1.LessonComponent"> & {
    * @generated from field: optional mirai.v1.ComponentAlignment alignment = 5;
    */
   alignment?: ComponentAlignment;
+
+  /**
+   * @generated from field: optional mirai.v1.ComponentProvenance provenance = 6;
+   */
+  provenance?: ComponentProvenance;
 };
 
 /**
@@ -497,6 +507,150 @@ export const ComponentAlignmentSchema: GenMessage<ComponentAlignment> = /*@__PUR
   messageDesc(file_mirai_v1_ai_generation_types, 6);
 
 /**
+ * ComponentProvenance tracks which knowledge sources contributed to a component.
+ *
+ * @generated from message mirai.v1.ComponentProvenance
+ */
+export type ComponentProvenance = Message<"mirai.v1.ComponentProvenance"> & {
+  /**
+   * @generated from field: repeated mirai.v1.ProvenanceChunk source_chunks = 1;
+   */
+  sourceChunks: ProvenanceChunk[];
+
+  /**
+   * @generated from field: repeated string queries = 2;
+   */
+  queries: string[];
+
+  /**
+   * @generated from field: int32 team_tokens = 3;
+   */
+  teamTokens: number;
+
+  /**
+   * @generated from field: int32 global_tokens = 4;
+   */
+  globalTokens: number;
+
+  /**
+   * @generated from field: int32 course_tokens = 5;
+   */
+  courseTokens: number;
+
+  /**
+   * @generated from field: int32 total_tokens = 6;
+   */
+  totalTokens: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp generated_at = 7;
+   */
+  generatedAt?: Timestamp;
+};
+
+/**
+ * Describes the message mirai.v1.ComponentProvenance.
+ * Use `create(ComponentProvenanceSchema)` to create a new message.
+ */
+export const ComponentProvenanceSchema: GenMessage<ComponentProvenance> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_types, 7);
+
+/**
+ * ProvenanceChunk represents a knowledge chunk that contributed to generated content.
+ *
+ * @generated from message mirai.v1.ProvenanceChunk
+ */
+export type ProvenanceChunk = Message<"mirai.v1.ProvenanceChunk"> & {
+  /**
+   * @generated from field: string chunk_id = 1;
+   */
+  chunkId: string;
+
+  /**
+   * @generated from field: string source_id = 2;
+   */
+  sourceId: string;
+
+  /**
+   * @generated from field: string source_name = 3;
+   */
+  sourceName: string;
+
+  /**
+   * @generated from field: string excerpt = 4;
+   */
+  excerpt: string;
+
+  /**
+   * @generated from field: float similarity_score = 5;
+   */
+  similarityScore: number;
+
+  /**
+   * "course", "team", "global"
+   *
+   * @generated from field: string scope = 6;
+   */
+  scope: string;
+};
+
+/**
+ * Describes the message mirai.v1.ProvenanceChunk.
+ * Use `create(ProvenanceChunkSchema)` to create a new message.
+ */
+export const ProvenanceChunkSchema: GenMessage<ProvenanceChunk> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_types, 8);
+
+/**
+ * LessonProvenance aggregates provenance across all components in a lesson.
+ *
+ * @generated from message mirai.v1.LessonProvenance
+ */
+export type LessonProvenance = Message<"mirai.v1.LessonProvenance"> & {
+  /**
+   * @generated from field: float grounding_score = 1;
+   */
+  groundingScore: number;
+
+  /**
+   * @generated from field: int32 team_tokens = 2;
+   */
+  teamTokens: number;
+
+  /**
+   * @generated from field: int32 global_tokens = 3;
+   */
+  globalTokens: number;
+
+  /**
+   * @generated from field: int32 course_tokens = 4;
+   */
+  courseTokens: number;
+
+  /**
+   * @generated from field: int32 ungrounded_tokens = 5;
+   */
+  ungroundedTokens: number;
+
+  /**
+   * @generated from field: int32 total_tokens = 6;
+   */
+  totalTokens: number;
+
+  /**
+   * @generated from field: int32 source_count = 7;
+   */
+  sourceCount: number;
+};
+
+/**
+ * Describes the message mirai.v1.LessonProvenance.
+ * Use `create(LessonProvenanceSchema)` to create a new message.
+ */
+export const LessonProvenanceSchema: GenMessage<LessonProvenance> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_types, 9);
+
+/**
  * ComponentAlignmentTargets for content regeneration alignment.
  *
  * @generated from message mirai.v1.ComponentAlignmentTargets
@@ -518,7 +672,7 @@ export type ComponentAlignmentTargets = Message<"mirai.v1.ComponentAlignmentTarg
  * Use `create(ComponentAlignmentTargetsSchema)` to create a new message.
  */
 export const ComponentAlignmentTargetsSchema: GenMessage<ComponentAlignmentTargets> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_types, 7);
+  messageDesc(file_mirai_v1_ai_generation_types, 10);
 
 /**
  * CourseGenerationInput captures inputs for AI course generation.
@@ -547,7 +701,209 @@ export type CourseGenerationInput = Message<"mirai.v1.CourseGenerationInput"> & 
  * Use `create(CourseGenerationInputSchema)` to create a new message.
  */
 export const CourseGenerationInputSchema: GenMessage<CourseGenerationInput> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_types, 8);
+  messageDesc(file_mirai_v1_ai_generation_types, 11);
+
+/**
+ * CoursePlan is the AI-generated course structure plan based on document analysis.
+ *
+ * @generated from message mirai.v1.CoursePlan
+ */
+export type CoursePlan = Message<"mirai.v1.CoursePlan"> & {
+  /**
+   * @generated from field: repeated mirai.v1.DocumentAnalysis document_analyses = 1;
+   */
+  documentAnalyses: DocumentAnalysis[];
+
+  /**
+   * @generated from field: repeated mirai.v1.PlannedSection planned_sections = 2;
+   */
+  plannedSections: PlannedSection[];
+
+  /**
+   * "pending_review", "approved"
+   *
+   * @generated from field: string status = 3;
+   */
+  status: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp generated_at = 4;
+   */
+  generatedAt?: Timestamp;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp approved_at = 5;
+   */
+  approvedAt?: Timestamp;
+
+  /**
+   * @generated from field: int64 tokens_used = 6;
+   */
+  tokensUsed: bigint;
+};
+
+/**
+ * Describes the message mirai.v1.CoursePlan.
+ * Use `create(CoursePlanSchema)` to create a new message.
+ */
+export const CoursePlanSchema: GenMessage<CoursePlan> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_types, 12);
+
+/**
+ * DocumentAnalysis is Gemini's structured summary of one knowledge source.
+ *
+ * @generated from message mirai.v1.DocumentAnalysis
+ */
+export type DocumentAnalysis = Message<"mirai.v1.DocumentAnalysis"> & {
+  /**
+   * @generated from field: string source_id = 1;
+   */
+  sourceId: string;
+
+  /**
+   * @generated from field: string source_name = 2;
+   */
+  sourceName: string;
+
+  /**
+   * @generated from field: string summary = 3;
+   */
+  summary: string;
+
+  /**
+   * @generated from field: repeated string main_topics = 4;
+   */
+  mainTopics: string[];
+
+  /**
+   * @generated from field: repeated string key_facts = 5;
+   */
+  keyFacts: string[];
+
+  /**
+   * @generated from field: string content_depth = 6;
+   */
+  contentDepth: string;
+
+  /**
+   * @generated from field: repeated mirai.v1.SectionHint section_hints = 7;
+   */
+  sectionHints: SectionHint[];
+};
+
+/**
+ * Describes the message mirai.v1.DocumentAnalysis.
+ * Use `create(DocumentAnalysisSchema)` to create a new message.
+ */
+export const DocumentAnalysisSchema: GenMessage<DocumentAnalysis> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_types, 13);
+
+/**
+ * SectionHint is a suggested course section derived from analyzing a document.
+ *
+ * @generated from message mirai.v1.SectionHint
+ */
+export type SectionHint = Message<"mirai.v1.SectionHint"> & {
+  /**
+   * @generated from field: string topic_name = 1;
+   */
+  topicName: string;
+
+  /**
+   * @generated from field: repeated string search_terms = 2;
+   */
+  searchTerms: string[];
+
+  /**
+   * @generated from field: repeated string key_points = 3;
+   */
+  keyPoints: string[];
+};
+
+/**
+ * Describes the message mirai.v1.SectionHint.
+ * Use `create(SectionHintSchema)` to create a new message.
+ */
+export const SectionHintSchema: GenMessage<SectionHint> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_types, 14);
+
+/**
+ * PlannedSection is a planned course section with targeted RAG search terms.
+ *
+ * @generated from message mirai.v1.PlannedSection
+ */
+export type PlannedSection = Message<"mirai.v1.PlannedSection"> & {
+  /**
+   * @generated from field: string title = 1;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string description = 2;
+   */
+  description: string;
+
+  /**
+   * @generated from field: repeated string search_terms = 3;
+   */
+  searchTerms: string[];
+
+  /**
+   * @generated from field: repeated string source_ids = 4;
+   */
+  sourceIds: string[];
+
+  /**
+   * @generated from field: repeated mirai.v1.PlannedLesson lessons = 5;
+   */
+  lessons: PlannedLesson[];
+
+  /**
+   * @generated from field: string rationale = 6;
+   */
+  rationale: string;
+};
+
+/**
+ * Describes the message mirai.v1.PlannedSection.
+ * Use `create(PlannedSectionSchema)` to create a new message.
+ */
+export const PlannedSectionSchema: GenMessage<PlannedSection> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_types, 15);
+
+/**
+ * PlannedLesson is a planned lesson with its own search terms for targeted RAG.
+ *
+ * @generated from message mirai.v1.PlannedLesson
+ */
+export type PlannedLesson = Message<"mirai.v1.PlannedLesson"> & {
+  /**
+   * @generated from field: string title = 1;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string description = 2;
+   */
+  description: string;
+
+  /**
+   * @generated from field: repeated string search_terms = 3;
+   */
+  searchTerms: string[];
+
+  /**
+   * @generated from field: repeated string learning_goals = 4;
+   */
+  learningGoals: string[];
+};
+
+/**
+ * Describes the message mirai.v1.PlannedLesson.
+ * Use `create(PlannedLessonSchema)` to create a new message.
+ */
+export const PlannedLessonSchema: GenMessage<PlannedLesson> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_types, 16);
 
 /**
  * GenerationJobType represents the type of AI generation job.
@@ -579,6 +935,11 @@ export enum GenerationJobType {
    * @generated from enum value: GENERATION_JOB_TYPE_FULL_COURSE = 5;
    */
   FULL_COURSE = 5,
+
+  /**
+   * @generated from enum value: GENERATION_JOB_TYPE_COURSE_PLANNING = 6;
+   */
+  COURSE_PLANNING = 6,
 }
 
 /**

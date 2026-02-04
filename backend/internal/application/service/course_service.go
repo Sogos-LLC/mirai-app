@@ -108,6 +108,7 @@ type S3CourseContent struct {
 	GeneratedLessons   []S3GeneratedLesson  `json:"generatedLessons,omitempty"`
 	CurriculumMap      *S3CurriculumMap     `json:"curriculumMap,omitempty"`
 	OutlineProvenance  *OutlineProvenance   `json:"outlineProvenance,omitempty"` // Aggregate provenance for outline generation
+	CoursePlan         *S3CoursePlan        `json:"coursePlan,omitempty"`        // AI-generated course plan
 }
 
 // OutlineProvenance tracks aggregate knowledge source attribution for outline generation.
@@ -1045,4 +1046,50 @@ func (s *CourseService) DeleteFolder(ctx context.Context, kratosID uuid.UUID, id
 
 	log.Info("folder deleted")
 	return nil
+}
+
+// S3CoursePlan is the AI-generated course structure plan stored in S3.
+type S3CoursePlan struct {
+	DocumentAnalyses []S3DocumentAnalysis `json:"documentAnalyses"`
+	PlannedSections  []S3PlannedSection   `json:"plannedSections"`
+	Status           string               `json:"status"` // "pending_review", "approved"
+	GeneratedAt      time.Time            `json:"generatedAt"`
+	ApprovedAt       *time.Time           `json:"approvedAt,omitempty"`
+	TokensUsed       int64                `json:"tokensUsed"`
+}
+
+// S3DocumentAnalysis is Gemini's structured summary of one knowledge source.
+type S3DocumentAnalysis struct {
+	SourceID     string           `json:"sourceId"`
+	SourceName   string           `json:"sourceName"`
+	Summary      string           `json:"summary"`
+	MainTopics   []string         `json:"mainTopics"`
+	KeyFacts     []string         `json:"keyFacts"`
+	ContentDepth string           `json:"contentDepth"`
+	SectionHints []S3SectionHint  `json:"sectionHints"`
+}
+
+// S3SectionHint is a suggested course section derived from one document.
+type S3SectionHint struct {
+	TopicName   string   `json:"topicName"`
+	SearchTerms []string `json:"searchTerms"`
+	KeyPoints   []string `json:"keyPoints"`
+}
+
+// S3PlannedSection is a planned course section with targeted search terms.
+type S3PlannedSection struct {
+	Title       string            `json:"title"`
+	Description string            `json:"description"`
+	SearchTerms []string          `json:"searchTerms"`
+	SourceIDs   []string          `json:"sourceIds"`
+	Lessons     []S3PlannedLesson `json:"lessons"`
+	Rationale   string            `json:"rationale"`
+}
+
+// S3PlannedLesson is a planned lesson with its own search terms.
+type S3PlannedLesson struct {
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	SearchTerms   []string `json:"searchTerms"`
+	LearningGoals []string `json:"learningGoals"`
 }

@@ -1682,6 +1682,183 @@ func (x *SubscribeJobsResponse) GetJob() *GenerationJob {
 	return nil
 }
 
+// Course Plan RPCs
+type GetCoursePlanRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CourseId      string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCoursePlanRequest) Reset() {
+	*x = GetCoursePlanRequest{}
+	mi := &file_mirai_v1_ai_generation_service_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCoursePlanRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCoursePlanRequest) ProtoMessage() {}
+
+func (x *GetCoursePlanRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_service_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCoursePlanRequest.ProtoReflect.Descriptor instead.
+func (*GetCoursePlanRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_service_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *GetCoursePlanRequest) GetCourseId() string {
+	if x != nil {
+		return x.CourseId
+	}
+	return ""
+}
+
+type GetCoursePlanResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Plan          *CoursePlan            `protobuf:"bytes,1,opt,name=plan,proto3" json:"plan,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCoursePlanResponse) Reset() {
+	*x = GetCoursePlanResponse{}
+	mi := &file_mirai_v1_ai_generation_service_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCoursePlanResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCoursePlanResponse) ProtoMessage() {}
+
+func (x *GetCoursePlanResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_service_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCoursePlanResponse.ProtoReflect.Descriptor instead.
+func (*GetCoursePlanResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_service_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *GetCoursePlanResponse) GetPlan() *CoursePlan {
+	if x != nil {
+		return x.Plan
+	}
+	return nil
+}
+
+type ApproveCoursePlanRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CourseId      string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveCoursePlanRequest) Reset() {
+	*x = ApproveCoursePlanRequest{}
+	mi := &file_mirai_v1_ai_generation_service_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveCoursePlanRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveCoursePlanRequest) ProtoMessage() {}
+
+func (x *ApproveCoursePlanRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_service_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveCoursePlanRequest.ProtoReflect.Descriptor instead.
+func (*ApproveCoursePlanRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_service_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ApproveCoursePlanRequest) GetCourseId() string {
+	if x != nil {
+		return x.CourseId
+	}
+	return ""
+}
+
+type ApproveCoursePlanResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Plan          *CoursePlan            `protobuf:"bytes,1,opt,name=plan,proto3" json:"plan,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveCoursePlanResponse) Reset() {
+	*x = ApproveCoursePlanResponse{}
+	mi := &file_mirai_v1_ai_generation_service_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveCoursePlanResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveCoursePlanResponse) ProtoMessage() {}
+
+func (x *ApproveCoursePlanResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_service_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveCoursePlanResponse.ProtoReflect.Descriptor instead.
+func (*ApproveCoursePlanResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_service_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ApproveCoursePlanResponse) GetPlan() *CoursePlan {
+	if x != nil {
+		return x.Plan
+	}
+	return nil
+}
+
 var File_mirai_v1_ai_generation_service_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_ai_generation_service_proto_rawDesc = "" +
@@ -1793,7 +1970,15 @@ const file_mirai_v1_ai_generation_service_proto_rawDesc = "" +
 	"\x15SubscribeJobsResponse\x125\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\x16.mirai.v1.JobEventTypeR\teventType\x12)\n" +
-	"\x03job\x18\x02 \x01(\v2\x17.mirai.v1.GenerationJobR\x03job2\xf4\v\n" +
+	"\x03job\x18\x02 \x01(\v2\x17.mirai.v1.GenerationJobR\x03job\"3\n" +
+	"\x14GetCoursePlanRequest\x12\x1b\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"A\n" +
+	"\x15GetCoursePlanResponse\x12(\n" +
+	"\x04plan\x18\x01 \x01(\v2\x14.mirai.v1.CoursePlanR\x04plan\"7\n" +
+	"\x18ApproveCoursePlanRequest\x12\x1b\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"E\n" +
+	"\x19ApproveCoursePlanResponse\x12(\n" +
+	"\x04plan\x18\x01 \x01(\v2\x14.mirai.v1.CoursePlanR\x04plan2\xa4\r\n" +
 	"\x13AIGenerationService\x12h\n" +
 	"\x15GenerateCourseOutline\x12&.mirai.v1.GenerateCourseOutlineRequest\x1a'.mirai.v1.GenerateCourseOutlineResponse\x12Y\n" +
 	"\x10GetCourseOutline\x12!.mirai.v1.GetCourseOutlineRequest\x1a\".mirai.v1.GetCourseOutlineResponse\x12e\n" +
@@ -1810,7 +1995,9 @@ const file_mirai_v1_ai_generation_service_proto_rawDesc = "" +
 	"\x14ListGeneratedLessons\x12%.mirai.v1.ListGeneratedLessonsRequest\x1a&.mirai.v1.ListGeneratedLessonsResponse\x12k\n" +
 	"\x16GenerateComponentImage\x12'.mirai.v1.GenerateComponentImageRequest\x1a(.mirai.v1.GenerateComponentImageResponse\x12k\n" +
 	"\x16UpdateLessonComponents\x12'.mirai.v1.UpdateLessonComponentsRequest\x1a(.mirai.v1.UpdateLessonComponentsResponse\x12R\n" +
-	"\rSubscribeJobs\x12\x1e.mirai.v1.SubscribeJobsRequest\x1a\x1f.mirai.v1.SubscribeJobsResponse0\x01B\x9e\x01\n" +
+	"\rSubscribeJobs\x12\x1e.mirai.v1.SubscribeJobsRequest\x1a\x1f.mirai.v1.SubscribeJobsResponse0\x01\x12P\n" +
+	"\rGetCoursePlan\x12\x1e.mirai.v1.GetCoursePlanRequest\x1a\x1f.mirai.v1.GetCoursePlanResponse\x12\\\n" +
+	"\x11ApproveCoursePlan\x12\".mirai.v1.ApproveCoursePlanRequest\x1a#.mirai.v1.ApproveCoursePlanResponseB\x9e\x01\n" +
 	"\fcom.mirai.v1B\x18AiGenerationServiceProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -1825,7 +2012,7 @@ func file_mirai_v1_ai_generation_service_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_ai_generation_service_proto_rawDescData
 }
 
-var file_mirai_v1_ai_generation_service_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_mirai_v1_ai_generation_service_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_mirai_v1_ai_generation_service_proto_goTypes = []any{
 	(*StoredWizardData)(nil),               // 0: mirai.v1.StoredWizardData
 	(*GenerateCourseOutlineRequest)(nil),   // 1: mirai.v1.GenerateCourseOutlineRequest
@@ -1860,85 +2047,96 @@ var file_mirai_v1_ai_generation_service_proto_goTypes = []any{
 	(*UpdateLessonComponentsResponse)(nil), // 30: mirai.v1.UpdateLessonComponentsResponse
 	(*SubscribeJobsRequest)(nil),           // 31: mirai.v1.SubscribeJobsRequest
 	(*SubscribeJobsResponse)(nil),          // 32: mirai.v1.SubscribeJobsResponse
-	(*SMEPersona)(nil),                     // 33: mirai.v1.SMEPersona
-	(*AudiencePersona)(nil),                // 34: mirai.v1.AudiencePersona
-	(*ToneOption)(nil),                     // 35: mirai.v1.ToneOption
-	(*CourseGenerationInput)(nil),          // 36: mirai.v1.CourseGenerationInput
-	(*GenerationJob)(nil),                  // 37: mirai.v1.GenerationJob
-	(*CourseOutline)(nil),                  // 38: mirai.v1.CourseOutline
-	(*OutlineSection)(nil),                 // 39: mirai.v1.OutlineSection
-	(*ComponentAlignmentTargets)(nil),      // 40: mirai.v1.ComponentAlignmentTargets
-	(GenerationJobType)(0),                 // 41: mirai.v1.GenerationJobType
-	(GenerationJobStatus)(0),               // 42: mirai.v1.GenerationJobStatus
-	(*GeneratedLesson)(nil),                // 43: mirai.v1.GeneratedLesson
-	(*LessonComponent)(nil),                // 44: mirai.v1.LessonComponent
-	(JobEventType)(0),                      // 45: mirai.v1.JobEventType
+	(*GetCoursePlanRequest)(nil),           // 33: mirai.v1.GetCoursePlanRequest
+	(*GetCoursePlanResponse)(nil),          // 34: mirai.v1.GetCoursePlanResponse
+	(*ApproveCoursePlanRequest)(nil),       // 35: mirai.v1.ApproveCoursePlanRequest
+	(*ApproveCoursePlanResponse)(nil),      // 36: mirai.v1.ApproveCoursePlanResponse
+	(*SMEPersona)(nil),                     // 37: mirai.v1.SMEPersona
+	(*AudiencePersona)(nil),                // 38: mirai.v1.AudiencePersona
+	(*ToneOption)(nil),                     // 39: mirai.v1.ToneOption
+	(*CourseGenerationInput)(nil),          // 40: mirai.v1.CourseGenerationInput
+	(*GenerationJob)(nil),                  // 41: mirai.v1.GenerationJob
+	(*CourseOutline)(nil),                  // 42: mirai.v1.CourseOutline
+	(*OutlineSection)(nil),                 // 43: mirai.v1.OutlineSection
+	(*ComponentAlignmentTargets)(nil),      // 44: mirai.v1.ComponentAlignmentTargets
+	(GenerationJobType)(0),                 // 45: mirai.v1.GenerationJobType
+	(GenerationJobStatus)(0),               // 46: mirai.v1.GenerationJobStatus
+	(*GeneratedLesson)(nil),                // 47: mirai.v1.GeneratedLesson
+	(*LessonComponent)(nil),                // 48: mirai.v1.LessonComponent
+	(JobEventType)(0),                      // 49: mirai.v1.JobEventType
+	(*CoursePlan)(nil),                     // 50: mirai.v1.CoursePlan
 }
 var file_mirai_v1_ai_generation_service_proto_depIdxs = []int32{
-	33, // 0: mirai.v1.StoredWizardData.sme_personas:type_name -> mirai.v1.SMEPersona
-	34, // 1: mirai.v1.StoredWizardData.audience_personas:type_name -> mirai.v1.AudiencePersona
-	35, // 2: mirai.v1.StoredWizardData.selected_tone:type_name -> mirai.v1.ToneOption
-	36, // 3: mirai.v1.GenerateCourseOutlineRequest.input:type_name -> mirai.v1.CourseGenerationInput
-	37, // 4: mirai.v1.GenerateCourseOutlineResponse.job:type_name -> mirai.v1.GenerationJob
-	38, // 5: mirai.v1.GetCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
+	37, // 0: mirai.v1.StoredWizardData.sme_personas:type_name -> mirai.v1.SMEPersona
+	38, // 1: mirai.v1.StoredWizardData.audience_personas:type_name -> mirai.v1.AudiencePersona
+	39, // 2: mirai.v1.StoredWizardData.selected_tone:type_name -> mirai.v1.ToneOption
+	40, // 3: mirai.v1.GenerateCourseOutlineRequest.input:type_name -> mirai.v1.CourseGenerationInput
+	41, // 4: mirai.v1.GenerateCourseOutlineResponse.job:type_name -> mirai.v1.GenerationJob
+	42, // 5: mirai.v1.GetCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
 	0,  // 6: mirai.v1.GetCourseOutlineResponse.wizard_data:type_name -> mirai.v1.StoredWizardData
-	38, // 7: mirai.v1.ApproveCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
-	38, // 8: mirai.v1.RejectCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
-	39, // 9: mirai.v1.UpdateCourseOutlineRequest.sections:type_name -> mirai.v1.OutlineSection
-	38, // 10: mirai.v1.UpdateCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
-	37, // 11: mirai.v1.GenerateLessonContentResponse.job:type_name -> mirai.v1.GenerationJob
-	37, // 12: mirai.v1.GenerateAllLessonsResponse.job:type_name -> mirai.v1.GenerationJob
-	40, // 13: mirai.v1.RegenerateComponentRequest.alignment_targets:type_name -> mirai.v1.ComponentAlignmentTargets
-	37, // 14: mirai.v1.RegenerateComponentResponse.job:type_name -> mirai.v1.GenerationJob
-	37, // 15: mirai.v1.GetJobResponse.job:type_name -> mirai.v1.GenerationJob
-	41, // 16: mirai.v1.ListJobsRequest.type:type_name -> mirai.v1.GenerationJobType
-	42, // 17: mirai.v1.ListJobsRequest.status:type_name -> mirai.v1.GenerationJobStatus
-	37, // 18: mirai.v1.ListJobsResponse.jobs:type_name -> mirai.v1.GenerationJob
-	37, // 19: mirai.v1.CancelJobResponse.job:type_name -> mirai.v1.GenerationJob
-	43, // 20: mirai.v1.GetGeneratedLessonResponse.lesson:type_name -> mirai.v1.GeneratedLesson
-	43, // 21: mirai.v1.ListGeneratedLessonsResponse.lessons:type_name -> mirai.v1.GeneratedLesson
-	44, // 22: mirai.v1.GenerateComponentImageResponse.component:type_name -> mirai.v1.LessonComponent
-	44, // 23: mirai.v1.UpdateLessonComponentsRequest.components:type_name -> mirai.v1.LessonComponent
-	43, // 24: mirai.v1.UpdateLessonComponentsResponse.lesson:type_name -> mirai.v1.GeneratedLesson
-	45, // 25: mirai.v1.SubscribeJobsResponse.event_type:type_name -> mirai.v1.JobEventType
-	37, // 26: mirai.v1.SubscribeJobsResponse.job:type_name -> mirai.v1.GenerationJob
-	1,  // 27: mirai.v1.AIGenerationService.GenerateCourseOutline:input_type -> mirai.v1.GenerateCourseOutlineRequest
-	3,  // 28: mirai.v1.AIGenerationService.GetCourseOutline:input_type -> mirai.v1.GetCourseOutlineRequest
-	5,  // 29: mirai.v1.AIGenerationService.ApproveCourseOutline:input_type -> mirai.v1.ApproveCourseOutlineRequest
-	7,  // 30: mirai.v1.AIGenerationService.RejectCourseOutline:input_type -> mirai.v1.RejectCourseOutlineRequest
-	9,  // 31: mirai.v1.AIGenerationService.UpdateCourseOutline:input_type -> mirai.v1.UpdateCourseOutlineRequest
-	11, // 32: mirai.v1.AIGenerationService.GenerateLessonContent:input_type -> mirai.v1.GenerateLessonContentRequest
-	13, // 33: mirai.v1.AIGenerationService.GenerateAllLessons:input_type -> mirai.v1.GenerateAllLessonsRequest
-	15, // 34: mirai.v1.AIGenerationService.RegenerateComponent:input_type -> mirai.v1.RegenerateComponentRequest
-	17, // 35: mirai.v1.AIGenerationService.GetJob:input_type -> mirai.v1.GetJobRequest
-	19, // 36: mirai.v1.AIGenerationService.ListJobs:input_type -> mirai.v1.ListJobsRequest
-	21, // 37: mirai.v1.AIGenerationService.CancelJob:input_type -> mirai.v1.CancelJobRequest
-	23, // 38: mirai.v1.AIGenerationService.GetGeneratedLesson:input_type -> mirai.v1.GetGeneratedLessonRequest
-	25, // 39: mirai.v1.AIGenerationService.ListGeneratedLessons:input_type -> mirai.v1.ListGeneratedLessonsRequest
-	27, // 40: mirai.v1.AIGenerationService.GenerateComponentImage:input_type -> mirai.v1.GenerateComponentImageRequest
-	29, // 41: mirai.v1.AIGenerationService.UpdateLessonComponents:input_type -> mirai.v1.UpdateLessonComponentsRequest
-	31, // 42: mirai.v1.AIGenerationService.SubscribeJobs:input_type -> mirai.v1.SubscribeJobsRequest
-	2,  // 43: mirai.v1.AIGenerationService.GenerateCourseOutline:output_type -> mirai.v1.GenerateCourseOutlineResponse
-	4,  // 44: mirai.v1.AIGenerationService.GetCourseOutline:output_type -> mirai.v1.GetCourseOutlineResponse
-	6,  // 45: mirai.v1.AIGenerationService.ApproveCourseOutline:output_type -> mirai.v1.ApproveCourseOutlineResponse
-	8,  // 46: mirai.v1.AIGenerationService.RejectCourseOutline:output_type -> mirai.v1.RejectCourseOutlineResponse
-	10, // 47: mirai.v1.AIGenerationService.UpdateCourseOutline:output_type -> mirai.v1.UpdateCourseOutlineResponse
-	12, // 48: mirai.v1.AIGenerationService.GenerateLessonContent:output_type -> mirai.v1.GenerateLessonContentResponse
-	14, // 49: mirai.v1.AIGenerationService.GenerateAllLessons:output_type -> mirai.v1.GenerateAllLessonsResponse
-	16, // 50: mirai.v1.AIGenerationService.RegenerateComponent:output_type -> mirai.v1.RegenerateComponentResponse
-	18, // 51: mirai.v1.AIGenerationService.GetJob:output_type -> mirai.v1.GetJobResponse
-	20, // 52: mirai.v1.AIGenerationService.ListJobs:output_type -> mirai.v1.ListJobsResponse
-	22, // 53: mirai.v1.AIGenerationService.CancelJob:output_type -> mirai.v1.CancelJobResponse
-	24, // 54: mirai.v1.AIGenerationService.GetGeneratedLesson:output_type -> mirai.v1.GetGeneratedLessonResponse
-	26, // 55: mirai.v1.AIGenerationService.ListGeneratedLessons:output_type -> mirai.v1.ListGeneratedLessonsResponse
-	28, // 56: mirai.v1.AIGenerationService.GenerateComponentImage:output_type -> mirai.v1.GenerateComponentImageResponse
-	30, // 57: mirai.v1.AIGenerationService.UpdateLessonComponents:output_type -> mirai.v1.UpdateLessonComponentsResponse
-	32, // 58: mirai.v1.AIGenerationService.SubscribeJobs:output_type -> mirai.v1.SubscribeJobsResponse
-	43, // [43:59] is the sub-list for method output_type
-	27, // [27:43] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	42, // 7: mirai.v1.ApproveCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
+	42, // 8: mirai.v1.RejectCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
+	43, // 9: mirai.v1.UpdateCourseOutlineRequest.sections:type_name -> mirai.v1.OutlineSection
+	42, // 10: mirai.v1.UpdateCourseOutlineResponse.outline:type_name -> mirai.v1.CourseOutline
+	41, // 11: mirai.v1.GenerateLessonContentResponse.job:type_name -> mirai.v1.GenerationJob
+	41, // 12: mirai.v1.GenerateAllLessonsResponse.job:type_name -> mirai.v1.GenerationJob
+	44, // 13: mirai.v1.RegenerateComponentRequest.alignment_targets:type_name -> mirai.v1.ComponentAlignmentTargets
+	41, // 14: mirai.v1.RegenerateComponentResponse.job:type_name -> mirai.v1.GenerationJob
+	41, // 15: mirai.v1.GetJobResponse.job:type_name -> mirai.v1.GenerationJob
+	45, // 16: mirai.v1.ListJobsRequest.type:type_name -> mirai.v1.GenerationJobType
+	46, // 17: mirai.v1.ListJobsRequest.status:type_name -> mirai.v1.GenerationJobStatus
+	41, // 18: mirai.v1.ListJobsResponse.jobs:type_name -> mirai.v1.GenerationJob
+	41, // 19: mirai.v1.CancelJobResponse.job:type_name -> mirai.v1.GenerationJob
+	47, // 20: mirai.v1.GetGeneratedLessonResponse.lesson:type_name -> mirai.v1.GeneratedLesson
+	47, // 21: mirai.v1.ListGeneratedLessonsResponse.lessons:type_name -> mirai.v1.GeneratedLesson
+	48, // 22: mirai.v1.GenerateComponentImageResponse.component:type_name -> mirai.v1.LessonComponent
+	48, // 23: mirai.v1.UpdateLessonComponentsRequest.components:type_name -> mirai.v1.LessonComponent
+	47, // 24: mirai.v1.UpdateLessonComponentsResponse.lesson:type_name -> mirai.v1.GeneratedLesson
+	49, // 25: mirai.v1.SubscribeJobsResponse.event_type:type_name -> mirai.v1.JobEventType
+	41, // 26: mirai.v1.SubscribeJobsResponse.job:type_name -> mirai.v1.GenerationJob
+	50, // 27: mirai.v1.GetCoursePlanResponse.plan:type_name -> mirai.v1.CoursePlan
+	50, // 28: mirai.v1.ApproveCoursePlanResponse.plan:type_name -> mirai.v1.CoursePlan
+	1,  // 29: mirai.v1.AIGenerationService.GenerateCourseOutline:input_type -> mirai.v1.GenerateCourseOutlineRequest
+	3,  // 30: mirai.v1.AIGenerationService.GetCourseOutline:input_type -> mirai.v1.GetCourseOutlineRequest
+	5,  // 31: mirai.v1.AIGenerationService.ApproveCourseOutline:input_type -> mirai.v1.ApproveCourseOutlineRequest
+	7,  // 32: mirai.v1.AIGenerationService.RejectCourseOutline:input_type -> mirai.v1.RejectCourseOutlineRequest
+	9,  // 33: mirai.v1.AIGenerationService.UpdateCourseOutline:input_type -> mirai.v1.UpdateCourseOutlineRequest
+	11, // 34: mirai.v1.AIGenerationService.GenerateLessonContent:input_type -> mirai.v1.GenerateLessonContentRequest
+	13, // 35: mirai.v1.AIGenerationService.GenerateAllLessons:input_type -> mirai.v1.GenerateAllLessonsRequest
+	15, // 36: mirai.v1.AIGenerationService.RegenerateComponent:input_type -> mirai.v1.RegenerateComponentRequest
+	17, // 37: mirai.v1.AIGenerationService.GetJob:input_type -> mirai.v1.GetJobRequest
+	19, // 38: mirai.v1.AIGenerationService.ListJobs:input_type -> mirai.v1.ListJobsRequest
+	21, // 39: mirai.v1.AIGenerationService.CancelJob:input_type -> mirai.v1.CancelJobRequest
+	23, // 40: mirai.v1.AIGenerationService.GetGeneratedLesson:input_type -> mirai.v1.GetGeneratedLessonRequest
+	25, // 41: mirai.v1.AIGenerationService.ListGeneratedLessons:input_type -> mirai.v1.ListGeneratedLessonsRequest
+	27, // 42: mirai.v1.AIGenerationService.GenerateComponentImage:input_type -> mirai.v1.GenerateComponentImageRequest
+	29, // 43: mirai.v1.AIGenerationService.UpdateLessonComponents:input_type -> mirai.v1.UpdateLessonComponentsRequest
+	31, // 44: mirai.v1.AIGenerationService.SubscribeJobs:input_type -> mirai.v1.SubscribeJobsRequest
+	33, // 45: mirai.v1.AIGenerationService.GetCoursePlan:input_type -> mirai.v1.GetCoursePlanRequest
+	35, // 46: mirai.v1.AIGenerationService.ApproveCoursePlan:input_type -> mirai.v1.ApproveCoursePlanRequest
+	2,  // 47: mirai.v1.AIGenerationService.GenerateCourseOutline:output_type -> mirai.v1.GenerateCourseOutlineResponse
+	4,  // 48: mirai.v1.AIGenerationService.GetCourseOutline:output_type -> mirai.v1.GetCourseOutlineResponse
+	6,  // 49: mirai.v1.AIGenerationService.ApproveCourseOutline:output_type -> mirai.v1.ApproveCourseOutlineResponse
+	8,  // 50: mirai.v1.AIGenerationService.RejectCourseOutline:output_type -> mirai.v1.RejectCourseOutlineResponse
+	10, // 51: mirai.v1.AIGenerationService.UpdateCourseOutline:output_type -> mirai.v1.UpdateCourseOutlineResponse
+	12, // 52: mirai.v1.AIGenerationService.GenerateLessonContent:output_type -> mirai.v1.GenerateLessonContentResponse
+	14, // 53: mirai.v1.AIGenerationService.GenerateAllLessons:output_type -> mirai.v1.GenerateAllLessonsResponse
+	16, // 54: mirai.v1.AIGenerationService.RegenerateComponent:output_type -> mirai.v1.RegenerateComponentResponse
+	18, // 55: mirai.v1.AIGenerationService.GetJob:output_type -> mirai.v1.GetJobResponse
+	20, // 56: mirai.v1.AIGenerationService.ListJobs:output_type -> mirai.v1.ListJobsResponse
+	22, // 57: mirai.v1.AIGenerationService.CancelJob:output_type -> mirai.v1.CancelJobResponse
+	24, // 58: mirai.v1.AIGenerationService.GetGeneratedLesson:output_type -> mirai.v1.GetGeneratedLessonResponse
+	26, // 59: mirai.v1.AIGenerationService.ListGeneratedLessons:output_type -> mirai.v1.ListGeneratedLessonsResponse
+	28, // 60: mirai.v1.AIGenerationService.GenerateComponentImage:output_type -> mirai.v1.GenerateComponentImageResponse
+	30, // 61: mirai.v1.AIGenerationService.UpdateLessonComponents:output_type -> mirai.v1.UpdateLessonComponentsResponse
+	32, // 62: mirai.v1.AIGenerationService.SubscribeJobs:output_type -> mirai.v1.SubscribeJobsResponse
+	34, // 63: mirai.v1.AIGenerationService.GetCoursePlan:output_type -> mirai.v1.GetCoursePlanResponse
+	36, // 64: mirai.v1.AIGenerationService.ApproveCoursePlan:output_type -> mirai.v1.ApproveCoursePlanResponse
+	47, // [47:65] is the sub-list for method output_type
+	29, // [29:47] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_ai_generation_service_proto_init() }
@@ -1958,7 +2156,7 @@ func file_mirai_v1_ai_generation_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_ai_generation_service_proto_rawDesc), len(file_mirai_v1_ai_generation_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

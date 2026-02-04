@@ -246,11 +246,15 @@ func (s *AIGenerationServiceServer) UpdateCourseOutline(
 		}
 
 		sections[i] = service.UpdateCourseOutlineSection{
-			ID:          sectionID,
-			Title:       protoSection.Title,
-			Description: protoSection.Description,
-			Order:       protoSection.Order,
-			Lessons:     lessons,
+			ID:               sectionID,
+			Title:            protoSection.Title,
+			Description:      protoSection.Description,
+			Order:            protoSection.Order,
+			Lessons:          lessons,
+			MappedOutcomeIDs: protoSection.MappedOutcomeIds,
+			Level:            sectionLevelToString(protoSection.Level),
+			Intent:           sectionIntentToString(protoSection.Intent),
+			Emphasis:         sectionEmphasisToString(protoSection.Emphasis),
 		}
 	}
 
@@ -708,6 +712,66 @@ func (s *AIGenerationServiceServer) UpdateLessonComponents(
 	}), nil
 }
 
+// GetCoursePlan retrieves the course plan for a course.
+func (s *AIGenerationServiceServer) GetCoursePlan(
+	ctx context.Context,
+	req *connect.Request[v1.GetCoursePlanRequest],
+) (*connect.Response[v1.GetCoursePlanResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	courseID, err := parseUUID(req.Msg.CourseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	result, err := s.aiService.GetCoursePlan(ctx, kratosID, courseID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.GetCoursePlanResponse{
+		Plan: s3CoursePlanToProto(result.Plan),
+	}), nil
+}
+
+// ApproveCoursePlan marks the course plan as approved.
+func (s *AIGenerationServiceServer) ApproveCoursePlan(
+	ctx context.Context,
+	req *connect.Request[v1.ApproveCoursePlanRequest],
+) (*connect.Response[v1.ApproveCoursePlanResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	courseID, err := parseUUID(req.Msg.CourseId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	result, err := s.aiService.ApproveCoursePlan(ctx, kratosID, courseID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.ApproveCoursePlanResponse{
+		Plan: s3CoursePlanToProto(result.Plan),
+	}), nil
+}
+
 // SubscribeJobs opens a server-streaming connection for real-time job events.
 func (s *AIGenerationServiceServer) SubscribeJobs(
 	ctx context.Context,
@@ -859,10 +923,16 @@ func outlineSectionToProto(section *entity.OutlineSection) *v1.OutlineSection {
 	}
 
 	proto := &v1.OutlineSection{
-		Id:          section.ID.String(),
-		Title:       section.Title,
-		Description: section.Description,
-		Order:       section.Position,
+		Id:                   section.ID.String(),
+		Title:                section.Title,
+		Description:          section.Description,
+		Order:                section.Position,
+		MappedOutcomeIds:     section.MappedOutcomeIDs,
+		GroundingScore:       section.GroundingScore,
+		ContributingChunkIds: section.ContributingChunkIDs,
+		Level:                stringToSectionLevel(section.Level),
+		Intent:               stringToSectionIntent(section.Intent),
+		Emphasis:             stringToSectionEmphasis(section.Emphasis),
 	}
 
 	proto.Lessons = make([]*v1.OutlineLesson, len(section.Lessons))
@@ -871,6 +941,84 @@ func outlineSectionToProto(section *entity.OutlineSection) *v1.OutlineSection {
 	}
 
 	return proto
+}
+
+func stringToSectionLevel(s string) v1.SectionLevel {
+	switch s {
+	case "introduce":
+		return v1.SectionLevel_SECTION_LEVEL_INTRODUCE
+	case "develop":
+		return v1.SectionLevel_SECTION_LEVEL_DEVELOP
+	case "master":
+		return v1.SectionLevel_SECTION_LEVEL_MASTER
+	default:
+		return v1.SectionLevel_SECTION_LEVEL_UNSPECIFIED
+	}
+}
+
+func stringToSectionIntent(s string) v1.SectionIntent {
+	switch s {
+	case "teach":
+		return v1.SectionIntent_SECTION_INTENT_TEACH
+	case "assess":
+		return v1.SectionIntent_SECTION_INTENT_ASSESS
+	case "reinforce":
+		return v1.SectionIntent_SECTION_INTENT_REINFORCE
+	default:
+		return v1.SectionIntent_SECTION_INTENT_UNSPECIFIED
+	}
+}
+
+func stringToSectionEmphasis(s string) v1.SectionEmphasis {
+	switch s {
+	case "low":
+		return v1.SectionEmphasis_SECTION_EMPHASIS_LOW
+	case "medium":
+		return v1.SectionEmphasis_SECTION_EMPHASIS_MEDIUM
+	case "high":
+		return v1.SectionEmphasis_SECTION_EMPHASIS_HIGH
+	default:
+		return v1.SectionEmphasis_SECTION_EMPHASIS_UNSPECIFIED
+	}
+}
+
+func sectionLevelToString(l v1.SectionLevel) string {
+	switch l {
+	case v1.SectionLevel_SECTION_LEVEL_INTRODUCE:
+		return "introduce"
+	case v1.SectionLevel_SECTION_LEVEL_DEVELOP:
+		return "develop"
+	case v1.SectionLevel_SECTION_LEVEL_MASTER:
+		return "master"
+	default:
+		return ""
+	}
+}
+
+func sectionIntentToString(i v1.SectionIntent) string {
+	switch i {
+	case v1.SectionIntent_SECTION_INTENT_TEACH:
+		return "teach"
+	case v1.SectionIntent_SECTION_INTENT_ASSESS:
+		return "assess"
+	case v1.SectionIntent_SECTION_INTENT_REINFORCE:
+		return "reinforce"
+	default:
+		return ""
+	}
+}
+
+func sectionEmphasisToString(e v1.SectionEmphasis) string {
+	switch e {
+	case v1.SectionEmphasis_SECTION_EMPHASIS_LOW:
+		return "low"
+	case v1.SectionEmphasis_SECTION_EMPHASIS_MEDIUM:
+		return "medium"
+	case v1.SectionEmphasis_SECTION_EMPHASIS_HIGH:
+		return "high"
+	default:
+		return ""
+	}
 }
 
 func outlineLessonToProto(lesson *entity.OutlineLesson) *v1.OutlineLesson {
@@ -968,13 +1116,21 @@ func generatedLessonToProto(lesson *entity.GeneratedLesson) *v1.GeneratedLesson 
 	}
 
 	proto := &v1.GeneratedLesson{
-		Id:              lesson.ID.String(),
-		CourseId:        lesson.CourseID.String(),
-		SectionId:       lesson.SectionID.String(),
-		OutlineLessonId: lesson.OutlineLessonID.String(),
-		Title:           lesson.Title,
-		SegueText:       lesson.SegueText,
-		GeneratedAt:     timestamppb.New(lesson.GeneratedAt),
+		Id:                lesson.ID.String(),
+		CourseId:          lesson.CourseID.String(),
+		SectionId:         lesson.SectionID.String(),
+		OutlineLessonId:   lesson.OutlineLessonID.String(),
+		Title:             lesson.Title,
+		SegueText:         lesson.SegueText,
+		GeneratedAt:       timestamppb.New(lesson.GeneratedAt),
+		GroundingScore:    lesson.GroundingScore,
+		SourceCount:       lesson.SourceCount,
+		GroundedTokenCount: lesson.GroundedTokens,
+		TotalTokenCount:   lesson.TotalTokens,
+	}
+
+	if lesson.AggregateProvenance != nil {
+		proto.AggregateProvenance = lessonProvenanceToProto(lesson.AggregateProvenance)
 	}
 
 	proto.Components = make([]*v1.LessonComponent, len(lesson.Components))
@@ -1003,7 +1159,51 @@ func lessonComponentToProto(comp *entity.LessonComponent) *v1.LessonComponent {
 		}
 	}
 
+	if comp.Provenance != nil {
+		proto.Provenance = componentProvenanceToProto(comp.Provenance)
+	}
+
 	return proto
+}
+
+func componentProvenanceToProto(prov *entity.ComponentProvenance) *v1.ComponentProvenance {
+	if prov == nil {
+		return nil
+	}
+	proto := &v1.ComponentProvenance{
+		Queries:      prov.Queries,
+		TeamTokens:   prov.TeamTokens,
+		GlobalTokens: prov.GlobalTokens,
+		CourseTokens: prov.CourseTokens,
+		TotalTokens:  prov.TotalTokens,
+		GeneratedAt:  timestamppb.New(prov.GeneratedAt),
+	}
+	for _, chunk := range prov.SourceChunks {
+		proto.SourceChunks = append(proto.SourceChunks, &v1.ProvenanceChunk{
+			ChunkId:         chunk.ChunkID,
+			SourceId:        chunk.SourceID,
+			SourceName:      chunk.SourceName,
+			Excerpt:         chunk.Excerpt,
+			SimilarityScore: chunk.SimilarityScore,
+			Scope:           chunk.Scope,
+		})
+	}
+	return proto
+}
+
+func lessonProvenanceToProto(prov *entity.LessonProvenance) *v1.LessonProvenance {
+	if prov == nil {
+		return nil
+	}
+	return &v1.LessonProvenance{
+		GroundingScore:   prov.GroundingScore,
+		TeamTokens:       prov.TeamTokens,
+		GlobalTokens:     prov.GlobalTokens,
+		CourseTokens:     prov.CourseTokens,
+		UngroundedTokens: prov.UngroundedTokens,
+		TotalTokens:      prov.TotalTokens,
+		SourceCount:      prov.SourceCount,
+	}
 }
 
 func uuidsToStrings(ids []uuid.UUID) []string {
@@ -1019,6 +1219,8 @@ func uuidsToStrings(ids []uuid.UUID) []string {
 
 func generationJobTypeToProto(t valueobject.GenerationJobType) v1.GenerationJobType {
 	switch t {
+	case valueobject.GenerationJobTypeCoursePlanning:
+		return v1.GenerationJobType_GENERATION_JOB_TYPE_COURSE_PLANNING
 	case valueobject.GenerationJobTypeCourseOutline:
 		return v1.GenerationJobType_GENERATION_JOB_TYPE_COURSE_OUTLINE
 	case valueobject.GenerationJobTypeLessonContent:
@@ -1032,6 +1234,8 @@ func generationJobTypeToProto(t valueobject.GenerationJobType) v1.GenerationJobT
 
 func protoToGenerationJobType(t v1.GenerationJobType) valueobject.GenerationJobType {
 	switch t {
+	case v1.GenerationJobType_GENERATION_JOB_TYPE_COURSE_PLANNING:
+		return valueobject.GenerationJobTypeCoursePlanning
 	case v1.GenerationJobType_GENERATION_JOB_TYPE_COURSE_OUTLINE:
 		return valueobject.GenerationJobTypeCourseOutline
 	case v1.GenerationJobType_GENERATION_JOB_TYPE_LESSON_CONTENT:
@@ -1156,4 +1360,67 @@ func protoToLessonComponentType(t v1.LessonComponentType) valueobject.LessonComp
 	default:
 		return valueobject.LessonComponentTypeText // Default to text
 	}
+}
+
+// s3CoursePlanToProto converts S3CoursePlan to proto CoursePlan.
+func s3CoursePlanToProto(plan *service.S3CoursePlan) *v1.CoursePlan {
+	if plan == nil {
+		return nil
+	}
+
+	proto := &v1.CoursePlan{
+		Status:      plan.Status,
+		GeneratedAt: timestamppb.New(plan.GeneratedAt),
+		TokensUsed:  plan.TokensUsed,
+	}
+
+	if plan.ApprovedAt != nil {
+		proto.ApprovedAt = timestamppb.New(*plan.ApprovedAt)
+	}
+
+	// Convert document analyses
+	proto.DocumentAnalyses = make([]*v1.DocumentAnalysis, len(plan.DocumentAnalyses))
+	for i, da := range plan.DocumentAnalyses {
+		protoDA := &v1.DocumentAnalysis{
+			SourceId:     da.SourceID,
+			SourceName:   da.SourceName,
+			Summary:      da.Summary,
+			MainTopics:   da.MainTopics,
+			KeyFacts:     da.KeyFacts,
+			ContentDepth: da.ContentDepth,
+		}
+		protoDA.SectionHints = make([]*v1.SectionHint, len(da.SectionHints))
+		for j, hint := range da.SectionHints {
+			protoDA.SectionHints[j] = &v1.SectionHint{
+				TopicName:   hint.TopicName,
+				SearchTerms: hint.SearchTerms,
+				KeyPoints:   hint.KeyPoints,
+			}
+		}
+		proto.DocumentAnalyses[i] = protoDA
+	}
+
+	// Convert planned sections
+	proto.PlannedSections = make([]*v1.PlannedSection, len(plan.PlannedSections))
+	for i, ps := range plan.PlannedSections {
+		protoPS := &v1.PlannedSection{
+			Title:       ps.Title,
+			Description: ps.Description,
+			SearchTerms: ps.SearchTerms,
+			SourceIds:   ps.SourceIDs,
+			Rationale:   ps.Rationale,
+		}
+		protoPS.Lessons = make([]*v1.PlannedLesson, len(ps.Lessons))
+		for j, pl := range ps.Lessons {
+			protoPS.Lessons[j] = &v1.PlannedLesson{
+				Title:         pl.Title,
+				Description:   pl.Description,
+				SearchTerms:   pl.SearchTerms,
+				LearningGoals: pl.LearningGoals,
+			}
+		}
+		proto.PlannedSections[i] = protoPS
+	}
+
+	return proto
 }

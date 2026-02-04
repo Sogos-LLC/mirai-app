@@ -126,6 +126,53 @@ type S3CourseContent struct {
 	GeneratedLessons   []GeneratedLesson   `json:"generatedLessons,omitempty"`
 	CurriculumMap      *CurriculumMap      `json:"curriculumMap,omitempty"`
 	OutlineProvenance  *OutlineProvenance  `json:"outlineProvenance,omitempty"`
+	CoursePlan         *CoursePlan         `json:"coursePlan,omitempty"`
+}
+
+// CoursePlan is the AI-generated course structure plan stored in S3.
+type CoursePlan struct {
+	DocumentAnalyses []DocumentAnalysis `json:"documentAnalyses"`
+	PlannedSections  []PlannedSection   `json:"plannedSections"`
+	Status           string             `json:"status"` // "pending_review", "approved"
+	GeneratedAt      time.Time          `json:"generatedAt"`
+	ApprovedAt       *time.Time         `json:"approvedAt,omitempty"`
+	TokensUsed       int64              `json:"tokensUsed"`
+}
+
+// DocumentAnalysis is Gemini's structured summary of one knowledge source.
+type DocumentAnalysis struct {
+	SourceID     string        `json:"sourceId"`
+	SourceName   string        `json:"sourceName"`
+	Summary      string        `json:"summary"`
+	MainTopics   []string      `json:"mainTopics"`
+	KeyFacts     []string      `json:"keyFacts"`
+	ContentDepth string        `json:"contentDepth"` // basic/intermediate/advanced
+	SectionHints []SectionHint `json:"sectionHints"`
+}
+
+// SectionHint is a suggested course section derived from one document.
+type SectionHint struct {
+	TopicName   string   `json:"topicName"`
+	SearchTerms []string `json:"searchTerms"`
+	KeyPoints   []string `json:"keyPoints"`
+}
+
+// PlannedSection is a planned course section with targeted search terms.
+type PlannedSection struct {
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	SearchTerms []string        `json:"searchTerms"`
+	SourceIDs   []string        `json:"sourceIds"`
+	Lessons     []PlannedLesson `json:"lessons"`
+	Rationale   string          `json:"rationale"`
+}
+
+// PlannedLesson is a planned lesson with its own search terms.
+type PlannedLesson struct {
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	SearchTerms   []string `json:"searchTerms"`
+	LearningGoals []string `json:"learningGoals"`
 }
 
 // GeneratedLesson represents a generated lesson stored in content.json.

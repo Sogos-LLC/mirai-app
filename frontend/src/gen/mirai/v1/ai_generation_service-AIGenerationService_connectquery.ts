@@ -78,3 +78,13 @@ export const generateComponentImage = AIGenerationService.method.generateCompone
  * @generated from rpc mirai.v1.AIGenerationService.UpdateLessonComponents
  */
 export const updateLessonComponents = AIGenerationService.method.updateLessonComponents;
+
+/**
+ * @generated from rpc mirai.v1.AIGenerationService.GetCoursePlan
+ */
+export const getCoursePlan = AIGenerationService.method.getCoursePlan;
+
+/**
+ * @generated from rpc mirai.v1.AIGenerationService.ApproveCoursePlan
+ */
+export const approveCoursePlan = AIGenerationService.method.approveCoursePlan;

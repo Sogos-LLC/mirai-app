@@ -31,6 +31,7 @@ const (
 	GenerationJobType_GENERATION_JOB_TYPE_LESSON_CONTENT  GenerationJobType = 3
 	GenerationJobType_GENERATION_JOB_TYPE_COMPONENT_REGEN GenerationJobType = 4
 	GenerationJobType_GENERATION_JOB_TYPE_FULL_COURSE     GenerationJobType = 5
+	GenerationJobType_GENERATION_JOB_TYPE_COURSE_PLANNING GenerationJobType = 6
 )
 
 // Enum value maps for GenerationJobType.
@@ -41,6 +42,7 @@ var (
 		3: "GENERATION_JOB_TYPE_LESSON_CONTENT",
 		4: "GENERATION_JOB_TYPE_COMPONENT_REGEN",
 		5: "GENERATION_JOB_TYPE_FULL_COURSE",
+		6: "GENERATION_JOB_TYPE_COURSE_PLANNING",
 	}
 	GenerationJobType_value = map[string]int32{
 		"GENERATION_JOB_TYPE_UNSPECIFIED":     0,
@@ -48,6 +50,7 @@ var (
 		"GENERATION_JOB_TYPE_LESSON_CONTENT":  3,
 		"GENERATION_JOB_TYPE_COMPONENT_REGEN": 4,
 		"GENERATION_JOB_TYPE_FULL_COURSE":     5,
+		"GENERATION_JOB_TYPE_COURSE_PLANNING": 6,
 	}
 )
 
@@ -993,12 +996,13 @@ type GeneratedLesson struct {
 	SegueText       *string                `protobuf:"bytes,7,opt,name=segue_text,json=segueText,proto3,oneof" json:"segue_text,omitempty"`
 	GeneratedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=generated_at,json=generatedAt,proto3" json:"generated_at,omitempty"`
 	// Provenance tracking
-	GroundingScore     float32 `protobuf:"fixed32,9,opt,name=grounding_score,json=groundingScore,proto3" json:"grounding_score,omitempty"`               // Aggregate grounding across components (0.0-1.0)
-	SourceCount        int32   `protobuf:"varint,10,opt,name=source_count,json=sourceCount,proto3" json:"source_count,omitempty"`                        // Number of knowledge sources used
-	GroundedTokenCount int32   `protobuf:"varint,11,opt,name=grounded_token_count,json=groundedTokenCount,proto3" json:"grounded_token_count,omitempty"` // Tokens from knowledge sources
-	TotalTokenCount    int32   `protobuf:"varint,12,opt,name=total_token_count,json=totalTokenCount,proto3" json:"total_token_count,omitempty"`          // Total tokens in lesson
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	GroundingScore      float32           `protobuf:"fixed32,9,opt,name=grounding_score,json=groundingScore,proto3" json:"grounding_score,omitempty"`               // Aggregate grounding across components (0.0-1.0)
+	SourceCount         int32             `protobuf:"varint,10,opt,name=source_count,json=sourceCount,proto3" json:"source_count,omitempty"`                        // Number of knowledge sources used
+	GroundedTokenCount  int32             `protobuf:"varint,11,opt,name=grounded_token_count,json=groundedTokenCount,proto3" json:"grounded_token_count,omitempty"` // Tokens from knowledge sources
+	TotalTokenCount     int32             `protobuf:"varint,12,opt,name=total_token_count,json=totalTokenCount,proto3" json:"total_token_count,omitempty"`          // Total tokens in lesson
+	AggregateProvenance *LessonProvenance `protobuf:"bytes,13,opt,name=aggregate_provenance,json=aggregateProvenance,proto3,oneof" json:"aggregate_provenance,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GeneratedLesson) Reset() {
@@ -1115,6 +1119,13 @@ func (x *GeneratedLesson) GetTotalTokenCount() int32 {
 	return 0
 }
 
+func (x *GeneratedLesson) GetAggregateProvenance() *LessonProvenance {
+	if x != nil {
+		return x.AggregateProvenance
+	}
+	return nil
+}
+
 // LessonComponent represents a content component in a lesson.
 type LessonComponent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1123,6 +1134,7 @@ type LessonComponent struct {
 	Order         int32                  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`
 	ContentJson   string                 `protobuf:"bytes,4,opt,name=content_json,json=contentJson,proto3" json:"content_json,omitempty"` // JSON string matching component_content.proto types
 	Alignment     *ComponentAlignment    `protobuf:"bytes,5,opt,name=alignment,proto3,oneof" json:"alignment,omitempty"`
+	Provenance    *ComponentProvenance   `protobuf:"bytes,6,opt,name=provenance,proto3,oneof" json:"provenance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1192,6 +1204,13 @@ func (x *LessonComponent) GetAlignment() *ComponentAlignment {
 	return nil
 }
 
+func (x *LessonComponent) GetProvenance() *ComponentProvenance {
+	if x != nil {
+		return x.Provenance
+	}
+	return nil
+}
+
 // ComponentAlignment tracks what knowledge/objectives a component addresses.
 type ComponentAlignment struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
@@ -1237,6 +1256,277 @@ func (x *ComponentAlignment) GetLearningObjectiveIds() []string {
 	return nil
 }
 
+// ComponentProvenance tracks which knowledge sources contributed to a component.
+type ComponentProvenance struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourceChunks  []*ProvenanceChunk     `protobuf:"bytes,1,rep,name=source_chunks,json=sourceChunks,proto3" json:"source_chunks,omitempty"`
+	Queries       []string               `protobuf:"bytes,2,rep,name=queries,proto3" json:"queries,omitempty"`
+	TeamTokens    int32                  `protobuf:"varint,3,opt,name=team_tokens,json=teamTokens,proto3" json:"team_tokens,omitempty"`
+	GlobalTokens  int32                  `protobuf:"varint,4,opt,name=global_tokens,json=globalTokens,proto3" json:"global_tokens,omitempty"`
+	CourseTokens  int32                  `protobuf:"varint,5,opt,name=course_tokens,json=courseTokens,proto3" json:"course_tokens,omitempty"`
+	TotalTokens   int32                  `protobuf:"varint,6,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	GeneratedAt   *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=generated_at,json=generatedAt,proto3" json:"generated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ComponentProvenance) Reset() {
+	*x = ComponentProvenance{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ComponentProvenance) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ComponentProvenance) ProtoMessage() {}
+
+func (x *ComponentProvenance) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ComponentProvenance.ProtoReflect.Descriptor instead.
+func (*ComponentProvenance) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ComponentProvenance) GetSourceChunks() []*ProvenanceChunk {
+	if x != nil {
+		return x.SourceChunks
+	}
+	return nil
+}
+
+func (x *ComponentProvenance) GetQueries() []string {
+	if x != nil {
+		return x.Queries
+	}
+	return nil
+}
+
+func (x *ComponentProvenance) GetTeamTokens() int32 {
+	if x != nil {
+		return x.TeamTokens
+	}
+	return 0
+}
+
+func (x *ComponentProvenance) GetGlobalTokens() int32 {
+	if x != nil {
+		return x.GlobalTokens
+	}
+	return 0
+}
+
+func (x *ComponentProvenance) GetCourseTokens() int32 {
+	if x != nil {
+		return x.CourseTokens
+	}
+	return 0
+}
+
+func (x *ComponentProvenance) GetTotalTokens() int32 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *ComponentProvenance) GetGeneratedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.GeneratedAt
+	}
+	return nil
+}
+
+// ProvenanceChunk represents a knowledge chunk that contributed to generated content.
+type ProvenanceChunk struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ChunkId         string                 `protobuf:"bytes,1,opt,name=chunk_id,json=chunkId,proto3" json:"chunk_id,omitempty"`
+	SourceId        string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	SourceName      string                 `protobuf:"bytes,3,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	Excerpt         string                 `protobuf:"bytes,4,opt,name=excerpt,proto3" json:"excerpt,omitempty"`
+	SimilarityScore float32                `protobuf:"fixed32,5,opt,name=similarity_score,json=similarityScore,proto3" json:"similarity_score,omitempty"`
+	Scope           string                 `protobuf:"bytes,6,opt,name=scope,proto3" json:"scope,omitempty"` // "course", "team", "global"
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ProvenanceChunk) Reset() {
+	*x = ProvenanceChunk{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProvenanceChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProvenanceChunk) ProtoMessage() {}
+
+func (x *ProvenanceChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProvenanceChunk.ProtoReflect.Descriptor instead.
+func (*ProvenanceChunk) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ProvenanceChunk) GetChunkId() string {
+	if x != nil {
+		return x.ChunkId
+	}
+	return ""
+}
+
+func (x *ProvenanceChunk) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *ProvenanceChunk) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+func (x *ProvenanceChunk) GetExcerpt() string {
+	if x != nil {
+		return x.Excerpt
+	}
+	return ""
+}
+
+func (x *ProvenanceChunk) GetSimilarityScore() float32 {
+	if x != nil {
+		return x.SimilarityScore
+	}
+	return 0
+}
+
+func (x *ProvenanceChunk) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
+// LessonProvenance aggregates provenance across all components in a lesson.
+type LessonProvenance struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	GroundingScore   float32                `protobuf:"fixed32,1,opt,name=grounding_score,json=groundingScore,proto3" json:"grounding_score,omitempty"`
+	TeamTokens       int32                  `protobuf:"varint,2,opt,name=team_tokens,json=teamTokens,proto3" json:"team_tokens,omitempty"`
+	GlobalTokens     int32                  `protobuf:"varint,3,opt,name=global_tokens,json=globalTokens,proto3" json:"global_tokens,omitempty"`
+	CourseTokens     int32                  `protobuf:"varint,4,opt,name=course_tokens,json=courseTokens,proto3" json:"course_tokens,omitempty"`
+	UngroundedTokens int32                  `protobuf:"varint,5,opt,name=ungrounded_tokens,json=ungroundedTokens,proto3" json:"ungrounded_tokens,omitempty"`
+	TotalTokens      int32                  `protobuf:"varint,6,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	SourceCount      int32                  `protobuf:"varint,7,opt,name=source_count,json=sourceCount,proto3" json:"source_count,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *LessonProvenance) Reset() {
+	*x = LessonProvenance{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LessonProvenance) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LessonProvenance) ProtoMessage() {}
+
+func (x *LessonProvenance) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LessonProvenance.ProtoReflect.Descriptor instead.
+func (*LessonProvenance) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *LessonProvenance) GetGroundingScore() float32 {
+	if x != nil {
+		return x.GroundingScore
+	}
+	return 0
+}
+
+func (x *LessonProvenance) GetTeamTokens() int32 {
+	if x != nil {
+		return x.TeamTokens
+	}
+	return 0
+}
+
+func (x *LessonProvenance) GetGlobalTokens() int32 {
+	if x != nil {
+		return x.GlobalTokens
+	}
+	return 0
+}
+
+func (x *LessonProvenance) GetCourseTokens() int32 {
+	if x != nil {
+		return x.CourseTokens
+	}
+	return 0
+}
+
+func (x *LessonProvenance) GetUngroundedTokens() int32 {
+	if x != nil {
+		return x.UngroundedTokens
+	}
+	return 0
+}
+
+func (x *LessonProvenance) GetTotalTokens() int32 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *LessonProvenance) GetSourceCount() int32 {
+	if x != nil {
+		return x.SourceCount
+	}
+	return 0
+}
+
 // ComponentAlignmentTargets for content regeneration alignment.
 type ComponentAlignmentTargets struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
@@ -1248,7 +1538,7 @@ type ComponentAlignmentTargets struct {
 
 func (x *ComponentAlignmentTargets) Reset() {
 	*x = ComponentAlignmentTargets{}
-	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[7]
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1260,7 +1550,7 @@ func (x *ComponentAlignmentTargets) String() string {
 func (*ComponentAlignmentTargets) ProtoMessage() {}
 
 func (x *ComponentAlignmentTargets) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[7]
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1273,7 +1563,7 @@ func (x *ComponentAlignmentTargets) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentAlignmentTargets.ProtoReflect.Descriptor instead.
 func (*ComponentAlignmentTargets) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{7}
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ComponentAlignmentTargets) GetPersonaIds() []string {
@@ -1302,7 +1592,7 @@ type CourseGenerationInput struct {
 
 func (x *CourseGenerationInput) Reset() {
 	*x = CourseGenerationInput{}
-	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[8]
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1314,7 +1604,7 @@ func (x *CourseGenerationInput) String() string {
 func (*CourseGenerationInput) ProtoMessage() {}
 
 func (x *CourseGenerationInput) ProtoReflect() protoreflect.Message {
-	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[8]
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1327,7 +1617,7 @@ func (x *CourseGenerationInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CourseGenerationInput.ProtoReflect.Descriptor instead.
 func (*CourseGenerationInput) Descriptor() ([]byte, []int) {
-	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{8}
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CourseGenerationInput) GetCourseId() string {
@@ -1349,6 +1639,399 @@ func (x *CourseGenerationInput) GetAdditionalContext() string {
 		return *x.AdditionalContext
 	}
 	return ""
+}
+
+// CoursePlan is the AI-generated course structure plan based on document analysis.
+type CoursePlan struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	DocumentAnalyses []*DocumentAnalysis    `protobuf:"bytes,1,rep,name=document_analyses,json=documentAnalyses,proto3" json:"document_analyses,omitempty"`
+	PlannedSections  []*PlannedSection      `protobuf:"bytes,2,rep,name=planned_sections,json=plannedSections,proto3" json:"planned_sections,omitempty"`
+	Status           string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"` // "pending_review", "approved"
+	GeneratedAt      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=generated_at,json=generatedAt,proto3" json:"generated_at,omitempty"`
+	ApprovedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=approved_at,json=approvedAt,proto3,oneof" json:"approved_at,omitempty"`
+	TokensUsed       int64                  `protobuf:"varint,6,opt,name=tokens_used,json=tokensUsed,proto3" json:"tokens_used,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CoursePlan) Reset() {
+	*x = CoursePlan{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CoursePlan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CoursePlan) ProtoMessage() {}
+
+func (x *CoursePlan) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CoursePlan.ProtoReflect.Descriptor instead.
+func (*CoursePlan) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *CoursePlan) GetDocumentAnalyses() []*DocumentAnalysis {
+	if x != nil {
+		return x.DocumentAnalyses
+	}
+	return nil
+}
+
+func (x *CoursePlan) GetPlannedSections() []*PlannedSection {
+	if x != nil {
+		return x.PlannedSections
+	}
+	return nil
+}
+
+func (x *CoursePlan) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *CoursePlan) GetGeneratedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.GeneratedAt
+	}
+	return nil
+}
+
+func (x *CoursePlan) GetApprovedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ApprovedAt
+	}
+	return nil
+}
+
+func (x *CoursePlan) GetTokensUsed() int64 {
+	if x != nil {
+		return x.TokensUsed
+	}
+	return 0
+}
+
+// DocumentAnalysis is Gemini's structured summary of one knowledge source.
+type DocumentAnalysis struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourceId      string                 `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	SourceName    string                 `protobuf:"bytes,2,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	Summary       string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
+	MainTopics    []string               `protobuf:"bytes,4,rep,name=main_topics,json=mainTopics,proto3" json:"main_topics,omitempty"`
+	KeyFacts      []string               `protobuf:"bytes,5,rep,name=key_facts,json=keyFacts,proto3" json:"key_facts,omitempty"`
+	ContentDepth  string                 `protobuf:"bytes,6,opt,name=content_depth,json=contentDepth,proto3" json:"content_depth,omitempty"`
+	SectionHints  []*SectionHint         `protobuf:"bytes,7,rep,name=section_hints,json=sectionHints,proto3" json:"section_hints,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DocumentAnalysis) Reset() {
+	*x = DocumentAnalysis{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DocumentAnalysis) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DocumentAnalysis) ProtoMessage() {}
+
+func (x *DocumentAnalysis) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DocumentAnalysis.ProtoReflect.Descriptor instead.
+func (*DocumentAnalysis) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *DocumentAnalysis) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *DocumentAnalysis) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+func (x *DocumentAnalysis) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *DocumentAnalysis) GetMainTopics() []string {
+	if x != nil {
+		return x.MainTopics
+	}
+	return nil
+}
+
+func (x *DocumentAnalysis) GetKeyFacts() []string {
+	if x != nil {
+		return x.KeyFacts
+	}
+	return nil
+}
+
+func (x *DocumentAnalysis) GetContentDepth() string {
+	if x != nil {
+		return x.ContentDepth
+	}
+	return ""
+}
+
+func (x *DocumentAnalysis) GetSectionHints() []*SectionHint {
+	if x != nil {
+		return x.SectionHints
+	}
+	return nil
+}
+
+// SectionHint is a suggested course section derived from analyzing a document.
+type SectionHint struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TopicName     string                 `protobuf:"bytes,1,opt,name=topic_name,json=topicName,proto3" json:"topic_name,omitempty"`
+	SearchTerms   []string               `protobuf:"bytes,2,rep,name=search_terms,json=searchTerms,proto3" json:"search_terms,omitempty"`
+	KeyPoints     []string               `protobuf:"bytes,3,rep,name=key_points,json=keyPoints,proto3" json:"key_points,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SectionHint) Reset() {
+	*x = SectionHint{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SectionHint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SectionHint) ProtoMessage() {}
+
+func (x *SectionHint) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SectionHint.ProtoReflect.Descriptor instead.
+func (*SectionHint) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SectionHint) GetTopicName() string {
+	if x != nil {
+		return x.TopicName
+	}
+	return ""
+}
+
+func (x *SectionHint) GetSearchTerms() []string {
+	if x != nil {
+		return x.SearchTerms
+	}
+	return nil
+}
+
+func (x *SectionHint) GetKeyPoints() []string {
+	if x != nil {
+		return x.KeyPoints
+	}
+	return nil
+}
+
+// PlannedSection is a planned course section with targeted RAG search terms.
+type PlannedSection struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	SearchTerms   []string               `protobuf:"bytes,3,rep,name=search_terms,json=searchTerms,proto3" json:"search_terms,omitempty"`
+	SourceIds     []string               `protobuf:"bytes,4,rep,name=source_ids,json=sourceIds,proto3" json:"source_ids,omitempty"`
+	Lessons       []*PlannedLesson       `protobuf:"bytes,5,rep,name=lessons,proto3" json:"lessons,omitempty"`
+	Rationale     string                 `protobuf:"bytes,6,opt,name=rationale,proto3" json:"rationale,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlannedSection) Reset() {
+	*x = PlannedSection{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlannedSection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlannedSection) ProtoMessage() {}
+
+func (x *PlannedSection) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlannedSection.ProtoReflect.Descriptor instead.
+func (*PlannedSection) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *PlannedSection) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *PlannedSection) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PlannedSection) GetSearchTerms() []string {
+	if x != nil {
+		return x.SearchTerms
+	}
+	return nil
+}
+
+func (x *PlannedSection) GetSourceIds() []string {
+	if x != nil {
+		return x.SourceIds
+	}
+	return nil
+}
+
+func (x *PlannedSection) GetLessons() []*PlannedLesson {
+	if x != nil {
+		return x.Lessons
+	}
+	return nil
+}
+
+func (x *PlannedSection) GetRationale() string {
+	if x != nil {
+		return x.Rationale
+	}
+	return ""
+}
+
+// PlannedLesson is a planned lesson with its own search terms for targeted RAG.
+type PlannedLesson struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	SearchTerms   []string               `protobuf:"bytes,3,rep,name=search_terms,json=searchTerms,proto3" json:"search_terms,omitempty"`
+	LearningGoals []string               `protobuf:"bytes,4,rep,name=learning_goals,json=learningGoals,proto3" json:"learning_goals,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlannedLesson) Reset() {
+	*x = PlannedLesson{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlannedLesson) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlannedLesson) ProtoMessage() {}
+
+func (x *PlannedLesson) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlannedLesson.ProtoReflect.Descriptor instead.
+func (*PlannedLesson) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *PlannedLesson) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *PlannedLesson) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PlannedLesson) GetSearchTerms() []string {
+	if x != nil {
+		return x.SearchTerms
+	}
+	return nil
+}
+
+func (x *PlannedLesson) GetLearningGoals() []string {
+	if x != nil {
+		return x.LearningGoals
+	}
+	return nil
 }
 
 var File_mirai_v1_ai_generation_types_proto protoreflect.FileDescriptor
@@ -1434,7 +2117,7 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x11is_last_in_course\x18\n" +
 	" \x01(\bR\x0eisLastInCourse\x129\n" +
 	"\tcitations\x18\v \x03(\v2\x1b.mirai.v1.KnowledgeCitationR\tcitations\x12'\n" +
-	"\x0fgrounding_score\x18\f \x01(\x02R\x0egroundingScore\"\xf6\x03\n" +
+	"\x0fgrounding_score\x18\f \x01(\x02R\x0egroundingScore\"\xe3\x04\n" +
 	"\x0fGeneratedLesson\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12\x1d\n" +
@@ -1452,18 +2135,50 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\fsource_count\x18\n" +
 	" \x01(\x05R\vsourceCount\x120\n" +
 	"\x14grounded_token_count\x18\v \x01(\x05R\x12groundedTokenCount\x12*\n" +
-	"\x11total_token_count\x18\f \x01(\x05R\x0ftotalTokenCountB\r\n" +
-	"\v_segue_text\"\xdc\x01\n" +
+	"\x11total_token_count\x18\f \x01(\x05R\x0ftotalTokenCount\x12R\n" +
+	"\x14aggregate_provenance\x18\r \x01(\v2\x1a.mirai.v1.LessonProvenanceH\x01R\x13aggregateProvenance\x88\x01\x01B\r\n" +
+	"\v_segue_textB\x17\n" +
+	"\x15_aggregate_provenance\"\xaf\x02\n" +
 	"\x0fLessonComponent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1d.mirai.v1.LessonComponentTypeR\x04type\x12\x14\n" +
 	"\x05order\x18\x03 \x01(\x05R\x05order\x12!\n" +
 	"\fcontent_json\x18\x04 \x01(\tR\vcontentJson\x12?\n" +
-	"\talignment\x18\x05 \x01(\v2\x1c.mirai.v1.ComponentAlignmentH\x00R\talignment\x88\x01\x01B\f\n" +
+	"\talignment\x18\x05 \x01(\v2\x1c.mirai.v1.ComponentAlignmentH\x00R\talignment\x88\x01\x01\x12B\n" +
 	"\n" +
-	"_alignment\"J\n" +
+	"provenance\x18\x06 \x01(\v2\x1d.mirai.v1.ComponentProvenanceH\x01R\n" +
+	"provenance\x88\x01\x01B\f\n" +
+	"\n" +
+	"_alignmentB\r\n" +
+	"\v_provenance\"J\n" +
 	"\x12ComponentAlignment\x124\n" +
-	"\x16learning_objective_ids\x18\x02 \x03(\tR\x14learningObjectiveIds\"r\n" +
+	"\x16learning_objective_ids\x18\x02 \x03(\tR\x14learningObjectiveIds\"\xbc\x02\n" +
+	"\x13ComponentProvenance\x12>\n" +
+	"\rsource_chunks\x18\x01 \x03(\v2\x19.mirai.v1.ProvenanceChunkR\fsourceChunks\x12\x18\n" +
+	"\aqueries\x18\x02 \x03(\tR\aqueries\x12\x1f\n" +
+	"\vteam_tokens\x18\x03 \x01(\x05R\n" +
+	"teamTokens\x12#\n" +
+	"\rglobal_tokens\x18\x04 \x01(\x05R\fglobalTokens\x12#\n" +
+	"\rcourse_tokens\x18\x05 \x01(\x05R\fcourseTokens\x12!\n" +
+	"\ftotal_tokens\x18\x06 \x01(\x05R\vtotalTokens\x12=\n" +
+	"\fgenerated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\vgeneratedAt\"\xc5\x01\n" +
+	"\x0fProvenanceChunk\x12\x19\n" +
+	"\bchunk_id\x18\x01 \x01(\tR\achunkId\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x1f\n" +
+	"\vsource_name\x18\x03 \x01(\tR\n" +
+	"sourceName\x12\x18\n" +
+	"\aexcerpt\x18\x04 \x01(\tR\aexcerpt\x12)\n" +
+	"\x10similarity_score\x18\x05 \x01(\x02R\x0fsimilarityScore\x12\x14\n" +
+	"\x05scope\x18\x06 \x01(\tR\x05scope\"\x99\x02\n" +
+	"\x10LessonProvenance\x12'\n" +
+	"\x0fgrounding_score\x18\x01 \x01(\x02R\x0egroundingScore\x12\x1f\n" +
+	"\vteam_tokens\x18\x02 \x01(\x05R\n" +
+	"teamTokens\x12#\n" +
+	"\rglobal_tokens\x18\x03 \x01(\x05R\fglobalTokens\x12#\n" +
+	"\rcourse_tokens\x18\x04 \x01(\x05R\fcourseTokens\x12+\n" +
+	"\x11ungrounded_tokens\x18\x05 \x01(\x05R\x10ungroundedTokens\x12!\n" +
+	"\ftotal_tokens\x18\x06 \x01(\x05R\vtotalTokens\x12!\n" +
+	"\fsource_count\x18\a \x01(\x05R\vsourceCount\"r\n" +
 	"\x19ComponentAlignmentTargets\x12\x1f\n" +
 	"\vpersona_ids\x18\x01 \x03(\tR\n" +
 	"personaIds\x124\n" +
@@ -1472,13 +2187,54 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12'\n" +
 	"\x0fdesired_outcome\x18\x04 \x01(\tR\x0edesiredOutcome\x122\n" +
 	"\x12additional_context\x18\x05 \x01(\tH\x00R\x11additionalContext\x88\x01\x01B\x15\n" +
-	"\x13_additional_context*\xd6\x01\n" +
+	"\x13_additional_context\"\xe4\x02\n" +
+	"\n" +
+	"CoursePlan\x12G\n" +
+	"\x11document_analyses\x18\x01 \x03(\v2\x1a.mirai.v1.DocumentAnalysisR\x10documentAnalyses\x12C\n" +
+	"\x10planned_sections\x18\x02 \x03(\v2\x18.mirai.v1.PlannedSectionR\x0fplannedSections\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12=\n" +
+	"\fgenerated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vgeneratedAt\x12@\n" +
+	"\vapproved_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\n" +
+	"approvedAt\x88\x01\x01\x12\x1f\n" +
+	"\vtokens_used\x18\x06 \x01(\x03R\n" +
+	"tokensUsedB\x0e\n" +
+	"\f_approved_at\"\x89\x02\n" +
+	"\x10DocumentAnalysis\x12\x1b\n" +
+	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12\x1f\n" +
+	"\vsource_name\x18\x02 \x01(\tR\n" +
+	"sourceName\x12\x18\n" +
+	"\asummary\x18\x03 \x01(\tR\asummary\x12\x1f\n" +
+	"\vmain_topics\x18\x04 \x03(\tR\n" +
+	"mainTopics\x12\x1b\n" +
+	"\tkey_facts\x18\x05 \x03(\tR\bkeyFacts\x12#\n" +
+	"\rcontent_depth\x18\x06 \x01(\tR\fcontentDepth\x12:\n" +
+	"\rsection_hints\x18\a \x03(\v2\x15.mirai.v1.SectionHintR\fsectionHints\"n\n" +
+	"\vSectionHint\x12\x1d\n" +
+	"\n" +
+	"topic_name\x18\x01 \x01(\tR\ttopicName\x12!\n" +
+	"\fsearch_terms\x18\x02 \x03(\tR\vsearchTerms\x12\x1d\n" +
+	"\n" +
+	"key_points\x18\x03 \x03(\tR\tkeyPoints\"\xdb\x01\n" +
+	"\x0ePlannedSection\x12\x14\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12!\n" +
+	"\fsearch_terms\x18\x03 \x03(\tR\vsearchTerms\x12\x1d\n" +
+	"\n" +
+	"source_ids\x18\x04 \x03(\tR\tsourceIds\x121\n" +
+	"\alessons\x18\x05 \x03(\v2\x17.mirai.v1.PlannedLessonR\alessons\x12\x1c\n" +
+	"\trationale\x18\x06 \x01(\tR\trationale\"\x91\x01\n" +
+	"\rPlannedLesson\x12\x14\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12!\n" +
+	"\fsearch_terms\x18\x03 \x03(\tR\vsearchTerms\x12%\n" +
+	"\x0elearning_goals\x18\x04 \x03(\tR\rlearningGoals*\xff\x01\n" +
 	"\x11GenerationJobType\x12#\n" +
 	"\x1fGENERATION_JOB_TYPE_UNSPECIFIED\x10\x00\x12&\n" +
 	"\"GENERATION_JOB_TYPE_COURSE_OUTLINE\x10\x02\x12&\n" +
 	"\"GENERATION_JOB_TYPE_LESSON_CONTENT\x10\x03\x12'\n" +
 	"#GENERATION_JOB_TYPE_COMPONENT_REGEN\x10\x04\x12#\n" +
-	"\x1fGENERATION_JOB_TYPE_FULL_COURSE\x10\x05*\xf0\x01\n" +
+	"\x1fGENERATION_JOB_TYPE_FULL_COURSE\x10\x05\x12'\n" +
+	"#GENERATION_JOB_TYPE_COURSE_PLANNING\x10\x06*\xf0\x01\n" +
 	"\x13GenerationJobStatus\x12%\n" +
 	"!GENERATION_JOB_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cGENERATION_JOB_STATUS_QUEUED\x10\x01\x12$\n" +
@@ -1530,7 +2286,7 @@ func file_mirai_v1_ai_generation_types_proto_rawDescGZIP() []byte {
 }
 
 var file_mirai_v1_ai_generation_types_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_mirai_v1_ai_generation_types_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_mirai_v1_ai_generation_types_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_mirai_v1_ai_generation_types_proto_goTypes = []any{
 	(GenerationJobType)(0),            // 0: mirai.v1.GenerationJobType
 	(GenerationJobStatus)(0),          // 1: mirai.v1.GenerationJobStatus
@@ -1546,36 +2302,54 @@ var file_mirai_v1_ai_generation_types_proto_goTypes = []any{
 	(*GeneratedLesson)(nil),           // 11: mirai.v1.GeneratedLesson
 	(*LessonComponent)(nil),           // 12: mirai.v1.LessonComponent
 	(*ComponentAlignment)(nil),        // 13: mirai.v1.ComponentAlignment
-	(*ComponentAlignmentTargets)(nil), // 14: mirai.v1.ComponentAlignmentTargets
-	(*CourseGenerationInput)(nil),     // 15: mirai.v1.CourseGenerationInput
-	(*timestamppb.Timestamp)(nil),     // 16: google.protobuf.Timestamp
-	(*KnowledgeCitation)(nil),         // 17: mirai.v1.KnowledgeCitation
-	(LessonComponentType)(0),          // 18: mirai.v1.LessonComponentType
+	(*ComponentProvenance)(nil),       // 14: mirai.v1.ComponentProvenance
+	(*ProvenanceChunk)(nil),           // 15: mirai.v1.ProvenanceChunk
+	(*LessonProvenance)(nil),          // 16: mirai.v1.LessonProvenance
+	(*ComponentAlignmentTargets)(nil), // 17: mirai.v1.ComponentAlignmentTargets
+	(*CourseGenerationInput)(nil),     // 18: mirai.v1.CourseGenerationInput
+	(*CoursePlan)(nil),                // 19: mirai.v1.CoursePlan
+	(*DocumentAnalysis)(nil),          // 20: mirai.v1.DocumentAnalysis
+	(*SectionHint)(nil),               // 21: mirai.v1.SectionHint
+	(*PlannedSection)(nil),            // 22: mirai.v1.PlannedSection
+	(*PlannedLesson)(nil),             // 23: mirai.v1.PlannedLesson
+	(*timestamppb.Timestamp)(nil),     // 24: google.protobuf.Timestamp
+	(*KnowledgeCitation)(nil),         // 25: mirai.v1.KnowledgeCitation
+	(LessonComponentType)(0),          // 26: mirai.v1.LessonComponentType
 }
 var file_mirai_v1_ai_generation_types_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.GenerationJob.type:type_name -> mirai.v1.GenerationJobType
 	1,  // 1: mirai.v1.GenerationJob.status:type_name -> mirai.v1.GenerationJobStatus
-	16, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
-	16, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
-	16, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
+	24, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
+	24, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
+	24, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
 	9,  // 5: mirai.v1.CourseOutline.sections:type_name -> mirai.v1.OutlineSection
 	2,  // 6: mirai.v1.CourseOutline.approval_status:type_name -> mirai.v1.OutlineApprovalStatus
-	16, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
-	16, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
+	24, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
+	24, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
 	10, // 9: mirai.v1.OutlineSection.lessons:type_name -> mirai.v1.OutlineLesson
 	4,  // 10: mirai.v1.OutlineSection.level:type_name -> mirai.v1.SectionLevel
 	5,  // 11: mirai.v1.OutlineSection.intent:type_name -> mirai.v1.SectionIntent
 	6,  // 12: mirai.v1.OutlineSection.emphasis:type_name -> mirai.v1.SectionEmphasis
-	17, // 13: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
+	25, // 13: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
 	12, // 14: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
-	16, // 15: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
-	18, // 16: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
-	13, // 17: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	24, // 15: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
+	16, // 16: mirai.v1.GeneratedLesson.aggregate_provenance:type_name -> mirai.v1.LessonProvenance
+	26, // 17: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
+	13, // 18: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
+	14, // 19: mirai.v1.LessonComponent.provenance:type_name -> mirai.v1.ComponentProvenance
+	15, // 20: mirai.v1.ComponentProvenance.source_chunks:type_name -> mirai.v1.ProvenanceChunk
+	24, // 21: mirai.v1.ComponentProvenance.generated_at:type_name -> google.protobuf.Timestamp
+	20, // 22: mirai.v1.CoursePlan.document_analyses:type_name -> mirai.v1.DocumentAnalysis
+	22, // 23: mirai.v1.CoursePlan.planned_sections:type_name -> mirai.v1.PlannedSection
+	24, // 24: mirai.v1.CoursePlan.generated_at:type_name -> google.protobuf.Timestamp
+	24, // 25: mirai.v1.CoursePlan.approved_at:type_name -> google.protobuf.Timestamp
+	21, // 26: mirai.v1.DocumentAnalysis.section_hints:type_name -> mirai.v1.SectionHint
+	23, // 27: mirai.v1.PlannedSection.lessons:type_name -> mirai.v1.PlannedLesson
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_ai_generation_types_proto_init() }
@@ -1589,14 +2363,15 @@ func file_mirai_v1_ai_generation_types_proto_init() {
 	file_mirai_v1_ai_generation_types_proto_msgTypes[1].OneofWrappers = []any{}
 	file_mirai_v1_ai_generation_types_proto_msgTypes[4].OneofWrappers = []any{}
 	file_mirai_v1_ai_generation_types_proto_msgTypes[5].OneofWrappers = []any{}
-	file_mirai_v1_ai_generation_types_proto_msgTypes[8].OneofWrappers = []any{}
+	file_mirai_v1_ai_generation_types_proto_msgTypes[11].OneofWrappers = []any{}
+	file_mirai_v1_ai_generation_types_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_ai_generation_types_proto_rawDesc), len(file_mirai_v1_ai_generation_types_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   9,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -31,6 +31,8 @@ service AIGenerationService {
   rpc GenerateComponentImage(GenerateComponentImageRequest) returns (GenerateComponentImageResponse);
   rpc UpdateLessonComponents(UpdateLessonComponentsRequest) returns (UpdateLessonComponentsResponse);
   rpc SubscribeJobs(SubscribeJobsRequest) returns (stream SubscribeJobsResponse);
+  rpc GetCoursePlan(GetCoursePlanRequest) returns (GetCoursePlanResponse);
+  rpc ApproveCoursePlan(ApproveCoursePlanRequest) returns (ApproveCoursePlanResponse);
 }
 
 // StoredWizardData represents wizard selections persisted with the course.
@@ -189,4 +191,21 @@ message SubscribeJobsRequest {}
 message SubscribeJobsResponse {
   JobEventType event_type = 1;
   GenerationJob job = 2;
+}
+
+// Course Plan RPCs
+message GetCoursePlanRequest {
+  string course_id = 1;
+}
+
+message GetCoursePlanResponse {
+  CoursePlan plan = 1;
+}
+
+message ApproveCoursePlanRequest {
+  string course_id = 1;
+}
+
+message ApproveCoursePlanResponse {
+  CoursePlan plan = 1;
 }

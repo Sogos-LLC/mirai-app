@@ -115,6 +115,37 @@ export const ComponentAlignmentSchema = z.object({
 export type ComponentAlignment = z.infer<typeof ComponentAlignmentSchema>;
 
 /**
+ * Zod schema for ProvenanceChunk
+ * @generated from message mirai.v1.ProvenanceChunk
+ */
+export const ProvenanceChunkSchema = z.object({
+  chunkId: z.string(),
+  sourceId: z.string(),
+  sourceName: z.string(),
+  excerpt: z.string(),
+  similarityScore: z.number(),
+  scope: z.string(),
+});
+
+export type ProvenanceChunk = z.infer<typeof ProvenanceChunkSchema>;
+
+/**
+ * Zod schema for LessonProvenance
+ * @generated from message mirai.v1.LessonProvenance
+ */
+export const LessonProvenanceSchema = z.object({
+  groundingScore: z.number(),
+  teamTokens: z.number().int(),
+  globalTokens: z.number().int(),
+  courseTokens: z.number().int(),
+  ungroundedTokens: z.number().int(),
+  totalTokens: z.number().int(),
+  sourceCount: z.number().int(),
+});
+
+export type LessonProvenance = z.infer<typeof LessonProvenanceSchema>;
+
+/**
  * Zod schema for ComponentAlignmentTargets
  * @generated from message mirai.v1.ComponentAlignmentTargets
  */
@@ -136,6 +167,31 @@ export const CourseGenerationInputSchema = z.object({
 });
 
 export type CourseGenerationInput = z.infer<typeof CourseGenerationInputSchema>;
+
+/**
+ * Zod schema for SectionHint
+ * @generated from message mirai.v1.SectionHint
+ */
+export const SectionHintSchema = z.object({
+  topicName: z.string(),
+  searchTerms: z.array(z.string()),
+  keyPoints: z.array(z.string()),
+});
+
+export type SectionHint = z.infer<typeof SectionHintSchema>;
+
+/**
+ * Zod schema for PlannedLesson
+ * @generated from message mirai.v1.PlannedLesson
+ */
+export const PlannedLessonSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  searchTerms: z.array(z.string()),
+  learningGoals: z.array(z.string()),
+});
+
+export type PlannedLesson = z.infer<typeof PlannedLessonSchema>;
 
 /**
  * Zod schema for OutlineSection
@@ -160,18 +216,51 @@ export const OutlineSectionSchema = z.object({
 export type OutlineSection = z.infer<typeof OutlineSectionSchema>;
 
 /**
- * Zod schema for LessonComponent
- * @generated from message mirai.v1.LessonComponent
+ * Zod schema for ComponentProvenance
+ * @generated from message mirai.v1.ComponentProvenance
  */
-export const LessonComponentSchema = z.object({
-  id: z.string(),
-  type: z.nativeEnum(LessonComponentType),
-  order: z.number().int(),
-  contentJson: z.string(),
-  alignment: ComponentAlignmentSchema.optional(),
+export const ComponentProvenanceSchema = z.object({
+  sourceChunks: z.array(ProvenanceChunkSchema),
+  queries: z.array(z.string()),
+  teamTokens: z.number().int(),
+  globalTokens: z.number().int(),
+  courseTokens: z.number().int(),
+  totalTokens: z.number().int(),
+  generatedAt: z.string().datetime().optional(),
 });
 
-export type LessonComponent = z.infer<typeof LessonComponentSchema>;
+export type ComponentProvenance = z.infer<typeof ComponentProvenanceSchema>;
+
+/**
+ * Zod schema for DocumentAnalysis
+ * @generated from message mirai.v1.DocumentAnalysis
+ */
+export const DocumentAnalysisSchema = z.object({
+  sourceId: z.string(),
+  sourceName: z.string(),
+  summary: z.string(),
+  mainTopics: z.array(z.string()),
+  keyFacts: z.array(z.string()),
+  contentDepth: z.string(),
+  sectionHints: z.array(SectionHintSchema),
+});
+
+export type DocumentAnalysis = z.infer<typeof DocumentAnalysisSchema>;
+
+/**
+ * Zod schema for PlannedSection
+ * @generated from message mirai.v1.PlannedSection
+ */
+export const PlannedSectionSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  searchTerms: z.array(z.string()),
+  sourceIds: z.array(z.string()),
+  lessons: z.array(PlannedLessonSchema),
+  rationale: z.string(),
+});
+
+export type PlannedSection = z.infer<typeof PlannedSectionSchema>;
 
 /**
  * Zod schema for CourseOutline
@@ -192,6 +281,36 @@ export const CourseOutlineSchema = z.object({
 export type CourseOutline = z.infer<typeof CourseOutlineSchema>;
 
 /**
+ * Zod schema for LessonComponent
+ * @generated from message mirai.v1.LessonComponent
+ */
+export const LessonComponentSchema = z.object({
+  id: z.string(),
+  type: z.nativeEnum(LessonComponentType),
+  order: z.number().int(),
+  contentJson: z.string(),
+  alignment: ComponentAlignmentSchema.optional(),
+  provenance: ComponentProvenanceSchema.optional(),
+});
+
+export type LessonComponent = z.infer<typeof LessonComponentSchema>;
+
+/**
+ * Zod schema for CoursePlan
+ * @generated from message mirai.v1.CoursePlan
+ */
+export const CoursePlanSchema = z.object({
+  documentAnalyses: z.array(DocumentAnalysisSchema),
+  plannedSections: z.array(PlannedSectionSchema),
+  status: z.string(),
+  generatedAt: z.string().datetime().optional(),
+  approvedAt: z.string().datetime().optional(),
+  tokensUsed: z.number().int(),
+});
+
+export type CoursePlan = z.infer<typeof CoursePlanSchema>;
+
+/**
  * Zod schema for GeneratedLesson
  * @generated from message mirai.v1.GeneratedLesson
  */
@@ -208,6 +327,7 @@ export const GeneratedLessonSchema = z.object({
   sourceCount: z.number().int(),
   groundedTokenCount: z.number().int(),
   totalTokenCount: z.number().int(),
+  aggregateProvenance: LessonProvenanceSchema.optional(),
 });
 
 export type GeneratedLesson = z.infer<typeof GeneratedLessonSchema>;

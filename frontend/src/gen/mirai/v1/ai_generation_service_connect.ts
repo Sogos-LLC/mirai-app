@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, SubscribeJobsRequest, SubscribeJobsResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
+import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, ApproveCoursePlanRequest, ApproveCoursePlanResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, SubscribeJobsRequest, SubscribeJobsResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -157,6 +157,24 @@ export const AIGenerationService = {
       I: SubscribeJobsRequest,
       O: SubscribeJobsResponse,
       kind: MethodKind.ServerStreaming,
+    },
+    /**
+     * @generated from rpc mirai.v1.AIGenerationService.GetCoursePlan
+     */
+    getCoursePlan: {
+      name: "GetCoursePlan",
+      I: GetCoursePlanRequest,
+      O: GetCoursePlanResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc mirai.v1.AIGenerationService.ApproveCoursePlan
+     */
+    approveCoursePlan: {
+      name: "ApproveCoursePlan",
+      I: ApproveCoursePlanRequest,
+      O: ApproveCoursePlanResponse,
+      kind: MethodKind.Unary,
     },
   }
 } as const;

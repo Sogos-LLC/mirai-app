@@ -104,12 +104,41 @@ func (h *OutlineHandler) Process(ctx context.Context, job *entity.GenerationJob)
 	smeKnowledge, targetAudience := ExtractPersonas(content.WizardData)
 	additionalContext := h.getAdditionalContext(content.WizardData)
 
+	// Parse desired outcomes for curriculum mapping
+	desiredOutcomes := parseDesiredOutcomes(content)
+
 	outlineRequest := service.GenerateOutlineRequest{
 		CourseTitle:       content.Settings.Title,
 		DesiredOutcome:    content.Settings.DesiredOutcome,
+		DesiredOutcomes:   desiredOutcomes,
 		SMEKnowledge:      smeKnowledge,
 		TargetAudience:    targetAudience,
 		AdditionalContext: additionalContext,
+	}
+
+	// Inject approved course plan as guidance for outline generation
+	if content.CoursePlan != nil && content.CoursePlan.Status == "approved" {
+		planCtx := &service.CoursePlanContext{}
+		for _, ps := range content.CoursePlan.PlannedSections {
+			sectionCtx := service.PlannedSectionContext{
+				Title:       ps.Title,
+				Description: ps.Description,
+				SourceIDs:   ps.SourceIDs,
+				Rationale:   ps.Rationale,
+			}
+			for _, pl := range ps.Lessons {
+				sectionCtx.Lessons = append(sectionCtx.Lessons, service.PlannedLessonContext{
+					Title:         pl.Title,
+					Description:   pl.Description,
+					LearningGoals: pl.LearningGoals,
+				})
+			}
+			planCtx.Sections = append(planCtx.Sections, sectionCtx)
+		}
+		outlineRequest.CoursePlan = planCtx
+		log.Info("[AI.Plan] Injecting approved course plan into outline request",
+			"planSections", len(planCtx.Sections),
+		)
 	}
 
 	// Check for selected knowledge sources
@@ -291,10 +320,31 @@ func (h *OutlineHandler) enrichWithRAGContext(
 		}
 	}
 
-	// Perform RAG search
-	queries := []string{content.Settings.Title, content.Settings.DesiredOutcome}
-	if additionalContext != "" {
-		queries = append(queries, additionalContext)
+	// Build RAG search queries — prefer plan search terms when available
+	var queries []string
+	if content.CoursePlan != nil && content.CoursePlan.Status == "approved" {
+		// Targeted RAG: use the approved plan's per-section search terms
+		log.Info("[AI.RAG] Using plan-driven targeted search terms")
+		for _, section := range content.CoursePlan.PlannedSections {
+			queries = append(queries, section.SearchTerms...)
+			for _, lesson := range section.Lessons {
+				queries = append(queries, lesson.SearchTerms...)
+			}
+		}
+	} else {
+		// Fallback: use document index topics as additional queries
+		queries = []string{content.Settings.Title, content.Settings.DesiredOutcome}
+		if additionalContext != "" {
+			queries = append(queries, additionalContext)
+		}
+		for _, doc := range outlineRequest.DocumentIndices {
+			for _, topic := range doc.MainTopics {
+				queries = append(queries, topic)
+			}
+			for _, concept := range doc.KeyConcepts {
+				queries = append(queries, concept)
+			}
+		}
 	}
 
 	seenChunks := make(map[string]bool)
@@ -326,7 +376,7 @@ func (h *OutlineHandler) enrichWithRAGContext(
 
 	// Search team knowledge
 	if h.teamKnowledgeSearcher != nil && h.teamResolver != nil {
-		h.enrichWithTeamRAG(ctx, job, outlineRequest, selectedSet, queries, seenChunks, log)
+		h.enrichWithTeamRAG(ctx, job, &outlineRequest.RAGContext, selectedSet, queries, seenChunks, log)
 	}
 
 	log.Info("[AI.RAG] Course knowledge context retrieved",
@@ -340,7 +390,7 @@ func (h *OutlineHandler) enrichWithRAGContext(
 func (h *OutlineHandler) enrichWithTeamRAG(
 	ctx context.Context,
 	job *entity.GenerationJob,
-	outlineRequest service.GenerateOutlineRequest,
+	ragContext *[]service.RAGChunkInput,
 	selectedSet map[string]bool,
 	queries []string,
 	seenChunks map[string]bool,
@@ -372,7 +422,7 @@ func (h *OutlineHandler) enrichWithTeamRAG(
 				continue
 			}
 			seenChunks[chunkKey] = true
-			outlineRequest.RAGContext = append(outlineRequest.RAGContext, service.RAGChunkInput{
+			*ragContext = append(*ragContext, service.RAGChunkInput{
 				ChunkID:         chunk.ID,
 				SourceID:        chunk.SourceID.String(),
 				SourceName:      chunk.SourceName,

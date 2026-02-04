@@ -39,7 +39,7 @@ func sectionsOnlySchema() map[string]any {
 							"items":       map[string]any{"type": "integer"},
 						},
 					},
-					"required": []string{"title", "description", "lesson_titles", "level", "intent", "emphasis"},
+					"required": []string{"title", "description", "lesson_titles", "level", "intent", "emphasis", "mapped_outcome_indices"},
 				},
 			},
 		},

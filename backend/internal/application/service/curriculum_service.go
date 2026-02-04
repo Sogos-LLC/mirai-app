@@ -370,6 +370,16 @@ func (s *CurriculumService) extractOutcomes(content *S3CourseContent) []string {
 		line = strings.TrimPrefix(line, "-")
 		line = strings.TrimPrefix(line, "•")
 		line = strings.TrimPrefix(line, "*")
+		// Handle numbered list items like "1. " or "1) "
+		for i, c := range line {
+			if c >= '0' && c <= '9' {
+				continue
+			}
+			if (c == '.' || c == ')') && i > 0 {
+				line = line[i+1:]
+			}
+			break
+		}
 		line = strings.TrimSpace(line)
 		if line != "" {
 			outcomes = append(outcomes, line)

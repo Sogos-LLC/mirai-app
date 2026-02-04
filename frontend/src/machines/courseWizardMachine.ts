@@ -6,6 +6,7 @@ import type {
   WizardStepData,
   WizardState,
 } from '@/gen/mirai/v1/course_wizard_pb';
+import { GenerationJobType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import type { CourseOutline, GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
 import type { KnowledgeSource } from '@/gen/mirai/v1/knowledge_source_pb';
 
@@ -93,6 +94,7 @@ export interface CourseWizardContext {
 
   // Outline Generation & Review
   outlineJobId: string | null;
+  outlineJobType: GenerationJobType | null;
   outline: CourseOutline | null;
 
   // Final: Course Creation
@@ -229,6 +231,7 @@ export const initialContext: CourseWizardContext = {
   additionalContext: '',
   // Outline
   outlineJobId: null,
+  outlineJobType: null,
   outline: null,
   // Course
   courseId: null,
@@ -960,6 +963,7 @@ export const courseWizardMachine = createMachine({
           target: 'outlineJobQueued',
           actions: assign({
             outlineJobId: ({ event }) => event.output.job.id,
+            outlineJobType: ({ event }) => event.output.job.type ?? null,
             courseId: ({ event }) => event.output.courseId,
           }),
         },

@@ -9,6 +9,7 @@ import {
   isGenerating,
   type CourseWizardContext,
 } from '@/machines/courseWizardMachine';
+import { GenerationJobType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { createCourseWizardActors } from '@/machines/courseWizardActors';
 import { useKnowledgeLoader } from '@/hooks/useKnowledgeLoader';
 import {
@@ -139,15 +140,19 @@ export default function CourseWizard() {
     }
   }, [knowledgeLoading, knowledgeLoaded, availableTeamDocs, availableGlobalDocs, send]);
 
-  // Handle redirect to outline page after job is queued
+  // Handle redirect after job is queued — plan page for planning jobs, outline page otherwise
   useEffect(() => {
     if (state.matches('outlineJobQueued') && context.courseId) {
-      const url = context.outlineJobId
-        ? `/course/${context.courseId}/outline?jobId=${context.outlineJobId}`
+      const isPlanningJob = context.outlineJobType === GenerationJobType.COURSE_PLANNING;
+      const basePath = isPlanningJob
+        ? `/course/${context.courseId}/plan`
         : `/course/${context.courseId}/outline`;
+      const url = context.outlineJobId
+        ? `${basePath}?jobId=${context.outlineJobId}`
+        : basePath;
       router.push(url);
     }
-  }, [state, context.courseId, context.outlineJobId, router]);
+  }, [state, context.courseId, context.outlineJobId, context.outlineJobType, router]);
 
   // Handle redirect to dashboard (after cancellation)
   useEffect(() => {

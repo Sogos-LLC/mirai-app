@@ -379,6 +379,18 @@ type AIProvider interface {
 
 	// GenerateImage generates an image from a text prompt.
 	GenerateImage(ctx context.Context, req GenerateImageRequest) (*GenerateImageResult, error)
+
+	// ==========================================================================
+	// Knowledge-Grounded Planning Methods
+	// ==========================================================================
+
+	// AnalyzeDocument analyzes a single knowledge source document and produces
+	// structured summaries, key facts, and search term suggestions per topic.
+	AnalyzeDocument(ctx context.Context, req AnalyzeDocumentRequest) (*AnalyzeDocumentResult, error)
+
+	// GenerateCoursePlan creates a structured course plan with sections and lessons,
+	// each carrying targeted search terms for subsequent RAG retrieval.
+	GenerateCoursePlan(ctx context.Context, req GenerateCoursePlanRequest) (*GenerateCoursePlanResult, error)
 }
 
 // =============================================================================
@@ -483,6 +495,7 @@ type GenerateToneOptionsResult struct {
 type GenerateOutlineRequest struct {
 	CourseTitle       string
 	DesiredOutcome    string
+	DesiredOutcomes   []string // Parsed individual learning outcomes for curriculum mapping
 	SMEKnowledge      []SMEKnowledgeInput // Knowledge from selected SMEs
 	TargetAudience    TargetAudienceInput // Target audience profile
 	AdditionalContext string
@@ -494,6 +507,9 @@ type GenerateOutlineRequest struct {
 
 	// Constraints derived from knowledge scope (when available)
 	Constraints *CourseConstraintsInput // Hard bounds AI must respect
+
+	// Approved course plan for guided outline generation
+	CoursePlan *CoursePlanContext // When set, outline follows plan structure
 }
 
 // CourseConstraintsInput provides deterministic bounds for outline generation.
@@ -712,6 +728,93 @@ type SMEChunkResult struct {
 	Topic          string
 	Keywords       []string
 	RelevanceScore float32
+}
+
+// =============================================================================
+// Knowledge-Grounded Planning Types
+// =============================================================================
+
+// AnalyzeDocumentRequest contains inputs for document analysis.
+type AnalyzeDocumentRequest struct {
+	SourceID       string
+	SourceName     string
+	DocumentText   string
+	CourseTitle    string
+	DesiredOutcome string
+}
+
+// AnalyzeDocumentResult contains the structured analysis of a single document.
+type AnalyzeDocumentResult struct {
+	Summary      string
+	MainTopics   []string
+	KeyFacts     []string
+	ContentDepth string // "basic", "intermediate", "advanced"
+	SectionHints []SectionHintResult
+	TokensUsed   int64
+}
+
+// SectionHintResult is a suggested section derived from document analysis.
+type SectionHintResult struct {
+	TopicName   string
+	SearchTerms []string
+	KeyPoints   []string
+}
+
+// CoursePlanContext provides the approved plan structure for guided outline generation.
+type CoursePlanContext struct {
+	Sections []PlannedSectionContext
+}
+
+// PlannedSectionContext provides plan context for a single section.
+type PlannedSectionContext struct {
+	Title       string
+	Description string
+	SourceIDs   []string
+	Rationale   string
+	Lessons     []PlannedLessonContext
+}
+
+// PlannedLessonContext provides plan context for a single lesson.
+type PlannedLessonContext struct {
+	Title         string
+	Description   string
+	LearningGoals []string
+}
+
+// GenerateCoursePlanRequest contains inputs for course plan generation.
+type GenerateCoursePlanRequest struct {
+	CourseTitle       string
+	DesiredOutcome    string
+	DocumentAnalyses []AnalyzeDocumentResult
+	SMEKnowledge     []SMEKnowledgeInput
+	TargetAudience   TargetAudienceInput
+	AdditionalContext string
+	InternalDataOnly bool
+	Constraints      *CourseConstraintsInput
+}
+
+// GenerateCoursePlanResult contains the generated course plan.
+type GenerateCoursePlanResult struct {
+	Sections   []PlannedSectionResult
+	TokensUsed int64
+}
+
+// PlannedSectionResult is a planned course section with targeted search terms.
+type PlannedSectionResult struct {
+	Title       string
+	Description string
+	SearchTerms []string
+	SourceIDs   []string
+	Lessons     []PlannedLessonResult
+	Rationale   string
+}
+
+// PlannedLessonResult is a planned lesson with its own search terms.
+type PlannedLessonResult struct {
+	Title         string
+	Description   string
+	SearchTerms   []string
+	LearningGoals []string
 }
 
 // =============================================================================

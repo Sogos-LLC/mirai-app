@@ -124,9 +124,26 @@ func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
 		sb.WriteString("\n\n")
 	}
 
+	// Enumerate desired outcomes so the AI can map sections to them
+	if len(req.DesiredOutcomes) > 0 {
+		sb.WriteString("## Desired Learning Outcomes\n")
+		sb.WriteString("The course must address these specific outcomes. Each section should map to one or more outcomes using their zero-based index.\n\n")
+		for i, outcome := range req.DesiredOutcomes {
+			sb.WriteString(fmt.Sprintf("**%d:** %s\n", i, outcome))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Include approved course plan guidance
+	if req.CoursePlan != nil && len(req.CoursePlan.Sections) > 0 {
+		sb.WriteString(buildCoursePlanGuidanceSection(req.CoursePlan))
+	}
+
 	sb.WriteString("## Instructions\n")
 	sb.WriteString("Create a high-level course outline with sections and lesson titles.\n")
-	if len(req.RAGContext) > 0 || len(req.DocumentIndices) > 0 {
+	if req.CoursePlan != nil && len(req.CoursePlan.Sections) > 0 {
+		sb.WriteString("**You MUST follow the Approved Course Plan structure above closely.** Each section has been mapped to specific source material.\n")
+	} else if len(req.RAGContext) > 0 || len(req.DocumentIndices) > 0 {
 		sb.WriteString("**Base your course structure on the provided knowledge sources.** The course length and depth should reflect the available source material.\n")
 	}
 	if req.Constraints != nil {
@@ -147,7 +164,14 @@ func buildSectionsOnlyPrompt(req service.GenerateOutlineRequest) string {
 	sb.WriteString("  - 'assess': Evaluation/testing of knowledge\n")
 	sb.WriteString("  - 'reinforce': Practice and reinforcement\n")
 	sb.WriteString("- **emphasis**: Relative importance (low, medium, high)\n")
-	sb.WriteString("- **mapped_outcome_indices**: Zero-based indices of desired outcomes this section addresses (based on the outcome list if provided)\n\n")
+	sb.WriteString("- **mapped_outcome_indices**: Zero-based indices of desired outcomes this section addresses. ")
+	if len(req.DesiredOutcomes) > 0 {
+		sb.WriteString(fmt.Sprintf("There are %d outcomes (indices 0 through %d). ", len(req.DesiredOutcomes), len(req.DesiredOutcomes)-1))
+		sb.WriteString("EVERY section MUST map to at least one outcome. ")
+		sb.WriteString("EVERY outcome MUST appear in at least one section's mapping.\n\n")
+	} else {
+		sb.WriteString("If the course has a single desired outcome, use [0] for all sections.\n\n")
+	}
 	sb.WriteString("Ensure content flows logically and builds on previous sections.\n")
 
 	return sb.String()
@@ -230,9 +254,29 @@ func buildInternalDataOnlySectionsPrompt(req service.GenerateOutlineRequest) str
 		sb.WriteString("\n\n")
 	}
 
+	// Enumerate desired outcomes so the AI can map sections to them
+	if len(req.DesiredOutcomes) > 0 {
+		sb.WriteString("## Desired Learning Outcomes\n")
+		sb.WriteString("The course must address these specific outcomes. Each section should map to one or more outcomes using their zero-based index.\n\n")
+		for i, outcome := range req.DesiredOutcomes {
+			sb.WriteString(fmt.Sprintf("**%d:** %s\n", i, outcome))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Include approved course plan guidance
+	if req.CoursePlan != nil && len(req.CoursePlan.Sections) > 0 {
+		sb.WriteString(buildCoursePlanGuidanceSection(req.CoursePlan))
+	}
+
 	sb.WriteString("## Instructions\n")
-	sb.WriteString("Based STRICTLY on the source content above, create a course outline:\n")
-	sb.WriteString("1. Analyze the available content and identify teachable topics\n")
+	if req.CoursePlan != nil && len(req.CoursePlan.Sections) > 0 {
+		sb.WriteString("Based on the Approved Course Plan AND source content above, create a course outline:\n")
+		sb.WriteString("1. Follow the plan structure closely — each planned section maps to source material\n")
+	} else {
+		sb.WriteString("Based STRICTLY on the source content above, create a course outline:\n")
+		sb.WriteString("1. Analyze the available content and identify teachable topics\n")
+	}
 	sb.WriteString("2. Create sections that group related topics from the source material\n")
 	if req.Constraints != nil {
 		sb.WriteString(fmt.Sprintf("3. Each section should have %d-%d lessons (as specified in constraints)\n",
@@ -247,7 +291,14 @@ func buildInternalDataOnlySectionsPrompt(req service.GenerateOutlineRequest) str
 	sb.WriteString("- **level**: 'introduce', 'develop', or 'master' (learning progression)\n")
 	sb.WriteString("- **intent**: 'teach', 'assess', or 'reinforce' (primary purpose)\n")
 	sb.WriteString("- **emphasis**: 'low', 'medium', or 'high' (relative importance)\n")
-	sb.WriteString("- **mapped_outcome_indices**: Zero-based indices of outcomes this section addresses\n\n")
+	sb.WriteString("- **mapped_outcome_indices**: Zero-based indices of outcomes this section addresses. ")
+	if len(req.DesiredOutcomes) > 0 {
+		sb.WriteString(fmt.Sprintf("There are %d outcomes (indices 0 through %d). ", len(req.DesiredOutcomes), len(req.DesiredOutcomes)-1))
+		sb.WriteString("EVERY section MUST map to at least one outcome. ")
+		sb.WriteString("EVERY outcome MUST appear in at least one section's mapping.\n\n")
+	} else {
+		sb.WriteString("If the course has a single desired outcome, use [0] for all sections.\n\n")
+	}
 	sb.WriteString("Remember: Quality over quantity. A smaller, accurate course is better than a large, hallucinated one.\n")
 
 	return sb.String()
@@ -346,6 +397,36 @@ func buildInternalDataOnlyLessonsPrompt(req service.GenerateOutlineRequest, sect
 	sb.WriteString("- Include 1-3 learning objectives that are supportable by the source\n")
 	sb.WriteString("- If insufficient content, create a shorter, focused lesson\n")
 	sb.WriteString("- Reference source document names in descriptions where helpful\n")
+
+	return sb.String()
+}
+
+// buildCoursePlanGuidanceSection creates the approved plan guidance for outline prompts.
+func buildCoursePlanGuidanceSection(plan *service.CoursePlanContext) string {
+	var sb strings.Builder
+
+	sb.WriteString("## Approved Course Plan\n")
+	sb.WriteString("The following course plan was created from analysis of the source documents.\n")
+	sb.WriteString("You MUST follow this structure closely. Each section has been mapped to specific source material.\n\n")
+
+	for i, section := range plan.Sections {
+		sb.WriteString(fmt.Sprintf("### Section %d: %s\n", i+1, section.Title))
+		sb.WriteString(fmt.Sprintf("**Description:** %s\n", section.Description))
+		if section.Rationale != "" {
+			sb.WriteString(fmt.Sprintf("**Rationale:** %s\n", section.Rationale))
+		}
+		if len(section.Lessons) > 0 {
+			sb.WriteString("**Planned Lessons:**\n")
+			for j, lesson := range section.Lessons {
+				sb.WriteString(fmt.Sprintf("  %d. %s", j+1, lesson.Title))
+				if lesson.Description != "" {
+					sb.WriteString(fmt.Sprintf(" — %s", lesson.Description))
+				}
+				sb.WriteString("\n")
+			}
+		}
+		sb.WriteString("\n")
+	}
 
 	return sb.String()
 }

@@ -2,6 +2,7 @@
 
 import { fromPromise } from 'xstate';
 import type { SMEPersona, AudiencePersona, ToneOption, WizardStepData } from '@/gen/mirai/v1/course_wizard_pb';
+import { GenerationJobType } from '@/gen/mirai/v1/ai_generation_types_pb';
 
 /**
  * Dependencies for creating wizard actor implementations.
@@ -73,7 +74,7 @@ export interface WizardActorDeps {
       courseId: string;
       desiredOutcome: string;
       additionalContext?: string;
-    }) => Promise<{ job?: { id?: string } }>;
+    }) => Promise<{ job?: { id?: string; type?: number } }>;
   };
   saveWizardState: {
     mutate: (params: {
@@ -244,7 +245,10 @@ export function createCourseWizardActors(deps: WizardActorDeps) {
 
         return {
           courseId,
-          job: { id: outlineResult.job.id },
+          job: {
+            id: outlineResult.job.id,
+            type: outlineResult.job.type ?? GenerationJobType.COURSE_OUTLINE,
+          },
         };
       }
     ),

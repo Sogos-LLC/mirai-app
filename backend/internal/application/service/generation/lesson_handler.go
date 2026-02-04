@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -149,10 +150,25 @@ func (h *LessonHandler) Process(ctx context.Context, job *entity.GenerationJob) 
 	// Check Internal Data Only mode and get RAG context
 	var internalDataOnly bool
 	var ragContext []service.RAGChunkInput
-	if content.WizardData != nil && content.WizardData.InternalDataOnly {
-		internalDataOnly = true
-		log.Info("Internal Data Only mode enabled, fetching RAG context for lesson", "lessonTitle", lessonTitle)
-		ragContext = h.fetchLessonRAGContext(ctx, job, lessonTitle, lessonDesc, learningObjectives, log)
+	selectedDocIDs := GetSelectedDocIDs(content.WizardData)
+	hasSelectedKnowledge := len(selectedDocIDs) > 0
+	if content.WizardData != nil {
+		internalDataOnly = content.WizardData.InternalDataOnly
+	}
+
+	if hasSelectedKnowledge {
+		// Try plan-driven search terms first, fall back to generic queries
+		planSearchTerms := h.findPlannedLessonSearchTerms(content.CoursePlan, sectionTitle, lessonTitle)
+		if len(planSearchTerms) > 0 {
+			log.Info("[AI.RAG] Using plan-driven search terms for lesson",
+				"lessonTitle", lessonTitle,
+				"searchTerms", len(planSearchTerms),
+			)
+			ragContext = h.fetchLessonRAGContextWithTerms(ctx, job, planSearchTerms, selectedDocIDs, log)
+		} else {
+			log.Info("[AI.RAG] No plan search terms found, using generic queries for lesson", "lessonTitle", lessonTitle)
+			ragContext = h.fetchLessonRAGContext(ctx, job, lessonTitle, lessonDesc, learningObjectives, log)
+		}
 	}
 
 	// Generate lesson content
@@ -182,6 +198,16 @@ func (h *LessonHandler) Process(ctx context.Context, job *entity.GenerationJob) 
 	job.TokensUsed = lessonResult.TokensUsed
 	_ = h.jobRepo.Update(ctx, job)
 
+	// Build provenance from RAG context
+	var searchQueries []string
+	planSearchTerms := h.findPlannedLessonSearchTerms(content.CoursePlan, sectionTitle, lessonTitle)
+	if len(planSearchTerms) > 0 {
+		searchQueries = planSearchTerms
+	} else {
+		searchQueries = append([]string{lessonTitle + " " + lessonDesc}, learningObjectives...)
+	}
+	provenance := buildComponentProvenance(ragContext, searchQueries)
+
 	// Build S3 lesson with components
 	now := time.Now()
 	s3Components := make([]LessonComponent, len(lessonResult.Components))
@@ -194,6 +220,7 @@ func (h *LessonHandler) Process(ctx context.Context, job *entity.GenerationJob) 
 			LearningObjectiveIDs: []string{},
 			CreatedAt:            now,
 			UpdatedAt:            now,
+			Provenance:           provenance,
 		}
 	}
 
@@ -205,6 +232,7 @@ func (h *LessonHandler) Process(ctx context.Context, job *entity.GenerationJob) 
 		Components:      s3Components,
 		GeneratedAt:     now,
 	}
+	s3Lesson.AggregateProvenance = aggregateProvenance(s3Components)
 	if lessonResult.SegueText != "" {
 		s3Lesson.SegueText = &lessonResult.SegueText
 	}
@@ -361,6 +389,135 @@ func (h *LessonHandler) fetchLessonRAGContext(
 				}
 			}
 			log.Info("[AI.RAG] Added team knowledge context for lesson", "totalChunks", len(ragContext))
+		}
+	}
+
+	return ragContext
+}
+
+// findPlannedLessonSearchTerms finds matching planned lesson search terms from the course plan.
+func (h *LessonHandler) findPlannedLessonSearchTerms(plan *CoursePlan, sectionTitle, lessonTitle string) []string {
+	if plan == nil || plan.Status != "approved" {
+		return nil
+	}
+
+	for _, section := range plan.PlannedSections {
+		if strings.EqualFold(section.Title, sectionTitle) {
+			for _, lesson := range section.Lessons {
+				if strings.EqualFold(lesson.Title, lessonTitle) && len(lesson.SearchTerms) > 0 {
+					return lesson.SearchTerms
+				}
+			}
+			// If no exact lesson match, use the section's search terms
+			if len(section.SearchTerms) > 0 {
+				return section.SearchTerms
+			}
+		}
+	}
+	return nil
+}
+
+// fetchLessonRAGContextWithTerms performs targeted RAG search using plan-provided search terms.
+func (h *LessonHandler) fetchLessonRAGContextWithTerms(
+	ctx context.Context,
+	job *entity.GenerationJob,
+	searchTerms []string,
+	selectedDocIDs []string,
+	log Logger,
+) []service.RAGChunkInput {
+	var ragContext []service.RAGChunkInput
+
+	selectedSet := make(map[string]bool)
+	for _, id := range selectedDocIDs {
+		selectedSet[id] = true
+	}
+
+	if h.knowledgeSearcher != nil && job.CourseID != nil {
+		seenChunks := make(map[string]bool)
+		for _, term := range searchTerms {
+			chunks, err := h.knowledgeSearcher.SearchKnowledge(ctx, *job.CourseID, term, 5)
+			if err != nil {
+				log.Warn("Plan-driven RAG search failed", "term", term, "error", err)
+				continue
+			}
+			for _, chunk := range chunks {
+				if !selectedSet[chunk.SourceID.String()] {
+					continue
+				}
+				hashKey := chunk.Content
+				if len(hashKey) > 100 {
+					hashKey = hashKey[:100]
+				}
+				if seenChunks[hashKey] {
+					continue
+				}
+				seenChunks[hashKey] = true
+				chunkIndex := 0
+				if chunk.ChunkIndex != nil {
+					chunkIndex = int(*chunk.ChunkIndex)
+				}
+				ragContext = append(ragContext, service.RAGChunkInput{
+					ChunkID:         chunk.ID,
+					SourceID:        chunk.SourceID.String(),
+					SourceName:      chunk.SourceName,
+					Content:         chunk.Content,
+					ChunkIndex:      chunkIndex,
+					SimilarityScore: chunk.SimilarityScore,
+					Scope:           "course",
+				})
+			}
+		}
+		log.Info("[AI.RAG] Plan-driven lesson context retrieved", "chunkCount", len(ragContext), "searchTerms", len(searchTerms))
+	}
+
+	// Also search team knowledge with plan terms
+	if h.teamKnowledgeSearcher != nil && h.teamResolver != nil {
+		team, err := h.teamResolver.GetTeamByTenant(ctx, job.TenantID)
+		if err != nil {
+			log.Warn("failed to resolve team for tenant", "error", err)
+		} else if team != nil {
+			teamSeenChunks := make(map[string]bool)
+			for _, chunk := range ragContext {
+				hashKey := chunk.Content
+				if len(hashKey) > 100 {
+					hashKey = hashKey[:100]
+				}
+				teamSeenChunks[hashKey] = true
+			}
+
+			for _, term := range searchTerms {
+				chunks, err := h.teamKnowledgeSearcher.SearchByTeam(ctx, team.ID, term, 5)
+				if err != nil {
+					log.Warn("Team plan-driven RAG search failed", "term", term, "error", err)
+					continue
+				}
+				for _, chunk := range chunks {
+					if !selectedSet[chunk.SourceID.String()] {
+						continue
+					}
+					hashKey := chunk.Content
+					if len(hashKey) > 100 {
+						hashKey = hashKey[:100]
+					}
+					if teamSeenChunks[hashKey] {
+						continue
+					}
+					teamSeenChunks[hashKey] = true
+					chunkIndex := 0
+					if chunk.ChunkIndex != nil {
+						chunkIndex = int(*chunk.ChunkIndex)
+					}
+					ragContext = append(ragContext, service.RAGChunkInput{
+						ChunkID:         chunk.ID,
+						SourceID:        chunk.SourceID.String(),
+						SourceName:      chunk.SourceName,
+						Content:         chunk.Content,
+						ChunkIndex:      chunkIndex,
+						SimilarityScore: chunk.SimilarityScore,
+						Scope:           "team",
+					})
+				}
+			}
 		}
 	}
 
