@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/sdk/activity"
 
 	"github.com/sogos/mirai-backend/internal/domain/repository"
+	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
@@ -51,6 +52,9 @@ type ClaimJobOutput struct {
 
 // ClaimJob atomically claims a job for processing (prevents duplicate execution).
 func (a *GoActivities) ClaimJob(ctx context.Context, input ClaimJobInput) (*ClaimJobOutput, error) {
+	// Temporal activities run without tenant context — use superadmin to bypass RLS.
+	ctx = tenant.WithSuperAdmin(ctx, true)
+
 	jobID, err := uuid.Parse(input.JobID)
 	if err != nil {
 		return nil, fmt.Errorf("parse job ID: %w", err)
@@ -85,6 +89,9 @@ type UpdateJobStatusInput struct {
 
 // UpdateJobStatus updates the job status in the database.
 func (a *GoActivities) UpdateJobStatus(ctx context.Context, input UpdateJobStatusInput) error {
+	// Temporal activities run without tenant context — use superadmin to bypass RLS.
+	ctx = tenant.WithSuperAdmin(ctx, true)
+
 	jobID, err := uuid.Parse(input.JobID)
 	if err != nil {
 		return fmt.Errorf("parse job ID: %w", err)
@@ -93,6 +100,9 @@ func (a *GoActivities) UpdateJobStatus(ctx context.Context, input UpdateJobStatu
 	job, err := a.JobRepo.GetByID(ctx, jobID)
 	if err != nil {
 		return fmt.Errorf("get job: %w", err)
+	}
+	if job == nil {
+		return fmt.Errorf("job %s not found", input.JobID)
 	}
 
 	job.Status = valueobject.GenerationJobStatus(input.Status)
@@ -133,6 +143,9 @@ type FinalizeParentJobOutput struct {
 
 // FinalizeParentJob atomically checks if all child jobs are complete.
 func (a *GoActivities) FinalizeParentJob(ctx context.Context, input FinalizeParentJobInput) (*FinalizeParentJobOutput, error) {
+	// Temporal activities run without tenant context — use superadmin to bypass RLS.
+	ctx = tenant.WithSuperAdmin(ctx, true)
+
 	parentID, err := uuid.Parse(input.ParentJobID)
 	if err != nil {
 		return nil, fmt.Errorf("parse parent job ID: %w", err)
