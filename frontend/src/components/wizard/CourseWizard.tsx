@@ -404,14 +404,6 @@ export default function CourseWizard() {
           processedSourcesCount={processedSources.length}
           onOpenKnowledgeModal={handleOpenKnowledgeModal}
           teamKnowledgeCount={context.selectedTeamDocIds.length + context.selectedGlobalDocIds.length}
-          teamKnowledgeTokens={
-            [...context.availableTeamDocs, ...context.availableGlobalDocs]
-              .filter((doc) =>
-                context.selectedTeamDocIds.includes(doc.id) ||
-                context.selectedGlobalDocIds.includes(doc.id)
-              )
-              .reduce((sum, doc) => sum + doc.tokenCount, 0)
-          }
           internalDataOnly={context.internalDataOnly}
           onInternalDataOnlyChange={(enabled) => send({ type: 'SET_INTERNAL_DATA_ONLY', enabled })}
         />

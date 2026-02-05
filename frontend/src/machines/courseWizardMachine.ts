@@ -517,9 +517,9 @@ export const courseWizardMachine = createMachine({
           actions: assign({
             availableTeamDocs: ({ event }) => event.teamDocs,
             availableGlobalDocs: ({ event }) => event.globalDocs,
-            // Pre-select all available sources by default
-            selectedTeamDocIds: ({ event }) => event.teamDocs.map((d) => d.id),
-            selectedGlobalDocIds: ({ event }) => event.globalDocs.map((d) => d.id),
+            // No sources selected by default — user must opt in
+            selectedTeamDocIds: () => [],
+            selectedGlobalDocIds: () => [],
           }),
         },
         TOGGLE_TEAM_DOC: {

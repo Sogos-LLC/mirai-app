@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Wand2, Loader2, Paperclip, CheckCircle, BookOpen } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, Paperclip, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import WizardNavigation from '../WizardNavigation';
@@ -23,7 +23,6 @@ interface CourseNameStepProps {
   onOpenKnowledgeModal?: () => void;
   // Team knowledge (shared across courses)
   teamKnowledgeCount?: number;
-  teamKnowledgeTokens?: number;
   // Internal Data Only mode
   internalDataOnly?: boolean;
   onInternalDataOnlyChange?: (enabled: boolean) => void;
@@ -44,7 +43,6 @@ export default function CourseNameStep({
   processedSourcesCount = 0,
   onOpenKnowledgeModal,
   teamKnowledgeCount = 0,
-  teamKnowledgeTokens = 0,
   internalDataOnly = false,
   onInternalDataOnlyChange,
 }: CourseNameStepProps) {
@@ -162,21 +160,6 @@ export default function CourseNameStep({
                 These outcomes serve as the north star guiding all content generation.
               </p>
             </div>
-
-            {/* Team Knowledge Available indicator */}
-            {hasTeamKnowledge && (
-              <div className="flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg text-left">
-                <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                <div className="text-sm text-indigo-800 dark:text-indigo-200">
-                  <span className="font-semibold">Team Knowledge Available</span>
-                  <span className="block mt-1 text-indigo-700 dark:text-indigo-300">
-                    {teamKnowledgeCount} document{teamKnowledgeCount !== 1 ? 's' : ''} from your team&apos;s knowledge base
-                    {teamKnowledgeTokens > 0 && ` (~${Math.round(teamKnowledgeTokens / 1000)}k tokens)`} will be used
-                    to enhance course content.
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Internal Data Only mode - show when any knowledge sources are present */}
             {(hasProcessedSources || hasTeamKnowledge) && onInternalDataOnlyChange && (
