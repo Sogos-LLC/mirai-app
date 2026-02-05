@@ -105,12 +105,16 @@ test.describe('Full Course Generation with ILD Quality Review', () => {
     console.log(`Creating course: "${courseName}"`);
 
     // Complete wizard - returns course ID after outline generation
-    const courseId = await wizard.completeWizard({
+    const success = await wizard.completeWizard({
       courseName,
-      additionalContext: 'Target audience is new sales representatives at B2B software companies. Cover prospecting, discovery calls, objection handling, and closing techniques. Include real-world scenarios and practice exercises.',
+      desiredOutcomes: 'Target audience is new sales representatives at B2B software companies. Cover prospecting, discovery calls, objection handling, and closing techniques. Include real-world scenarios and practice exercises.',
     });
 
-    expect(courseId).toBeTruthy();
+    expect(success).toBe(true);
+
+    // Extract courseId from editor URL after wizard completion
+    const editorUrl = await wizard.clickOpenInEditor();
+    const courseId = editorUrl.match(/\/course\/([^/]+)\//)?.[1] ?? '';
     console.log(`Course created with ID: ${courseId}`);
     await takeScreenshot(page, '02-wizard-complete', 'Wizard completed, outline ready');
 

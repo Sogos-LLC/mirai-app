@@ -71,7 +71,7 @@ test.describe('Conga Revenue Lifecycle - Full E2E', () => {
     // Complete the wizard flow
     const success = await wizard.completeWizard({
       courseName: COURSE_NAME,
-      additionalContext: COURSE_CONTEXT,
+      desiredOutcomes: COURSE_CONTEXT,
     });
 
     await takeScreenshot(page, 'conga-01-wizard-complete', 'Wizard completed');

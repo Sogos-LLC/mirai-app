@@ -39,7 +39,7 @@ test.describe('Course Generation Quality', () => {
 
     const wizardSuccess = await wizard.completeWizard({
       courseName: TEST_COURSE.name,
-      additionalContext: TEST_COURSE.context,
+      desiredOutcomes: TEST_COURSE.context,
     });
     expect(wizardSuccess).toBe(true);
 

@@ -149,13 +149,17 @@ class CourseCreationWorkflow:
         )
         improved_title = title_result.improved_title
         description = title_result.description
-        if not title_approval.approved:
+        if title_approval.approved and title_approval.modifications:
+            improved_title = title_approval.modifications.get("improved_title", improved_title)
+            description = title_approval.modifications.get("description", description)
+        elif not title_approval.approved:
             # Regenerate on rejection
             title_result = await self._run_ai_activity(
                 "generate_title_activity",
                 GenerateTitleInput(
                     api_key=api_key,
                     course_name=input.course_name,
+                    feedback=title_approval.feedback,
                     rag_filters=input.rag_filters or None,
                 ),
                 GenerateTitleOutput,
@@ -163,12 +167,15 @@ class CourseCreationWorkflow:
             )
             improved_title = title_result.improved_title
             description = title_result.description
-            await self._publish_and_wait(
+            second_title_approval = await self._publish_and_wait(
                 input, "title", json.dumps({
                     "improved_title": improved_title,
                     "description": description,
                 }), 5,
             )
+            if second_title_approval.approved and second_title_approval.modifications:
+                improved_title = second_title_approval.modifications.get("improved_title", improved_title)
+                description = second_title_approval.modifications.get("description", description)
 
         # Step 2: Generate outcomes
         self._progress = 8
@@ -189,21 +196,26 @@ class CourseCreationWorkflow:
             }), 10,
         )
         desired_outcomes = outcomes_result.outcomes
-        if not outcomes_approval.approved:
+        if outcomes_approval.approved and outcomes_approval.modifications:
+            desired_outcomes = outcomes_approval.modifications.get("outcomes", desired_outcomes)
+        elif not outcomes_approval.approved:
             outcomes_result = await self._run_ai_activity(
                 "generate_outcomes_activity",
                 GenerateOutcomesInput(
                     api_key=api_key,
                     course_name=improved_title,
+                    feedback=outcomes_approval.feedback,
                     rag_filters=input.rag_filters or None,
                 ),
                 GenerateOutcomesOutput,
                 timeout=AI_SHORT_TIMEOUT,
             )
             desired_outcomes = outcomes_result.outcomes
-            await self._publish_and_wait(
+            second_outcomes_approval = await self._publish_and_wait(
                 input, "outcomes", json.dumps({"outcomes": desired_outcomes}), 10,
             )
+            if second_outcomes_approval.approved and second_outcomes_approval.modifications:
+                desired_outcomes = second_outcomes_approval.modifications.get("outcomes", desired_outcomes)
 
         # Step 3: Generate SME personas
         self._progress = 13
@@ -284,6 +296,13 @@ class CourseCreationWorkflow:
             tone_result.options[0],
         )
 
+        # Merge any additional context from tone approval
+        additional_context = input.additional_context or ""
+        if tone_approval.modifications:
+            extra_context = tone_approval.modifications.get("additional_context", "")
+            if extra_context:
+                additional_context = (additional_context + "\n" + extra_context).strip()
+
         # Build wizard context for later phases
         wizard_context = {
             "improved_title": improved_title,
@@ -292,7 +311,7 @@ class CourseCreationWorkflow:
             "sme_personas": selected_smes,
             "audience_personas": selected_audiences,
             "tone": selected_tone,
-            "additional_context": input.additional_context,
+            "additional_context": additional_context,
             "internal_data_only": input.internal_data_only,
         }
 
@@ -358,7 +377,7 @@ class CourseCreationWorkflow:
                         desired_outcome=desired_outcomes,
                         document_analyses=[a for a in analyses],
                         internal_data_only=input.internal_data_only,
-                        additional_context=input.additional_context,
+                        additional_context=additional_context,
                     ),
                     GenerateCoursePlanOutput,
                     timeout=AI_LONG_TIMEOUT,
@@ -424,7 +443,7 @@ class CourseCreationWorkflow:
                     sme_knowledge=selected_smes,
                     target_audience=selected_audiences,
                     additional_context=(
-                        input.additional_context + "\n\n"
+                        additional_context + "\n\n"
                         + f"FEEDBACK FROM REVIEWER:\n{outline_approval.feedback}"
                     ),
                     internal_data_only=input.internal_data_only,

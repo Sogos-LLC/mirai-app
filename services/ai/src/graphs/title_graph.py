@@ -196,6 +196,7 @@ async def run_title_graph(
     *,
     api_key: str,
     course_name: str,
+    feedback: str = "",
     rag_filters: dict[str, str] | None = None,
 ) -> TitleResult:
     """Run the title generation graph."""
@@ -210,9 +211,13 @@ async def run_title_graph(
         rag_filters=rag_filters,
     )
 
+    state = TitleState()
+    if feedback:
+        state.refinement_feedback = f"User feedback on previous attempt: {feedback}"
+
     result = await title_graph.run(
         SearchKnowledgeNode(),
-        state=TitleState(),
+        state=state,
         deps=deps,
     )
 

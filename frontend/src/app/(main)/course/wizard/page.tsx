@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
 import { WizardStepper } from '@/components/course/WizardStepper';
+import { KnowledgeSelectionModal } from '@/components/course/KnowledgeSelectionModal';
 import { PageShell } from '@/components/layout/PageShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -33,7 +34,15 @@ import {
 } from '@/hooks/useCourseCreation';
 import { useCreateCourse } from '@/hooks/useCourses';
 import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
-import { GenerationJobStatus } from '@/gen/mirai/v1/ai_generation_types_pb';
+import {
+  GenerationJobStatus,
+  WorkflowStepType,
+} from '@/gen/mirai/v1/ai_generation_types_pb';
+
+/** Steps that support regeneration via reject. Selection-only steps (personas, tone, plan) don't. */
+function stepSupportsRegeneration(step: WorkflowStepType): boolean {
+  return [WorkflowStepType.TITLE, WorkflowStepType.OUTCOMES, WorkflowStepType.OUTLINE].includes(step);
+}
 
 export default function CourseWizardPage() {
   const router = useRouter();
@@ -56,6 +65,13 @@ export default function CourseWizardPage() {
 
   // Selection state for persona/tone steps
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Modifications state for editable steps (title, outcomes, additional context)
+  const [modifications, setModifications] = useState<Record<string, string>>({});
+
+  // Knowledge selection
+  const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<string[]>([]);
+  const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
 
   // XState machine with real actor implementations
   const [state, send] = useMachine(
@@ -119,12 +135,26 @@ export default function CourseWizardPage() {
     if (isCompleted) {
       setDisplayPhase(TOTAL_WIZARD_PHASES + 1);
     } else if (state.context.pendingStep) {
-      setDisplayPhase(getWizardPhase(state.context.pendingStep, false));
+      const nextPhase = getWizardPhase(state.context.pendingStep, false);
+      // Only advance forward during processing (never go backwards)
+      setDisplayPhase((prev) => (isIdle ? nextPhase : Math.max(prev, nextPhase)));
     } else if (isIdle) {
       setDisplayPhase(1);
     }
     // During processing with no pendingStep, keep the current displayPhase
   }, [state.context.pendingStep, isIdle, isCompleted]);
+
+  // Reset selection/modification state when step changes
+  const prevStepRef = React.useRef(state.context.pendingStep);
+  useEffect(() => {
+    if (state.context.pendingStep !== prevStepRef.current) {
+      setSelectedIds([]);
+      setModifications({});
+      setShowRejectForm(false);
+      setFeedback('');
+      prevStepRef.current = state.context.pendingStep;
+    }
+  }, [state.context.pendingStep]);
 
   // Start the workflow: create a course record, then start the Temporal workflow
   const handleStart = useCallback(async () => {
@@ -147,6 +177,7 @@ export default function CourseWizardPage() {
         courseId,
         courseName: name,
         desiredOutcomes: desiredOutcomes.trim() || undefined,
+        selectedGlobalDocIds: selectedKnowledgeIds.length > 0 ? selectedKnowledgeIds : undefined,
       });
 
       if (result.job?.id) {
@@ -161,15 +192,20 @@ export default function CourseWizardPage() {
     } finally {
       setIsStarting(false);
     }
-  }, [courseName, desiredOutcomes, createCourse, startCreation, send]);
+  }, [courseName, desiredOutcomes, selectedKnowledgeIds, createCourse, startCreation, send]);
 
   // Approve current step
   const handleApprove = useCallback(() => {
     setShowRejectForm(false);
     setFeedback('');
-    send({ type: 'APPROVE', selectedIds: selectedIds.length > 0 ? selectedIds : undefined });
+    send({
+      type: 'APPROVE',
+      selectedIds: selectedIds.length > 0 ? selectedIds : undefined,
+      modifications: Object.keys(modifications).length > 0 ? modifications : undefined,
+    });
     setSelectedIds([]);
-  }, [send, selectedIds]);
+    setModifications({});
+  }, [send, selectedIds, modifications]);
 
   // Reject current step
   const handleReject = useCallback(() => {
@@ -242,22 +278,19 @@ export default function CourseWizardPage() {
                     >
                       Desired Course Outcomes
                     </label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary bg-surface border rounded-full hover:bg-hover transition-colors min-h-[32px]"
-                      >
-                        <Paperclip className="w-3.5 h-3.5" />
-                        Add Knowledge
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary bg-surface border rounded-full hover:bg-hover transition-colors min-h-[32px]"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Generate
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowKnowledgeModal(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary bg-surface border rounded-full hover:bg-hover transition-colors min-h-[32px]"
+                    >
+                      <Paperclip className="w-3.5 h-3.5" />
+                      Add Knowledge
+                      {selectedKnowledgeIds.length > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full">
+                          {selectedKnowledgeIds.length}
+                        </span>
+                      )}
+                    </button>
                   </div>
                   <textarea
                     id="outcomes"
@@ -270,8 +303,9 @@ export default function CourseWizardPage() {
                     className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                   <p className="mt-2 text-xs text-muted text-center">
-                    These outcomes serve as the north star guiding all content
-                    generation.
+                    {desiredOutcomes.trim()
+                      ? 'These outcomes serve as the north star guiding all content generation.'
+                      : 'Optional — AI will refine your outcomes in the next step.'}
                   </p>
                 </div>
 
@@ -350,6 +384,7 @@ export default function CourseWizardPage() {
                   step={state.context.pendingStep!}
                   data={state.context.stepData}
                   onSelectionChange={setSelectedIds}
+                  onModificationsChange={setModifications}
                 />
               </CardContent>
             )}
@@ -358,16 +393,24 @@ export default function CourseWizardPage() {
             <div className="px-4 py-4 sm:px-6 border-t">
               {!showRejectForm ? (
                 <div className="flex items-center justify-between">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowRejectForm(true)}
-                    disabled={isSendingSignal}
-                    className="gap-2"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Regenerate
-                  </Button>
+                  {state.context.pendingStep && stepSupportsRegeneration(state.context.pendingStep) ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowRejectForm(true)}
+                      disabled={isSendingSignal}
+                      className="gap-2"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Regenerate
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-muted">
+                      {state.context.pendingStep === WorkflowStepType.TONE_OPTIONS
+                        ? 'Pick the tone that best fits your course, then continue.'
+                        : 'Select the items you want, then continue.'}
+                    </p>
+                  )}
                   <Button
                     variant="primary"
                     onClick={handleApprove}
@@ -490,6 +533,17 @@ export default function CourseWizardPage() {
             Dismiss
           </button>
         </div>
+      )}
+      {/* Knowledge selection modal */}
+      {showKnowledgeModal && (
+        <KnowledgeSelectionModal
+          selectedIds={selectedKnowledgeIds}
+          onConfirm={(ids) => {
+            setSelectedKnowledgeIds(ids);
+            setShowKnowledgeModal(false);
+          }}
+          onClose={() => setShowKnowledgeModal(false)}
+        />
       )}
     </PageShell>
   );

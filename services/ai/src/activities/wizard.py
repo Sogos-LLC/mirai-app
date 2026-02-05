@@ -24,6 +24,7 @@ log = structlog.get_logger()
 class GenerateTitleInput:
     api_key: str
     course_name: str
+    feedback: str = ""
     rag_filters: dict[str, str] | None = None
 
 
@@ -43,6 +44,7 @@ async def generate_title_activity(input: GenerateTitleInput) -> GenerateTitleOut
     result = await run_title_graph(
         api_key=input.api_key,
         course_name=input.course_name,
+        feedback=input.feedback,
         rag_filters=input.rag_filters,
     )
 
@@ -63,6 +65,7 @@ async def generate_title_activity(input: GenerateTitleInput) -> GenerateTitleOut
 class GenerateOutcomesInput:
     api_key: str
     course_name: str
+    feedback: str = ""
     rag_filters: dict[str, str] | None = None
 
 
@@ -83,6 +86,7 @@ async def generate_outcomes_activity(
     result = await run_outcomes_graph(
         api_key=input.api_key,
         course_name=input.course_name,
+        feedback=input.feedback,
         rag_filters=input.rag_filters,
     )
 

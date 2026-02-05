@@ -20,11 +20,11 @@ interface PhaseDefinition {
 }
 
 const PHASES: PhaseDefinition[] = [
-  { label: 'Course Name', icon: FileText },
-  { label: 'Title & Description', icon: Sparkles },
-  { label: 'SME Personas', icon: Users },
-  { label: 'Target Audience', icon: Target },
-  { label: 'Tone & Context', icon: MessageCircle },
+  { label: 'Course Setup', icon: FileText },
+  { label: 'Learning Outcomes', icon: Target },
+  { label: 'Expert Personas', icon: Users },
+  { label: 'Tone & Style', icon: MessageCircle },
+  { label: 'Course Content', icon: Sparkles },
 ];
 
 export function WizardStepper({ currentPhase }: WizardStepperProps) {

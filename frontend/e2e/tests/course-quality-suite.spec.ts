@@ -96,13 +96,17 @@ test.describe.serial('Course Quality Suite', () => {
 
     // Step 2: Complete wizard
     console.log(`--- Step 2: Creating course "${courseName}" ---`);
-    const courseId = await wizard.completeWizard({
+    const success = await wizard.completeWizard({
       courseName,
-      additionalContext:
+      desiredOutcomes:
         'Target audience is new sales representatives at B2B software companies. Cover prospecting, discovery calls, objection handling, and closing techniques. Include real-world scenarios.',
     });
 
-    expect(courseId).toBeTruthy();
+    expect(success).toBe(true);
+
+    // Extract courseId from editor URL after wizard completion
+    const editorUrl = await wizard.clickOpenInEditor();
+    const courseId = editorUrl.match(/\/course\/([^/]+)\//)?.[1] ?? '';
     console.log(`Course created with ID: ${courseId}`);
     await takeScreenshot(page, 'gen-02-wizard-complete', 'Wizard completed');
 

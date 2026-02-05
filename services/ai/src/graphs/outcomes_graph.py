@@ -207,6 +207,7 @@ async def run_outcomes_graph(
     *,
     api_key: str,
     course_name: str,
+    feedback: str = "",
     rag_filters: dict[str, str] | None = None,
 ) -> OutcomesResult:
     """Run the outcomes generation graph."""
@@ -221,9 +222,13 @@ async def run_outcomes_graph(
         rag_filters=rag_filters,
     )
 
+    state = OutcomesState()
+    if feedback:
+        state.refinement_feedback = f"User feedback on previous attempt: {feedback}"
+
     result = await outcomes_graph.run(
         SearchKnowledgeNode(),
-        state=OutcomesState(),
+        state=state,
         deps=deps,
     )
 

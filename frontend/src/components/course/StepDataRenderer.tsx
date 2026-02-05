@@ -108,14 +108,15 @@ interface StepDataRendererProps {
   step: WorkflowStepType;
   data: Record<string, unknown>;
   onSelectionChange?: (selectedIds: string[]) => void;
+  onModificationsChange?: (mods: Record<string, string>) => void;
 }
 
-export function StepDataRenderer({ step, data, onSelectionChange }: StepDataRendererProps) {
+export function StepDataRenderer({ step, data, onSelectionChange, onModificationsChange }: StepDataRendererProps) {
   switch (step) {
     case WorkflowStepType.TITLE:
-      return <TitleStep data={data as unknown as TitleStepData} />;
+      return <TitleStep data={data as unknown as TitleStepData} onModificationsChange={onModificationsChange} />;
     case WorkflowStepType.OUTCOMES:
-      return <OutcomesStep data={data as unknown as OutcomesStepData} />;
+      return <OutcomesStep data={data as unknown as OutcomesStepData} onModificationsChange={onModificationsChange} />;
     case WorkflowStepType.SME_PERSONAS:
       return (
         <PersonaCards
@@ -137,6 +138,7 @@ export function StepDataRenderer({ step, data, onSelectionChange }: StepDataRend
         <ToneOptionCards
           options={(data as unknown as ToneOptionsStepData).options ?? []}
           onSelectionChange={onSelectionChange}
+          onModificationsChange={onModificationsChange}
         />
       );
     case WorkflowStepType.COURSE_PLAN:
@@ -156,21 +158,46 @@ export function StepDataRenderer({ step, data, onSelectionChange }: StepDataRend
 // Title Step
 // ============================================================
 
-function TitleStep({ data }: { data: TitleStepData }) {
+function TitleStep({ data, onModificationsChange }: { data: TitleStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
+  const [title, setTitle] = useState(data.improved_title);
+  const [description, setDescription] = useState(data.description);
+
+  const handleTitleChange = useCallback((val: string) => {
+    setTitle(val);
+    onModificationsChange?.({ improved_title: val, description });
+  }, [description, onModificationsChange]);
+
+  const handleDescriptionChange = useCallback((val: string) => {
+    setDescription(val);
+    onModificationsChange?.({ improved_title: title, description: val });
+  }, [title, onModificationsChange]);
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 text-xs text-muted">
-        <BookOpen className="w-3.5 h-3.5" />
-        <span>Proposed Title</span>
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-center gap-2 text-xs text-muted mb-1.5">
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Course Title</span>
+        </div>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => handleTitleChange(e.target.value)}
+          className="w-full px-3 py-2 bg-page border rounded-lg text-primary text-base font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        />
       </div>
-      <h4 className="text-base font-semibold text-primary">
-        {data.improved_title}
-      </h4>
-      {data.description && (
-        <p className="text-sm text-secondary leading-relaxed">
-          {data.description}
-        </p>
-      )}
+      <div>
+        <div className="flex items-center gap-2 text-xs text-muted mb-1.5">
+          <span>Description</span>
+        </div>
+        <textarea
+          value={description}
+          onChange={(e) => handleDescriptionChange(e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none leading-relaxed"
+        />
+      </div>
+      <p className="text-xs text-muted">Edit the title and description above, or approve as-is.</p>
     </div>
   );
 }
@@ -179,11 +206,13 @@ function TitleStep({ data }: { data: TitleStepData }) {
 // Outcomes Step
 // ============================================================
 
-function OutcomesStep({ data }: { data: OutcomesStepData }) {
-  const outcomes = (data.outcomes ?? '')
-    .split('\n')
-    .map((line) => line.replace(/^[•\-*]\s*/, '').trim())
-    .filter(Boolean);
+function OutcomesStep({ data, onModificationsChange }: { data: OutcomesStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
+  const [outcomes, setOutcomes] = useState(data.outcomes ?? '');
+
+  const handleChange = useCallback((val: string) => {
+    setOutcomes(val);
+    onModificationsChange?.({ outcomes: val });
+  }, [onModificationsChange]);
 
   return (
     <div className="space-y-3">
@@ -191,14 +220,13 @@ function OutcomesStep({ data }: { data: OutcomesStepData }) {
         <Target className="w-3.5 h-3.5" />
         <span>Learning Outcomes</span>
       </div>
-      <ul className="space-y-2">
-        {outcomes.map((outcome, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-primary">
-            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />
-            <span>{outcome}</span>
-          </li>
-        ))}
-      </ul>
+      <textarea
+        value={outcomes}
+        onChange={(e) => handleChange(e.target.value)}
+        rows={6}
+        className="w-full px-3 py-2 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none leading-relaxed font-mono"
+      />
+      <p className="text-xs text-muted">Edit the outcomes above, or approve as-is. Use bullet points (one per line).</p>
     </div>
   );
 }
@@ -217,6 +245,7 @@ function PersonaCards({ personas, type, onSelectionChange }: PersonaCardsProps) 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set(personas.map((p) => p.id))
   );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const toggleSelection = useCallback(
     (id: string) => {
@@ -234,85 +263,131 @@ function PersonaCards({ personas, type, onSelectionChange }: PersonaCardsProps) 
     [onSelectionChange]
   );
 
+  const toggleAll = useCallback(() => {
+    const allSelected = selectedIds.size === personas.length;
+    const next = allSelected ? new Set<string>() : new Set(personas.map((p) => p.id));
+    setSelectedIds(next);
+    onSelectionChange?.(Array.from(next));
+  }, [selectedIds, personas, onSelectionChange]);
+
   const isSME = type === 'sme';
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-xs text-muted">
-        {isSME ? <User className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
-        <span>
-          {isSME ? 'Subject Matter Experts' : 'Target Audience'}
-        </span>
-        <span className="text-muted">— select personas to include</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted">
+          {isSME ? <User className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+          <span>
+            {isSME ? 'Subject Matter Experts' : 'Target Audience'}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted">{selectedIds.size} of {personas.length} selected</span>
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+          >
+            {selectedIds.size === personas.length ? 'Deselect All' : 'Select All'}
+          </button>
+        </div>
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {personas.map((persona) => {
           const isSelected = selectedIds.has(persona.id);
+          const isExpanded = expandedId === persona.id;
           const sme = persona as SMEPersona;
           const audience = persona as AudiencePersona;
 
           return (
-            <button
+            <div
               key={persona.id}
-              type="button"
-              onClick={() => toggleSelection(persona.id)}
-              className={`w-full text-left rounded-lg border p-3 transition-colors ${
+              className={`rounded-lg border transition-colors ${
                 isSelected
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/20'
-                  : 'border-subtle bg-page hover:bg-hover'
+                  : 'border-subtle bg-page'
               }`}
             >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                    isSelected
-                      ? 'bg-indigo-600 border-indigo-600'
-                      : 'border-subtle'
-                  }`}
-                >
-                  {isSelected && (
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-primary">
-                    {isSME ? sme.job_title : audience.name}
+              <button
+                type="button"
+                onClick={() => toggleSelection(persona.id)}
+                className="w-full text-left p-3"
+              >
+                <div className="flex items-start gap-2">
+                  <div
+                    className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                      isSelected
+                        ? 'bg-indigo-600 border-indigo-600'
+                        : 'border-subtle'
+                    }`}
+                  >
+                    {isSelected && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </div>
-                  {!isSME && audience.role && (
-                    <div className="text-xs text-muted mt-0.5">{audience.role}</div>
-                  )}
-                  <p className="text-xs text-secondary mt-1 line-clamp-2">
-                    {persona.description}
-                  </p>
-                  {isSME && sme.skills?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {sme.skills.slice(0, 4).map((skill) => (
-                        <span
-                          key={skill}
-                          className="px-1.5 py-0.5 text-[10px] rounded bg-surface border text-muted"
-                        >
-                          {skill}
-                        </span>
-                      ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-primary">
+                      {isSME ? sme.job_title : audience.name}
                     </div>
-                  )}
-                  {!isSME && audience.goals?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {audience.goals.slice(0, 3).map((goal) => (
-                        <span
-                          key={goal}
-                          className="px-1.5 py-0.5 text-[10px] rounded bg-surface border text-muted"
-                        >
-                          {goal}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                    {!isSME && audience.role && (
+                      <div className="text-xs text-muted mt-0.5">{audience.role}</div>
+                    )}
+                    <p className="text-xs text-secondary mt-1 line-clamp-2">
+                      {persona.description}
+                    </p>
+                    {isSME && sme.voice && (
+                      <p className="text-xs text-secondary mt-1 italic line-clamp-1">
+                        &ldquo;{sme.voice}&rdquo;
+                      </p>
+                    )}
+                  </div>
                 </div>
+              </button>
+              {/* Expand toggle */}
+              <div className="px-3 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isExpanded ? null : persona.id)}
+                  className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {isExpanded ? 'Show less' : 'Show more'}
+                </button>
+                {isExpanded && (
+                  <div className="mt-2 space-y-2">
+                    {isSME && sme.skills?.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {sme.skills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="px-1.5 py-0.5 text-[10px] rounded bg-surface border text-muted"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {isSME && sme.voice && (
+                      <p className="text-xs text-secondary italic">&ldquo;{sme.voice}&rdquo;</p>
+                    )}
+                    {!isSME && audience.goals?.length > 0 && (
+                      <div>
+                        <span className="text-[10px] text-muted font-medium">Goals:</span>
+                        <ul className="mt-1 space-y-0.5">
+                          {audience.goals.map((goal) => (
+                            <li key={goal} className="flex items-start gap-1.5 text-xs text-secondary">
+                              <span className="mt-1 h-1 w-1 rounded-full bg-current shrink-0" />
+                              <span>{goal}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -329,10 +404,15 @@ interface ToneOptionCardsProps {
   onSelectionChange?: (selectedIds: string[]) => void;
 }
 
-function ToneOptionCards({ options, onSelectionChange }: ToneOptionCardsProps) {
+interface ToneOptionCardsWithContextProps extends ToneOptionCardsProps {
+  onModificationsChange?: (mods: Record<string, string>) => void;
+}
+
+function ToneOptionCards({ options, onSelectionChange, onModificationsChange }: ToneOptionCardsWithContextProps) {
   const [selectedId, setSelectedId] = useState<string | null>(
     options.length > 0 ? options[0].id : null
   );
+  const [additionalContext, setAdditionalContext] = useState('');
 
   const selectTone = useCallback(
     (id: string) => {
@@ -342,8 +422,29 @@ function ToneOptionCards({ options, onSelectionChange }: ToneOptionCardsProps) {
     [onSelectionChange]
   );
 
+  const handleContextChange = useCallback(
+    (val: string) => {
+      setAdditionalContext(val);
+      if (val.trim()) {
+        onModificationsChange?.({ additional_context: val });
+      } else {
+        onModificationsChange?.({});
+      }
+    },
+    [onModificationsChange]
+  );
+
+  const detailBadgeColor = (level: string) => {
+    switch (level.toLowerCase()) {
+      case 'brief': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'moderate': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'comprehensive': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+      default: return 'bg-surface border text-muted';
+    }
+  };
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center gap-2 text-xs text-muted">
         <MessageSquare className="w-3.5 h-3.5" />
         <span>Tone & Style</span>
@@ -379,7 +480,7 @@ function ToneOptionCards({ options, onSelectionChange }: ToneOptionCardsProps) {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-primary">{option.name}</span>
                     {option.level_of_detail && (
-                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-surface border text-muted">
+                      <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${detailBadgeColor(option.level_of_detail)}`}>
                         {option.level_of_detail}
                       </span>
                     )}
@@ -390,6 +491,20 @@ function ToneOptionCards({ options, onSelectionChange }: ToneOptionCardsProps) {
             </button>
           );
         })}
+      </div>
+
+      {/* Additional context textarea */}
+      <div>
+        <label className="text-xs text-muted font-medium mb-1.5 block">
+          Additional Context (Optional)
+        </label>
+        <textarea
+          value={additionalContext}
+          onChange={(e) => handleContextChange(e.target.value)}
+          placeholder="Add any extra context about your preferred tone, audience specifics, or style notes..."
+          rows={2}
+          className="w-full px-3 py-2 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+        />
       </div>
     </div>
   );
