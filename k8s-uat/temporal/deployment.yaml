@@ -44,8 +44,8 @@ spec:
             secretKeyRef:
               name: temporal-db-credentials
               key: password
-        - name: DYNAMIC_CONFIG_FILE_PATH
-          value: "config/dynamicconfig/development-sql.yaml"
+        - name: SKIP_DEFAULT_NAMESPACE_CREATION
+          value: "false"
         - name: TEMPORAL_ADDRESS
           value: "0.0.0.0:7233"
         - name: LOG_LEVEL
