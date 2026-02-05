@@ -3,9 +3,9 @@
 Flow:
   Wizard Phase → (optional) Planning Phase → Outline Phase → Lesson Phase → Complete
 
-At each approval point, publishes SSE via Go activity and waits for a Temporal signal.
+At each approval point, sets internal state and waits for a Temporal update.
 AI work is done in Python activities on ai-tasks queue.
-Infrastructure (DB, MinIO, SSE) is done via Go activities on go-tasks queue.
+Infrastructure (DB, MinIO) is done via Go activities on go-tasks queue.
 """
 
 import json
@@ -13,6 +13,7 @@ from datetime import timedelta
 
 import structlog
 from temporalio import workflow
+from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
     from src.activities.generation import (
@@ -54,24 +55,56 @@ GO_RETRY = {"maximum_attempts": 3}
 AI_RETRY = {"maximum_attempts": 2}
 
 
-@workflow.defn
+@workflow.defn(sandboxed=False)
 class CourseCreationWorkflow:
-    """Unified course creation workflow with signal-based human-in-the-loop."""
+    """Unified course creation workflow with update-based human-in-the-loop."""
 
     def __init__(self) -> None:
         self._approval: StepApproval | None = None
         self._current_step: str = ""
+        self._status: str = "processing"
+        self._step_data: str = ""
+        self._progress: int = 0
+        self._progress_message: str = ""
 
-    @workflow.signal
+    # ------------------------------------------------------------------
+    # Query handler — lightweight, read-only snapshot of workflow state
+    # ------------------------------------------------------------------
+
+    @workflow.query
+    def get_state(self) -> dict:
+        return {
+            "status": self._status,
+            "current_step": self._current_step,
+            "step_data_json": self._step_data,
+            "progress_percent": self._progress,
+            "progress_message": self._progress_message,
+        }
+
+    # ------------------------------------------------------------------
+    # Update handlers — synchronous round-trip for approvals/rejections
+    # ------------------------------------------------------------------
+
+    @workflow.update
     async def approve_step(self, data: StepApproval) -> None:
-        """Signal: user approved a step. Store the approval data."""
+        """Update: user approved a step. Store the approval data."""
         self._approval = data
 
-    @workflow.signal
+    @approve_step.validator
+    def validate_approve(self, data: StepApproval) -> None:
+        if self._status != "awaiting_approval":
+            raise ApplicationError(f"Not in approval state: {self._status}")
+
+    @workflow.update
     async def reject_step(self, data: StepApproval) -> None:
-        """Signal: user rejected a step. Store with approved=False."""
+        """Update: user rejected a step. Store with approved=False."""
         data.approved = False
         self._approval = data
+
+    @reject_step.validator
+    def validate_reject(self, data: StepApproval) -> None:
+        if self._status != "awaiting_approval":
+            raise ApplicationError(f"Not in approval state: {self._status}")
 
     @workflow.run
     async def run(self, input: CourseCreationInput) -> CourseCreationOutput:
@@ -83,6 +116,9 @@ class CourseCreationWorkflow:
         )
 
         # Update job status to processing
+        self._status = "processing"
+        self._progress = 0
+        self._progress_message = "Starting course creation"
         await self._update_job(input, "PROCESSING", 0, "Starting course creation")
 
         # 1. Decrypt API key (Go activity)
@@ -93,6 +129,8 @@ class CourseCreationWorkflow:
         # ---------------------------------------------------------------
 
         # Step 1: Generate title
+        self._progress = 3
+        self._progress_message = "Generating title..."
         title_result = await self._run_ai_activity(
             "generate_title_activity",
             GenerateTitleInput(api_key=api_key, course_name=input.course_name),
@@ -125,6 +163,8 @@ class CourseCreationWorkflow:
             )
 
         # Step 2: Generate outcomes
+        self._progress = 8
+        self._progress_message = "Generating outcomes..."
         outcomes_result = await self._run_ai_activity(
             "generate_outcomes_activity",
             GenerateOutcomesInput(
@@ -153,6 +193,8 @@ class CourseCreationWorkflow:
             )
 
         # Step 3: Generate SME personas
+        self._progress = 13
+        self._progress_message = "Generating SME personas..."
         sme_result = await self._run_ai_activity(
             "generate_sme_personas_activity",
             GenerateSMEPersonasInput(
@@ -172,6 +214,8 @@ class CourseCreationWorkflow:
         ]
 
         # Step 4: Generate audience personas
+        self._progress = 18
+        self._progress_message = "Generating audience personas..."
         audience_result = await self._run_ai_activity(
             "generate_audience_personas_activity",
             GenerateAudiencePersonasInput(
@@ -195,6 +239,8 @@ class CourseCreationWorkflow:
         ]
 
         # Step 5: Generate tone options
+        self._progress = 23
+        self._progress_message = "Generating tone options..."
         tone_result = await self._run_ai_activity(
             "generate_tone_options_activity",
             GenerateToneOptionsInput(
@@ -247,6 +293,8 @@ class CourseCreationWorkflow:
         )
 
         if has_knowledge:
+            self._progress = 30
+            self._progress_message = "Analyzing documents"
             await self._update_job(input, "PROCESSING", 30, "Analyzing documents")
 
             # Analyze each document
@@ -308,6 +356,8 @@ class CourseCreationWorkflow:
         # OUTLINE PHASE
         # ---------------------------------------------------------------
 
+        self._progress = 40
+        self._progress_message = "Generating outline"
         await self._update_job(input, "PROCESSING", 40, "Generating outline")
 
         # Parse desired outcomes into a list
@@ -384,6 +434,8 @@ class CourseCreationWorkflow:
         # LESSON PHASE
         # ---------------------------------------------------------------
 
+        self._progress = 55
+        self._progress_message = "Generating lessons"
         await self._update_job(input, "PROCESSING", 55, "Generating lessons")
 
         outline = outline_result.outline
@@ -428,13 +480,12 @@ class CourseCreationWorkflow:
                 completed_lessons += 1
                 progress = 55 + int((completed_lessons / total_lessons) * 40)
 
+                self._progress = progress
+                self._progress_message = f"Generated lesson {completed_lessons}/{total_lessons}"
                 await self._update_job(
                     input, "PROCESSING", progress,
                     f"Generated lesson {completed_lessons}/{total_lessons}",
                 )
-
-                # Publish progress event
-                await self._publish_event(input, "updated")
 
         # ---------------------------------------------------------------
         # FINALIZE
@@ -446,8 +497,13 @@ class CourseCreationWorkflow:
             input.tenant_id, input.course_id, course_content,
         )
 
+        self._status = "completed"
+        self._progress = 100
+        self._progress_message = "Course creation complete"
         await self._update_job(input, "COMPLETED", 100, "Course creation complete")
-        await self._publish_event(input, "completed")
+
+        # Ensure all pending update handlers complete before returning
+        await workflow.wait_condition(workflow.all_handlers_finished)
 
         return CourseCreationOutput(
             course_id=input.course_id,
@@ -466,25 +522,28 @@ class CourseCreationWorkflow:
         data_json: str,
         progress: int,
     ) -> StepApproval:
-        """Publish step result via SSE, then wait for user approval signal."""
+        """Set internal state for query, then wait for user approval update."""
         self._current_step = step
+        self._step_data = data_json
+        self._status = "awaiting_approval"
+        self._progress = progress
+        self._progress_message = f"Waiting for approval: {step}"
         self._approval = None
 
-        # Update job with step data
+        # DB audit trail only
         await self._update_job(
             input, "AWAITING_APPROVAL", progress,
             f"Waiting for approval: {step}",
         )
 
-        # Publish SSE event with step data
-        await self._publish_step_event(input, step, data_json)
-
-        # Wait for signal (durable — survives restarts)
+        # Wait for update (durable — survives restarts)
         await workflow.wait_condition(lambda: self._approval is not None)
 
         approval = self._approval
         assert approval is not None
         self._approval = None
+        self._status = "processing"
+        self._step_data = ""
         return approval
 
     async def _decrypt_api_key(self, tenant_id: str) -> str:
@@ -513,42 +572,6 @@ class CourseCreationWorkflow:
                 "status": status,
                 "progress_percent": progress,
                 "progress_message": message,
-            },
-            task_queue=GO_TASKS,
-            start_to_close_timeout=GO_TIMEOUT,
-            retry_policy=workflow.RetryPolicy(**GO_RETRY),
-        )
-
-    async def _publish_event(
-        self, input: CourseCreationInput, event_type: str,
-    ) -> None:
-        """Publish SSE event via Go activity."""
-        await workflow.execute_activity(
-            "PublishJobEvent",
-            {
-                "user_id": input.user_id,
-                "event_type": event_type,
-                "job_id": input.job_id,
-            },
-            task_queue=GO_TASKS,
-            start_to_close_timeout=GO_TIMEOUT,
-            retry_policy=workflow.RetryPolicy(**GO_RETRY),
-        )
-
-    async def _publish_step_event(
-        self,
-        input: CourseCreationInput,
-        step: str,
-        data_json: str,
-    ) -> None:
-        """Publish awaiting-approval SSE event with step data."""
-        await workflow.execute_activity(
-            "PublishJobStepEvent",
-            {
-                "user_id": input.user_id,
-                "job_id": input.job_id,
-                "step": step,
-                "data_json": data_json,
             },
             task_queue=GO_TASKS,
             start_to_close_timeout=GO_TIMEOUT,
