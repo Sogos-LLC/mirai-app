@@ -9,7 +9,7 @@ import {
   Check,
   X,
   FileText,
-  Settings2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import type { OutlineSection } from '@/gen/mirai/v1/ai_generation_types_pb';
 import {
@@ -19,6 +19,7 @@ import {
 } from '@/gen/mirai/v1/ai_generation_types_pb';
 import SectionMetadataBadges from '@/components/outline/SectionMetadataBadges';
 import SectionFeedbackControls, { type SectionFeedbackData } from '@/components/outline/SectionFeedbackControls';
+import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import { LessonSourcePanel } from '@/components/lessons/LessonSourcePanel';
 
 interface EditState {
@@ -150,7 +151,6 @@ export function OutlineSectionCard({
               <SectionMetadataBadges
                 level={section.level}
                 intent={section.intent}
-                emphasis={section.emphasis}
                 groundingScore={section.groundingScore}
                 contributingChunkIds={section.contributingChunkIds}
                 compact={false}
@@ -161,31 +161,34 @@ export function OutlineSectionCard({
                   e.stopPropagation();
                   setFeedbackOpen(true);
                 }}
-                className={`p-1 rounded transition-opacity ${isTouch ? 'opacity-70' : 'opacity-0 group-hover:opacity-100'} hover:bg-hover text-muted`}
-                title="Edit section metadata"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
               >
-                <Settings2 className="w-4 h-4" />
+                <SlidersHorizontal className="w-3 h-3" />
+                <span>Edit</span>
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Section Feedback Controls */}
-      {feedbackOpen && (
-        <div className="px-4 pb-3">
-          <SectionFeedbackControls
-            initialData={getSectionFeedbackData()}
-            availableOutcomes={availableOutcomes}
-            sectionTitle={section.title || `Section ${sectionIndex + 1}`}
-            onSave={(data) => {
-              onSaveSectionFeedback(sectionIndex, data);
-              setFeedbackOpen(false);
-            }}
-            onCancel={() => setFeedbackOpen(false)}
-          />
-        </div>
-      )}
+      {/* Section Feedback Modal */}
+      <ResponsiveModal
+        isOpen={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        title={`Section Feedback: ${section.title || `Section ${sectionIndex + 1}`}`}
+        size="lg"
+        mobileHeight="full"
+      >
+        <SectionFeedbackControls
+          initialData={getSectionFeedbackData()}
+          availableOutcomes={availableOutcomes}
+          onSave={(data) => {
+            onSaveSectionFeedback(sectionIndex, data);
+            setFeedbackOpen(false);
+          }}
+          onCancel={() => setFeedbackOpen(false)}
+        />
+      </ResponsiveModal>
 
       {isExpanded && section.lessons && (
         <div className="px-2 sm:px-4 pb-3">

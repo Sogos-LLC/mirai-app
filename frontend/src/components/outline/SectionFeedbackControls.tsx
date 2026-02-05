@@ -24,8 +24,6 @@ export interface SectionFeedbackControlsProps {
   onSave: (data: SectionFeedbackData) => void;
   /** Called when user cancels */
   onCancel: () => void;
-  /** Section title for context */
-  sectionTitle: string;
 }
 
 /**
@@ -37,7 +35,6 @@ export default function SectionFeedbackControls({
   availableOutcomes,
   onSave,
   onCancel,
-  sectionTitle,
 }: SectionFeedbackControlsProps) {
   const [data, setData] = useState<SectionFeedbackData>(initialData);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -64,11 +61,7 @@ export default function SectionFeedbackControls({
   ];
 
   return (
-    <div className="bg-surface border rounded-lg p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-primary">Section Feedback: {sectionTitle}</h4>
-      </div>
-
+    <div className="space-y-4">
       {/* Learning Level */}
       <div>
         <label className="block text-xs font-medium text-secondary mb-2">Learning Level</label>

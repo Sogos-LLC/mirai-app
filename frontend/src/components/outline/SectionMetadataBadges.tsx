@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BookOpen, PenTool, RotateCcw, Lightbulb, GraduationCap, Award } from 'lucide-react';
-import { SectionLevel, SectionIntent, SectionEmphasis } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { SectionLevel, SectionIntent } from '@/gen/mirai/v1/ai_generation_types_pb';
 import GroundingIndicator from '@/components/ui/GroundingIndicator';
 
 export interface SectionMetadataBadgesProps {
@@ -10,8 +10,6 @@ export interface SectionMetadataBadgesProps {
   level?: SectionLevel;
   /** Primary intent of the section */
   intent?: SectionIntent;
-  /** Relative importance */
-  emphasis?: SectionEmphasis;
   /** Grounding score from knowledge sources (0.0 - 1.0) */
   groundingScore?: number;
   /** IDs of contributing knowledge chunks */
@@ -29,7 +27,6 @@ export interface SectionMetadataBadgesProps {
 export default function SectionMetadataBadges({
   level,
   intent,
-  emphasis,
   groundingScore,
   contributingChunkIds,
   compact = false,
@@ -75,12 +72,6 @@ export default function SectionMetadataBadges({
     },
   };
 
-  // Emphasis indicator (dots or bar)
-  const emphasisLevel = emphasis ?? SectionEmphasis.UNSPECIFIED;
-  const emphasisDots = emphasisLevel === SectionEmphasis.HIGH ? 3 :
-                       emphasisLevel === SectionEmphasis.MEDIUM ? 2 :
-                       emphasisLevel === SectionEmphasis.LOW ? 1 : 0;
-
   const levelInfo = level !== undefined ? levelConfig[level] : null;
   const intentInfo = intent !== undefined ? intentConfig[intent] : null;
 
@@ -115,25 +106,6 @@ export default function SectionMetadataBadges({
         >
           {intentInfo.icon}
           {!compact && <span>{intentInfo.label}</span>}
-        </span>
-      )}
-
-      {/* Emphasis indicator (subtle dots) */}
-      {emphasisDots > 0 && !compact && (
-        <span
-          className="flex items-center gap-0.5 px-1.5 py-0.5"
-          title={`Emphasis: ${emphasisLevel === SectionEmphasis.HIGH ? 'High' : emphasisLevel === SectionEmphasis.MEDIUM ? 'Medium' : 'Low'}`}
-        >
-          {[...Array(3)].map((_, i) => (
-            <span
-              key={i}
-              className={`w-1.5 h-1.5 rounded-full ${
-                i < emphasisDots
-                  ? 'bg-indigo-500 dark:bg-indigo-400'
-                  : 'bg-gray-300 dark:bg-gray-600'
-              }`}
-            />
-          ))}
         </span>
       )}
 
