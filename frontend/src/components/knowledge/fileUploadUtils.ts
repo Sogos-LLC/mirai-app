@@ -36,6 +36,27 @@ export function formatTokenCount(tokens: number): string {
   return `~${Math.round(tokens / 1000)}k tokens`;
 }
 
+/** Strip markdown syntax to produce clean plain text for previews. */
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, '')       // # headings
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold**
+    .replace(/\*(.+?)\*/g, '$1')       // *italic*
+    .replace(/__(.+?)__/g, '$1')       // __bold__
+    .replace(/_(.+?)_/g, '$1')         // _italic_
+    .replace(/~~(.+?)~~/g, '$1')       // ~~strikethrough~~
+    .replace(/`(.+?)`/g, '$1')         // `code`
+    .replace(/^---+$/gm, '')           // horizontal rules
+    .replace(/^\s*[-*+]\s+/gm, '')     // list markers
+    .replace(/^\s*\d+\.\s+/gm, '')     // numbered lists
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // [links](url)
+    .replace(/!\[.*?\]\(.+?\)/g, '')   // ![images](url)
+    .replace(/^>\s+/gm, '')            // > blockquotes
+    .replace(/\n{2,}/g, ' ')           // collapse multiple newlines
+    .replace(/\n/g, ' ')               // remaining newlines to spaces
+    .trim();
+}
+
 export function generateFileId(): string {
   return `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }

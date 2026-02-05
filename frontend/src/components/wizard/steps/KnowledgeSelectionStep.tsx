@@ -5,6 +5,7 @@ import { BookOpen, Check, Library, Globe, AlertTriangle, ChevronRight } from 'lu
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import type { WizardKnowledgeSource } from '@/machines/courseWizardMachine';
+import { formatTokenCount, stripMarkdown } from '@/components/knowledge/fileUploadUtils';
 import WizardNavigation from '../WizardNavigation';
 
 interface KnowledgeSelectionStepProps {
@@ -22,11 +23,6 @@ interface KnowledgeSelectionStepProps {
   onSkip: () => void;
   onCancel: () => void;
   isLoading?: boolean;
-}
-
-function formatTokenCount(tokens: number): string {
-  if (tokens < 1000) return `${tokens} tokens`;
-  return `~${Math.round(tokens / 1000)}k tokens`;
 }
 
 export default function KnowledgeSelectionStep({
@@ -162,7 +158,7 @@ export default function KnowledgeSelectionStep({
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-primary truncate">{doc.name}</p>
                             {doc.summary && (
-                              <p className="text-xs text-muted line-clamp-1 mt-0.5">{doc.summary}</p>
+                              <p className="text-xs text-muted line-clamp-1 mt-0.5">{stripMarkdown(doc.summary)}</p>
                             )}
                           </div>
                         </div>
@@ -228,7 +224,7 @@ export default function KnowledgeSelectionStep({
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-primary truncate">{doc.name}</p>
                             {doc.summary && (
-                              <p className="text-xs text-muted line-clamp-1 mt-0.5">{doc.summary}</p>
+                              <p className="text-xs text-muted line-clamp-1 mt-0.5">{stripMarkdown(doc.summary)}</p>
                             )}
                           </div>
                         </div>

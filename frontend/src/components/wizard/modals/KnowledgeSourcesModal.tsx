@@ -15,7 +15,7 @@ import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
 import { FileUploadZone } from '@/components/knowledge/FileUploadZone';
 import { useFileAutoUpload } from '@/components/knowledge/useFileUpload';
-import { formatTokenCount } from '@/components/knowledge/fileUploadUtils';
+import { formatTokenCount, stripMarkdown } from '@/components/knowledge/fileUploadUtils';
 import type { PendingFile } from '@/components/knowledge/fileUploadUtils';
 import type { ProcessedSource } from './KnowledgeVerificationModal';
 import type { WizardKnowledgeSource } from '@/machines/courseWizardMachine';
@@ -443,7 +443,7 @@ function SourceItem({
               </span>
             )}
           </div>
-          {doc.summary && <p className="text-sm text-muted line-clamp-2 mt-1">{doc.summary}</p>}
+          {doc.summary && <p className="text-sm text-muted line-clamp-2 mt-1">{stripMarkdown(doc.summary)}</p>}
           <p className="text-xs text-muted mt-2">{formatTokenCount(doc.tokenCount)}</p>
         </div>
       </div>
