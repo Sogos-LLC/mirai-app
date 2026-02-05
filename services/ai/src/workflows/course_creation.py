@@ -133,7 +133,11 @@ class CourseCreationWorkflow:
         self._progress_message = "Generating title..."
         title_result = await self._run_ai_activity(
             "generate_title_activity",
-            GenerateTitleInput(api_key=api_key, course_name=input.course_name),
+            GenerateTitleInput(
+                api_key=api_key,
+                course_name=input.course_name,
+                rag_filters=input.rag_filters or None,
+            ),
             GenerateTitleOutput,
             timeout=AI_SHORT_TIMEOUT,
         )
@@ -149,7 +153,11 @@ class CourseCreationWorkflow:
             # Regenerate on rejection
             title_result = await self._run_ai_activity(
                 "generate_title_activity",
-                GenerateTitleInput(api_key=api_key, course_name=input.course_name),
+                GenerateTitleInput(
+                    api_key=api_key,
+                    course_name=input.course_name,
+                    rag_filters=input.rag_filters or None,
+                ),
                 GenerateTitleOutput,
                 timeout=AI_SHORT_TIMEOUT,
             )
@@ -170,6 +178,7 @@ class CourseCreationWorkflow:
             GenerateOutcomesInput(
                 api_key=api_key,
                 course_name=improved_title,
+                rag_filters=input.rag_filters or None,
             ),
             GenerateOutcomesOutput,
             timeout=AI_SHORT_TIMEOUT,
@@ -183,7 +192,11 @@ class CourseCreationWorkflow:
         if not outcomes_approval.approved:
             outcomes_result = await self._run_ai_activity(
                 "generate_outcomes_activity",
-                GenerateOutcomesInput(api_key=api_key, course_name=improved_title),
+                GenerateOutcomesInput(
+                    api_key=api_key,
+                    course_name=improved_title,
+                    rag_filters=input.rag_filters or None,
+                ),
                 GenerateOutcomesOutput,
                 timeout=AI_SHORT_TIMEOUT,
             )
@@ -198,7 +211,10 @@ class CourseCreationWorkflow:
         sme_result = await self._run_ai_activity(
             "generate_sme_personas_activity",
             GenerateSMEPersonasInput(
-                api_key=api_key, title=improved_title, description=description,
+                api_key=api_key,
+                title=improved_title,
+                description=description,
+                rag_filters=input.rag_filters or None,
             ),
             GenerateSMEPersonasOutput,
             timeout=AI_SHORT_TIMEOUT,
@@ -223,6 +239,7 @@ class CourseCreationWorkflow:
                 title=improved_title,
                 description=description,
                 sme_personas=selected_smes,
+                rag_filters=input.rag_filters or None,
             ),
             GenerateAudiencePersonasOutput,
             timeout=AI_SHORT_TIMEOUT,
@@ -248,6 +265,7 @@ class CourseCreationWorkflow:
                 title=improved_title,
                 description=description,
                 audience_personas=selected_audiences,
+                rag_filters=input.rag_filters or None,
             ),
             GenerateToneOptionsOutput,
             timeout=AI_SHORT_TIMEOUT,

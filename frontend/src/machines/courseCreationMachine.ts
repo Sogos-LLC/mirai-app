@@ -380,6 +380,42 @@ export function getWorkflowStepNumber(step: WorkflowStepType): number {
 export const TOTAL_WORKFLOW_STEPS = 8;
 
 /**
+ * Number of user-facing wizard phases (collapsed from 8 backend steps).
+ */
+export const TOTAL_WIZARD_PHASES = 5;
+
+/**
+ * Map a backend WorkflowStepType (or null/idle) to a user-facing phase (1-5).
+ *
+ * Phase mapping:
+ *   1 – Course Setup     (idle → TITLE)
+ *   2 – Learning Outcomes (OUTCOMES)
+ *   3 – Expert Personas   (SME_PERSONAS, AUDIENCE_PERSONAS)
+ *   4 – Tone & Style      (TONE_OPTIONS)
+ *   5 – Course Content    (COURSE_PLAN, OUTLINE, LESSONS)
+ */
+export function getWizardPhase(step: WorkflowStepType | null, isIdle: boolean): number {
+  if (isIdle || !step) return 1;
+  switch (step) {
+    case WorkflowStepType.TITLE:
+      return 1;
+    case WorkflowStepType.OUTCOMES:
+      return 2;
+    case WorkflowStepType.SME_PERSONAS:
+    case WorkflowStepType.AUDIENCE_PERSONAS:
+      return 3;
+    case WorkflowStepType.TONE_OPTIONS:
+      return 4;
+    case WorkflowStepType.COURSE_PLAN:
+    case WorkflowStepType.OUTLINE:
+    case WorkflowStepType.LESSONS:
+      return 5;
+    default:
+      return 1;
+  }
+}
+
+/**
  * Parse the step_data_json from a Temporal query into a typed StepData object.
  */
 export function parseStepData(stepDataJson: string | undefined): StepData | null {

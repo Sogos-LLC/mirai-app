@@ -4,12 +4,26 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMachine } from '@xstate/react';
 import { fromPromise } from 'xstate';
-import { ArrowLeft, Sparkles, Check, RotateCcw, Loader2 } from 'lucide-react';
+import {
+  Sparkles,
+  Check,
+  RotateCcw,
+  Loader2,
+  ArrowRight,
+  AlertCircle,
+  Paperclip,
+} from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
+import { WizardStepper } from '@/components/course/WizardStepper';
+import { PageShell } from '@/components/layout/PageShell';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 
 import {
   courseCreationMachine,
   getWorkflowStepLabel,
+  getWizardPhase,
+  TOTAL_WIZARD_PHASES,
 } from '@/machines/courseCreationMachine';
 import {
   useStartCourseCreation,
@@ -20,12 +34,6 @@ import {
 import { useCreateCourse } from '@/hooks/useCourses';
 import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
 import { GenerationJobStatus } from '@/gen/mirai/v1/ai_generation_types_pb';
-import dynamic from 'next/dynamic';
-
-const WorkflowVisualization = dynamic(
-  () => import('@/components/course/WorkflowVisualization'),
-  { ssr: false }
-);
 
 export default function CourseWizardPage() {
   const router = useRouter();
@@ -105,6 +113,19 @@ export default function CourseWizardPage() {
     send({ type: 'STATE_UPDATE', state: workflowState });
   }, [workflowState, send]);
 
+  // Track display phase for stepper — only advances forward, resets on idle
+  const [displayPhase, setDisplayPhase] = useState(1);
+  useEffect(() => {
+    if (isCompleted) {
+      setDisplayPhase(TOTAL_WIZARD_PHASES + 1);
+    } else if (state.context.pendingStep) {
+      setDisplayPhase(getWizardPhase(state.context.pendingStep, false));
+    } else if (isIdle) {
+      setDisplayPhase(1);
+    }
+    // During processing with no pendingStep, keep the current displayPhase
+  }, [state.context.pendingStep, isIdle, isCompleted]);
+
   // Start the workflow: create a course record, then start the Temporal workflow
   const handleStart = useCallback(async () => {
     const name = courseName.trim();
@@ -161,253 +182,315 @@ export default function CourseWizardPage() {
   const isProcessing = state.matches('processing');
   const isAwaitingApproval = state.matches('awaitingApproval');
   const isSendingSignal = state.matches('sendingApproval') || state.matches('sendingRejection');
+  // Keep step review visible while sending signal (buttons become disabled)
+  const showStepReview = (isAwaitingApproval || isSendingSignal) && !!state.context.pendingStep;
 
   return (
-    <div className="min-h-[calc(100vh-8rem)]">
-      {/* Header */}
-      <div className="mb-8">
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2 text-secondary hover:text-primary transition-colors mb-4 min-h-[44px] -ml-2 px-2"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-base">Back to Dashboard</span>
-        </button>
-        <h1 className="text-2xl md:text-3xl font-bold text-primary">Create New Course</h1>
-        <p className="text-secondary mt-2">
-          AI-guided course creation with step-by-step review
-        </p>
-      </div>
+    <PageShell
+      title="Create New Course"
+      description="Let AI guide you through creating an engaging course in 5 simple steps"
+      backButton={{ label: 'Back to Dashboard', onClick: () => router.push('/dashboard') }}
+      maxWidth="5xl"
+    >
+      <WizardStepper currentPhase={displayPhase} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl">
-        {/* Left column: Always show workflow visualization */}
-        <div className="lg:col-span-2">
-          <WorkflowVisualization
-            jobId={state.context.jobId}
-            pendingStep={state.context.pendingStep}
-            progressPercent={state.context.progressPercent}
-            progressMessage={state.context.progressMessage}
-            isActive={isActive}
-          />
-        </div>
+      <Card>
+        {/* ===================== IDLE STATE ===================== */}
+        {isIdle && (
+          <>
+            <CardContent>
+              <div className="max-w-2xl mx-auto">
+                {/* Hero icon + heading */}
+                <div className="flex flex-col items-center text-center mb-8">
+                  <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
+                    <Sparkles className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-primary mb-2">
+                    What would you like to teach?
+                  </h2>
+                  <p className="text-sm text-secondary max-w-lg">
+                    Enter a course name or topic. Our AI will help you refine it
+                    and generate engaging content.
+                  </p>
+                </div>
 
-        {/* Right column: Controls & Step Data */}
-        <div className="space-y-4">
-          {/* Start Form */}
-          {isIdle && (
-            <div className="bg-surface border rounded-xl p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-indigo-500" />
-                <h3 className="text-sm font-medium text-primary">Start Course Creation</h3>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-secondary mb-1">Course Name</label>
+                {/* Course Name */}
+                <div className="mb-6">
                   <input
+                    id="courseName"
                     type="text"
                     value={courseName}
                     onChange={(e) => setCourseName(e.target.value)}
-                    placeholder="e.g. Introduction to Machine Learning"
-                    className="w-full px-3 py-2 bg-page border rounded-lg text-primary text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="e.g., Introduction to Machine Learning, Leadership Skills for Managers"
+                    className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && courseName.trim()) handleStart();
                     }}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-secondary mb-1">
-                    Desired Outcomes <span className="text-muted">(optional)</span>
-                  </label>
-                  <textarea
-                    value={desiredOutcomes}
-                    onChange={(e) => setDesiredOutcomes(e.target.value)}
-                    placeholder="What should students learn?"
-                    rows={3}
-                    className="w-full px-3 py-2 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleStart}
-                  disabled={!courseName.trim() || isStarting}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
-                >
-                  {isStarting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Starting...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Start AI Course Creation
-                    </>
-                  )}
-                </button>
-
-                {startError && (
-                  <p className="text-xs text-red-500">{startError}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Processing indicator */}
-          {isProcessing && (
-            <div className="bg-surface border rounded-xl p-6">
-              <div className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
-                <div>
-                  <h3 className="text-sm font-medium text-primary">AI is generating...</h3>
-                  <p className="text-xs text-secondary mt-0.5">
-                    {state.context.progressMessage || 'Working on the next step'}
+                  <p className="mt-2 text-xs text-muted text-center">
+                    Don&apos;t worry about getting it perfect &mdash; you can
+                    refine it in the next step.
                   </p>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Step Review Panel */}
-          {isAwaitingApproval && state.context.pendingStep && (
-            <div className="bg-surface border rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b bg-indigo-50 dark:bg-indigo-950/30">
-                <h3 className="text-sm font-medium text-primary">
-                  Review: {getWorkflowStepLabel(state.context.pendingStep)}
-                </h3>
-              </div>
-
-              {/* Step data preview */}
-              {state.context.stepData && (
-                <div className="px-4 py-3 border-b max-h-[60vh] overflow-y-auto">
-                  <StepDataRenderer
-                    step={state.context.pendingStep!}
-                    data={state.context.stepData}
-                    onSelectionChange={setSelectedIds}
-                  />
-                </div>
-              )}
-
-              {/* Approve/Reject actions */}
-              <div className="px-4 py-3 space-y-3">
-                {!showRejectForm ? (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleApprove}
-                      disabled={isSendingSignal}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
+                {/* Desired Outcomes */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="outcomes"
+                      className="text-sm font-semibold text-primary"
                     >
-                      <Check className="w-4 h-4" />
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => setShowRejectForm(true)}
-                      disabled={isSendingSignal}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-surface border hover:bg-hover text-primary rounded-lg text-sm font-medium transition-colors min-h-[44px]"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Regenerate
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <textarea
-                      value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
-                      placeholder="What should be different?"
-                      rows={2}
-                      className="w-full px-3 py-2 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
+                      Desired Course Outcomes
+                    </label>
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={handleReject}
-                        disabled={!feedback.trim() || isSendingSignal}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
+                        type="button"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary bg-surface border rounded-full hover:bg-hover transition-colors min-h-[32px]"
                       >
-                        {isSendingSignal ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <RotateCcw className="w-4 h-4" />
-                        )}
-                        Regenerate
+                        <Paperclip className="w-3.5 h-3.5" />
+                        Add Knowledge
                       </button>
                       <button
-                        onClick={() => {
-                          setShowRejectForm(false);
-                          setFeedback('');
-                        }}
-                        className="px-3 py-2 text-secondary hover:text-primary text-sm min-h-[44px]"
+                        type="button"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary bg-surface border rounded-full hover:bg-hover transition-colors min-h-[32px]"
                       >
-                        Cancel
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Generate
                       </button>
                     </div>
                   </div>
+                  <textarea
+                    id="outcomes"
+                    value={desiredOutcomes}
+                    onChange={(e) => setDesiredOutcomes(e.target.value)}
+                    placeholder={
+                      '\u2022 Learners will be able to identify key concepts...\n\u2022 Learners will understand how to apply...\n\u2022 Learners will demonstrate proficiency in...'
+                    }
+                    rows={4}
+                    className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                  />
+                  <p className="mt-2 text-xs text-muted text-center">
+                    These outcomes serve as the north star guiding all content
+                    generation.
+                  </p>
+                </div>
+
+                {startError && (
+                  <div className="mt-4 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {startError}
+                  </div>
                 )}
               </div>
-            </div>
-          )}
+            </CardContent>
 
-          {/* Sending signal indicator */}
-          {isSendingSignal && (
-            <div className="bg-surface border rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
-                <span className="text-sm text-secondary">Sending response...</span>
-              </div>
+            {/* Footer */}
+            <div className="px-4 py-4 sm:px-6 border-t flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/dashboard')}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleStart}
+                disabled={!courseName.trim() || isStarting}
+                className="gap-2"
+              >
+                {isStarting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  <>
+                    Generate Title
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </Button>
             </div>
-          )}
+          </>
+        )}
 
-          {/* Completed */}
-          {isCompleted && (
-            <div className="bg-surface border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3">
-                <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+        {/* ===================== PROCESSING STATE ===================== */}
+        {isProcessing && (
+          <CardContent>
+            {/* Thin progress bar */}
+            <div className="w-full h-1 bg-page rounded-full mb-8 overflow-hidden">
+              <div
+                className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                style={{ width: `${state.context.progressPercent}%` }}
+              />
+            </div>
+
+            <div className="flex flex-col items-center text-center py-12">
+              <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+              <p className="text-sm text-secondary">
+                {state.context.progressMessage || 'Working on the next step...'}
+              </p>
+            </div>
+          </CardContent>
+        )}
+
+        {/* ============ AWAITING APPROVAL / SENDING SIGNAL ============ */}
+        {showStepReview && (
+          <>
+            <CardHeader>
+              <CardTitle as="h3">
+                Review: {getWorkflowStepLabel(state.context.pendingStep!)}
+              </CardTitle>
+            </CardHeader>
+
+            {state.context.stepData && (
+              <CardContent className="max-h-[60vh] overflow-y-auto">
+                <StepDataRenderer
+                  step={state.context.pendingStep!}
+                  data={state.context.stepData}
+                  onSelectionChange={setSelectedIds}
+                />
+              </CardContent>
+            )}
+
+            {/* Action footer */}
+            <div className="px-4 py-4 sm:px-6 border-t">
+              {!showRejectForm ? (
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowRejectForm(true)}
+                    disabled={isSendingSignal}
+                    className="gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Regenerate
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleApprove}
+                    disabled={isSendingSignal}
+                    className="gap-2"
+                  >
+                    {isSendingSignal ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                    Approve & Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <textarea
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder="What should be different?"
+                    rows={2}
+                    className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowRejectForm(false);
+                        setFeedback('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleReject}
+                      disabled={!feedback.trim() || isSendingSignal}
+                      className="gap-2"
+                    >
+                      {isSendingSignal ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="w-4 h-4" />
+                      )}
+                      Regenerate
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ===================== COMPLETED STATE ===================== */}
+        {isCompleted && (
+          <CardContent>
+            <div className="flex flex-col items-center text-center py-12">
+              <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+                <Check className="w-7 h-7 text-green-600 dark:text-green-400" />
               </div>
-              <h3 className="text-sm font-medium text-primary mb-1">Course Created</h3>
-              <p className="text-xs text-secondary mb-4">
+              <h2 className="text-xl font-semibold text-primary mb-2">
+                Course Created!
+              </h2>
+              <p className="text-sm text-secondary mb-6">
                 Your course has been generated successfully.
               </p>
               {state.context.courseId && (
-                <button
-                  onClick={() => router.push(`/course/${state.context.courseId}/editor`)}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    router.push(`/course/${state.context.courseId}/editor`)
+                  }
+                  className="gap-2"
                 >
                   Open in Editor
-                </button>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
               )}
             </div>
-          )}
+          </CardContent>
+        )}
 
-          {/* Failed */}
-          {isFailed && (
-            <div className="bg-surface border border-red-200 dark:border-red-800 rounded-xl p-6">
-              <h3 className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">
-                Workflow Failed
-              </h3>
-              <p className="text-xs text-secondary">
+        {/* ===================== FAILED STATE ===================== */}
+        {isFailed && (
+          <CardContent>
+            <div className="flex flex-col items-center text-center py-12">
+              <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                <AlertCircle className="w-7 h-7 text-red-600 dark:text-red-400" />
+              </div>
+              <h2 className="text-xl font-semibold text-primary mb-2">
+                Something went wrong
+              </h2>
+              <p className="text-sm text-secondary mb-6">
                 {state.context.error ?? 'An unexpected error occurred'}
               </p>
-            </div>
-          )}
-
-          {/* Error toast */}
-          {state.context.error && !isFailed && (
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-3">
-              <p className="text-xs text-red-600 dark:text-red-400">
-                {state.context.error}
-              </p>
-              <button
-                onClick={() => send({ type: 'DISMISS_ERROR' })}
-                className="text-xs text-red-500 hover:text-red-600 mt-1 underline"
+              <Button
+                variant="secondary"
+                onClick={() => router.push('/dashboard')}
               >
-                Dismiss
-              </button>
+                Back to Dashboard
+              </Button>
             </div>
-          )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Error toast (non-fatal errors during active workflow) */}
+      {state.context.error && !isFailed && (
+        <div className="mt-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center justify-between">
+          <p className="text-sm text-red-600 dark:text-red-400">
+            {state.context.error}
+          </p>
+          <button
+            onClick={() => send({ type: 'DISMISS_ERROR' })}
+            className="text-sm text-red-500 hover:text-red-600 underline ml-4"
+          >
+            Dismiss
+          </button>
         </div>
-      </div>
-    </div>
+      )}
+    </PageShell>
   );
 }
