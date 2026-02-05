@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: temporal
+  name: temporal-server
   namespace: mirai-uat
   labels:
-    app: temporal
+    app: temporal-server
     environment: uat
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: temporal
+      app: temporal-server
   template:
     metadata:
       labels:
-        app: temporal
+        app: temporal-server
         environment: uat
     spec:
       tolerations:
@@ -22,7 +22,7 @@ spec:
         operator: Exists
         effect: NoSchedule
       containers:
-      - name: temporal
+      - name: temporal-server
         image: temporalio/auto-setup:1.25.2
         ports:
         - containerPort: 7233

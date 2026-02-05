@@ -31,7 +31,7 @@ spec:
           name: http
         env:
         - name: TEMPORAL_ADDRESS
-          value: "temporal.mirai-uat.svc.cluster.local:7233"
+          value: "temporal-server.mirai-uat.svc.cluster.local:7233"
         - name: TEMPORAL_NAMESPACE
           value: "mirai-uat"
         - name: TEMPORAL_TASK_QUEUE

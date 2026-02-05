@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: temporal
+  name: temporal-server
   namespace: mirai-uat
   labels:
-    app: temporal
+    app: temporal-server
     environment: uat
 spec:
   type: ClusterIP
@@ -13,4 +13,4 @@ spec:
     targetPort: 7233
     name: grpc
   selector:
-    app: temporal
+    app: temporal-server
