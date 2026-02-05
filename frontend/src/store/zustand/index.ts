@@ -2,7 +2,58 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 // ============================================================================
-// Types
+// Re-export individual stores for new code
+// ============================================================================
+
+export { useLayoutStore, useSidebarOpen, useMobileSidebarOpen } from './useLayoutStore';
+
+export {
+  useSMEStore,
+  useSMEState,
+  useSelectedSMEId,
+  useSelectedTaskId,
+} from './useSMEStore';
+export type { SortOrder, SMESortBy, SMEFilterScope, SMEFilterStatus } from './useSMEStore';
+
+export {
+  useTeamUIStore,
+  useTeamState,
+  useSelectedTeamId,
+} from './useTeamUIStore';
+
+export {
+  useTargetAudienceStore,
+  useTargetAudienceState,
+} from './useTargetAudienceStore';
+export type { TargetAudienceSortBy, ExperienceLevel } from './useTargetAudienceStore';
+
+export {
+  useNotificationUIStore,
+  useNotificationState,
+  useNotificationPanelOpen,
+} from './useNotificationUIStore';
+
+export {
+  useGenerationStore,
+  useAIGenerationState,
+  useIsGenerating,
+} from './useGenerationStore';
+export type { GenerationType } from './useGenerationStore';
+
+export {
+  useTenantSettingsStore,
+  useTenantSettingsState,
+} from './useTenantSettingsStore';
+export type { ApiKeyTestStatus, UsageTimeRange } from './useTenantSettingsStore';
+
+export {
+  useFeedbackStore,
+  useFeedbackState,
+  useFeedbackModalOpen,
+} from './useFeedbackStore';
+
+// ============================================================================
+// Types (for backward-compatible composite store)
 // ============================================================================
 
 type SortOrder = 'asc' | 'desc';
@@ -16,11 +67,11 @@ type ApiKeyTestStatus = 'idle' | 'testing' | 'success' | 'failed';
 type UsageTimeRange = '7d' | '30d' | '90d' | 'all';
 
 // ============================================================================
-// UI Store Interface
+// Backward-compatible UIStore interface
 // ============================================================================
 
 interface UIStore {
-  // Layout state (formerly uiSlice)
+  // Layout state
   sidebarOpen: boolean;
   mobileSidebarOpen: boolean;
   globalLoading: boolean;
@@ -34,7 +85,7 @@ interface UIStore {
   setGlobalLoading: (loading: boolean) => void;
   setGlobalError: (error: string | null) => void;
 
-  // SME state (formerly smeSlice)
+  // SME state (nested for backward compat)
   sme: {
     selectedSMEId: string | null;
     selectedTaskId: string | null;
@@ -64,7 +115,7 @@ interface UIStore {
   setSMEFilterStatus: (status: SMEFilterStatus) => void;
   resetSMEFilters: () => void;
 
-  // Team state (formerly teamSlice)
+  // Team state (nested for backward compat)
   team: {
     selectedTeamId: string | null;
     isCreateModalOpen: boolean;
@@ -86,7 +137,7 @@ interface UIStore {
   closeAddMemberModal: () => void;
   resetTeamState: () => void;
 
-  // Target Audience state (formerly targetAudienceSlice)
+  // Target Audience state (nested for backward compat)
   targetAudience: {
     selectedTemplateId: string | null;
     isCreateModalOpen: boolean;
@@ -109,7 +160,7 @@ interface UIStore {
   setTAFilterExperienceLevel: (level: ExperienceLevel) => void;
   resetTAFilters: () => void;
 
-  // Notification state (formerly notificationSlice)
+  // Notification state (nested for backward compat)
   notification: {
     isPanelOpen: boolean;
     showUnreadOnly: boolean;
@@ -126,7 +177,7 @@ interface UIStore {
   markAllLocallyRead: () => void;
   clearLocallyRead: () => void;
 
-  // AI Generation state (formerly aiGenerationSlice)
+  // AI Generation state (nested for backward compat)
   aiGeneration: {
     isGenerating: boolean;
     generationType: GenerationType;
@@ -142,7 +193,7 @@ interface UIStore {
   setGenerationError: (error: string) => void;
   resetGeneration: () => void;
 
-  // Tenant Settings state (formerly tenantSettingsSlice)
+  // Tenant Settings state (nested for backward compat)
   tenantSettings: {
     isApiKeyModalOpen: boolean;
     isTestingApiKey: boolean;
@@ -162,7 +213,7 @@ interface UIStore {
   toggleUsageExpanded: () => void;
   setUsageTimeRange: (range: UsageTimeRange) => void;
 
-  // Feedback state
+  // Feedback state (nested for backward compat)
   feedback: {
     isModalOpen: boolean;
   };
@@ -173,7 +224,7 @@ interface UIStore {
 }
 
 // ============================================================================
-// Initial States
+// Initial States (for backward-compatible composite store)
 // ============================================================================
 
 const initialSMEState: UIStore['sme'] = {
@@ -233,9 +284,20 @@ const initialFeedbackState: UIStore['feedback'] = {
 };
 
 // ============================================================================
-// Store
+// Backward-compatible composite store
 // ============================================================================
 
+/**
+ * @deprecated Use individual stores instead:
+ * - useLayoutStore (layout, sidebar, loading, error)
+ * - useSMEStore (SME selection, modals, sort/filter)
+ * - useTeamUIStore (team selection, modals)
+ * - useTargetAudienceStore (TA selection, modals, sort/filter)
+ * - useNotificationUIStore (notification panel, read state)
+ * - useGenerationStore (AI generation progress)
+ * - useTenantSettingsStore (API key modals, usage)
+ * - useFeedbackStore (feedback modal)
+ */
 export const useUIStore = create<UIStore>()(
   devtools(
     (set) => ({
@@ -542,38 +604,3 @@ export const useUIStore = create<UIStore>()(
     { name: 'ui-store' }
   )
 );
-
-// ============================================================================
-// Selectors (for optimized re-renders)
-// ============================================================================
-
-// Layout selectors
-export const useSidebarOpen = () => useUIStore((s) => s.sidebarOpen);
-export const useMobileSidebarOpen = () => useUIStore((s) => s.mobileSidebarOpen);
-
-// SME selectors
-export const useSMEState = () => useUIStore((s) => s.sme);
-export const useSelectedSMEId = () => useUIStore((s) => s.sme.selectedSMEId);
-export const useSelectedTaskId = () => useUIStore((s) => s.sme.selectedTaskId);
-
-// Team selectors
-export const useTeamState = () => useUIStore((s) => s.team);
-export const useSelectedTeamId = () => useUIStore((s) => s.team.selectedTeamId);
-
-// Target Audience selectors
-export const useTargetAudienceState = () => useUIStore((s) => s.targetAudience);
-
-// Notification selectors
-export const useNotificationState = () => useUIStore((s) => s.notification);
-export const useNotificationPanelOpen = () => useUIStore((s) => s.notification.isPanelOpen);
-
-// AI Generation selectors
-export const useAIGenerationState = () => useUIStore((s) => s.aiGeneration);
-export const useIsGenerating = () => useUIStore((s) => s.aiGeneration.isGenerating);
-
-// Tenant Settings selectors
-export const useTenantSettingsState = () => useUIStore((s) => s.tenantSettings);
-
-// Feedback selectors
-export const useFeedbackState = () => useUIStore((s) => s.feedback);
-export const useFeedbackModalOpen = () => useUIStore((s) => s.feedback.isModalOpen);

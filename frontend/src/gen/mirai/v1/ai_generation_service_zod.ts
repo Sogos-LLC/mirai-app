@@ -44,29 +44,6 @@ export const GetCourseOutlineRequestSchema = z.object({
 export type GetCourseOutlineRequest = z.infer<typeof GetCourseOutlineRequestSchema>;
 
 /**
- * Zod schema for ApproveCourseOutlineRequest
- * @generated from message mirai.v1.ApproveCourseOutlineRequest
- */
-export const ApproveCourseOutlineRequestSchema = z.object({
-  courseId: z.string(),
-  outlineId: z.string(),
-});
-
-export type ApproveCourseOutlineRequest = z.infer<typeof ApproveCourseOutlineRequestSchema>;
-
-/**
- * Zod schema for RejectCourseOutlineRequest
- * @generated from message mirai.v1.RejectCourseOutlineRequest
- */
-export const RejectCourseOutlineRequestSchema = z.object({
-  courseId: z.string(),
-  outlineId: z.string(),
-  reason: z.string(),
-});
-
-export type RejectCourseOutlineRequest = z.infer<typeof RejectCourseOutlineRequestSchema>;
-
-/**
  * Zod schema for UpdateCourseOutlineRequest
  * @generated from message mirai.v1.UpdateCourseOutlineRequest
  */
@@ -77,17 +54,6 @@ export const UpdateCourseOutlineRequestSchema = z.object({
 });
 
 export type UpdateCourseOutlineRequest = z.infer<typeof UpdateCourseOutlineRequestSchema>;
-
-/**
- * Zod schema for GenerateLessonContentRequest
- * @generated from message mirai.v1.GenerateLessonContentRequest
- */
-export const GenerateLessonContentRequestSchema = z.object({
-  courseId: z.string(),
-  outlineLessonId: z.string(),
-});
-
-export type GenerateLessonContentRequest = z.infer<typeof GenerateLessonContentRequestSchema>;
 
 /**
  * Zod schema for GenerateAllLessonsRequest

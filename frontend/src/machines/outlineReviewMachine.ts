@@ -58,10 +58,6 @@ interface GetOutlineResponse {
   outline: CourseOutline;
 }
 
-interface ApproveOutlineResponse {
-  outline: CourseOutline;
-}
-
 interface GenerateLessonsResponse {
   job: GenerationJob;
 }
@@ -110,15 +106,6 @@ export const pollJobActor = fromPromise<GetJobResponse, { jobId: string }>(
 export const getOutlineActor = fromPromise<GetOutlineResponse, { courseId: string }>(
   async () => {
     throw new NetworkError('getOutlineActor must be provided by the component');
-  }
-);
-
-/**
- * Approve outline
- */
-export const approveOutlineActor = fromPromise<ApproveOutlineResponse, { courseId: string; outlineId: string }>(
-  async () => {
-    throw new NetworkError('approveOutlineActor must be provided by the component');
   }
 );
 

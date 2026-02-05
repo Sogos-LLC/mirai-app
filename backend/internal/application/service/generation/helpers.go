@@ -3,12 +3,12 @@ package generation
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/sogos/mirai-backend/internal/application/service/content"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
@@ -73,59 +73,6 @@ func CheckJobCancelled(ctx context.Context, jobRepo JobRepository, jobID uuid.UU
 	return currentJob.Status == valueobject.GenerationJobStatusCancelled
 }
 
-// ScopePriority returns priority for deduplication (lower = higher priority).
-func ScopePriority(scope string) int {
-	switch scope {
-	case "course":
-		return 0
-	case "team":
-		return 1
-	case "global":
-		return 2
-	default:
-		return 3
-	}
-}
-
-// DeduplicateChunksWithScopePriority removes duplicate chunks, keeping the one
-// with highest scope priority (course > team > global).
-func DeduplicateChunksWithScopePriority(chunks []service.RAGChunkInput) []service.RAGChunkInput {
-	if len(chunks) == 0 {
-		return chunks
-	}
-
-	// Sort by scope priority (lower = higher priority)
-	sort.SliceStable(chunks, func(i, j int) bool {
-		return ScopePriority(chunks[i].Scope) < ScopePriority(chunks[j].Scope)
-	})
-
-	// Deduplicate by content hash, keeping first occurrence (highest priority)
-	seenContent := make(map[string]bool)
-	result := make([]service.RAGChunkInput, 0, len(chunks))
-
-	for _, chunk := range chunks {
-		// Use first 100 chars as content hash
-		hash := chunk.Content
-		if len(hash) > 100 {
-			hash = hash[:100]
-		}
-		if !seenContent[hash] {
-			seenContent[hash] = true
-			result = append(result, chunk)
-		}
-	}
-
-	return result
-}
-
-// TruncateExcerpt truncates content to maxLen characters, adding ellipsis if needed.
-func TruncateExcerpt(content string, maxLen int) string {
-	if len(content) <= maxLen {
-		return content
-	}
-	return content[:maxLen-3] + "..."
-}
-
 // BuildConstraintRetryContext appends violation feedback to the additional context
 // to help the AI correct its output on retry.
 func BuildConstraintRetryContext(
@@ -159,7 +106,7 @@ func BuildConstraintRetryContext(
 }
 
 // ExtractPersonas extracts SME and audience persona inputs from wizard data.
-func ExtractPersonas(wizardData *WizardData) (smeKnowledge []service.SMEKnowledgeInput, targetAudience service.TargetAudienceInput) {
+func ExtractPersonas(wizardData *content.WizardData) (smeKnowledge []service.SMEKnowledgeInput, targetAudience service.TargetAudienceInput) {
 	if wizardData == nil {
 		return nil, service.TargetAudienceInput{}
 	}
@@ -206,120 +153,8 @@ func ExtractPersonas(wizardData *WizardData) (smeKnowledge []service.SMEKnowledg
 	return smeKnowledge, targetAudience
 }
 
-// parseDesiredOutcomes extracts individual learning outcomes from course content.
-// It parses the multi-line desired outcomes from wizard data, falling back to
-// the single desired outcome from settings if needed.
-func parseDesiredOutcomes(content *S3CourseContent) []string {
-	var outcomes []string
-
-	rawOutcomes := ""
-	if content.WizardData != nil {
-		rawOutcomes = content.WizardData.DesiredOutcomes
-	}
-	if rawOutcomes == "" {
-		rawOutcomes = content.Settings.DesiredOutcome
-	}
-	if rawOutcomes == "" {
-		return outcomes
-	}
-
-	lines := strings.Split(rawOutcomes, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		line = strings.TrimPrefix(line, "-")
-		line = strings.TrimPrefix(line, "•")
-		line = strings.TrimPrefix(line, "*")
-		// Handle numbered list items like "1. " or "1) "
-		for i, c := range line {
-			if c >= '0' && c <= '9' {
-				continue
-			}
-			if (c == '.' || c == ')') && i > 0 {
-				line = line[i+1:]
-			}
-			break
-		}
-		line = strings.TrimSpace(line)
-		if line != "" {
-			outcomes = append(outcomes, line)
-		}
-	}
-
-	return outcomes
-}
-
-// buildComponentProvenance creates a ComponentProvenance from RAG chunks and search queries.
-func buildComponentProvenance(chunks []service.RAGChunkInput, queries []string) *ComponentProvenance {
-	if len(chunks) == 0 {
-		return nil
-	}
-
-	prov := &ComponentProvenance{
-		SourceChunks: make([]ProvenanceChunk, 0, len(chunks)),
-		Queries:      queries,
-		GeneratedAt:  time.Now(),
-	}
-
-	for _, chunk := range chunks {
-		prov.SourceChunks = append(prov.SourceChunks, ProvenanceChunk{
-			ChunkID:         chunk.ChunkID,
-			SourceID:        chunk.SourceID,
-			SourceName:      chunk.SourceName,
-			Excerpt:         TruncateExcerpt(chunk.Content, 200),
-			SimilarityScore: chunk.SimilarityScore,
-			Scope:           chunk.Scope,
-		})
-
-		// Estimate tokens (roughly 4 chars per token)
-		tokens := int32(len(chunk.Content) / 4)
-		prov.TotalTokens += tokens
-
-		switch chunk.Scope {
-		case "course":
-			prov.CourseTokens += tokens
-		case "team":
-			prov.TeamTokens += tokens
-		case "global":
-			prov.GlobalTokens += tokens
-		}
-	}
-
-	return prov
-}
-
-// aggregateProvenance aggregates provenance from all components in a lesson.
-func aggregateProvenance(components []LessonComponent) *LessonProvenance {
-	prov := &LessonProvenance{}
-
-	sourceIDs := make(map[string]bool)
-	for _, comp := range components {
-		if comp.Provenance == nil {
-			continue
-		}
-
-		prov.CourseTokens += comp.Provenance.CourseTokens
-		prov.TeamTokens += comp.Provenance.TeamTokens
-		prov.GlobalTokens += comp.Provenance.GlobalTokens
-		prov.TotalTokens += comp.Provenance.TotalTokens
-
-		for _, chunk := range comp.Provenance.SourceChunks {
-			sourceIDs[chunk.SourceID] = true
-		}
-	}
-
-	prov.SourceCount = int32(len(sourceIDs))
-
-	groundedTokens := prov.CourseTokens + prov.TeamTokens + prov.GlobalTokens
-	if prov.TotalTokens > 0 {
-		prov.GroundingScore = float32(groundedTokens) / float32(prov.TotalTokens)
-		prov.UngroundedTokens = prov.TotalTokens - groundedTokens
-	}
-
-	return prov
-}
-
 // GetSelectedDocIDs extracts selected document IDs from wizard data.
-func GetSelectedDocIDs(wizardData *WizardData) []string {
+func GetSelectedDocIDs(wizardData *content.WizardData) []string {
 	if wizardData == nil {
 		return nil
 	}

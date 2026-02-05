@@ -1,13 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { User, Bell, Lock, Palette, Globe, CreditCard, Users, ChevronRight, Sparkles, AlertCircle, Database } from 'lucide-react';
-import BillingSettings from '@/components/settings/BillingSettings';
-import TeamSettings from '@/components/settings/TeamSettings';
-import TeamKnowledgeSettings from '@/components/settings/TeamKnowledgeSettings';
-import { AISettingsPanel } from '@/components/settings/AISettingsPanel';
-import { KnowledgeSettingsPanel } from '@/components/settings/KnowledgeSettingsPanel';
-import AppearanceSettings from '@/components/settings/AppearanceSettings';
 import {
   useGetAISettings,
   useSetAPIKey,
@@ -16,6 +11,13 @@ import {
   useGetUsageStats,
   AIProvider,
 } from '@/hooks/useTenantSettings';
+
+const BillingSettings = dynamic(() => import('@/components/settings/BillingSettings'));
+const TeamSettings = dynamic(() => import('@/components/settings/TeamSettings'));
+const TeamKnowledgeSettings = dynamic(() => import('@/components/settings/TeamKnowledgeSettings'));
+const AISettingsPanel = dynamic(() => import('@/components/settings/AISettingsPanel').then(m => ({ default: m.AISettingsPanel })));
+const KnowledgeSettingsPanel = dynamic(() => import('@/components/settings/KnowledgeSettingsPanel').then(m => ({ default: m.KnowledgeSettingsPanel })));
+const AppearanceSettings = dynamic(() => import('@/components/settings/AppearanceSettings'));
 
 // Wrapper component that connects AISettingsPanel to hooks
 function AISettingsContainer() {

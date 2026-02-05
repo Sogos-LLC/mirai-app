@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/ai_generation_service.proto.
  */
 export const file_mirai_v1_ai_generation_service: GenFile = /*@__PURE__*/
-  fileDesc("CiRtaXJhaS92MS9haV9nZW5lcmF0aW9uX3NlcnZpY2UucHJvdG8SCG1pcmFpLnYxIvQBChBTdG9yZWRXaXphcmREYXRhEioKDHNtZV9wZXJzb25hcxgBIAMoCzIULm1pcmFpLnYxLlNNRVBlcnNvbmESGAoQc2VsZWN0ZWRfc21lX2lkcxgCIAMoCRI0ChFhdWRpZW5jZV9wZXJzb25hcxgDIAMoCzIZLm1pcmFpLnYxLkF1ZGllbmNlUGVyc29uYRIdChVzZWxlY3RlZF9hdWRpZW5jZV9pZHMYBCADKAkSKwoNc2VsZWN0ZWRfdG9uZRgFIAEoCzIULm1pcmFpLnYxLlRvbmVPcHRpb24SGAoQZGVzaXJlZF9vdXRjb21lcxgGIAEoCSJOChxHZW5lcmF0ZUNvdXJzZU91dGxpbmVSZXF1ZXN0Ei4KBWlucHV0GAEgASgLMh8ubWlyYWkudjEuQ291cnNlR2VuZXJhdGlvbklucHV0IkUKHUdlbmVyYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiTgoXR2V0Q291cnNlT3V0bGluZVJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhQKB3ZlcnNpb24YAiABKAVIAIgBAUIKCghfdmVyc2lvbiJ1ChhHZXRDb3Vyc2VPdXRsaW5lUmVzcG9uc2USKAoHb3V0bGluZRgBIAEoCzIXLm1pcmFpLnYxLkNvdXJzZU91dGxpbmUSLwoLd2l6YXJkX2RhdGEYAiABKAsyGi5taXJhaS52MS5TdG9yZWRXaXphcmREYXRhIkQKG0FwcHJvdmVDb3Vyc2VPdXRsaW5lUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkSEgoKb3V0bGluZV9pZBgCIAEoCSJIChxBcHByb3ZlQ291cnNlT3V0bGluZVJlc3BvbnNlEigKB291dGxpbmUYASABKAsyFy5taXJhaS52MS5Db3Vyc2VPdXRsaW5lIlMKGlJlamVjdENvdXJzZU91dGxpbmVSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRISCgpvdXRsaW5lX2lkGAIgASgJEg4KBnJlYXNvbhgDIAEoCSJHChtSZWplY3RDb3Vyc2VPdXRsaW5lUmVzcG9uc2USKAoHb3V0bGluZRgBIAEoCzIXLm1pcmFpLnYxLkNvdXJzZU91dGxpbmUibwoaVXBkYXRlQ291cnNlT3V0bGluZVJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhIKCm91dGxpbmVfaWQYAiABKAkSKgoIc2VjdGlvbnMYAyADKAsyGC5taXJhaS52MS5PdXRsaW5lU2VjdGlvbiJHChtVcGRhdGVDb3Vyc2VPdXRsaW5lUmVzcG9uc2USKAoHb3V0bGluZRgBIAEoCzIXLm1pcmFpLnYxLkNvdXJzZU91dGxpbmUiTAocR2VuZXJhdGVMZXNzb25Db250ZW50UmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkSGQoRb3V0bGluZV9sZXNzb25faWQYAiABKAkiRQodR2VuZXJhdGVMZXNzb25Db250ZW50UmVzcG9uc2USJAoDam9iGAEgASgLMhcubWlyYWkudjEuR2VuZXJhdGlvbkpvYiIuChlHZW5lcmF0ZUFsbExlc3NvbnNSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCSJCChpHZW5lcmF0ZUFsbExlc3NvbnNSZXNwb25zZRIkCgNqb2IYASABKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iItoBChpSZWdlbmVyYXRlQ29tcG9uZW50UmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkSGwoTZ2VuZXJhdGVkX2xlc3Nvbl9pZBgCIAEoCRIUCgxjb21wb25lbnRfaWQYAyABKAkSGwoTbW9kaWZpY2F0aW9uX3Byb21wdBgEIAEoCRJDChFhbGlnbm1lbnRfdGFyZ2V0cxgFIAEoCzIjLm1pcmFpLnYxLkNvbXBvbmVudEFsaWdubWVudFRhcmdldHNIAIgBAUIUChJfYWxpZ25tZW50X3RhcmdldHMiQwobUmVnZW5lcmF0ZUNvbXBvbmVudFJlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiHwoNR2V0Sm9iUmVxdWVzdBIOCgZqb2JfaWQYASABKAkiNgoOR2V0Sm9iUmVzcG9uc2USJAoDam9iGAEgASgLMhcubWlyYWkudjEuR2VuZXJhdGlvbkpvYiKvAQoPTGlzdEpvYnNSZXF1ZXN0Ei4KBHR5cGUYASABKA4yGy5taXJhaS52MS5HZW5lcmF0aW9uSm9iVHlwZUgAiAEBEjIKBnN0YXR1cxgCIAEoDjIdLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2JTdGF0dXNIAYgBARIWCgljb3Vyc2VfaWQYAyABKAlIAogBAUIHCgVfdHlwZUIJCgdfc3RhdHVzQgwKCl9jb3Vyc2VfaWQiOQoQTGlzdEpvYnNSZXNwb25zZRIlCgRqb2JzGAEgAygLMhcubWlyYWkudjEuR2VuZXJhdGlvbkpvYiIiChBDYW5jZWxKb2JSZXF1ZXN0Eg4KBmpvYl9pZBgBIAEoCSI5ChFDYW5jZWxKb2JSZXNwb25zZRIkCgNqb2IYASABKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iIi4KGUdldEdlbmVyYXRlZExlc3NvblJlcXVlc3QSEQoJbGVzc29uX2lkGAEgASgJIkcKGkdldEdlbmVyYXRlZExlc3NvblJlc3BvbnNlEikKBmxlc3NvbhgBIAEoCzIZLm1pcmFpLnYxLkdlbmVyYXRlZExlc3NvbiIwChtMaXN0R2VuZXJhdGVkTGVzc29uc1JlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJIkoKHExpc3RHZW5lcmF0ZWRMZXNzb25zUmVzcG9uc2USKgoHbGVzc29ucxgBIAMoCzIZLm1pcmFpLnYxLkdlbmVyYXRlZExlc3NvbiKhAQodR2VuZXJhdGVDb21wb25lbnRJbWFnZVJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhsKE2dlbmVyYXRlZF9sZXNzb25faWQYAiABKAkSFAoMY29tcG9uZW50X2lkGAMgASgJEg4KBnByb21wdBgEIAEoCRIZCgxhc3BlY3RfcmF0aW8YBSABKAlIAIgBAUIPCg1fYXNwZWN0X3JhdGlvImEKHkdlbmVyYXRlQ29tcG9uZW50SW1hZ2VSZXNwb25zZRIRCglpbWFnZV91cmwYASABKAkSLAoJY29tcG9uZW50GAIgASgLMhkubWlyYWkudjEuTGVzc29uQ29tcG9uZW50In4KHVVwZGF0ZUxlc3NvbkNvbXBvbmVudHNSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRIbChNnZW5lcmF0ZWRfbGVzc29uX2lkGAIgASgJEi0KCmNvbXBvbmVudHMYAyADKAsyGS5taXJhaS52MS5MZXNzb25Db21wb25lbnQiSwoeVXBkYXRlTGVzc29uQ29tcG9uZW50c1Jlc3BvbnNlEikKBmxlc3NvbhgBIAEoCzIZLm1pcmFpLnYxLkdlbmVyYXRlZExlc3NvbiIWChRTdWJzY3JpYmVKb2JzUmVxdWVzdCJpChVTdWJzY3JpYmVKb2JzUmVzcG9uc2USKgoKZXZlbnRfdHlwZRgBIAEoDjIWLm1pcmFpLnYxLkpvYkV2ZW50VHlwZRIkCgNqb2IYAiABKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iIikKFEdldENvdXJzZVBsYW5SZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCSI7ChVHZXRDb3Vyc2VQbGFuUmVzcG9uc2USIgoEcGxhbhgBIAEoCzIULm1pcmFpLnYxLkNvdXJzZVBsYW4iLQoYQXBwcm92ZUNvdXJzZVBsYW5SZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCSI/ChlBcHByb3ZlQ291cnNlUGxhblJlc3BvbnNlEiIKBHBsYW4YASABKAsyFC5taXJhaS52MS5Db3Vyc2VQbGFuMqQNChNBSUdlbmVyYXRpb25TZXJ2aWNlEmgKFUdlbmVyYXRlQ291cnNlT3V0bGluZRImLm1pcmFpLnYxLkdlbmVyYXRlQ291cnNlT3V0bGluZVJlcXVlc3QaJy5taXJhaS52MS5HZW5lcmF0ZUNvdXJzZU91dGxpbmVSZXNwb25zZRJZChBHZXRDb3Vyc2VPdXRsaW5lEiEubWlyYWkudjEuR2V0Q291cnNlT3V0bGluZVJlcXVlc3QaIi5taXJhaS52MS5HZXRDb3Vyc2VPdXRsaW5lUmVzcG9uc2USZQoUQXBwcm92ZUNvdXJzZU91dGxpbmUSJS5taXJhaS52MS5BcHByb3ZlQ291cnNlT3V0bGluZVJlcXVlc3QaJi5taXJhaS52MS5BcHByb3ZlQ291cnNlT3V0bGluZVJlc3BvbnNlEmIKE1JlamVjdENvdXJzZU91dGxpbmUSJC5taXJhaS52MS5SZWplY3RDb3Vyc2VPdXRsaW5lUmVxdWVzdBolLm1pcmFpLnYxLlJlamVjdENvdXJzZU91dGxpbmVSZXNwb25zZRJiChNVcGRhdGVDb3Vyc2VPdXRsaW5lEiQubWlyYWkudjEuVXBkYXRlQ291cnNlT3V0bGluZVJlcXVlc3QaJS5taXJhaS52MS5VcGRhdGVDb3Vyc2VPdXRsaW5lUmVzcG9uc2USaAoVR2VuZXJhdGVMZXNzb25Db250ZW50EiYubWlyYWkudjEuR2VuZXJhdGVMZXNzb25Db250ZW50UmVxdWVzdBonLm1pcmFpLnYxLkdlbmVyYXRlTGVzc29uQ29udGVudFJlc3BvbnNlEl8KEkdlbmVyYXRlQWxsTGVzc29ucxIjLm1pcmFpLnYxLkdlbmVyYXRlQWxsTGVzc29uc1JlcXVlc3QaJC5taXJhaS52MS5HZW5lcmF0ZUFsbExlc3NvbnNSZXNwb25zZRJiChNSZWdlbmVyYXRlQ29tcG9uZW50EiQubWlyYWkudjEuUmVnZW5lcmF0ZUNvbXBvbmVudFJlcXVlc3QaJS5taXJhaS52MS5SZWdlbmVyYXRlQ29tcG9uZW50UmVzcG9uc2USOwoGR2V0Sm9iEhcubWlyYWkudjEuR2V0Sm9iUmVxdWVzdBoYLm1pcmFpLnYxLkdldEpvYlJlc3BvbnNlEkEKCExpc3RKb2JzEhkubWlyYWkudjEuTGlzdEpvYnNSZXF1ZXN0GhoubWlyYWkudjEuTGlzdEpvYnNSZXNwb25zZRJECglDYW5jZWxKb2ISGi5taXJhaS52MS5DYW5jZWxKb2JSZXF1ZXN0GhsubWlyYWkudjEuQ2FuY2VsSm9iUmVzcG9uc2USXwoSR2V0R2VuZXJhdGVkTGVzc29uEiMubWlyYWkudjEuR2V0R2VuZXJhdGVkTGVzc29uUmVxdWVzdBokLm1pcmFpLnYxLkdldEdlbmVyYXRlZExlc3NvblJlc3BvbnNlEmUKFExpc3RHZW5lcmF0ZWRMZXNzb25zEiUubWlyYWkudjEuTGlzdEdlbmVyYXRlZExlc3NvbnNSZXF1ZXN0GiYubWlyYWkudjEuTGlzdEdlbmVyYXRlZExlc3NvbnNSZXNwb25zZRJrChZHZW5lcmF0ZUNvbXBvbmVudEltYWdlEicubWlyYWkudjEuR2VuZXJhdGVDb21wb25lbnRJbWFnZVJlcXVlc3QaKC5taXJhaS52MS5HZW5lcmF0ZUNvbXBvbmVudEltYWdlUmVzcG9uc2USawoWVXBkYXRlTGVzc29uQ29tcG9uZW50cxInLm1pcmFpLnYxLlVwZGF0ZUxlc3NvbkNvbXBvbmVudHNSZXF1ZXN0GigubWlyYWkudjEuVXBkYXRlTGVzc29uQ29tcG9uZW50c1Jlc3BvbnNlElIKDVN1YnNjcmliZUpvYnMSHi5taXJhaS52MS5TdWJzY3JpYmVKb2JzUmVxdWVzdBofLm1pcmFpLnYxLlN1YnNjcmliZUpvYnNSZXNwb25zZTABElAKDUdldENvdXJzZVBsYW4SHi5taXJhaS52MS5HZXRDb3Vyc2VQbGFuUmVxdWVzdBofLm1pcmFpLnYxLkdldENvdXJzZVBsYW5SZXNwb25zZRJcChFBcHByb3ZlQ291cnNlUGxhbhIiLm1pcmFpLnYxLkFwcHJvdmVDb3Vyc2VQbGFuUmVxdWVzdBojLm1pcmFpLnYxLkFwcHJvdmVDb3Vyc2VQbGFuUmVzcG9uc2VCngEKDGNvbS5taXJhaS52MUIYQWlHZW5lcmF0aW9uU2VydmljZVByb3RvUAFaM2dpdGh1Yi5jb20vc29nb3MvbWlyYWktYmFja2VuZC9nZW4vbWlyYWkvdjE7bWlyYWl2MaICA01YWKoCCE1pcmFpLlYxygIITWlyYWlcVjHiAhRNaXJhaVxWMVxHUEJNZXRhZGF0YeoCCU1pcmFpOjpWMWIGcHJvdG8z", [file_mirai_v1_ai_generation_types, file_mirai_v1_course_wizard]);
+  fileDesc("CiRtaXJhaS92MS9haV9nZW5lcmF0aW9uX3NlcnZpY2UucHJvdG8SCG1pcmFpLnYxIvQBChBTdG9yZWRXaXphcmREYXRhEioKDHNtZV9wZXJzb25hcxgBIAMoCzIULm1pcmFpLnYxLlNNRVBlcnNvbmESGAoQc2VsZWN0ZWRfc21lX2lkcxgCIAMoCRI0ChFhdWRpZW5jZV9wZXJzb25hcxgDIAMoCzIZLm1pcmFpLnYxLkF1ZGllbmNlUGVyc29uYRIdChVzZWxlY3RlZF9hdWRpZW5jZV9pZHMYBCADKAkSKwoNc2VsZWN0ZWRfdG9uZRgFIAEoCzIULm1pcmFpLnYxLlRvbmVPcHRpb24SGAoQZGVzaXJlZF9vdXRjb21lcxgGIAEoCSJOChxHZW5lcmF0ZUNvdXJzZU91dGxpbmVSZXF1ZXN0Ei4KBWlucHV0GAEgASgLMh8ubWlyYWkudjEuQ291cnNlR2VuZXJhdGlvbklucHV0IkUKHUdlbmVyYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiTgoXR2V0Q291cnNlT3V0bGluZVJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhQKB3ZlcnNpb24YAiABKAVIAIgBAUIKCghfdmVyc2lvbiJ1ChhHZXRDb3Vyc2VPdXRsaW5lUmVzcG9uc2USKAoHb3V0bGluZRgBIAEoCzIXLm1pcmFpLnYxLkNvdXJzZU91dGxpbmUSLwoLd2l6YXJkX2RhdGEYAiABKAsyGi5taXJhaS52MS5TdG9yZWRXaXphcmREYXRhIm8KGlVwZGF0ZUNvdXJzZU91dGxpbmVSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRISCgpvdXRsaW5lX2lkGAIgASgJEioKCHNlY3Rpb25zGAMgAygLMhgubWlyYWkudjEuT3V0bGluZVNlY3Rpb24iRwobVXBkYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlEigKB291dGxpbmUYASABKAsyFy5taXJhaS52MS5Db3Vyc2VPdXRsaW5lIi4KGUdlbmVyYXRlQWxsTGVzc29uc1JlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJIkIKGkdlbmVyYXRlQWxsTGVzc29uc1Jlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2Ii2gEKGlJlZ2VuZXJhdGVDb21wb25lbnRSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRIbChNnZW5lcmF0ZWRfbGVzc29uX2lkGAIgASgJEhQKDGNvbXBvbmVudF9pZBgDIAEoCRIbChNtb2RpZmljYXRpb25fcHJvbXB0GAQgASgJEkMKEWFsaWdubWVudF90YXJnZXRzGAUgASgLMiMubWlyYWkudjEuQ29tcG9uZW50QWxpZ25tZW50VGFyZ2V0c0gAiAEBQhQKEl9hbGlnbm1lbnRfdGFyZ2V0cyJDChtSZWdlbmVyYXRlQ29tcG9uZW50UmVzcG9uc2USJAoDam9iGAEgASgLMhcubWlyYWkudjEuR2VuZXJhdGlvbkpvYiIfCg1HZXRKb2JSZXF1ZXN0Eg4KBmpvYl9pZBgBIAEoCSI2Cg5HZXRKb2JSZXNwb25zZRIkCgNqb2IYASABKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iIq8BCg9MaXN0Sm9ic1JlcXVlc3QSLgoEdHlwZRgBIAEoDjIbLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2JUeXBlSACIAQESMgoGc3RhdHVzGAIgASgOMh0ubWlyYWkudjEuR2VuZXJhdGlvbkpvYlN0YXR1c0gBiAEBEhYKCWNvdXJzZV9pZBgDIAEoCUgCiAEBQgcKBV90eXBlQgkKB19zdGF0dXNCDAoKX2NvdXJzZV9pZCI5ChBMaXN0Sm9ic1Jlc3BvbnNlEiUKBGpvYnMYASADKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iIiIKEENhbmNlbEpvYlJlcXVlc3QSDgoGam9iX2lkGAEgASgJIjkKEUNhbmNlbEpvYlJlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiLgoZR2V0R2VuZXJhdGVkTGVzc29uUmVxdWVzdBIRCglsZXNzb25faWQYASABKAkiRwoaR2V0R2VuZXJhdGVkTGVzc29uUmVzcG9uc2USKQoGbGVzc29uGAEgASgLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIjAKG0xpc3RHZW5lcmF0ZWRMZXNzb25zUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkiSgocTGlzdEdlbmVyYXRlZExlc3NvbnNSZXNwb25zZRIqCgdsZXNzb25zGAEgAygLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIqEBCh1HZW5lcmF0ZUNvbXBvbmVudEltYWdlUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkSGwoTZ2VuZXJhdGVkX2xlc3Nvbl9pZBgCIAEoCRIUCgxjb21wb25lbnRfaWQYAyABKAkSDgoGcHJvbXB0GAQgASgJEhkKDGFzcGVjdF9yYXRpbxgFIAEoCUgAiAEBQg8KDV9hc3BlY3RfcmF0aW8iYQoeR2VuZXJhdGVDb21wb25lbnRJbWFnZVJlc3BvbnNlEhEKCWltYWdlX3VybBgBIAEoCRIsCgljb21wb25lbnQYAiABKAsyGS5taXJhaS52MS5MZXNzb25Db21wb25lbnQifgodVXBkYXRlTGVzc29uQ29tcG9uZW50c1JlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhsKE2dlbmVyYXRlZF9sZXNzb25faWQYAiABKAkSLQoKY29tcG9uZW50cxgDIAMoCzIZLm1pcmFpLnYxLkxlc3NvbkNvbXBvbmVudCJLCh5VcGRhdGVMZXNzb25Db21wb25lbnRzUmVzcG9uc2USKQoGbGVzc29uGAEgASgLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIhYKFFN1YnNjcmliZUpvYnNSZXF1ZXN0ImkKFVN1YnNjcmliZUpvYnNSZXNwb25zZRIqCgpldmVudF90eXBlGAEgASgOMhYubWlyYWkudjEuSm9iRXZlbnRUeXBlEiQKA2pvYhgCIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiKQoUR2V0Q291cnNlUGxhblJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJIjsKFUdldENvdXJzZVBsYW5SZXNwb25zZRIiCgRwbGFuGAEgASgLMhQubWlyYWkudjEuQ291cnNlUGxhbiItChhBcHByb3ZlQ291cnNlUGxhblJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJIj8KGUFwcHJvdmVDb3Vyc2VQbGFuUmVzcG9uc2USIgoEcGxhbhgBIAEoCzIULm1pcmFpLnYxLkNvdXJzZVBsYW4y7woKE0FJR2VuZXJhdGlvblNlcnZpY2USaAoVR2VuZXJhdGVDb3Vyc2VPdXRsaW5lEiYubWlyYWkudjEuR2VuZXJhdGVDb3Vyc2VPdXRsaW5lUmVxdWVzdBonLm1pcmFpLnYxLkdlbmVyYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlElkKEEdldENvdXJzZU91dGxpbmUSIS5taXJhaS52MS5HZXRDb3Vyc2VPdXRsaW5lUmVxdWVzdBoiLm1pcmFpLnYxLkdldENvdXJzZU91dGxpbmVSZXNwb25zZRJiChNVcGRhdGVDb3Vyc2VPdXRsaW5lEiQubWlyYWkudjEuVXBkYXRlQ291cnNlT3V0bGluZVJlcXVlc3QaJS5taXJhaS52MS5VcGRhdGVDb3Vyc2VPdXRsaW5lUmVzcG9uc2USXwoSR2VuZXJhdGVBbGxMZXNzb25zEiMubWlyYWkudjEuR2VuZXJhdGVBbGxMZXNzb25zUmVxdWVzdBokLm1pcmFpLnYxLkdlbmVyYXRlQWxsTGVzc29uc1Jlc3BvbnNlEmIKE1JlZ2VuZXJhdGVDb21wb25lbnQSJC5taXJhaS52MS5SZWdlbmVyYXRlQ29tcG9uZW50UmVxdWVzdBolLm1pcmFpLnYxLlJlZ2VuZXJhdGVDb21wb25lbnRSZXNwb25zZRI7CgZHZXRKb2ISFy5taXJhaS52MS5HZXRKb2JSZXF1ZXN0GhgubWlyYWkudjEuR2V0Sm9iUmVzcG9uc2USQQoITGlzdEpvYnMSGS5taXJhaS52MS5MaXN0Sm9ic1JlcXVlc3QaGi5taXJhaS52MS5MaXN0Sm9ic1Jlc3BvbnNlEkQKCUNhbmNlbEpvYhIaLm1pcmFpLnYxLkNhbmNlbEpvYlJlcXVlc3QaGy5taXJhaS52MS5DYW5jZWxKb2JSZXNwb25zZRJfChJHZXRHZW5lcmF0ZWRMZXNzb24SIy5taXJhaS52MS5HZXRHZW5lcmF0ZWRMZXNzb25SZXF1ZXN0GiQubWlyYWkudjEuR2V0R2VuZXJhdGVkTGVzc29uUmVzcG9uc2USZQoUTGlzdEdlbmVyYXRlZExlc3NvbnMSJS5taXJhaS52MS5MaXN0R2VuZXJhdGVkTGVzc29uc1JlcXVlc3QaJi5taXJhaS52MS5MaXN0R2VuZXJhdGVkTGVzc29uc1Jlc3BvbnNlEmsKFkdlbmVyYXRlQ29tcG9uZW50SW1hZ2USJy5taXJhaS52MS5HZW5lcmF0ZUNvbXBvbmVudEltYWdlUmVxdWVzdBooLm1pcmFpLnYxLkdlbmVyYXRlQ29tcG9uZW50SW1hZ2VSZXNwb25zZRJrChZVcGRhdGVMZXNzb25Db21wb25lbnRzEicubWlyYWkudjEuVXBkYXRlTGVzc29uQ29tcG9uZW50c1JlcXVlc3QaKC5taXJhaS52MS5VcGRhdGVMZXNzb25Db21wb25lbnRzUmVzcG9uc2USUgoNU3Vic2NyaWJlSm9icxIeLm1pcmFpLnYxLlN1YnNjcmliZUpvYnNSZXF1ZXN0Gh8ubWlyYWkudjEuU3Vic2NyaWJlSm9ic1Jlc3BvbnNlMAESUAoNR2V0Q291cnNlUGxhbhIeLm1pcmFpLnYxLkdldENvdXJzZVBsYW5SZXF1ZXN0Gh8ubWlyYWkudjEuR2V0Q291cnNlUGxhblJlc3BvbnNlElwKEUFwcHJvdmVDb3Vyc2VQbGFuEiIubWlyYWkudjEuQXBwcm92ZUNvdXJzZVBsYW5SZXF1ZXN0GiMubWlyYWkudjEuQXBwcm92ZUNvdXJzZVBsYW5SZXNwb25zZUKeAQoMY29tLm1pcmFpLnYxQhhBaUdlbmVyYXRpb25TZXJ2aWNlUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_mirai_v1_ai_generation_types, file_mirai_v1_course_wizard]);
 
 /**
  * StoredWizardData represents wizard selections persisted with the course.
@@ -139,89 +139,6 @@ export const GetCourseOutlineResponseSchema: GenMessage<GetCourseOutlineResponse
   messageDesc(file_mirai_v1_ai_generation_service, 4);
 
 /**
- * @generated from message mirai.v1.ApproveCourseOutlineRequest
- */
-export type ApproveCourseOutlineRequest = Message<"mirai.v1.ApproveCourseOutlineRequest"> & {
-  /**
-   * @generated from field: string course_id = 1;
-   */
-  courseId: string;
-
-  /**
-   * @generated from field: string outline_id = 2;
-   */
-  outlineId: string;
-};
-
-/**
- * Describes the message mirai.v1.ApproveCourseOutlineRequest.
- * Use `create(ApproveCourseOutlineRequestSchema)` to create a new message.
- */
-export const ApproveCourseOutlineRequestSchema: GenMessage<ApproveCourseOutlineRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 5);
-
-/**
- * @generated from message mirai.v1.ApproveCourseOutlineResponse
- */
-export type ApproveCourseOutlineResponse = Message<"mirai.v1.ApproveCourseOutlineResponse"> & {
-  /**
-   * @generated from field: mirai.v1.CourseOutline outline = 1;
-   */
-  outline?: CourseOutline;
-};
-
-/**
- * Describes the message mirai.v1.ApproveCourseOutlineResponse.
- * Use `create(ApproveCourseOutlineResponseSchema)` to create a new message.
- */
-export const ApproveCourseOutlineResponseSchema: GenMessage<ApproveCourseOutlineResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 6);
-
-/**
- * @generated from message mirai.v1.RejectCourseOutlineRequest
- */
-export type RejectCourseOutlineRequest = Message<"mirai.v1.RejectCourseOutlineRequest"> & {
-  /**
-   * @generated from field: string course_id = 1;
-   */
-  courseId: string;
-
-  /**
-   * @generated from field: string outline_id = 2;
-   */
-  outlineId: string;
-
-  /**
-   * @generated from field: string reason = 3;
-   */
-  reason: string;
-};
-
-/**
- * Describes the message mirai.v1.RejectCourseOutlineRequest.
- * Use `create(RejectCourseOutlineRequestSchema)` to create a new message.
- */
-export const RejectCourseOutlineRequestSchema: GenMessage<RejectCourseOutlineRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 7);
-
-/**
- * @generated from message mirai.v1.RejectCourseOutlineResponse
- */
-export type RejectCourseOutlineResponse = Message<"mirai.v1.RejectCourseOutlineResponse"> & {
-  /**
-   * @generated from field: mirai.v1.CourseOutline outline = 1;
-   */
-  outline?: CourseOutline;
-};
-
-/**
- * Describes the message mirai.v1.RejectCourseOutlineResponse.
- * Use `create(RejectCourseOutlineResponseSchema)` to create a new message.
- */
-export const RejectCourseOutlineResponseSchema: GenMessage<RejectCourseOutlineResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 8);
-
-/**
  * @generated from message mirai.v1.UpdateCourseOutlineRequest
  */
 export type UpdateCourseOutlineRequest = Message<"mirai.v1.UpdateCourseOutlineRequest"> & {
@@ -246,7 +163,7 @@ export type UpdateCourseOutlineRequest = Message<"mirai.v1.UpdateCourseOutlineRe
  * Use `create(UpdateCourseOutlineRequestSchema)` to create a new message.
  */
 export const UpdateCourseOutlineRequestSchema: GenMessage<UpdateCourseOutlineRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 9);
+  messageDesc(file_mirai_v1_ai_generation_service, 5);
 
 /**
  * @generated from message mirai.v1.UpdateCourseOutlineResponse
@@ -263,46 +180,7 @@ export type UpdateCourseOutlineResponse = Message<"mirai.v1.UpdateCourseOutlineR
  * Use `create(UpdateCourseOutlineResponseSchema)` to create a new message.
  */
 export const UpdateCourseOutlineResponseSchema: GenMessage<UpdateCourseOutlineResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 10);
-
-/**
- * @generated from message mirai.v1.GenerateLessonContentRequest
- */
-export type GenerateLessonContentRequest = Message<"mirai.v1.GenerateLessonContentRequest"> & {
-  /**
-   * @generated from field: string course_id = 1;
-   */
-  courseId: string;
-
-  /**
-   * @generated from field: string outline_lesson_id = 2;
-   */
-  outlineLessonId: string;
-};
-
-/**
- * Describes the message mirai.v1.GenerateLessonContentRequest.
- * Use `create(GenerateLessonContentRequestSchema)` to create a new message.
- */
-export const GenerateLessonContentRequestSchema: GenMessage<GenerateLessonContentRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 11);
-
-/**
- * @generated from message mirai.v1.GenerateLessonContentResponse
- */
-export type GenerateLessonContentResponse = Message<"mirai.v1.GenerateLessonContentResponse"> & {
-  /**
-   * @generated from field: mirai.v1.GenerationJob job = 1;
-   */
-  job?: GenerationJob;
-};
-
-/**
- * Describes the message mirai.v1.GenerateLessonContentResponse.
- * Use `create(GenerateLessonContentResponseSchema)` to create a new message.
- */
-export const GenerateLessonContentResponseSchema: GenMessage<GenerateLessonContentResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 12);
+  messageDesc(file_mirai_v1_ai_generation_service, 6);
 
 /**
  * @generated from message mirai.v1.GenerateAllLessonsRequest
@@ -319,7 +197,7 @@ export type GenerateAllLessonsRequest = Message<"mirai.v1.GenerateAllLessonsRequ
  * Use `create(GenerateAllLessonsRequestSchema)` to create a new message.
  */
 export const GenerateAllLessonsRequestSchema: GenMessage<GenerateAllLessonsRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 13);
+  messageDesc(file_mirai_v1_ai_generation_service, 7);
 
 /**
  * @generated from message mirai.v1.GenerateAllLessonsResponse
@@ -336,7 +214,7 @@ export type GenerateAllLessonsResponse = Message<"mirai.v1.GenerateAllLessonsRes
  * Use `create(GenerateAllLessonsResponseSchema)` to create a new message.
  */
 export const GenerateAllLessonsResponseSchema: GenMessage<GenerateAllLessonsResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 14);
+  messageDesc(file_mirai_v1_ai_generation_service, 8);
 
 /**
  * @generated from message mirai.v1.RegenerateComponentRequest
@@ -373,7 +251,7 @@ export type RegenerateComponentRequest = Message<"mirai.v1.RegenerateComponentRe
  * Use `create(RegenerateComponentRequestSchema)` to create a new message.
  */
 export const RegenerateComponentRequestSchema: GenMessage<RegenerateComponentRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 15);
+  messageDesc(file_mirai_v1_ai_generation_service, 9);
 
 /**
  * @generated from message mirai.v1.RegenerateComponentResponse
@@ -390,7 +268,7 @@ export type RegenerateComponentResponse = Message<"mirai.v1.RegenerateComponentR
  * Use `create(RegenerateComponentResponseSchema)` to create a new message.
  */
 export const RegenerateComponentResponseSchema: GenMessage<RegenerateComponentResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 16);
+  messageDesc(file_mirai_v1_ai_generation_service, 10);
 
 /**
  * @generated from message mirai.v1.GetJobRequest
@@ -407,7 +285,7 @@ export type GetJobRequest = Message<"mirai.v1.GetJobRequest"> & {
  * Use `create(GetJobRequestSchema)` to create a new message.
  */
 export const GetJobRequestSchema: GenMessage<GetJobRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 17);
+  messageDesc(file_mirai_v1_ai_generation_service, 11);
 
 /**
  * @generated from message mirai.v1.GetJobResponse
@@ -424,7 +302,7 @@ export type GetJobResponse = Message<"mirai.v1.GetJobResponse"> & {
  * Use `create(GetJobResponseSchema)` to create a new message.
  */
 export const GetJobResponseSchema: GenMessage<GetJobResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 18);
+  messageDesc(file_mirai_v1_ai_generation_service, 12);
 
 /**
  * @generated from message mirai.v1.ListJobsRequest
@@ -451,7 +329,7 @@ export type ListJobsRequest = Message<"mirai.v1.ListJobsRequest"> & {
  * Use `create(ListJobsRequestSchema)` to create a new message.
  */
 export const ListJobsRequestSchema: GenMessage<ListJobsRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 19);
+  messageDesc(file_mirai_v1_ai_generation_service, 13);
 
 /**
  * @generated from message mirai.v1.ListJobsResponse
@@ -468,7 +346,7 @@ export type ListJobsResponse = Message<"mirai.v1.ListJobsResponse"> & {
  * Use `create(ListJobsResponseSchema)` to create a new message.
  */
 export const ListJobsResponseSchema: GenMessage<ListJobsResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 20);
+  messageDesc(file_mirai_v1_ai_generation_service, 14);
 
 /**
  * @generated from message mirai.v1.CancelJobRequest
@@ -485,7 +363,7 @@ export type CancelJobRequest = Message<"mirai.v1.CancelJobRequest"> & {
  * Use `create(CancelJobRequestSchema)` to create a new message.
  */
 export const CancelJobRequestSchema: GenMessage<CancelJobRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 21);
+  messageDesc(file_mirai_v1_ai_generation_service, 15);
 
 /**
  * @generated from message mirai.v1.CancelJobResponse
@@ -502,7 +380,7 @@ export type CancelJobResponse = Message<"mirai.v1.CancelJobResponse"> & {
  * Use `create(CancelJobResponseSchema)` to create a new message.
  */
 export const CancelJobResponseSchema: GenMessage<CancelJobResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 22);
+  messageDesc(file_mirai_v1_ai_generation_service, 16);
 
 /**
  * @generated from message mirai.v1.GetGeneratedLessonRequest
@@ -519,7 +397,7 @@ export type GetGeneratedLessonRequest = Message<"mirai.v1.GetGeneratedLessonRequ
  * Use `create(GetGeneratedLessonRequestSchema)` to create a new message.
  */
 export const GetGeneratedLessonRequestSchema: GenMessage<GetGeneratedLessonRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 23);
+  messageDesc(file_mirai_v1_ai_generation_service, 17);
 
 /**
  * @generated from message mirai.v1.GetGeneratedLessonResponse
@@ -536,7 +414,7 @@ export type GetGeneratedLessonResponse = Message<"mirai.v1.GetGeneratedLessonRes
  * Use `create(GetGeneratedLessonResponseSchema)` to create a new message.
  */
 export const GetGeneratedLessonResponseSchema: GenMessage<GetGeneratedLessonResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 24);
+  messageDesc(file_mirai_v1_ai_generation_service, 18);
 
 /**
  * @generated from message mirai.v1.ListGeneratedLessonsRequest
@@ -553,7 +431,7 @@ export type ListGeneratedLessonsRequest = Message<"mirai.v1.ListGeneratedLessons
  * Use `create(ListGeneratedLessonsRequestSchema)` to create a new message.
  */
 export const ListGeneratedLessonsRequestSchema: GenMessage<ListGeneratedLessonsRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 25);
+  messageDesc(file_mirai_v1_ai_generation_service, 19);
 
 /**
  * @generated from message mirai.v1.ListGeneratedLessonsResponse
@@ -570,7 +448,7 @@ export type ListGeneratedLessonsResponse = Message<"mirai.v1.ListGeneratedLesson
  * Use `create(ListGeneratedLessonsResponseSchema)` to create a new message.
  */
 export const ListGeneratedLessonsResponseSchema: GenMessage<ListGeneratedLessonsResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 26);
+  messageDesc(file_mirai_v1_ai_generation_service, 20);
 
 /**
  * @generated from message mirai.v1.GenerateComponentImageRequest
@@ -607,7 +485,7 @@ export type GenerateComponentImageRequest = Message<"mirai.v1.GenerateComponentI
  * Use `create(GenerateComponentImageRequestSchema)` to create a new message.
  */
 export const GenerateComponentImageRequestSchema: GenMessage<GenerateComponentImageRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 27);
+  messageDesc(file_mirai_v1_ai_generation_service, 21);
 
 /**
  * @generated from message mirai.v1.GenerateComponentImageResponse
@@ -629,7 +507,7 @@ export type GenerateComponentImageResponse = Message<"mirai.v1.GenerateComponent
  * Use `create(GenerateComponentImageResponseSchema)` to create a new message.
  */
 export const GenerateComponentImageResponseSchema: GenMessage<GenerateComponentImageResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 28);
+  messageDesc(file_mirai_v1_ai_generation_service, 22);
 
 /**
  * @generated from message mirai.v1.UpdateLessonComponentsRequest
@@ -656,7 +534,7 @@ export type UpdateLessonComponentsRequest = Message<"mirai.v1.UpdateLessonCompon
  * Use `create(UpdateLessonComponentsRequestSchema)` to create a new message.
  */
 export const UpdateLessonComponentsRequestSchema: GenMessage<UpdateLessonComponentsRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 29);
+  messageDesc(file_mirai_v1_ai_generation_service, 23);
 
 /**
  * @generated from message mirai.v1.UpdateLessonComponentsResponse
@@ -673,7 +551,7 @@ export type UpdateLessonComponentsResponse = Message<"mirai.v1.UpdateLessonCompo
  * Use `create(UpdateLessonComponentsResponseSchema)` to create a new message.
  */
 export const UpdateLessonComponentsResponseSchema: GenMessage<UpdateLessonComponentsResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 30);
+  messageDesc(file_mirai_v1_ai_generation_service, 24);
 
 /**
  * @generated from message mirai.v1.SubscribeJobsRequest
@@ -686,7 +564,7 @@ export type SubscribeJobsRequest = Message<"mirai.v1.SubscribeJobsRequest"> & {
  * Use `create(SubscribeJobsRequestSchema)` to create a new message.
  */
 export const SubscribeJobsRequestSchema: GenMessage<SubscribeJobsRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 31);
+  messageDesc(file_mirai_v1_ai_generation_service, 25);
 
 /**
  * @generated from message mirai.v1.SubscribeJobsResponse
@@ -708,7 +586,7 @@ export type SubscribeJobsResponse = Message<"mirai.v1.SubscribeJobsResponse"> & 
  * Use `create(SubscribeJobsResponseSchema)` to create a new message.
  */
 export const SubscribeJobsResponseSchema: GenMessage<SubscribeJobsResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 32);
+  messageDesc(file_mirai_v1_ai_generation_service, 26);
 
 /**
  * Course Plan RPCs
@@ -727,7 +605,7 @@ export type GetCoursePlanRequest = Message<"mirai.v1.GetCoursePlanRequest"> & {
  * Use `create(GetCoursePlanRequestSchema)` to create a new message.
  */
 export const GetCoursePlanRequestSchema: GenMessage<GetCoursePlanRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 33);
+  messageDesc(file_mirai_v1_ai_generation_service, 27);
 
 /**
  * @generated from message mirai.v1.GetCoursePlanResponse
@@ -744,7 +622,7 @@ export type GetCoursePlanResponse = Message<"mirai.v1.GetCoursePlanResponse"> & 
  * Use `create(GetCoursePlanResponseSchema)` to create a new message.
  */
 export const GetCoursePlanResponseSchema: GenMessage<GetCoursePlanResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 34);
+  messageDesc(file_mirai_v1_ai_generation_service, 28);
 
 /**
  * @generated from message mirai.v1.ApproveCoursePlanRequest
@@ -761,7 +639,7 @@ export type ApproveCoursePlanRequest = Message<"mirai.v1.ApproveCoursePlanReques
  * Use `create(ApproveCoursePlanRequestSchema)` to create a new message.
  */
 export const ApproveCoursePlanRequestSchema: GenMessage<ApproveCoursePlanRequest> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 35);
+  messageDesc(file_mirai_v1_ai_generation_service, 29);
 
 /**
  * @generated from message mirai.v1.ApproveCoursePlanResponse
@@ -778,7 +656,7 @@ export type ApproveCoursePlanResponse = Message<"mirai.v1.ApproveCoursePlanRespo
  * Use `create(ApproveCoursePlanResponseSchema)` to create a new message.
  */
 export const ApproveCoursePlanResponseSchema: GenMessage<ApproveCoursePlanResponse> = /*@__PURE__*/
-  messageDesc(file_mirai_v1_ai_generation_service, 36);
+  messageDesc(file_mirai_v1_ai_generation_service, 30);
 
 /**
  * AIGenerationService handles AI generation operations.
@@ -803,36 +681,12 @@ export const AIGenerationService: GenService<{
     output: typeof GetCourseOutlineResponseSchema;
   },
   /**
-   * @generated from rpc mirai.v1.AIGenerationService.ApproveCourseOutline
-   */
-  approveCourseOutline: {
-    methodKind: "unary";
-    input: typeof ApproveCourseOutlineRequestSchema;
-    output: typeof ApproveCourseOutlineResponseSchema;
-  },
-  /**
-   * @generated from rpc mirai.v1.AIGenerationService.RejectCourseOutline
-   */
-  rejectCourseOutline: {
-    methodKind: "unary";
-    input: typeof RejectCourseOutlineRequestSchema;
-    output: typeof RejectCourseOutlineResponseSchema;
-  },
-  /**
    * @generated from rpc mirai.v1.AIGenerationService.UpdateCourseOutline
    */
   updateCourseOutline: {
     methodKind: "unary";
     input: typeof UpdateCourseOutlineRequestSchema;
     output: typeof UpdateCourseOutlineResponseSchema;
-  },
-  /**
-   * @generated from rpc mirai.v1.AIGenerationService.GenerateLessonContent
-   */
-  generateLessonContent: {
-    methodKind: "unary";
-    input: typeof GenerateLessonContentRequestSchema;
-    output: typeof GenerateLessonContentResponseSchema;
   },
   /**
    * @generated from rpc mirai.v1.AIGenerationService.GenerateAllLessons

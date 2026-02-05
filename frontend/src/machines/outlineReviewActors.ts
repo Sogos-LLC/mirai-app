@@ -12,15 +12,10 @@ import {
 import { GenerationJobStatus } from '@/gen/mirai/v1/ai_generation_types_pb';
 import type {
   GenerateCourseOutlineResponse,
-  ApproveCourseOutlineResponse,
   GenerateAllLessonsResponse,
 } from '@/gen/mirai/v1/ai_generation_service_pb';
 
 type AIClient = Client<typeof AIGenerationService>;
-
-interface ApproveMutate {
-  mutate: (courseId: string, outlineId: string) => Promise<ApproveCourseOutlineResponse>;
-}
 
 interface GenerateOutlineMutate {
   mutate: (params: { courseId: string; desiredOutcome: string }) => Promise<GenerateCourseOutlineResponse>;
@@ -36,7 +31,6 @@ interface GenerateLessonsMutate {
  */
 export function createOutlineReviewActors(
   aiClient: AIClient,
-  approveCourseOutline: ApproveMutate,
   generateCourseOutline: GenerateOutlineMutate,
   generateAllLessons: GenerateLessonsMutate,
 ) {
@@ -161,13 +155,6 @@ export function createOutlineReviewActors(
       }
       return { outline: outlineResponse.outline };
     }),
-
-    approveOutlineActor: fromPromise(
-      async ({ input }: { input: { courseId: string; outlineId: string } }) => {
-        const result = await approveCourseOutline.mutate(input.courseId, input.outlineId);
-        return { outline: result.outline! };
-      }
-    ),
 
     regenerateOutlineActor: fromPromise(
       async ({ input }: { input: { courseId: string } }) => {

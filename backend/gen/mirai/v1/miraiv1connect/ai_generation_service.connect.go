@@ -39,18 +39,9 @@ const (
 	// AIGenerationServiceGetCourseOutlineProcedure is the fully-qualified name of the
 	// AIGenerationService's GetCourseOutline RPC.
 	AIGenerationServiceGetCourseOutlineProcedure = "/mirai.v1.AIGenerationService/GetCourseOutline"
-	// AIGenerationServiceApproveCourseOutlineProcedure is the fully-qualified name of the
-	// AIGenerationService's ApproveCourseOutline RPC.
-	AIGenerationServiceApproveCourseOutlineProcedure = "/mirai.v1.AIGenerationService/ApproveCourseOutline"
-	// AIGenerationServiceRejectCourseOutlineProcedure is the fully-qualified name of the
-	// AIGenerationService's RejectCourseOutline RPC.
-	AIGenerationServiceRejectCourseOutlineProcedure = "/mirai.v1.AIGenerationService/RejectCourseOutline"
 	// AIGenerationServiceUpdateCourseOutlineProcedure is the fully-qualified name of the
 	// AIGenerationService's UpdateCourseOutline RPC.
 	AIGenerationServiceUpdateCourseOutlineProcedure = "/mirai.v1.AIGenerationService/UpdateCourseOutline"
-	// AIGenerationServiceGenerateLessonContentProcedure is the fully-qualified name of the
-	// AIGenerationService's GenerateLessonContent RPC.
-	AIGenerationServiceGenerateLessonContentProcedure = "/mirai.v1.AIGenerationService/GenerateLessonContent"
 	// AIGenerationServiceGenerateAllLessonsProcedure is the fully-qualified name of the
 	// AIGenerationService's GenerateAllLessons RPC.
 	AIGenerationServiceGenerateAllLessonsProcedure = "/mirai.v1.AIGenerationService/GenerateAllLessons"
@@ -93,10 +84,7 @@ const (
 type AIGenerationServiceClient interface {
 	GenerateCourseOutline(context.Context, *connect.Request[v1.GenerateCourseOutlineRequest]) (*connect.Response[v1.GenerateCourseOutlineResponse], error)
 	GetCourseOutline(context.Context, *connect.Request[v1.GetCourseOutlineRequest]) (*connect.Response[v1.GetCourseOutlineResponse], error)
-	ApproveCourseOutline(context.Context, *connect.Request[v1.ApproveCourseOutlineRequest]) (*connect.Response[v1.ApproveCourseOutlineResponse], error)
-	RejectCourseOutline(context.Context, *connect.Request[v1.RejectCourseOutlineRequest]) (*connect.Response[v1.RejectCourseOutlineResponse], error)
 	UpdateCourseOutline(context.Context, *connect.Request[v1.UpdateCourseOutlineRequest]) (*connect.Response[v1.UpdateCourseOutlineResponse], error)
-	GenerateLessonContent(context.Context, *connect.Request[v1.GenerateLessonContentRequest]) (*connect.Response[v1.GenerateLessonContentResponse], error)
 	GenerateAllLessons(context.Context, *connect.Request[v1.GenerateAllLessonsRequest]) (*connect.Response[v1.GenerateAllLessonsResponse], error)
 	RegenerateComponent(context.Context, *connect.Request[v1.RegenerateComponentRequest]) (*connect.Response[v1.RegenerateComponentResponse], error)
 	GetJob(context.Context, *connect.Request[v1.GetJobRequest]) (*connect.Response[v1.GetJobResponse], error)
@@ -134,28 +122,10 @@ func NewAIGenerationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(aIGenerationServiceMethods.ByName("GetCourseOutline")),
 			connect.WithClientOptions(opts...),
 		),
-		approveCourseOutline: connect.NewClient[v1.ApproveCourseOutlineRequest, v1.ApproveCourseOutlineResponse](
-			httpClient,
-			baseURL+AIGenerationServiceApproveCourseOutlineProcedure,
-			connect.WithSchema(aIGenerationServiceMethods.ByName("ApproveCourseOutline")),
-			connect.WithClientOptions(opts...),
-		),
-		rejectCourseOutline: connect.NewClient[v1.RejectCourseOutlineRequest, v1.RejectCourseOutlineResponse](
-			httpClient,
-			baseURL+AIGenerationServiceRejectCourseOutlineProcedure,
-			connect.WithSchema(aIGenerationServiceMethods.ByName("RejectCourseOutline")),
-			connect.WithClientOptions(opts...),
-		),
 		updateCourseOutline: connect.NewClient[v1.UpdateCourseOutlineRequest, v1.UpdateCourseOutlineResponse](
 			httpClient,
 			baseURL+AIGenerationServiceUpdateCourseOutlineProcedure,
 			connect.WithSchema(aIGenerationServiceMethods.ByName("UpdateCourseOutline")),
-			connect.WithClientOptions(opts...),
-		),
-		generateLessonContent: connect.NewClient[v1.GenerateLessonContentRequest, v1.GenerateLessonContentResponse](
-			httpClient,
-			baseURL+AIGenerationServiceGenerateLessonContentProcedure,
-			connect.WithSchema(aIGenerationServiceMethods.ByName("GenerateLessonContent")),
 			connect.WithClientOptions(opts...),
 		),
 		generateAllLessons: connect.NewClient[v1.GenerateAllLessonsRequest, v1.GenerateAllLessonsResponse](
@@ -237,10 +207,7 @@ func NewAIGenerationServiceClient(httpClient connect.HTTPClient, baseURL string,
 type aIGenerationServiceClient struct {
 	generateCourseOutline  *connect.Client[v1.GenerateCourseOutlineRequest, v1.GenerateCourseOutlineResponse]
 	getCourseOutline       *connect.Client[v1.GetCourseOutlineRequest, v1.GetCourseOutlineResponse]
-	approveCourseOutline   *connect.Client[v1.ApproveCourseOutlineRequest, v1.ApproveCourseOutlineResponse]
-	rejectCourseOutline    *connect.Client[v1.RejectCourseOutlineRequest, v1.RejectCourseOutlineResponse]
 	updateCourseOutline    *connect.Client[v1.UpdateCourseOutlineRequest, v1.UpdateCourseOutlineResponse]
-	generateLessonContent  *connect.Client[v1.GenerateLessonContentRequest, v1.GenerateLessonContentResponse]
 	generateAllLessons     *connect.Client[v1.GenerateAllLessonsRequest, v1.GenerateAllLessonsResponse]
 	regenerateComponent    *connect.Client[v1.RegenerateComponentRequest, v1.RegenerateComponentResponse]
 	getJob                 *connect.Client[v1.GetJobRequest, v1.GetJobResponse]
@@ -265,24 +232,9 @@ func (c *aIGenerationServiceClient) GetCourseOutline(ctx context.Context, req *c
 	return c.getCourseOutline.CallUnary(ctx, req)
 }
 
-// ApproveCourseOutline calls mirai.v1.AIGenerationService.ApproveCourseOutline.
-func (c *aIGenerationServiceClient) ApproveCourseOutline(ctx context.Context, req *connect.Request[v1.ApproveCourseOutlineRequest]) (*connect.Response[v1.ApproveCourseOutlineResponse], error) {
-	return c.approveCourseOutline.CallUnary(ctx, req)
-}
-
-// RejectCourseOutline calls mirai.v1.AIGenerationService.RejectCourseOutline.
-func (c *aIGenerationServiceClient) RejectCourseOutline(ctx context.Context, req *connect.Request[v1.RejectCourseOutlineRequest]) (*connect.Response[v1.RejectCourseOutlineResponse], error) {
-	return c.rejectCourseOutline.CallUnary(ctx, req)
-}
-
 // UpdateCourseOutline calls mirai.v1.AIGenerationService.UpdateCourseOutline.
 func (c *aIGenerationServiceClient) UpdateCourseOutline(ctx context.Context, req *connect.Request[v1.UpdateCourseOutlineRequest]) (*connect.Response[v1.UpdateCourseOutlineResponse], error) {
 	return c.updateCourseOutline.CallUnary(ctx, req)
-}
-
-// GenerateLessonContent calls mirai.v1.AIGenerationService.GenerateLessonContent.
-func (c *aIGenerationServiceClient) GenerateLessonContent(ctx context.Context, req *connect.Request[v1.GenerateLessonContentRequest]) (*connect.Response[v1.GenerateLessonContentResponse], error) {
-	return c.generateLessonContent.CallUnary(ctx, req)
 }
 
 // GenerateAllLessons calls mirai.v1.AIGenerationService.GenerateAllLessons.
@@ -349,10 +301,7 @@ func (c *aIGenerationServiceClient) ApproveCoursePlan(ctx context.Context, req *
 type AIGenerationServiceHandler interface {
 	GenerateCourseOutline(context.Context, *connect.Request[v1.GenerateCourseOutlineRequest]) (*connect.Response[v1.GenerateCourseOutlineResponse], error)
 	GetCourseOutline(context.Context, *connect.Request[v1.GetCourseOutlineRequest]) (*connect.Response[v1.GetCourseOutlineResponse], error)
-	ApproveCourseOutline(context.Context, *connect.Request[v1.ApproveCourseOutlineRequest]) (*connect.Response[v1.ApproveCourseOutlineResponse], error)
-	RejectCourseOutline(context.Context, *connect.Request[v1.RejectCourseOutlineRequest]) (*connect.Response[v1.RejectCourseOutlineResponse], error)
 	UpdateCourseOutline(context.Context, *connect.Request[v1.UpdateCourseOutlineRequest]) (*connect.Response[v1.UpdateCourseOutlineResponse], error)
-	GenerateLessonContent(context.Context, *connect.Request[v1.GenerateLessonContentRequest]) (*connect.Response[v1.GenerateLessonContentResponse], error)
 	GenerateAllLessons(context.Context, *connect.Request[v1.GenerateAllLessonsRequest]) (*connect.Response[v1.GenerateAllLessonsResponse], error)
 	RegenerateComponent(context.Context, *connect.Request[v1.RegenerateComponentRequest]) (*connect.Response[v1.RegenerateComponentResponse], error)
 	GetJob(context.Context, *connect.Request[v1.GetJobRequest]) (*connect.Response[v1.GetJobResponse], error)
@@ -386,28 +335,10 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 		connect.WithSchema(aIGenerationServiceMethods.ByName("GetCourseOutline")),
 		connect.WithHandlerOptions(opts...),
 	)
-	aIGenerationServiceApproveCourseOutlineHandler := connect.NewUnaryHandler(
-		AIGenerationServiceApproveCourseOutlineProcedure,
-		svc.ApproveCourseOutline,
-		connect.WithSchema(aIGenerationServiceMethods.ByName("ApproveCourseOutline")),
-		connect.WithHandlerOptions(opts...),
-	)
-	aIGenerationServiceRejectCourseOutlineHandler := connect.NewUnaryHandler(
-		AIGenerationServiceRejectCourseOutlineProcedure,
-		svc.RejectCourseOutline,
-		connect.WithSchema(aIGenerationServiceMethods.ByName("RejectCourseOutline")),
-		connect.WithHandlerOptions(opts...),
-	)
 	aIGenerationServiceUpdateCourseOutlineHandler := connect.NewUnaryHandler(
 		AIGenerationServiceUpdateCourseOutlineProcedure,
 		svc.UpdateCourseOutline,
 		connect.WithSchema(aIGenerationServiceMethods.ByName("UpdateCourseOutline")),
-		connect.WithHandlerOptions(opts...),
-	)
-	aIGenerationServiceGenerateLessonContentHandler := connect.NewUnaryHandler(
-		AIGenerationServiceGenerateLessonContentProcedure,
-		svc.GenerateLessonContent,
-		connect.WithSchema(aIGenerationServiceMethods.ByName("GenerateLessonContent")),
 		connect.WithHandlerOptions(opts...),
 	)
 	aIGenerationServiceGenerateAllLessonsHandler := connect.NewUnaryHandler(
@@ -488,14 +419,8 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 			aIGenerationServiceGenerateCourseOutlineHandler.ServeHTTP(w, r)
 		case AIGenerationServiceGetCourseOutlineProcedure:
 			aIGenerationServiceGetCourseOutlineHandler.ServeHTTP(w, r)
-		case AIGenerationServiceApproveCourseOutlineProcedure:
-			aIGenerationServiceApproveCourseOutlineHandler.ServeHTTP(w, r)
-		case AIGenerationServiceRejectCourseOutlineProcedure:
-			aIGenerationServiceRejectCourseOutlineHandler.ServeHTTP(w, r)
 		case AIGenerationServiceUpdateCourseOutlineProcedure:
 			aIGenerationServiceUpdateCourseOutlineHandler.ServeHTTP(w, r)
-		case AIGenerationServiceGenerateLessonContentProcedure:
-			aIGenerationServiceGenerateLessonContentHandler.ServeHTTP(w, r)
 		case AIGenerationServiceGenerateAllLessonsProcedure:
 			aIGenerationServiceGenerateAllLessonsHandler.ServeHTTP(w, r)
 		case AIGenerationServiceRegenerateComponentProcedure:
@@ -537,20 +462,8 @@ func (UnimplementedAIGenerationServiceHandler) GetCourseOutline(context.Context,
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.GetCourseOutline is not implemented"))
 }
 
-func (UnimplementedAIGenerationServiceHandler) ApproveCourseOutline(context.Context, *connect.Request[v1.ApproveCourseOutlineRequest]) (*connect.Response[v1.ApproveCourseOutlineResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.ApproveCourseOutline is not implemented"))
-}
-
-func (UnimplementedAIGenerationServiceHandler) RejectCourseOutline(context.Context, *connect.Request[v1.RejectCourseOutlineRequest]) (*connect.Response[v1.RejectCourseOutlineResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.RejectCourseOutline is not implemented"))
-}
-
 func (UnimplementedAIGenerationServiceHandler) UpdateCourseOutline(context.Context, *connect.Request[v1.UpdateCourseOutlineRequest]) (*connect.Response[v1.UpdateCourseOutlineResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.UpdateCourseOutline is not implemented"))
-}
-
-func (UnimplementedAIGenerationServiceHandler) GenerateLessonContent(context.Context, *connect.Request[v1.GenerateLessonContentRequest]) (*connect.Response[v1.GenerateLessonContentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.GenerateLessonContent is not implemented"))
 }
 
 func (UnimplementedAIGenerationServiceHandler) GenerateAllLessons(context.Context, *connect.Request[v1.GenerateAllLessonsRequest]) (*connect.Response[v1.GenerateAllLessonsResponse], error) {

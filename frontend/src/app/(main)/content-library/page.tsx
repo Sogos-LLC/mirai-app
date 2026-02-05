@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Folder, FolderOpen, Search, FileText, Users, User, Edit2, Eye, Filter, X, Plus, Check, Trash2, MoreVertical } from 'lucide-react';
+import { ChevronRight, Folder, Search, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useGetFolderHierarchy, useListCourses, FolderType, type LibraryEntry, type Folder as FolderNode } from '@/hooks/useCourses';
+import { useGetFolderHierarchy, useListCourses, useCreateFolder, useDeleteFolder, FolderType, type Folder as FolderNode } from '@/hooks/useCourses';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
-import * as courseClient from '@/lib/courseClient';
+import { FolderTreeNode } from '@/components/content-library/FolderTreeNode';
+import { CourseCard } from '@/components/content-library/CourseCard';
+import { DeleteFolderModal } from '@/components/content-library/DeleteFolderModal';
 
 const MAX_FOLDER_DEPTH = 3;
 
@@ -15,17 +16,25 @@ export default function ContentLibrary() {
   const router = useRouter();
   const isMobile = useIsMobile();
 
+  // Folder mutation hooks
+  const createFolderMutation = useCreateFolder();
+  const deleteFolderMutation = useDeleteFolder();
+
   // Local UI state only
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['library', 'team', 'personal']));
   const [searchQuery, setSearchQuery] = useState('');
 
   // Connect-query hooks - use folder filter directly for better caching
-  const { data: folders, isLoading: foldersLoading, refetch: refetchFolders } = useGetFolderHierarchy(true);
+  const { data: folders, isLoading: foldersLoading } = useGetFolderHierarchy(true);
+  // Pagination state
+  const [pageOffset, setPageOffset] = useState(0);
+  const PAGE_SIZE = 20;
   // Fetch courses with folder filter - React Query will cache per folder automatically
-  const { data: courses, isLoading: coursesLoading } = useListCourses({
+  const { data: courses, isLoading: coursesLoading, hasMore } = useListCourses({
     folder: selectedFolderId || undefined,
-    limit: 100, // Reasonable limit for content library
+    limit: PAGE_SIZE,
+    offset: pageOffset,
   });
   const [isFolderSheetOpen, setIsFolderSheetOpen] = useState(false);
 
@@ -65,6 +74,7 @@ export default function ContentLibrary() {
 
   const handleFolderClick = (folderId: string) => {
     setSelectedFolderId(folderId);
+    setPageOffset(0);
     // Close folder sheet on mobile after selection
     if (isMobile) {
       setTimeout(() => setIsFolderSheetOpen(false), 150);
@@ -91,6 +101,10 @@ export default function ContentLibrary() {
     router.push(`/course/${courseId}/editor`);
   };
 
+  const handleCoursePreview = (courseId: string) => {
+    router.push(`/preview/${courseId}`);
+  };
+
   // Folder creation handlers
   const handleStartCreateFolder = (parentId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -113,9 +127,10 @@ export default function ContentLibrary() {
     try {
       setIsCreating(true);
       setCreateError(null);
-      await courseClient.createFolder(newFolderName.trim(), creatingFolderIn);
-      // Refetch folders to show the new one
-      await refetchFolders();
+      await createFolderMutation.mutate({
+        name: newFolderName.trim(),
+        parentId: creatingFolderIn,
+      });
       setCreatingFolderIn(null);
       setNewFolderName('');
     } catch (error: any) {
@@ -133,11 +148,8 @@ export default function ContentLibrary() {
     try {
       setIsDeleting(true);
       setDeleteError(null);
-      await courseClient.deleteFolder(folderToDelete.id);
-      // Refetch folders to reflect deletion
-      await refetchFolders();
+      await deleteFolderMutation.mutate(folderToDelete.id);
       setFolderToDelete(null);
-      // Clear selection if deleted folder was selected
       if (selectedFolderId === folderToDelete.id) {
         setSelectedFolderId(null);
       }
@@ -152,200 +164,6 @@ export default function ContentLibrary() {
   const handleCancelDelete = () => {
     setFolderToDelete(null);
     setDeleteError(null);
-  };
-
-  // Check if folder can be deleted (only user-created folders, not system folders)
-  const canDeleteFolder = (folder: FolderNode): boolean => {
-    // Can't delete system folders (Shared, Private, Team root folders)
-    if (folder.type === FolderType.LIBRARY || folder.type === FolderType.PERSONAL || folder.type === FolderType.TEAM) {
-      return false;
-    }
-    return true;
-  };
-
-  // Calculate folder depth
-  const getFolderDepth = (folderId: string, folderList: FolderNode[], depth: number = 1): number => {
-    for (const folder of folderList) {
-      if (folder.id === folderId) return depth;
-      if (folder.children) {
-        const found = getFolderDepth(folderId, folder.children, depth + 1);
-        if (found > 0) return found;
-      }
-    }
-    return 0;
-  };
-
-  const renderFolder = (folder: FolderNode, level = 0) => {
-    const isExpanded = expandedFolders.has(folder.id);
-    const hasChildren = folder.children && folder.children.length > 0;
-    const isSelected = selectedFolderId === folder.id;
-    const currentDepth = level + 1;
-    const canCreateSubfolder = currentDepth < MAX_FOLDER_DEPTH;
-    const isCreatingHere = creatingFolderIn === folder.id;
-
-    const getIcon = () => {
-      if (folder.type === FolderType.LIBRARY) return <FolderOpen className="w-5 h-5 text-purple-600" />;
-      if (folder.type === FolderType.TEAM) return <Users className="w-5 h-5 text-blue-600" />;
-      if (folder.type === FolderType.PERSONAL) return <User className="w-5 h-5 text-green-600" />;
-      if (isExpanded) return <FolderOpen className="w-5 h-5 text-yellow-600" />;
-      return <Folder className="w-5 h-5 text-gray-600" />;
-    };
-
-    return (
-      <div key={folder.id}>
-        <div
-          className={`
-            group flex items-center gap-2 py-2 px-3 rounded-lg cursor-pointer transition-colors
-            ${isSelected ? 'bg-white dark:bg-dark-surface shadow-sm dark:shadow-glow-sm' : 'hover:bg-primary-100 dark:hover:bg-primary-900/20'}
-          `}
-          style={{ paddingLeft: `${level * 20 + 12}px` }}
-          onClick={() => {
-            if (hasChildren) {
-              toggleFolder(folder.id);
-            }
-            handleFolderClick(folder.id);
-          }}
-        >
-          {(hasChildren || isCreatingHere) && (
-            <button
-              className="p-1 -ml-1 text-gray-600 dark:text-gray-400 min-w-[32px] min-h-[32px] flex items-center justify-center"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleFolder(folder.id);
-              }}
-            >
-              {isExpanded ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
-            </button>
-          )}
-          {!hasChildren && !isCreatingHere && <div className="w-8" />}
-          {getIcon()}
-          <span className="font-medium text-gray-900 dark:text-white flex-1">{folder.name}</span>
-          {folder.courseCount !== undefined && folder.courseCount > 0 && (
-            <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-dark-50 px-2 py-0.5 rounded-full">
-              {folder.courseCount}
-            </span>
-          )}
-          {/* New Folder button - only show if depth allows */}
-          {canCreateSubfolder && (
-            <button
-              onClick={(e) => handleStartCreateFolder(folder.id, e)}
-              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary-200 dark:hover:bg-primary-900/30 rounded transition-opacity"
-              title="Create subfolder"
-            >
-              <Plus className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            </button>
-          )}
-
-          {/* Three-dot menu for deletable folders */}
-          {canDeleteFolder(folder) && (
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowFolderMenu(showFolderMenu === folder.id ? null : folder.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-dark-50 rounded transition-opacity"
-                title="Folder options"
-              >
-                <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              </button>
-
-              {/* Dropdown menu */}
-              {showFolderMenu === folder.id && (
-                <div className="absolute right-0 top-8 z-20 bg-white dark:bg-dark-surface-elevated border border-gray-200 dark:border-dark-border rounded-lg shadow-lg dark:shadow-dark-lg py-1 min-w-[120px]">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowFolderMenu(null);
-                      setFolderToDelete({ id: folder.id, name: folder.name, type: folder.type || 'folder' });
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Children and new folder input */}
-        {(hasChildren || isCreatingHere) && isExpanded && (
-          <div>
-            {folder.children?.map((child) => renderFolder(child, level + 1))}
-
-            {/* New folder input row */}
-            {isCreatingHere && (
-              <div
-                className="flex items-center gap-2 py-2 px-3"
-                style={{ paddingLeft: `${(level + 1) * 20 + 12}px` }}
-              >
-                <div className="w-8" />
-                <Folder className="w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newFolderName.trim()) {
-                      handleCreateFolder();
-                    } else if (e.key === 'Escape') {
-                      handleCancelCreateFolder();
-                    }
-                  }}
-                  placeholder="New folder name"
-                  className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                    bg-white dark:bg-dark-400
-                    border-gray-300 dark:border-dark-border
-                    text-gray-900 dark:text-white
-                    placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                  autoFocus
-                  disabled={isCreating}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCreateFolder();
-                  }}
-                  disabled={!newFolderName.trim() || isCreating}
-                  className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded text-green-600 dark:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Create folder"
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCancelCreateFolder();
-                  }}
-                  disabled={isCreating}
-                  className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400"
-                  title="Cancel"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {/* Error message */}
-            {isCreatingHere && createError && (
-              <div
-                className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 dark:text-red-400"
-                style={{ paddingLeft: `${(level + 1) * 20 + 12 + 32}px` }}
-              >
-                {createError}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
   };
 
   // Courses are already filtered by folder via React Query
@@ -363,6 +181,25 @@ export default function ContentLibrary() {
     return titleMatch || tagMatch;
   });
 
+  // Shared props for FolderTreeNode instances
+  const folderTreeProps = {
+    selectedFolderId,
+    expandedFolders,
+    creatingFolderIn,
+    newFolderName,
+    isCreating,
+    createError,
+    showFolderMenu,
+    onToggleFolder: toggleFolder,
+    onFolderClick: handleFolderClick,
+    onStartCreateFolder: handleStartCreateFolder,
+    onCancelCreateFolder: handleCancelCreateFolder,
+    onCreateFolder: handleCreateFolder,
+    onNewFolderNameChange: setNewFolderName,
+    onShowFolderMenu: setShowFolderMenu,
+    onDeleteFolder: setFolderToDelete,
+  };
+
   // Folder list content (used in both desktop sidebar and mobile sheet)
   const folderListContent = (
     <div className="space-y-1">
@@ -373,7 +210,13 @@ export default function ContentLibrary() {
         <div className="text-center text-gray-600 dark:text-gray-400 py-8">Loading folders...</div>
       ) : (
         <div className="space-y-1">
-          {folders.map((folder) => renderFolder(folder))}
+          {folders.map((folder) => (
+            <FolderTreeNode
+              key={folder.id}
+              folder={folder}
+              {...folderTreeProps}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -444,71 +287,28 @@ export default function ContentLibrary() {
           {coursesLoading ? (
             <div className="text-center text-gray-600 dark:text-gray-400 py-12">Loading courses...</div>
           ) : filteredCourses.length > 0 ? (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCourses.map((course) => (
-                <div
+                <CourseCard
                   key={course.id}
-                  className="border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface-elevated rounded-lg p-4 hover:shadow-lg dark:hover:shadow-glow-sm transition-shadow cursor-pointer"
-                  onClick={() => handleCourseClick(course.id)}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2">
-                        {course.title || 'Untitled Course'}
-                      </h3>
-                    </div>
-                    <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                  </div>
-
-                  {course.tags && course.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {course.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {course.tags.length > 3 && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          +{course.tags.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Modified {course.modifiedAt?.seconds
-                      ? new Date(Number(course.modifiedAt.seconds) * 1000).toLocaleDateString()
-                      : 'N/A'}
-                  </div>
-
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-dark-border">
-                    <button
-                      className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors min-h-[44px]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCourseClick(course.id);
-                      }}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button
-                      className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-50 rounded-lg transition-colors min-h-[44px]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/preview/${course.id}`);
-                      }}
-                    >
-                      <Eye className="w-4 h-4" />
-                      Preview
-                    </button>
-                  </div>
-                </div>
+                  course={course}
+                  onEdit={handleCourseClick}
+                  onPreview={handleCoursePreview}
+                />
               ))}
             </div>
+            {hasMore && (
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => setPageOffset(prev => prev + PAGE_SIZE)}
+                  className="px-6 py-3 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors min-h-[44px]"
+                >
+                  Load more
+                </button>
+              </div>
+            )}
+            </>
           ) : (
             <div className="text-center py-16 lg:py-24">
               <Folder className="w-16 h-16 text-gray-300 dark:text-dark-text-muted mx-auto mb-6" />
@@ -526,57 +326,13 @@ export default function ContentLibrary() {
       </div>
 
       {/* Delete Folder Confirmation Modal */}
-      <ResponsiveModal
-        isOpen={!!folderToDelete}
-        onClose={handleCancelDelete}
-        title="Delete Folder"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete the folder <strong className="text-gray-900 dark:text-white">"{folderToDelete?.name}"</strong>?
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            This action cannot be undone. The folder must be empty to be deleted.
-          </p>
-
-          {deleteError && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
-              {deleteError}
-            </div>
-          )}
-
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
-            <button
-              onClick={handleCancelDelete}
-              disabled={isDeleting}
-              className="flex-1 px-4 py-3 lg:py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-dark-50 rounded-lg hover:bg-gray-200 dark:hover:bg-dark-400 transition-colors font-medium min-h-[44px]"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDeleteFolder}
-              disabled={isDeleting}
-              className="flex-1 px-4 py-3 lg:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 min-h-[44px] flex items-center justify-center gap-2"
-            >
-              {isDeleting ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  Delete Folder
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </ResponsiveModal>
+      <DeleteFolderModal
+        folder={folderToDelete}
+        isDeleting={isDeleting}
+        deleteError={deleteError}
+        onConfirm={handleDeleteFolder}
+        onCancel={handleCancelDelete}
+      />
     </>
   );
 }

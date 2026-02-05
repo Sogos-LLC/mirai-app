@@ -251,7 +251,7 @@ message DeleteWizardStateResponse {
 
 // CreateCourseFromOutlineRequest creates a course from an approved outline.
 message CreateCourseFromOutlineRequest {
-  string outline_id = 1 [(buf.validate.field).string.min_len = 1];
+  string course_id = 1 [(buf.validate.field).string.min_len = 1];
   // Wizard data to store with the course
   WizardStepData wizard_data = 2;
 }

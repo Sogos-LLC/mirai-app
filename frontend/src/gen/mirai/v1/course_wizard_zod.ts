@@ -224,7 +224,7 @@ export type SaveWizardStateRequest = z.infer<typeof SaveWizardStateRequestSchema
  * @generated from message mirai.v1.CreateCourseFromOutlineRequest
  */
 export const CreateCourseFromOutlineRequestSchema = z.object({
-  outlineId: z.string().min(1),
+  courseId: z.string().min(1),
   wizardData: WizardStepDataSchema.optional(),
 });
 

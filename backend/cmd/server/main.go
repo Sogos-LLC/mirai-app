@@ -262,12 +262,18 @@ func main() {
 	)
 	logger.Info("course export service initialized")
 
-	// Knowledge Source service (for RAG - needed before AI services for RAG integration)
-	knowledgeSourceService := service.NewKnowledgeSourceService(knowledgeRepo, embeddingClient, vectorClient)
+	// Unified Knowledge service (shared chunking, embedding, vector logic for all scopes)
+	unifiedKnowledgeService := service.NewUnifiedKnowledgeService(
+		knowledgeRepo, teamKnowledgeRepo, embeddingClient, vectorClient, baseStorage,
+	)
+	logger.Info("unified knowledge service initialized")
+
+	// Course-scoped knowledge facade (delegates to unified service)
+	knowledgeSourceService := service.NewKnowledgeSourceService(unifiedKnowledgeService)
 	logger.Info("knowledge source service initialized")
 
-	// Team Knowledge service (for team-level RAG knowledge)
-	teamKnowledgeService := service.NewTeamKnowledgeService(teamKnowledgeRepo, embeddingClient, vectorClient, baseStorage)
+	// Team-scoped knowledge facade (delegates to unified service)
+	teamKnowledgeService := service.NewTeamKnowledgeService(unifiedKnowledgeService)
 	logger.Info("team knowledge service initialized")
 
 	// Team Knowledge worker handler (for async processing)

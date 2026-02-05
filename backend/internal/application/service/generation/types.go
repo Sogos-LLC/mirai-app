@@ -2,14 +2,43 @@ package generation
 
 import (
 	"context"
-	"encoding/json"
-	"time"
+	"strings"
 
 	"github.com/google/uuid"
 
+	"github.com/sogos/mirai-backend/internal/application/service/content"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/service"
 )
+
+// Type aliases for backward-compatible access within the generation package.
+// These point to the canonical definitions in the content package.
+type S3CourseContent = content.S3CourseContent
+type WizardData = content.WizardData
+type SMEPersona = content.SMEPersona
+type AudiencePersona = content.AudiencePersona
+type ToneOption = content.ToneOption
+type CourseContent = content.CourseContent
+type CourseSettings = content.CourseSettings
+type CurriculumMap = content.CurriculumMap
+type CoursePlan = content.CoursePlan
+type DocumentAnalysis = content.DocumentAnalysis
+type SectionHint = content.SectionHint
+type PlannedSection = content.PlannedSection
+type PlannedLesson = content.PlannedLesson
+type GeneratedLesson = content.GeneratedLesson
+type LessonComponent = content.LessonComponent
+type ProvenanceChunk = content.ProvenanceChunk
+type ComponentProvenance = content.ComponentProvenance
+type LessonProvenance = content.LessonProvenance
+type OutlineProvenance = content.OutlineProvenance
+type CurriculumRow = content.CurriculumRow
+type CurriculumCell = content.CurriculumCell
+type CurriculumValidationIssue = content.CurriculumValidationIssue
+
+// Re-export content package functions used by generation handlers.
+var FindLesson = content.FindLesson
+var UpsertLesson = content.UpsertLesson
 
 // AIProviderFactory creates AIProvider instances per-tenant.
 type AIProviderFactory interface {
@@ -57,193 +86,6 @@ type AISettingsRepository interface {
 	IncrementTokenUsage(ctx context.Context, tenantID uuid.UUID, tokens int64) error
 }
 
-// WizardData stores wizard selections for AI context and realignment.
-type WizardData struct {
-	SMEPersonas          []SMEPersona      `json:"smePersonas"`
-	SelectedSMEIDs       []string          `json:"selectedSmeIds"`
-	AudiencePersonas     []AudiencePersona `json:"audiencePersonas"`
-	SelectedAudienceIDs  []string          `json:"selectedAudienceIds"`
-	SelectedTone         *ToneOption       `json:"selectedTone,omitempty"`
-	AdditionalContext    string            `json:"additionalContext"`
-	DesiredOutcomes      string            `json:"desiredOutcomes"`
-	InternalDataOnly     bool              `json:"internalDataOnly"`
-	SelectedTeamDocIDs   []string          `json:"selectedTeamDocIds,omitempty"`
-	SelectedGlobalDocIDs []string          `json:"selectedGlobalDocIds,omitempty"`
-}
-
-// SMEPersona represents an SME (Subject Matter Expert) persona.
-type SMEPersona struct {
-	ID          string   `json:"id"`
-	JobTitle    string   `json:"jobTitle"`
-	Description string   `json:"description"`
-	Skills      []string `json:"skills"`
-	Voice       string   `json:"voice"`
-}
-
-// AudiencePersona represents an audience persona.
-type AudiencePersona struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Role        string   `json:"role"`
-	Description string   `json:"description"`
-	Goals       []string `json:"goals"`
-}
-
-// ToneOption represents the selected tone/style for the course.
-type ToneOption struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Description   string `json:"description"`
-	LevelOfDetail string `json:"levelOfDetail"`
-}
-
-// CourseContent represents the course content structure.
-type CourseContent struct {
-	Sections []map[string]any `json:"sections"`
-}
-
-// CourseSettings represents the course settings.
-type CourseSettings struct {
-	Title          string `json:"title"`
-	DesiredOutcome string `json:"desiredOutcome"`
-}
-
-// CurriculumMap represents the curriculum coverage matrix.
-type CurriculumMap struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
-}
-
-// S3CourseContent represents the full course content stored in object storage.
-type S3CourseContent struct {
-	Settings           CourseSettings      `json:"settings"`
-	WizardData         *WizardData         `json:"wizardData,omitempty"`
-	Personas           []map[string]any    `json:"personas"`
-	LearningObjectives []map[string]any    `json:"learningObjectives"`
-	AssessmentSettings map[string]any      `json:"assessmentSettings"`
-	Content            CourseContent       `json:"content"`
-	Exports            []map[string]any    `json:"exports,omitempty"`
-	GeneratedLessons   []GeneratedLesson   `json:"generatedLessons,omitempty"`
-	CurriculumMap      *CurriculumMap      `json:"curriculumMap,omitempty"`
-	OutlineProvenance  *OutlineProvenance  `json:"outlineProvenance,omitempty"`
-	CoursePlan         *CoursePlan         `json:"coursePlan,omitempty"`
-}
-
-// CoursePlan is the AI-generated course structure plan stored in S3.
-type CoursePlan struct {
-	DocumentAnalyses []DocumentAnalysis `json:"documentAnalyses"`
-	PlannedSections  []PlannedSection   `json:"plannedSections"`
-	Status           string             `json:"status"` // "pending_review", "approved"
-	GeneratedAt      time.Time          `json:"generatedAt"`
-	ApprovedAt       *time.Time         `json:"approvedAt,omitempty"`
-	TokensUsed       int64              `json:"tokensUsed"`
-}
-
-// DocumentAnalysis is Gemini's structured summary of one knowledge source.
-type DocumentAnalysis struct {
-	SourceID     string        `json:"sourceId"`
-	SourceName   string        `json:"sourceName"`
-	Summary      string        `json:"summary"`
-	MainTopics   []string      `json:"mainTopics"`
-	KeyFacts     []string      `json:"keyFacts"`
-	ContentDepth string        `json:"contentDepth"` // basic/intermediate/advanced
-	SectionHints []SectionHint `json:"sectionHints"`
-}
-
-// SectionHint is a suggested course section derived from one document.
-type SectionHint struct {
-	TopicName   string   `json:"topicName"`
-	SearchTerms []string `json:"searchTerms"`
-	KeyPoints   []string `json:"keyPoints"`
-}
-
-// PlannedSection is a planned course section with targeted search terms.
-type PlannedSection struct {
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	SearchTerms []string        `json:"searchTerms"`
-	SourceIDs   []string        `json:"sourceIds"`
-	Lessons     []PlannedLesson `json:"lessons"`
-	Rationale   string          `json:"rationale"`
-}
-
-// PlannedLesson is a planned lesson with its own search terms.
-type PlannedLesson struct {
-	Title         string   `json:"title"`
-	Description   string   `json:"description"`
-	SearchTerms   []string `json:"searchTerms"`
-	LearningGoals []string `json:"learningGoals"`
-}
-
-// GeneratedLesson represents a generated lesson stored in content.json.
-type GeneratedLesson struct {
-	ID                  string            `json:"id"`
-	SectionID           string            `json:"sectionId"`
-	OutlineLessonID     string            `json:"outlineLessonId"`
-	Title               string            `json:"title"`
-	SegueText           *string           `json:"segueText,omitempty"`
-	Components          []LessonComponent `json:"components"`
-	GeneratedAt         time.Time         `json:"generatedAt"`
-	AggregateProvenance *LessonProvenance `json:"aggregateProvenance,omitempty"`
-}
-
-// LessonComponent represents a lesson component stored in content.json.
-type LessonComponent struct {
-	ID                   string               `json:"id"`
-	Type                 string               `json:"type"`
-	Order                int32                `json:"order"`
-	ContentJSON          json.RawMessage      `json:"contentJson"`
-	LearningObjectiveIDs []string             `json:"learningObjectiveIds,omitempty"`
-	CreatedAt            time.Time            `json:"createdAt"`
-	UpdatedAt            time.Time            `json:"updatedAt"`
-	Provenance           *ComponentProvenance `json:"provenance,omitempty"`
-}
-
-// ProvenanceChunk represents a knowledge chunk that contributed to generated content.
-type ProvenanceChunk struct {
-	ChunkID         string  `json:"chunkId"`
-	SourceID        string  `json:"sourceId"`
-	SourceName      string  `json:"sourceName"`
-	Excerpt         string  `json:"excerpt"`
-	SimilarityScore float32 `json:"similarityScore"`
-	Scope           string  `json:"scope"`
-}
-
-// ComponentProvenance tracks which knowledge sources contributed to a component.
-type ComponentProvenance struct {
-	SourceChunks []ProvenanceChunk `json:"sourceChunks"`
-	Queries      []string          `json:"queries,omitempty"`
-	TeamTokens   int32             `json:"teamTokens"`
-	GlobalTokens int32             `json:"globalTokens"`
-	CourseTokens int32             `json:"courseTokens"`
-	TotalTokens  int32             `json:"totalTokens"`
-	GeneratedAt  time.Time         `json:"generatedAt"`
-}
-
-// LessonProvenance aggregates provenance across all components in a lesson.
-type LessonProvenance struct {
-	GroundingScore   float32 `json:"groundingScore"`
-	TeamTokens       int32   `json:"teamTokens"`
-	GlobalTokens     int32   `json:"globalTokens"`
-	CourseTokens     int32   `json:"courseTokens"`
-	UngroundedTokens int32   `json:"ungroundedTokens"`
-	TotalTokens      int32   `json:"totalTokens"`
-	SourceCount      int32   `json:"sourceCount"`
-}
-
-// OutlineProvenance tracks aggregate knowledge source attribution for outline generation.
-type OutlineProvenance struct {
-	TotalSources       int       `json:"totalSources"`
-	TotalChunks        int       `json:"totalChunks"`
-	TeamTokens         int32     `json:"teamTokens"`
-	GlobalTokens       int32     `json:"globalTokens"`
-	CourseTokens       int32     `json:"courseTokens"`
-	GroundingScore     float32   `json:"groundingScore"`
-	ConstraintsApplied bool      `json:"constraintsApplied"`
-	ConstraintsMet     bool      `json:"constraintsMet"`
-	GeneratedAt        time.Time `json:"generatedAt"`
-}
-
 // ComponentRegenInput stores inputs for component regeneration job.
 type ComponentRegenInput struct {
 	CourseID             string   `json:"courseId"`
@@ -254,23 +96,44 @@ type ComponentRegenInput struct {
 	LearningObjectiveIDs []string `json:"learningObjectiveIds,omitempty"`
 }
 
-// FindLesson finds a generated lesson by ID.
-func FindLesson(content *S3CourseContent, lessonID string) *GeneratedLesson {
-	for i := range content.GeneratedLessons {
-		if content.GeneratedLessons[i].ID == lessonID {
-			return &content.GeneratedLessons[i]
-		}
-	}
-	return nil
-}
+// parseDesiredOutcomes extracts individual learning outcomes from course content.
+// It parses the multi-line desired outcomes from wizard data, falling back to
+// the single desired outcome from settings if needed.
+func parseDesiredOutcomes(c *S3CourseContent) []string {
+	var outcomes []string
 
-// UpsertLesson adds or updates a lesson in the content.
-func UpsertLesson(content *S3CourseContent, lesson GeneratedLesson) {
-	for i := range content.GeneratedLessons {
-		if content.GeneratedLessons[i].ID == lesson.ID {
-			content.GeneratedLessons[i] = lesson
-			return
+	rawOutcomes := ""
+	if c.WizardData != nil {
+		rawOutcomes = c.WizardData.DesiredOutcomes
+	}
+	if rawOutcomes == "" {
+		rawOutcomes = c.Settings.DesiredOutcome
+	}
+	if rawOutcomes == "" {
+		return outcomes
+	}
+
+	lines := strings.Split(rawOutcomes, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "-")
+		line = strings.TrimPrefix(line, "•")
+		line = strings.TrimPrefix(line, "*")
+		// Handle numbered list items like "1. " or "1) "
+		for i, ch := range line {
+			if ch >= '0' && ch <= '9' {
+				continue
+			}
+			if (ch == '.' || ch == ')') && i > 0 {
+				line = line[i+1:]
+			}
+			break
+		}
+		line = strings.TrimSpace(line)
+		if line != "" {
+			outcomes = append(outcomes, line)
 		}
 	}
-	content.GeneratedLessons = append(content.GeneratedLessons, lesson)
+
+	return outcomes
 }

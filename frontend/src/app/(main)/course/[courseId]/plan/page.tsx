@@ -9,11 +9,7 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
-  ChevronDown,
-  ChevronRight,
   CheckCircle2,
-  Search,
-  Lightbulb,
 } from 'lucide-react';
 import {
   planReviewMachine,
@@ -24,10 +20,11 @@ import { createPlanReviewActors } from '@/machines/planReviewActors';
 import { createClient } from '@connectrpc/connect';
 import { transport } from '@/lib/connect';
 import { AIGenerationService } from '@/gen/mirai/v1/ai_generation_service_pb';
-import type { DocumentAnalysis, PlannedSection } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useGetCourse } from '@/hooks/useCourses';
+import { DocumentAnalysisCard } from '@/components/plan/DocumentAnalysisCard';
+import { PlannedSectionCard } from '@/components/plan/PlannedSectionCard';
 
 export default function PlanReviewPage() {
   const params = useParams();
@@ -221,7 +218,7 @@ export default function PlanReviewPage() {
               </div>
 
               <div className="space-y-3">
-                {context.plan.documentAnalyses.map((doc: DocumentAnalysis, idx: number) => (
+                {context.plan.documentAnalyses.map((doc, idx) => (
                   <DocumentAnalysisCard
                     key={doc.sourceId || idx}
                     doc={doc}
@@ -253,7 +250,7 @@ export default function PlanReviewPage() {
 
             {context.plan?.plannedSections && context.plan.plannedSections.length > 0 ? (
               <div className="border rounded-lg divide-y mb-6">
-                {context.plan.plannedSections.map((section: PlannedSection, idx: number) => (
+                {context.plan.plannedSections.map((section, idx) => (
                   <PlannedSectionCard
                     key={idx}
                     section={section}
@@ -311,237 +308,6 @@ export default function PlanReviewPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Sub-components
-// ============================================================
-
-function DocumentAnalysisCard({
-  doc,
-  isExpanded,
-  onToggle,
-}: {
-  doc: DocumentAnalysis;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-hover transition-colors min-h-[44px]"
-      >
-        {isExpanded ? (
-          <ChevronDown className="w-4 h-4 text-muted flex-shrink-0" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-muted flex-shrink-0" />
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-primary truncate">{doc.sourceName}</p>
-          <p className="text-xs text-muted">
-            {doc.mainTopics?.length ?? 0} topics, {doc.keyFacts?.length ?? 0} key facts
-            {doc.contentDepth && (
-              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 bg-surface-elevated rounded text-xs">
-                {doc.contentDepth}
-              </span>
-            )}
-          </p>
-        </div>
-      </button>
-
-      {isExpanded && (
-        <div className="px-4 pb-4 border-t">
-          {/* Summary */}
-          <div className="mt-3">
-            <h4 className="text-sm font-semibold text-primary mb-1">Summary</h4>
-            <p className="text-sm text-secondary">{doc.summary}</p>
-          </div>
-
-          {/* Main Topics */}
-          {doc.mainTopics && doc.mainTopics.length > 0 && (
-            <div className="mt-3">
-              <h4 className="text-sm font-semibold text-primary mb-1">Main Topics</h4>
-              <div className="flex flex-wrap gap-1.5">
-                {doc.mainTopics.map((topic, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs"
-                  >
-                    {topic}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Key Facts */}
-          {doc.keyFacts && doc.keyFacts.length > 0 && (
-            <div className="mt-3">
-              <h4 className="text-sm font-semibold text-primary mb-1">Key Facts</h4>
-              <ul className="text-sm text-secondary space-y-1">
-                {doc.keyFacts.map((fact, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="text-indigo-600 dark:text-indigo-400 mt-0.5">-</span>
-                    <span>{fact}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Section Hints */}
-          {doc.sectionHints && doc.sectionHints.length > 0 && (
-            <div className="mt-3">
-              <h4 className="text-sm font-semibold text-primary mb-1">Suggested Sections</h4>
-              <div className="space-y-2">
-                {doc.sectionHints.map((hint, i) => (
-                  <div key={i} className="text-sm pl-3 border-l-2 border-indigo-200 dark:border-indigo-700">
-                    <p className="font-medium text-primary">{hint.topicName}</p>
-                    {hint.keyPoints && hint.keyPoints.length > 0 && (
-                      <p className="text-muted text-xs mt-0.5">
-                        {hint.keyPoints.slice(0, 3).join(' | ')}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PlannedSectionCard({
-  section,
-  sectionIndex,
-  isExpanded,
-  onToggle,
-}: {
-  section: PlannedSection;
-  sectionIndex: number;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div>
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-hover transition-colors min-h-[44px]"
-      >
-        {isExpanded ? (
-          <ChevronDown className="w-4 h-4 text-muted flex-shrink-0" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-muted flex-shrink-0" />
-        )}
-        <span className="flex items-center justify-center w-7 h-7 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-bold flex-shrink-0">
-          {sectionIndex + 1}
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-primary">{section.title}</p>
-          <p className="text-xs text-muted">
-            {section.lessons?.length ?? 0} lesson{(section.lessons?.length ?? 0) !== 1 ? 's' : ''}
-            {section.sourceIds && section.sourceIds.length > 0 && (
-              <span className="ml-2">
-                from {section.sourceIds.length} source{section.sourceIds.length !== 1 ? 's' : ''}
-              </span>
-            )}
-          </p>
-        </div>
-      </button>
-
-      {isExpanded && (
-        <div className="px-4 pb-4 ml-14">
-          {/* Description */}
-          {section.description && (
-            <p className="text-sm text-secondary mb-3">{section.description}</p>
-          )}
-
-          {/* Rationale */}
-          {section.rationale && (
-            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg mb-3">
-              <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800 dark:text-amber-200">{section.rationale}</p>
-            </div>
-          )}
-
-          {/* Search Terms */}
-          {section.searchTerms && section.searchTerms.length > 0 && (
-            <div className="mb-3">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Search className="w-3.5 h-3.5 text-muted" />
-                <h4 className="text-xs font-semibold text-muted uppercase tracking-wide">Search Terms</h4>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {section.searchTerms.map((term, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded text-xs"
-                  >
-                    {term}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Lessons */}
-          {section.lessons && section.lessons.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Lessons</h4>
-              <div className="space-y-2">
-                {section.lessons.map((lesson, lIdx) => (
-                  <div key={lIdx} className="border rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-mono text-muted mt-0.5">
-                        {sectionIndex + 1}.{lIdx + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-primary">{lesson.title}</p>
-                        {lesson.description && (
-                          <p className="text-xs text-secondary mt-0.5">{lesson.description}</p>
-                        )}
-
-                        {/* Lesson Learning Goals */}
-                        {lesson.learningGoals && lesson.learningGoals.length > 0 && (
-                          <div className="mt-2">
-                            <ul className="text-xs text-secondary space-y-0.5">
-                              {lesson.learningGoals.map((goal, gIdx) => (
-                                <li key={gIdx} className="flex items-start gap-1.5">
-                                  <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                                  <span>{goal}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* Lesson Search Terms */}
-                        {lesson.searchTerms && lesson.searchTerms.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {lesson.searchTerms.map((term, tIdx) => (
-                              <span
-                                key={tIdx}
-                                className="inline-flex items-center px-1.5 py-0.5 bg-surface-elevated text-muted rounded text-[10px]"
-                              >
-                                {term}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

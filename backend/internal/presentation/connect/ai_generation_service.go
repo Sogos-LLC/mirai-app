@@ -130,66 +130,6 @@ func (s *AIGenerationServiceServer) GetCourseOutline(
 	}), nil
 }
 
-// ApproveCourseOutline approves an outline for content generation.
-func (s *AIGenerationServiceServer) ApproveCourseOutline(
-	ctx context.Context,
-	req *connect.Request[v1.ApproveCourseOutlineRequest],
-) (*connect.Response[v1.ApproveCourseOutlineResponse], error) {
-	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
-	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
-	}
-
-	kratosID, err := parseUUID(kratosIDStr)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	outlineID, err := parseUUID(req.Msg.OutlineId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	outline, err := s.aiService.ApproveCourseOutline(ctx, kratosID, outlineID)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-
-	return connect.NewResponse(&v1.ApproveCourseOutlineResponse{
-		Outline: courseOutlineToProto(outline),
-	}), nil
-}
-
-// RejectCourseOutline rejects an outline with feedback.
-func (s *AIGenerationServiceServer) RejectCourseOutline(
-	ctx context.Context,
-	req *connect.Request[v1.RejectCourseOutlineRequest],
-) (*connect.Response[v1.RejectCourseOutlineResponse], error) {
-	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
-	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
-	}
-
-	kratosID, err := parseUUID(kratosIDStr)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	outlineID, err := parseUUID(req.Msg.OutlineId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	outline, err := s.aiService.RejectCourseOutline(ctx, kratosID, outlineID, req.Msg.Reason)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-
-	return connect.NewResponse(&v1.RejectCourseOutlineResponse{
-		Outline: courseOutlineToProto(outline),
-	}), nil
-}
-
 // UpdateCourseOutline allows editing the outline before approval.
 func (s *AIGenerationServiceServer) UpdateCourseOutline(
 	ctx context.Context,
@@ -265,46 +205,6 @@ func (s *AIGenerationServiceServer) UpdateCourseOutline(
 
 	return connect.NewResponse(&v1.UpdateCourseOutlineResponse{
 		Outline: courseOutlineToProto(outline),
-	}), nil
-}
-
-// GenerateLessonContent generates content for a specific lesson.
-func (s *AIGenerationServiceServer) GenerateLessonContent(
-	ctx context.Context,
-	req *connect.Request[v1.GenerateLessonContentRequest],
-) (*connect.Response[v1.GenerateLessonContentResponse], error) {
-	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
-	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
-	}
-
-	kratosID, err := parseUUID(kratosIDStr)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	courseID, err := parseUUID(req.Msg.CourseId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	outlineLessonID, err := parseUUID(req.Msg.OutlineLessonId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	serviceReq := service.GenerateLessonContentRequest{
-		CourseID:        courseID,
-		OutlineLessonID: outlineLessonID,
-	}
-
-	result, err := s.aiService.GenerateLessonContent(ctx, kratosID, serviceReq)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-
-	return connect.NewResponse(&v1.GenerateLessonContentResponse{
-		Job: generationJobToProto(result.Job),
 	}), nil
 }
 

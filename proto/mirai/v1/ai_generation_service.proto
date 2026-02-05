@@ -17,10 +17,7 @@ import "mirai/v1/course_wizard.proto";
 service AIGenerationService {
   rpc GenerateCourseOutline(GenerateCourseOutlineRequest) returns (GenerateCourseOutlineResponse);
   rpc GetCourseOutline(GetCourseOutlineRequest) returns (GetCourseOutlineResponse);
-  rpc ApproveCourseOutline(ApproveCourseOutlineRequest) returns (ApproveCourseOutlineResponse);
-  rpc RejectCourseOutline(RejectCourseOutlineRequest) returns (RejectCourseOutlineResponse);
   rpc UpdateCourseOutline(UpdateCourseOutlineRequest) returns (UpdateCourseOutlineResponse);
-  rpc GenerateLessonContent(GenerateLessonContentRequest) returns (GenerateLessonContentResponse);
   rpc GenerateAllLessons(GenerateAllLessonsRequest) returns (GenerateAllLessonsResponse);
   rpc RegenerateComponent(RegenerateComponentRequest) returns (RegenerateComponentResponse);
   rpc GetJob(GetJobRequest) returns (GetJobResponse);
@@ -63,25 +60,6 @@ message GetCourseOutlineResponse {
   StoredWizardData wizard_data = 2;
 }
 
-message ApproveCourseOutlineRequest {
-  string course_id = 1;
-  string outline_id = 2;
-}
-
-message ApproveCourseOutlineResponse {
-  CourseOutline outline = 1;
-}
-
-message RejectCourseOutlineRequest {
-  string course_id = 1;
-  string outline_id = 2;
-  string reason = 3;
-}
-
-message RejectCourseOutlineResponse {
-  CourseOutline outline = 1;
-}
-
 message UpdateCourseOutlineRequest {
   string course_id = 1;
   string outline_id = 2;
@@ -90,15 +68,6 @@ message UpdateCourseOutlineRequest {
 
 message UpdateCourseOutlineResponse {
   CourseOutline outline = 1;
-}
-
-message GenerateLessonContentRequest {
-  string course_id = 1;
-  string outline_lesson_id = 2;
-}
-
-message GenerateLessonContentResponse {
-  GenerationJob job = 1;
 }
 
 message GenerateAllLessonsRequest {

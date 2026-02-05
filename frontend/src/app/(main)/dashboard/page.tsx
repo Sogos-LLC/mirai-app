@@ -5,8 +5,6 @@ import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2, X, PartyPopper } fro
 import { useListCourses, useDeleteCourse, type LibraryEntry } from '@/hooks/useCourses';
 import { CourseStatus } from '@/gen/mirai/v1/course_pb';
 import { useRouter, useSearchParams } from 'next/navigation';
-import confetti from 'canvas-confetti';
-import * as courseClient from '@/lib/courseClient';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
@@ -15,12 +13,11 @@ export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Confetti celebration function
-  const fireConfetti = useCallback(() => {
-    // Multicolored confetti burst - less particles, shorter duration
+  // Confetti celebration function - lazy loads canvas-confetti only when needed
+  const fireConfetti = useCallback(async () => {
+    const { default: confetti } = await import('canvas-confetti');
     const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 
-    // Single burst from center-top
     confetti({
       particleCount: 80,
       spread: 100,
@@ -31,7 +28,6 @@ export default function Dashboard() {
       scalar: 1.2,
     });
 
-    // Delayed side bursts
     setTimeout(() => {
       confetti({
         particleCount: 30,
@@ -80,17 +76,19 @@ export default function Dashboard() {
     }
   }, [showSuccessBanner]);
 
-  // Connect-Query - automatically fetches and caches
-  const { data: courses, isLoading } = useListCourses();
+  // Server-side filtering based on active tab
+  const statusFilter = activeTab === 'draft'
+    ? CourseStatus.DRAFT
+    : activeTab === 'published'
+      ? CourseStatus.PUBLISHED
+      : undefined;
+
+  const { data: courses, isLoading } = useListCourses({
+    status: statusFilter,
+  });
   const deleteCourseMutation = useDeleteCourse();
 
-  // Filter courses based on active tab - handle undefined courses array
-  const filteredCourses = (courses || []).filter((course: LibraryEntry) => {
-    if (activeTab === 'draft') return course.status === CourseStatus.DRAFT;
-    if (activeTab === 'published') return course.status === CourseStatus.PUBLISHED;
-    // For 'recent', show all courses sorted by date (handled by API)
-    return true;
-  });
+  const filteredCourses = courses || [];
 
   const handleEditCourse = (courseId: string) => {
     router.push(`/course/${courseId}/editor`);

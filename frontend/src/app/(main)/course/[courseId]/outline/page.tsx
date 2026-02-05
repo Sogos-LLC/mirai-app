@@ -20,7 +20,6 @@ import {
 } from '@/machines/outlineReviewMachine';
 import { createOutlineReviewActors } from '@/machines/outlineReviewActors';
 import {
-  useApproveCourseOutline,
   useGenerateAllLessons,
   useGenerateCourseOutline,
 } from '@/hooks/useAIGeneration';
@@ -63,7 +62,6 @@ export default function OutlineReviewPage() {
   const isApproved = isCurriculumMapApproved(curriculumMapQuery.data?.curriculumMap);
 
   // API hooks
-  const approveCourseOutline = useApproveCourseOutline();
   const generateAllLessons = useGenerateAllLessons();
   const generateCourseOutline = useGenerateCourseOutline();
 
@@ -74,12 +72,11 @@ export default function OutlineReviewPage() {
   const machineWithActors = useMemo(() => {
     const actors = createOutlineReviewActors(
       aiClient,
-      approveCourseOutline,
       generateCourseOutline,
       generateAllLessons,
     );
     return outlineReviewMachine.provide({ actors });
-  }, [aiClient, approveCourseOutline, generateAllLessons, generateCourseOutline]);
+  }, [aiClient, generateAllLessons, generateCourseOutline]);
 
   // Initialize machine with courseId and optional jobId from URL
   const [state, send] = useMachine(machineWithActors, {

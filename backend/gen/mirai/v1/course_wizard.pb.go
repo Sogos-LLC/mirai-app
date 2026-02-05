@@ -1608,8 +1608,8 @@ func (x *DeleteWizardStateResponse) GetSuccess() bool {
 
 // CreateCourseFromOutlineRequest creates a course from an approved outline.
 type CreateCourseFromOutlineRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	OutlineId string                 `protobuf:"bytes,1,opt,name=outline_id,json=outlineId,proto3" json:"outline_id,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	CourseId string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
 	// Wizard data to store with the course
 	WizardData    *WizardStepData `protobuf:"bytes,2,opt,name=wizard_data,json=wizardData,proto3" json:"wizard_data,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1646,9 +1646,9 @@ func (*CreateCourseFromOutlineRequest) Descriptor() ([]byte, []int) {
 	return file_mirai_v1_course_wizard_proto_rawDescGZIP(), []int{23}
 }
 
-func (x *CreateCourseFromOutlineRequest) GetOutlineId() string {
+func (x *CreateCourseFromOutlineRequest) GetCourseId() string {
 	if x != nil {
-		return x.OutlineId
+		return x.CourseId
 	}
 	return ""
 }
@@ -1840,10 +1840,9 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\x06_state\"\x1a\n" +
 	"\x18DeleteWizardStateRequest\"5\n" +
 	"\x19DeleteWizardStateResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x83\x01\n" +
-	"\x1eCreateCourseFromOutlineRequest\x12&\n" +
-	"\n" +
-	"outline_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\toutlineId\x129\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x81\x01\n" +
+	"\x1eCreateCourseFromOutlineRequest\x12$\n" +
+	"\tcourse_id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bcourseId\x129\n" +
 	"\vwizard_data\x18\x02 \x01(\v2\x18.mirai.v1.WizardStepDataR\n" +
 	"wizardData\"a\n" +
 	"\x1fCreateCourseFromOutlineResponse\x12\x1b\n" +

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Folder, FolderOpen, ChevronRight, ChevronDown, Users, User, Plus, X, Check } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
-import * as courseClient from '@/lib/courseClient';
+import { useGetFolderHierarchy, useCreateFolder, FolderType, type Folder as ProtoFolder } from '@/hooks/useCourses';
 
 interface FolderNode {
   id: string;
@@ -22,14 +22,36 @@ interface FolderSelectionModalProps {
 
 const MAX_FOLDER_DEPTH = 3;
 
+function folderTypeToString(type: FolderType): 'library' | 'team' | 'personal' | 'folder' {
+  switch (type) {
+    case FolderType.LIBRARY: return 'library';
+    case FolderType.TEAM: return 'team';
+    case FolderType.PERSONAL: return 'personal';
+    default: return 'folder';
+  }
+}
+
+function convertFolder(f: ProtoFolder, depth: number = 1): FolderNode {
+  return {
+    id: f.id,
+    name: f.name,
+    type: folderTypeToString(f.type as FolderType),
+    depth,
+    children: f.children?.map((c: ProtoFolder) => convertFolder(c, depth + 1)),
+  };
+}
+
 export default function FolderSelectionModal({
   isOpen,
   onClose,
   onSelect,
   selectedFolder
 }: FolderSelectionModalProps) {
-  const [folderStructure, setFolderStructure] = useState<FolderNode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: protoFolders, isLoading: loading } = useGetFolderHierarchy(false);
+  const createFolderMutation = useCreateFolder();
+
+  const folderStructure = protoFolders.map((f: ProtoFolder) => convertFolder(f));
+
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set(['library', 'team', 'personal'])
   );
@@ -39,48 +61,6 @@ export default function FolderSelectionModal({
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-
-  // Calculate folder depth from root
-  const calculateDepths = (folders: FolderNode[], depth: number = 1): FolderNode[] => {
-    return folders.map(folder => ({
-      ...folder,
-      depth,
-      children: folder.children ? calculateDepths(folder.children, depth + 1) : undefined
-    }));
-  };
-
-  // Load folder structure from connect-rpc API
-  const loadFolders = async () => {
-    try {
-      setLoading(true);
-      const folders = await courseClient.getFolderHierarchy(false);
-      // Convert proto folders to local format with depth calculation
-      const convertedFolders = folders.map((f: any) => ({
-        id: f.id,
-        name: f.name,
-        type: f.type === 1 ? 'library' : f.type === 2 ? 'team' : f.type === 3 ? 'personal' : 'folder',
-        children: f.children?.map((c: any) => convertFolder(c)),
-      }));
-      setFolderStructure(calculateDepths(convertedFolders as FolderNode[]));
-    } catch (error) {
-      console.error('Error loading folders:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const convertFolder = (f: any): FolderNode => ({
-    id: f.id,
-    name: f.name,
-    type: f.type === 1 ? 'library' : f.type === 2 ? 'team' : f.type === 3 ? 'personal' : 'folder',
-    children: f.children?.map((c: any) => convertFolder(c)),
-  });
-
-  useEffect(() => {
-    if (isOpen) {
-      loadFolders();
-    }
-  }, [isOpen]);
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -101,7 +81,6 @@ export default function FolderSelectionModal({
     setCreatingFolderIn(parentId);
     setNewFolderName('');
     setCreateError(null);
-    // Expand the parent folder
     setExpandedFolders(prev => new Set([...prev, parentId]));
   };
 
@@ -117,9 +96,10 @@ export default function FolderSelectionModal({
     try {
       setIsCreating(true);
       setCreateError(null);
-      await courseClient.createFolder(newFolderName.trim(), creatingFolderIn);
-      // Reload folders to show the new one
-      await loadFolders();
+      await createFolderMutation.mutate({
+        name: newFolderName.trim(),
+        parentId: creatingFolderIn,
+      });
       setCreatingFolderIn(null);
       setNewFolderName('');
     } catch (error: any) {
@@ -190,7 +170,6 @@ export default function FolderSelectionModal({
             {node.name}
           </span>
 
-          {/* New Folder button - only show if depth allows */}
           {canCreateSubfolder && (
             <button
               onClick={(e) => {
@@ -205,12 +184,10 @@ export default function FolderSelectionModal({
           )}
         </div>
 
-        {/* Children and new folder input */}
         {(hasChildren || isCreatingHere) && isExpanded && (
           <div>
             {node.children?.map((child) => renderFolderNode(child, level + 1))}
 
-            {/* New folder input row */}
             {isCreatingHere && (
               <div
                 className="flex items-center gap-2 px-3 py-2 min-h-[44px]"
@@ -253,7 +230,6 @@ export default function FolderSelectionModal({
               </div>
             )}
 
-            {/* Error message */}
             {isCreatingHere && createError && (
               <div
                 className="flex items-center gap-2 px-3 py-1 text-sm text-red-600 dark:text-red-400"
@@ -276,26 +252,22 @@ export default function FolderSelectionModal({
       size="lg"
     >
       <div className="flex flex-col h-full">
-        {/* Loading State */}
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-12">
             <div className="text-secondary">Loading folders...</div>
           </div>
         ) : (
           <>
-            {/* Info text */}
             <p className="text-sm text-secondary mb-4">
               Select a folder or create a new one (max {MAX_FOLDER_DEPTH} levels deep). Hover over a folder to see the create option.
             </p>
 
-            {/* Folder Tree */}
             <div className="flex-1 overflow-y-auto -mx-4 px-4 lg:mx-0 lg:px-0">
               <div className="space-y-1">
                 {folderStructure.map((node) => renderFolderNode(node))}
               </div>
             </div>
 
-            {/* Footer */}
             <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 pt-4 border-t border">
               <button
                 onClick={onClose}

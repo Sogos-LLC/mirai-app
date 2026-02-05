@@ -18,7 +18,7 @@ export function ConnectProvider({ children }: ConnectProviderProps) {
           queries: {
             staleTime: 30 * 1000, // 30 seconds - balance between freshness and performance
             gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
-            refetchOnWindowFocus: true, // Refetch when user returns to tab
+            refetchOnWindowFocus: false, // Disabled globally; SSE streams handle updates
             refetchOnReconnect: true, // Refetch when network reconnects
             retry: 1, // Retry once on failure
           },

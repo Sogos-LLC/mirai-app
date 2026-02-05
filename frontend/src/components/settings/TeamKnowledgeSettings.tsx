@@ -27,7 +27,8 @@ import {
   type KnowledgeSource,
   type DuplicateCheckResult,
 } from '@/hooks/useTeamKnowledge';
-import { KnowledgeUploadModal } from './KnowledgeUploadModal';
+import dynamic from 'next/dynamic';
+const KnowledgeUploadModal = dynamic(() => import('./KnowledgeUploadModal').then(m => ({ default: m.KnowledgeUploadModal })));
 
 // =============================================================================
 // Types

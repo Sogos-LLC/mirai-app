@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveCourseOutlineRequest, ApproveCourseOutlineResponse, ApproveCoursePlanRequest, ApproveCoursePlanResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GenerateLessonContentRequest, GenerateLessonContentResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectCourseOutlineRequest, RejectCourseOutlineResponse, SubscribeJobsRequest, SubscribeJobsResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
+import { ApproveCoursePlanRequest, ApproveCoursePlanResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, SubscribeJobsRequest, SubscribeJobsResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -33,39 +33,12 @@ export const AIGenerationService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc mirai.v1.AIGenerationService.ApproveCourseOutline
-     */
-    approveCourseOutline: {
-      name: "ApproveCourseOutline",
-      I: ApproveCourseOutlineRequest,
-      O: ApproveCourseOutlineResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc mirai.v1.AIGenerationService.RejectCourseOutline
-     */
-    rejectCourseOutline: {
-      name: "RejectCourseOutline",
-      I: RejectCourseOutlineRequest,
-      O: RejectCourseOutlineResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
      * @generated from rpc mirai.v1.AIGenerationService.UpdateCourseOutline
      */
     updateCourseOutline: {
       name: "UpdateCourseOutline",
       I: UpdateCourseOutlineRequest,
       O: UpdateCourseOutlineResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc mirai.v1.AIGenerationService.GenerateLessonContent
-     */
-    generateLessonContent: {
-      name: "GenerateLessonContent",
-      I: GenerateLessonContentRequest,
-      O: GenerateLessonContentResponse,
       kind: MethodKind.Unary,
     },
     /**

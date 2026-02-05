@@ -15,24 +15,9 @@ export const generateCourseOutline = AIGenerationService.method.generateCourseOu
 export const getCourseOutline = AIGenerationService.method.getCourseOutline;
 
 /**
- * @generated from rpc mirai.v1.AIGenerationService.ApproveCourseOutline
- */
-export const approveCourseOutline = AIGenerationService.method.approveCourseOutline;
-
-/**
- * @generated from rpc mirai.v1.AIGenerationService.RejectCourseOutline
- */
-export const rejectCourseOutline = AIGenerationService.method.rejectCourseOutline;
-
-/**
  * @generated from rpc mirai.v1.AIGenerationService.UpdateCourseOutline
  */
 export const updateCourseOutline = AIGenerationService.method.updateCourseOutline;
-
-/**
- * @generated from rpc mirai.v1.AIGenerationService.GenerateLessonContent
- */
-export const generateLessonContent = AIGenerationService.method.generateLessonContent;
 
 /**
  * @generated from rpc mirai.v1.AIGenerationService.GenerateAllLessons

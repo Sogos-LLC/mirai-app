@@ -76,18 +76,6 @@ export async function getCourseOutline(courseId: string): Promise<CourseOutline 
 }
 
 /**
- * Approve a course outline
- */
-export async function approveCourseOutline(outlineId: string): Promise<{ outline: CourseOutline }> {
-  const response = await callMethod<{ outlineId: string }, { outline: CourseOutline }>(
-    'mirai.v1.AIGenerationService',
-    'ApproveCourseOutline',
-    { outlineId }
-  );
-  return response;
-}
-
-/**
  * List jobs by course ID, optionally filtered by type and status
  */
 export async function listJobsByCourse(

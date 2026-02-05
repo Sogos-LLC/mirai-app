@@ -320,13 +320,12 @@ func (s *CourseWizardServiceServer) DeleteWizardState(
 	return connect.NewResponse(&v1.DeleteWizardStateResponse{}), nil
 }
 
-// CreateCourseFromOutline creates a course record after outline approval.
+// CreateCourseFromOutline persists wizard data and starts lesson generation.
 // This method:
-// 1. Approves the outline
-// 2. Persists wizard data (personas, audience, tone) to course content
-// 3. Starts background jobs to generate lesson content via GenerateAllLessons
-// 4. Cleans up wizard state
-// 5. Returns the course ID and title
+// 1. Persists wizard data (personas, audience, tone) to course content
+// 2. Starts background jobs to generate lesson content via GenerateAllLessons
+// 3. Cleans up wizard state
+// 4. Returns the course ID and title
 func (s *CourseWizardServiceServer) CreateCourseFromOutline(
 	ctx context.Context,
 	req *connect.Request[v1.CreateCourseFromOutlineRequest],
@@ -341,22 +340,16 @@ func (s *CourseWizardServiceServer) CreateCourseFromOutline(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	outlineID, err := parseUUID(req.Msg.OutlineId)
+	courseID, err := parseUUID(req.Msg.CourseId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	// Step 1: Approve the outline
-	outline, err := s.aiService.ApproveCourseOutline(ctx, kratosID, outlineID)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-
-	// Step 2: Get wizard state to persist personas/audience/tone with course
+	// Step 1: Get wizard state to persist personas/audience/tone with course
 	wizardState, _ := s.wizardService.GetWizardState(ctx, kratosID)
 
-	// Step 3: Get the course and update it with wizard data
-	course, err := s.courseService.GetCourse(ctx, kratosID, outline.CourseID.String())
+	// Step 2: Get the course and update it with wizard data
+	course, err := s.courseService.GetCourse(ctx, kratosID, courseID.String())
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -371,7 +364,7 @@ func (s *CourseWizardServiceServer) CreateCourseFromOutline(
 			course.WizardData = wizardData
 
 			// Update the course with wizard data
-			_, err = s.courseService.UpdateCourse(ctx, kratosID, outline.CourseID.String(), course)
+			_, err = s.courseService.UpdateCourse(ctx, kratosID, courseID.String(), course)
 			if err != nil {
 				// Log but don't fail - wizard data is supplementary
 				// The course will still work, just without persona context
@@ -379,19 +372,19 @@ func (s *CourseWizardServiceServer) CreateCourseFromOutline(
 		}
 	}
 
-	// Step 4: Start background jobs to generate lesson content
+	// Step 3: Start background jobs to generate lesson content
 	// GenerateAllLessons creates a parent FULL_COURSE job and child LESSON_CONTENT jobs
-	_, err = s.aiService.GenerateAllLessons(ctx, kratosID, outline.CourseID)
+	_, err = s.aiService.GenerateAllLessons(ctx, kratosID, courseID)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
-	// Step 5: Clean up wizard state (ignore errors - not critical)
+	// Step 4: Clean up wizard state (ignore errors - not critical)
 	_ = s.wizardService.DeleteWizardState(ctx, kratosID)
 
 	// Return the course ID and title
 	return connect.NewResponse(&v1.CreateCourseFromOutlineResponse{
-		CourseId:    outline.CourseID.String(),
+		CourseId:    courseID.String(),
 		CourseTitle: courseTitle,
 	}), nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	contentpkg "github.com/sogos/mirai-backend/internal/application/service/content"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
@@ -243,7 +244,7 @@ func (h *LessonHandler) Process(ctx context.Context, job *entity.GenerationJob) 
 	} else {
 		searchQueries = append([]string{lessonTitle + " " + lessonDesc}, learningObjectives...)
 	}
-	provenance := buildComponentProvenance(ragContext, searchQueries)
+	provenance := contentpkg.BuildComponentProvenance(ragContext, searchQueries)
 
 	// Build S3 lesson with components
 	now := time.Now()
@@ -269,7 +270,7 @@ func (h *LessonHandler) Process(ctx context.Context, job *entity.GenerationJob) 
 		Components:      s3Components,
 		GeneratedAt:     now,
 	}
-	s3Lesson.AggregateProvenance = aggregateProvenance(s3Components)
+	s3Lesson.AggregateProvenance = contentpkg.AggregateProvenance(s3Components)
 	if lessonResult.SegueText != "" {
 		s3Lesson.SegueText = &lessonResult.SegueText
 	}

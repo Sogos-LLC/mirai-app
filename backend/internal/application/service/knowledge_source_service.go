@@ -2,16 +2,12 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
-	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
-	"github.com/sogos/mirai-backend/internal/infrastructure/external/embedding"
-	"github.com/sogos/mirai-backend/internal/infrastructure/external/vectordb"
 )
 
 const (
@@ -33,68 +29,53 @@ var videoPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`https?://(?:www\.)?notebooklm\.google\.com/[\w/-]+`),
 }
 
-// KnowledgeSourceService handles knowledge source operations.
+// KnowledgeSourceService handles course-scoped knowledge source operations.
+// It delegates to UnifiedKnowledgeService for all shared processing logic.
 type KnowledgeSourceService struct {
-	repo            repository.KnowledgeSourceRepository
-	embeddingClient *embedding.Client
-	vectorClient    *vectordb.QdrantClient
+	unified *UnifiedKnowledgeService
 }
 
-// NewKnowledgeSourceService creates a new knowledge source service.
-func NewKnowledgeSourceService(
-	repo repository.KnowledgeSourceRepository,
-	embeddingClient *embedding.Client,
-	vectorClient *vectordb.QdrantClient,
-) *KnowledgeSourceService {
+// NewKnowledgeSourceService creates a new knowledge source service backed by the
+// unified knowledge service.
+func NewKnowledgeSourceService(unified *UnifiedKnowledgeService) *KnowledgeSourceService {
 	return &KnowledgeSourceService{
-		repo:            repo,
-		embeddingClient: embeddingClient,
-		vectorClient:    vectorClient,
+		unified: unified,
 	}
 }
 
 // Create creates a new knowledge source.
 func (s *KnowledgeSourceService) Create(ctx context.Context, source *entity.KnowledgeSource) error {
-	source.Status = valueobject.KnowledgeSourceStatusPending
-	return s.repo.Create(ctx, source)
+	return s.unified.CreateCourseSource(ctx, source)
 }
 
 // GetByID retrieves a knowledge source by ID.
 func (s *KnowledgeSourceService) GetByID(ctx context.Context, id uuid.UUID) (*entity.KnowledgeSource, error) {
-	return s.repo.GetByID(ctx, id)
+	return s.unified.GetCourseSourceByID(ctx, id)
 }
 
 // ListByCourse retrieves all knowledge sources for a course.
 func (s *KnowledgeSourceService) ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeSource, error) {
-	return s.repo.ListByCourse(ctx, courseID)
+	return s.unified.ListByCourse(ctx, courseID)
 }
 
 // CreateWithSession creates a knowledge source with session_id (pre-course wizard flow).
 func (s *KnowledgeSourceService) CreateWithSession(ctx context.Context, source *entity.KnowledgeSource) error {
-	source.Status = valueobject.KnowledgeSourceStatusPending
-	return s.repo.CreateWithSession(ctx, source)
+	return s.unified.CreateWithSession(ctx, source)
 }
 
 // ListBySession retrieves all knowledge sources for a session.
 func (s *KnowledgeSourceService) ListBySession(ctx context.Context, sessionID string) ([]*entity.KnowledgeSource, error) {
-	return s.repo.ListBySession(ctx, sessionID)
+	return s.unified.ListBySession(ctx, sessionID)
 }
 
 // LinkSessionToCourse links all sources from a session to a course.
 func (s *KnowledgeSourceService) LinkSessionToCourse(ctx context.Context, sessionID string, courseID uuid.UUID) (int64, error) {
-	return s.repo.LinkSessionToCourse(ctx, sessionID, courseID)
+	return s.unified.LinkSessionToCourse(ctx, sessionID, courseID)
 }
 
 // Delete deletes a knowledge source and its vectors.
 func (s *KnowledgeSourceService) Delete(ctx context.Context, id uuid.UUID) error {
-	// Delete vectors first
-	if s.vectorClient != nil {
-		if err := s.vectorClient.DeleteBySourceID(ctx, VectorCollectionName, id); err != nil {
-			// Log but don't fail - vectors may not exist
-			fmt.Printf("Warning: failed to delete vectors for source %s: %v\n", id, err)
-		}
-	}
-	return s.repo.Delete(ctx, id)
+	return s.unified.DeleteCourseSource(ctx, id)
 }
 
 // SearchKnowledge performs semantic search across course knowledge.
@@ -104,49 +85,7 @@ func (s *KnowledgeSourceService) SearchKnowledge(
 	query string,
 	topK int,
 ) ([]*entity.RetrievedChunk, error) {
-	if s.embeddingClient == nil || s.vectorClient == nil {
-		return nil, fmt.Errorf("embedding or vector client not configured")
-	}
-
-	// Generate query embedding
-	queryVector, err := s.embeddingClient.EmbedSingle(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to embed query: %w", err)
-	}
-
-	// Build filter for course
-	filter := map[string]interface{}{
-		"must": []map[string]interface{}{
-			{
-				"key":   "course_id",
-				"match": map[string]interface{}{"value": courseID.String()},
-			},
-		},
-	}
-
-	// Search vectors
-	results, err := s.vectorClient.Search(ctx, VectorCollectionName, queryVector, topK, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search vectors: %w", err)
-	}
-
-	// Convert to domain entities
-	chunks := make([]*entity.RetrievedChunk, len(results))
-	for i, r := range results {
-		sourceID, _ := uuid.Parse(getStringPayload(r.Payload, "source_id"))
-		chunkIndex := getIntPayload(r.Payload, "chunk_index")
-
-		chunks[i] = &entity.RetrievedChunk{
-			ID:              r.ID,
-			SourceID:        sourceID,
-			SourceName:      getStringPayload(r.Payload, "source_name"),
-			Content:         getStringPayload(r.Payload, "content"),
-			SimilarityScore: r.Score,
-			ChunkIndex:      &chunkIndex,
-		}
-	}
-
-	return chunks, nil
+	return s.unified.SearchKnowledge(ctx, courseID, query, topK)
 }
 
 // SearchKnowledgeBySession performs semantic search across session knowledge.
@@ -156,189 +95,26 @@ func (s *KnowledgeSourceService) SearchKnowledgeBySession(
 	query string,
 	topK int,
 ) ([]*entity.RetrievedChunk, error) {
-	if s.embeddingClient == nil || s.vectorClient == nil {
-		return nil, fmt.Errorf("embedding or vector client not configured")
-	}
-
-	// Generate query embedding
-	queryVector, err := s.embeddingClient.EmbedSingle(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to embed query: %w", err)
-	}
-
-	// Build filter for session
-	filter := map[string]interface{}{
-		"must": []map[string]interface{}{
-			{
-				"key":   "session_id",
-				"match": map[string]interface{}{"value": sessionID},
-			},
-		},
-	}
-
-	// Search vectors
-	results, err := s.vectorClient.Search(ctx, VectorCollectionName, queryVector, topK, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search vectors: %w", err)
-	}
-
-	// Convert to domain entities
-	chunks := make([]*entity.RetrievedChunk, len(results))
-	for i, r := range results {
-		sourceID, _ := uuid.Parse(getStringPayload(r.Payload, "source_id"))
-		chunkIndex := getIntPayload(r.Payload, "chunk_index")
-
-		chunks[i] = &entity.RetrievedChunk{
-			ID:              r.ID,
-			SourceID:        sourceID,
-			SourceName:      getStringPayload(r.Payload, "source_name"),
-			Content:         getStringPayload(r.Payload, "content"),
-			SimilarityScore: r.Score,
-			ChunkIndex:      &chunkIndex,
-		}
-	}
-
-	return chunks, nil
+	return s.unified.SearchKnowledgeBySession(ctx, sessionID, query, topK)
 }
 
 // SearchKnowledgeBySourceIDs performs semantic search across specific knowledge sources.
-// sourceIDs is a list of knowledge source IDs to search within.
 func (s *KnowledgeSourceService) SearchKnowledgeBySourceIDs(
 	ctx context.Context,
 	sourceIDs []string,
 	query string,
 	topK int,
 ) ([]*entity.RetrievedChunk, error) {
-	if s.embeddingClient == nil || s.vectorClient == nil {
-		return nil, fmt.Errorf("embedding or vector client not configured")
-	}
-
-	if len(sourceIDs) == 0 {
-		return nil, nil // No sources to search
-	}
-
-	// Generate query embedding
-	queryVector, err := s.embeddingClient.EmbedSingle(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to embed query: %w", err)
-	}
-
-	// Build filter for source IDs (OR condition - match any of the IDs)
-	shouldConditions := make([]map[string]interface{}, len(sourceIDs))
-	for i, sourceID := range sourceIDs {
-		shouldConditions[i] = map[string]interface{}{
-			"key":   "source_id",
-			"match": map[string]interface{}{"value": sourceID},
-		}
-	}
-
-	filter := map[string]interface{}{
-		"should": shouldConditions,
-	}
-
-	// Search vectors
-	results, err := s.vectorClient.Search(ctx, VectorCollectionName, queryVector, topK, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search vectors: %w", err)
-	}
-
-	// Convert to domain entities
-	chunks := make([]*entity.RetrievedChunk, len(results))
-	for i, r := range results {
-		sourceID, _ := uuid.Parse(getStringPayload(r.Payload, "source_id"))
-		chunkIndex := getIntPayload(r.Payload, "chunk_index")
-
-		chunks[i] = &entity.RetrievedChunk{
-			ID:              r.ID,
-			SourceID:        sourceID,
-			SourceName:      getStringPayload(r.Payload, "source_name"),
-			Content:         getStringPayload(r.Payload, "content"),
-			SimilarityScore: r.Score,
-			ChunkIndex:      &chunkIndex,
-		}
-	}
-
-	return chunks, nil
+	return s.unified.SearchKnowledgeBySourceIDs(ctx, sourceIDs, query, topK)
 }
 
 // ProcessAndIndex processes document content and stores vectors in the vector DB.
-// Returns chunk count and token count for the processed document.
 func (s *KnowledgeSourceService) ProcessAndIndex(
 	ctx context.Context,
 	source *entity.KnowledgeSource,
 	content string,
 ) (chunkCount int32, tokenCount int32, err error) {
-	if s.embeddingClient == nil || s.vectorClient == nil {
-		return 0, 0, fmt.Errorf("embedding or vector client not configured")
-	}
-
-	// Ensure collection exists
-	if err := s.vectorClient.EnsureCollection(ctx, VectorCollectionName, VectorDimensions); err != nil {
-		return 0, 0, fmt.Errorf("failed to ensure collection: %w", err)
-	}
-
-	// Chunk the content
-	chunks := ChunkText(content, ChunkSize, ChunkOverlap)
-	if len(chunks) == 0 {
-		return 0, 0, fmt.Errorf("no content to process")
-	}
-
-	// Calculate token count (rough estimate: ~4 chars per token)
-	tokenCount = int32(len(content) / 4)
-
-	// Generate embeddings for all chunks
-	embeddings, err := s.embeddingClient.Embed(ctx, chunks)
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to embed chunks: %w", err)
-	}
-
-	// Validate embedding response
-	if embeddings == nil || len(embeddings) != len(chunks) {
-		return 0, 0, fmt.Errorf("embedding response mismatch: got %d embeddings for %d chunks", len(embeddings), len(chunks))
-	}
-
-	// Build points for vector DB
-	points := make([]vectordb.Point, len(chunks))
-	for i, chunk := range chunks {
-		pointID := uuid.New().String()
-
-		// Build payload with metadata
-		payload := map[string]interface{}{
-			"source_id":   source.ID.String(),
-			"source_name": source.Name,
-			"content":     chunk,
-			"chunk_index": i,
-			"tenant_id":   source.TenantID.String(),
-		}
-
-		// Add course_id or session_id based on what's available
-		if source.CourseID != nil {
-			payload["course_id"] = source.CourseID.String()
-		}
-		if source.SessionID != nil {
-			payload["session_id"] = *source.SessionID
-		}
-
-		points[i] = vectordb.Point{
-			ID:      pointID,
-			Vector:  embeddings[i],
-			Payload: payload,
-		}
-	}
-
-	// Upsert vectors in batches to avoid timeout
-	const batchSize = 100
-	for i := 0; i < len(points); i += batchSize {
-		end := i + batchSize
-		if end > len(points) {
-			end = len(points)
-		}
-		if err := s.vectorClient.Upsert(ctx, VectorCollectionName, points[i:end]); err != nil {
-			return 0, 0, fmt.Errorf("failed to upsert vectors (batch %d-%d): %w", i, end, err)
-		}
-	}
-
-	return int32(len(chunks)), tokenCount, nil
+	return s.unified.ProcessAndIndex(ctx, source, content)
 }
 
 // UpdateStatusWithSummary updates the source status with summary and counts.
@@ -351,8 +127,12 @@ func (s *KnowledgeSourceService) UpdateStatusWithSummary(
 	summary string,
 	tokenCount int32,
 ) (*entity.KnowledgeSource, error) {
-	return s.repo.UpdateStatusWithSummary(ctx, id, status, errorMsg, chunkCount, summary, tokenCount)
+	return s.unified.UpdateCourseStatusWithSummary(ctx, id, status, errorMsg, chunkCount, summary, tokenCount)
 }
+
+// ---------------------------------------------------------------------------
+// Shared utility functions (package-level, used by multiple services)
+// ---------------------------------------------------------------------------
 
 // DetectVideoURLs extracts video URLs from text content.
 func DetectVideoURLs(content string) []string {

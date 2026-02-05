@@ -306,7 +306,7 @@ export function useCreateCourseFromOutline() {
 
   return {
     mutate: async (params: {
-      outlineId: string;
+      courseId: string;
       wizardData: Partial<WizardStepData>;
     }) => {
       const wizardData = create(WizardStepDataSchema, {
@@ -327,7 +327,7 @@ export function useCreateCourseFromOutline() {
       });
 
       const request = create(CreateCourseFromOutlineRequestSchema, {
-        outlineId: params.outlineId,
+        courseId: params.courseId,
         wizardData: wizardData,
       });
 
