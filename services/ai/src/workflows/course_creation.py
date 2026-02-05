@@ -13,6 +13,7 @@ from datetime import timedelta
 
 import structlog
 from temporalio import workflow
+from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
@@ -590,7 +591,7 @@ class CourseCreationWorkflow:
             {"tenant_id": tenant_id},
             task_queue=GO_TASKS,
             start_to_close_timeout=GO_TIMEOUT,
-            retry_policy=workflow.RetryPolicy(**GO_RETRY),
+            retry_policy=RetryPolicy(**GO_RETRY),
         )
         return result["api_key"]
 
@@ -612,7 +613,7 @@ class CourseCreationWorkflow:
             },
             task_queue=GO_TASKS,
             start_to_close_timeout=GO_TIMEOUT,
-            retry_policy=workflow.RetryPolicy(**GO_RETRY),
+            retry_policy=RetryPolicy(**GO_RETRY),
         )
 
     async def _write_course_content(
@@ -628,7 +629,7 @@ class CourseCreationWorkflow:
             },
             task_queue=GO_TASKS,
             start_to_close_timeout=GO_TIMEOUT,
-            retry_policy=workflow.RetryPolicy(**GO_RETRY),
+            retry_policy=RetryPolicy(**GO_RETRY),
         )
 
     async def _read_file_content(self, file_path: str) -> str | None:
@@ -639,7 +640,7 @@ class CourseCreationWorkflow:
                 {"file_path": file_path},
                 task_queue=GO_TASKS,
                 start_to_close_timeout=GO_TIMEOUT,
-                retry_policy=workflow.RetryPolicy(**GO_RETRY),
+                retry_policy=RetryPolicy(**GO_RETRY),
             )
             return result.get("content", "")
         except Exception:
@@ -659,7 +660,7 @@ class CourseCreationWorkflow:
             task_queue=AI_TASKS,
             start_to_close_timeout=timeout,
             heartbeat_timeout=AI_HEARTBEAT,
-            retry_policy=workflow.RetryPolicy(**AI_RETRY),
+            retry_policy=RetryPolicy(**AI_RETRY),
         )
 
     @staticmethod
