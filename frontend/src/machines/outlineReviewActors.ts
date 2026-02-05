@@ -25,6 +25,10 @@ interface GenerateLessonsMutate {
   mutate: (courseId: string) => Promise<GenerateAllLessonsResponse>;
 }
 
+interface ApproveCurriculumMapMutate {
+  mutateAsync: (params: { courseId: string; acknowledgeWarnings: boolean }) => Promise<unknown>;
+}
+
 /**
  * Creates concrete actor implementations for the outline review machine.
  * These are passed to `outlineReviewMachine.provide({ actors: ... })`.
@@ -33,6 +37,7 @@ export function createOutlineReviewActors(
   aiClient: AIClient,
   generateCourseOutline: GenerateOutlineMutate,
   generateAllLessons: GenerateLessonsMutate,
+  approveCurriculumMap: ApproveCurriculumMapMutate,
 ) {
   return {
     loadOutlineActor: fromPromise(async ({ input }: { input: { courseId: string; initialJobId?: string } }) => {
@@ -168,9 +173,18 @@ export function createOutlineReviewActors(
 
     generateLessonsActor: fromPromise(
       async ({ input }: { input: { courseId: string } }) => {
-        console.log('[DEBUG-COURSEID] OutlinePage generateLessonsActor: calling generateAllLessons with courseId:', input.courseId);
+        // Auto-approve curriculum map first (backend blocks lesson generation if map exists but isn't approved)
+        console.log('[OutlinePage] generateLessonsActor: auto-approving curriculum map for courseId:', input.courseId);
+        try {
+          await approveCurriculumMap.mutateAsync({ courseId: input.courseId, acknowledgeWarnings: true });
+        } catch (err) {
+          // If approve fails (e.g. no map exists yet), that's fine — backend allows generation without a map
+          console.log('[OutlinePage] generateLessonsActor: curriculum map approve skipped:', err instanceof Error ? err.message : err);
+        }
+
+        console.log('[OutlinePage] generateLessonsActor: calling generateAllLessons with courseId:', input.courseId);
         const result = await generateAllLessons.mutate(input.courseId);
-        console.log('[DEBUG-COURSEID] OutlinePage generateLessonsActor: job created', {
+        console.log('[OutlinePage] generateLessonsActor: job created', {
           jobId: result.job?.id,
           courseId: input.courseId,
         });

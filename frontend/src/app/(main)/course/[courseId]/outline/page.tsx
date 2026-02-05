@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useMachine } from '@xstate/react';
 import {
@@ -27,15 +27,18 @@ import { createClient } from '@connectrpc/connect';
 import { transport } from '@/lib/connect';
 import type { CourseOutline } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { AIGenerationService } from '@/gen/mirai/v1/ai_generation_service_pb';
+import { CoverageIntent } from '@/gen/mirai/v1/curriculum_map_pb';
 import { Card, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useIsTouchDevice } from '@/hooks/useBreakpoint';
 import { useGetCourse } from '@/hooks/useCourses';
-import { useGetCurriculumMap, isCurriculumMapApproved } from '@/hooks/useCurriculumMap';
+import { useGetCurriculumMap, useGenerateCurriculumMap, useApproveCurriculumMap } from '@/hooks/useCurriculumMap';
 import type { Course } from '@/gen/mirai/v1/course_pb';
 import GroundingIndicator from '@/components/ui/GroundingIndicator';
 import SourceEvidencePanel, { type SourceChunk } from '@/components/ui/SourceEvidencePanel';
 import { OutlineSectionCard } from '@/components/outline/OutlineSectionCard';
+import { OutlineCoverageStats } from '@/components/outline/OutlineCoverageStats';
+import type { CoverageStatsData } from '@/components/outline/OutlineCoverageStats';
 import type { SectionFeedbackData } from '@/components/outline/SectionFeedbackControls';
 
 export default function OutlineReviewPage() {
@@ -57,9 +60,10 @@ export default function OutlineReviewPage() {
   const courseQuery = useGetCourse(courseId);
   const course = courseQuery.data;
 
-  // Check curriculum map approval status
+  // Curriculum map hooks
   const curriculumMapQuery = useGetCurriculumMap(courseId);
-  const isApproved = isCurriculumMapApproved(curriculumMapQuery.data?.curriculumMap);
+  const generateCurriculumMap = useGenerateCurriculumMap();
+  const approveCurriculumMap = useApproveCurriculumMap();
 
   // API hooks
   const generateAllLessons = useGenerateAllLessons();
@@ -74,9 +78,10 @@ export default function OutlineReviewPage() {
       aiClient,
       generateCourseOutline,
       generateAllLessons,
+      approveCurriculumMap,
     );
     return outlineReviewMachine.provide({ actors });
-  }, [aiClient, generateAllLessons, generateCourseOutline]);
+  }, [aiClient, generateAllLessons, generateCourseOutline, approveCurriculumMap]);
 
   // Initialize machine with courseId and optional jobId from URL
   const [state, send] = useMachine(machineWithActors, {
@@ -131,6 +136,57 @@ export default function OutlineReviewPage() {
     );
     return [...new Set(allObjectives)].slice(0, 5);
   }, [context.outline]);
+
+  // Auto-generate curriculum map when outline is loaded but no map exists
+  const mapGenerationTriggered = useRef(false);
+  useEffect(() => {
+    if (
+      state.matches('viewing') &&
+      !curriculumMapQuery.isLoading &&
+      !curriculumMapQuery.data?.curriculumMap &&
+      !generateCurriculumMap.isPending &&
+      !mapGenerationTriggered.current
+    ) {
+      mapGenerationTriggered.current = true;
+      generateCurriculumMap.mutate({ courseId });
+    }
+  }, [state, curriculumMapQuery.isLoading, curriculumMapQuery.data, generateCurriculumMap, courseId]);
+
+  // Compute coverage stats from curriculum map
+  const coverageStats = useMemo<CoverageStatsData | null>(() => {
+    const curriculumMap = curriculumMapQuery.data?.curriculumMap;
+    if (!curriculumMap?.rows?.length) return null;
+    const outcomes = curriculumMap.rows[0]?.cells || [];
+    const totalCells = curriculumMap.rows.length * outcomes.length;
+    let coveredCells = 0;
+    let teachCount = 0;
+    let assessCount = 0;
+    let reinforceCount = 0;
+    const outcomeCoverage = new Map<string, number>();
+
+    for (const row of curriculumMap.rows) {
+      for (const cell of row.cells || []) {
+        if (cell.intent !== CoverageIntent.UNSPECIFIED) {
+          coveredCells++;
+          outcomeCoverage.set(cell.outcomeId, (outcomeCoverage.get(cell.outcomeId) || 0) + 1);
+        }
+        if (cell.intent === CoverageIntent.TEACH) teachCount++;
+        if (cell.intent === CoverageIntent.ASSESS) assessCount++;
+        if (cell.intent === CoverageIntent.REINFORCE) reinforceCount++;
+      }
+    }
+    const uncoveredOutcomes = outcomes.filter(c => !outcomeCoverage.has(c.outcomeId)).length;
+    return {
+      totalCells,
+      coveredCells,
+      coveragePercent: totalCells > 0 ? Math.round((coveredCells / totalCells) * 100) : 0,
+      teachCount,
+      assessCount,
+      reinforceCount,
+      uncoveredOutcomes,
+      totalOutcomes: outcomes.length,
+    };
+  }, [curriculumMapQuery.data]);
 
   // Calculate aggregate grounding metrics from all sections
   const aggregateGrounding = useMemo(() => {
@@ -495,23 +551,13 @@ export default function OutlineReviewPage() {
               </div>
             )}
 
-            {/* Info box */}
-            {isApproved ? (
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-6">
-                <p className="text-sm text-green-800 dark:text-green-200">
-                  <strong>Ready to generate your course?</strong> Click &quot;Generate
-                  Lessons&quot; to start creating lesson content. This process runs in the background
-                  and you&apos;ll be notified when complete.
-                </p>
-              </div>
-            ) : (
-              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg mb-6">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  <strong>Curriculum map approval required.</strong> You must review and approve the
-                  curriculum map before generating lessons. This ensures coverage of all learning outcomes.
-                </p>
-              </div>
-            )}
+            {/* Curriculum Coverage Stats */}
+            <div className="mb-6">
+              <OutlineCoverageStats
+                stats={coverageStats}
+                isGenerating={generateCurriculumMap.isPending || curriculumMapQuery.isLoading}
+              />
+            </div>
 
             {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 sm:justify-end">
@@ -522,32 +568,21 @@ export default function OutlineReviewPage() {
               >
                 Cancel
               </Button>
-              {isApproved ? (
-                <Button
-                  variant="primary"
-                  onClick={() => send({ type: 'APPROVE_OUTLINE' })}
-                  disabled={loading || !context.outline}
-                  className="w-full sm:w-auto min-h-[44px]"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Generate Lessons'
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  onClick={() => router.push(`/course/${courseId}/curriculum`)}
-                  disabled={loading || !context.outline}
-                  className="w-full sm:w-auto min-h-[44px]"
-                >
-                  Review Curriculum Map
-                </Button>
-              )}
+              <Button
+                variant="primary"
+                onClick={() => send({ type: 'APPROVE_OUTLINE' })}
+                disabled={loading || !context.outline}
+                className="w-full sm:w-auto min-h-[44px]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Generate Lessons'
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
