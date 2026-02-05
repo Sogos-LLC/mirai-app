@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/activity"
@@ -105,7 +106,8 @@ func (a *GoActivities) UpdateJobStatus(ctx context.Context, input UpdateJobStatu
 		return fmt.Errorf("job %s not found", input.JobID)
 	}
 
-	job.Status = valueobject.GenerationJobStatus(input.Status)
+	// Python workflow sends uppercase status (e.g. "PROCESSING"), DB enum is lowercase.
+	job.Status = valueobject.GenerationJobStatus(strings.ToLower(input.Status))
 	if input.ProgressPercent > 0 {
 		job.ProgressPercent = input.ProgressPercent
 	}
