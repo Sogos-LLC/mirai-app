@@ -33,7 +33,7 @@ spec:
         - name: TEMPORAL_ADDRESS
           value: "temporal.mirai-uat.svc.cluster.local:7233"
         - name: TEMPORAL_NAMESPACE
-          value: "default"
+          value: "mirai"
         - name: TEMPORAL_TASK_QUEUE
           value: "ai-tasks"
         - name: QDRANT_URL
