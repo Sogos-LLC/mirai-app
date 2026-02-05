@@ -5,10 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Sparkles, ArrowRight, Loader2, Clock } from 'lucide-react';
 import {
   GenerationJobStatus,
-  WorkflowStepType,
   type GenerationJob,
 } from '@/gen/mirai/v1/ai_generation_types_pb';
-import { getWorkflowStepLabel } from '@/machines/courseCreationMachine';
 
 interface ActiveWorkflowCardProps {
   job: GenerationJob;
@@ -18,10 +16,6 @@ export function ActiveWorkflowCard({ job }: ActiveWorkflowCardProps) {
   const router = useRouter();
 
   const isAwaiting = job.status === GenerationJobStatus.AWAITING_APPROVAL;
-  const stepLabel =
-    isAwaiting && job.pendingStep != null
-      ? getWorkflowStepLabel(job.pendingStep as WorkflowStepType)
-      : null;
 
   return (
     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 mb-8 relative overflow-hidden">
@@ -46,9 +40,7 @@ export function ActiveWorkflowCard({ job }: ActiveWorkflowCardProps) {
             </h3>
             <p className="text-white/80 text-sm mt-0.5">
               {isAwaiting
-                ? stepLabel
-                  ? `Awaiting your approval: ${stepLabel}`
-                  : 'Awaiting your review'
+                ? 'Awaiting your review'
                 : job.progressMessage ?? 'AI is generating content...'}
             </p>
             {/* Progress bar */}

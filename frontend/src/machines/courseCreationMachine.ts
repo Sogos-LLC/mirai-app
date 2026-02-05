@@ -2,7 +2,6 @@ import { createMachine, assign, fromPromise } from 'xstate';
 import {
   WorkflowStepType,
   GenerationJobStatus,
-  type GenerationJob,
 } from '@/gen/mirai/v1/ai_generation_types_pb';
 
 // ============================================================
@@ -15,6 +14,17 @@ import {
  */
 export interface StepData {
   [key: string]: unknown;
+}
+
+/**
+ * Workflow state returned by the GetWorkflowState RPC (Temporal query).
+ */
+export interface WorkflowStateData {
+  status: string;
+  currentStep: string;
+  stepDataJson: string;
+  progressPercent: number;
+  progressMessage: string;
 }
 
 /**
@@ -41,22 +51,12 @@ export type CourseCreationEvent =
   | { type: 'WORKFLOW_STARTED'; jobId: string; courseId: string }
   // Resume an active workflow (from dashboard or page remount)
   | { type: 'RESUME'; jobId: string; courseId: string; status: GenerationJobStatus }
-  // SSE event received: workflow is awaiting approval
-  | { type: 'AWAITING_APPROVAL'; pendingStep: WorkflowStepType; stepData: StepData | null; job?: GenerationJob }
-  // SSE event received: job progress update
-  | { type: 'JOB_UPDATED'; job: GenerationJob }
-  // SSE event received: workflow completed
-  | { type: 'JOB_COMPLETED'; job: GenerationJob }
-  // SSE event received: workflow failed
-  | { type: 'JOB_FAILED'; job: GenerationJob }
+  // Temporal query state update (replaces SSE events)
+  | { type: 'STATE_UPDATE'; state: WorkflowStateData }
   // User approves the current step
   | { type: 'APPROVE'; selectedIds?: string[]; modifications?: Record<string, string> }
   // User rejects the current step with feedback
   | { type: 'REJECT'; feedback: string }
-  // Approval/rejection API call succeeded
-  | { type: 'SIGNAL_SENT' }
-  // Approval/rejection API call failed
-  | { type: 'SIGNAL_ERROR'; error: string }
   // Dismiss error
   | { type: 'DISMISS_ERROR' };
 
@@ -138,34 +138,39 @@ export const courseCreationMachine = createMachine({
     // --------------------------------------------------------
     processing: {
       on: {
-        JOB_UPDATED: {
-          actions: assign({
-            progressPercent: ({ event }) => event.job.progressPercent,
-            progressMessage: ({ event }) => event.job.progressMessage ?? '',
-          }),
-        },
-        AWAITING_APPROVAL: {
-          target: 'awaitingApproval',
-          actions: assign({
-            pendingStep: ({ event }) => event.pendingStep,
-            stepData: ({ event }) => event.stepData,
-            progressPercent: ({ event }) => event.job?.progressPercent ?? 0,
-            progressMessage: ({ event }) => event.job?.progressMessage ?? '',
-          }),
-        },
-        JOB_COMPLETED: {
-          target: 'completed',
-          actions: assign({
-            progressPercent: 100,
-            progressMessage: 'Course creation complete!',
-          }),
-        },
-        JOB_FAILED: {
-          target: 'failed',
-          actions: assign({
-            error: ({ event }) => event.job.errorMessage ?? 'Workflow failed',
-          }),
-        },
+        STATE_UPDATE: [
+          {
+            guard: ({ event }) => event.state.status === 'awaiting_approval',
+            target: 'awaitingApproval',
+            actions: assign({
+              pendingStep: ({ event }) => stepStringToEnum(event.state.currentStep),
+              stepData: ({ event }) => parseStepData(event.state.stepDataJson),
+              progressPercent: ({ event }) => event.state.progressPercent,
+              progressMessage: ({ event }) => event.state.progressMessage,
+            }),
+          },
+          {
+            guard: ({ event }) => event.state.status === 'completed',
+            target: 'completed',
+            actions: assign({
+              progressPercent: 100,
+              progressMessage: 'Course creation complete!',
+            }),
+          },
+          {
+            guard: ({ event }) => event.state.status === 'failed',
+            target: 'failed',
+            actions: assign({
+              error: ({ event }) => event.state.progressMessage || 'Workflow failed',
+            }),
+          },
+          {
+            actions: assign({
+              progressPercent: ({ event }) => event.state.progressPercent,
+              progressMessage: ({ event }) => event.state.progressMessage,
+            }),
+          },
+        ],
       },
     },
 
@@ -180,26 +185,23 @@ export const courseCreationMachine = createMachine({
         REJECT: {
           target: 'sendingRejection',
         },
-        // Handle out-of-order events (e.g. late SSE update)
-        JOB_UPDATED: {
-          actions: assign({
-            progressPercent: ({ event }) => event.job.progressPercent,
-            progressMessage: ({ event }) => event.job.progressMessage ?? '',
-          }),
-        },
-        JOB_COMPLETED: {
-          target: 'completed',
-          actions: assign({
-            progressPercent: 100,
-            progressMessage: 'Course creation complete!',
-          }),
-        },
-        JOB_FAILED: {
-          target: 'failed',
-          actions: assign({
-            error: ({ event }) => event.job.errorMessage ?? 'Workflow failed',
-          }),
-        },
+        STATE_UPDATE: [
+          {
+            guard: ({ event }) => event.state.status === 'completed',
+            target: 'completed',
+            actions: assign({
+              progressPercent: 100,
+              progressMessage: 'Course creation complete!',
+            }),
+          },
+          {
+            guard: ({ event }) => event.state.status === 'failed',
+            target: 'failed',
+            actions: assign({
+              error: ({ event }) => event.state.progressMessage || 'Workflow failed',
+            }),
+          },
+        ],
       },
     },
 
@@ -295,6 +297,32 @@ export const courseCreationMachine = createMachine({
 // ============================================================
 
 /**
+ * Convert a step string from Temporal query to WorkflowStepType enum.
+ */
+function stepStringToEnum(step: string): WorkflowStepType {
+  switch (step) {
+    case 'title':
+      return WorkflowStepType.TITLE;
+    case 'outcomes':
+      return WorkflowStepType.OUTCOMES;
+    case 'sme_personas':
+      return WorkflowStepType.SME_PERSONAS;
+    case 'audience_personas':
+      return WorkflowStepType.AUDIENCE_PERSONAS;
+    case 'tone_options':
+      return WorkflowStepType.TONE_OPTIONS;
+    case 'course_plan':
+      return WorkflowStepType.COURSE_PLAN;
+    case 'outline':
+      return WorkflowStepType.OUTLINE;
+    case 'lessons':
+      return WorkflowStepType.LESSONS;
+    default:
+      return WorkflowStepType.UNSPECIFIED;
+  }
+}
+
+/**
  * Get a human-readable label for a workflow step.
  */
 export function getWorkflowStepLabel(step: WorkflowStepType): string {
@@ -352,7 +380,7 @@ export function getWorkflowStepNumber(step: WorkflowStepType): number {
 export const TOTAL_WORKFLOW_STEPS = 8;
 
 /**
- * Parse the step_data_json from an SSE event into a typed StepData object.
+ * Parse the step_data_json from a Temporal query into a typed StepData object.
  */
 export function parseStepData(stepDataJson: string | undefined): StepData | null {
   if (!stepDataJson) return null;

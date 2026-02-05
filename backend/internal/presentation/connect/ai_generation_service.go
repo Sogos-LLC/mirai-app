@@ -3,7 +3,6 @@ package connect
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -14,21 +13,18 @@ import (
 	"github.com/sogos/mirai-backend/internal/application/service"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
-	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 )
 
 // AIGenerationServiceServer implements the AIGenerationService Connect handler.
 type AIGenerationServiceServer struct {
 	miraiv1connect.UnimplementedAIGenerationServiceHandler
-	aiService  *service.AIGenerationService
-	subscriber pubsub.Subscriber
+	aiService *service.AIGenerationService
 }
 
 // NewAIGenerationServiceServer creates a new AIGenerationServiceServer.
-func NewAIGenerationServiceServer(aiService *service.AIGenerationService, subscriber pubsub.Subscriber) *AIGenerationServiceServer {
+func NewAIGenerationServiceServer(aiService *service.AIGenerationService) *AIGenerationServiceServer {
 	return &AIGenerationServiceServer{
-		aiService:  aiService,
-		subscriber: subscriber,
+		aiService: aiService,
 	}
 }
 
@@ -530,101 +526,6 @@ func (s *AIGenerationServiceServer) ApproveCoursePlan(
 	}), nil
 }
 
-// SubscribeJobs opens a server-streaming connection for real-time job events.
-func (s *AIGenerationServiceServer) SubscribeJobs(
-	ctx context.Context,
-	req *connect.Request[v1.SubscribeJobsRequest],
-	stream *connect.ServerStream[v1.SubscribeJobsResponse],
-) error {
-	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
-	if !ok {
-		return connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
-	}
-
-	kratosID, err := parseUUID(kratosIDStr)
-	if err != nil {
-		return connect.NewError(connect.CodeInternal, err)
-	}
-
-	// Get user ID from kratos ID
-	userID, err := s.aiService.GetUserIDByKratosID(ctx, kratosID)
-	if err != nil {
-		return connect.NewError(connect.CodeInternal, err)
-	}
-
-	// Subscribe to Redis channel for this user's job events
-	eventCh, cleanup, err := s.subscriber.SubscribeJobEvents(ctx, userID)
-	if err != nil {
-		return connect.NewError(connect.CodeInternal, err)
-	}
-	defer cleanup()
-
-	// Re-emit pending approval events for workflow resumption
-	awaitingStatus := valueobject.GenerationJobStatusAwaitingApproval
-	awaitingJobs, err := s.aiService.ListJobs(ctx, kratosID, entity.GenerationJobListOptions{
-		Status: &awaitingStatus,
-	})
-	if err != nil {
-		slog.Warn("failed to list awaiting approval jobs for re-emit", "error", err)
-	} else {
-		for _, job := range awaitingJobs {
-			if job.PendingStep != nil {
-				pendingStep := v1.WorkflowStepType(*job.PendingStep)
-				resp := &v1.SubscribeJobsResponse{
-					EventType:    v1.JobEventType_JOB_EVENT_TYPE_AWAITING_APPROVAL,
-					Job:          generationJobToProto(job),
-					PendingStep:  &pendingStep,
-					StepDataJson: job.StepDataJSON,
-				}
-				if err := stream.Send(resp); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// Heartbeat ticker to keep connection alive through Cloudflare/proxy timeouts
-	// Send a keep-alive every 15 seconds (proxy timeout is ~30s)
-	heartbeat := time.NewTicker(15 * time.Second)
-	defer heartbeat.Stop()
-
-	// Forward events to client stream
-	for {
-		select {
-		case <-ctx.Done():
-			// Client disconnected or context cancelled
-			return nil
-		case <-heartbeat.C:
-			// Send heartbeat to keep connection alive through proxy timeouts
-			resp := &v1.SubscribeJobsResponse{
-				EventType: v1.JobEventType_JOB_EVENT_TYPE_KEEPALIVE,
-				Job: &v1.GenerationJob{
-					Id:        "keepalive",
-					CreatedAt: timestamppb.Now(),
-				},
-			}
-			if err := stream.Send(resp); err != nil {
-				return err
-			}
-		case event, ok := <-eventCh:
-			if !ok {
-				// Channel closed
-				return nil
-			}
-			// Send event to client
-			resp := &v1.SubscribeJobsResponse{
-				EventType:    event.EventType,
-				Job:          event.Job,
-				PendingStep:  event.PendingStep,
-				StepDataJson: event.StepDataJSON,
-			}
-			if err := stream.Send(resp); err != nil {
-				return err
-			}
-		}
-	}
-}
-
 // Helper functions for proto conversion
 
 func generationJobToProto(job *entity.GenerationJob) *v1.GenerationJob {
@@ -667,14 +568,6 @@ func generationJobToProto(job *entity.GenerationJob) *v1.GenerationJob {
 	if job.CompletedAt != nil {
 		proto.CompletedAt = timestamppb.New(*job.CompletedAt)
 	}
-	if job.PendingStep != nil {
-		v := *job.PendingStep
-		proto.PendingStep = &v
-	}
-	if job.StepDataJSON != nil {
-		proto.StepDataJson = job.StepDataJSON
-	}
-
 	return proto
 }
 
@@ -1380,6 +1273,40 @@ func (s *AIGenerationServiceServer) RejectWorkflowStep(
 	}
 
 	return connect.NewResponse(&v1.RejectWorkflowStepResponse{}), nil
+}
+
+// GetWorkflowState queries the Temporal workflow for its current state.
+func (s *AIGenerationServiceServer) GetWorkflowState(
+	ctx context.Context,
+	req *connect.Request[v1.GetWorkflowStateRequest],
+) (*connect.Response[v1.GetWorkflowStateResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	jobID, err := parseUUID(req.Msg.GetJobId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	state, err := s.aiService.GetWorkflowState(ctx, kratosID, jobID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.GetWorkflowStateResponse{
+		Status:          state.Status,
+		CurrentStep:     state.CurrentStep,
+		StepDataJson:    state.StepDataJSON,
+		ProgressPercent: state.ProgressPercent,
+		ProgressMessage: state.ProgressMessage,
+	}), nil
 }
 
 // GetGraphVisualization returns the mermaid diagram for the course creation graph.

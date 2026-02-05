@@ -5,8 +5,8 @@ import { Check, Loader2, Target, BookOpen, MessageSquare, Plus, X, ChevronDown, 
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
 import type { SMEPersona, AudiencePersona } from '@/gen/mirai/v1/course_wizard_pb';
-import { JobEventType, type LessonComponent, type GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
-import { useJobStream } from '@/hooks/useJobStream';
+import { GenerationJobStatus, type LessonComponent, type GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { useGetJob } from '@/hooks/ai-generation/useJobs';
 
 export interface LearningObjective {
   id: string;
@@ -51,10 +51,15 @@ export function RealignmentModal({
   const [showPersonaDropdown, setShowPersonaDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // SSE job tracking state
+  // Job tracking state (polling replaces SSE)
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobError, setJobError] = useState<string | null>(null);
-  const { lastEvent } = useJobStream();
+
+  // Poll job status when a regeneration job is active (2s interval)
+  const { data: activeJob } = useGetJob(activeJobId ?? undefined, {
+    enabled: !!activeJobId,
+    refetchInterval: activeJobId ? 2000 : false,
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -67,16 +72,11 @@ export function RealignmentModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Monitor SSE events for job completion
+  // Monitor job status via polling
   useEffect(() => {
-    if (!activeJobId || !lastEvent) return;
+    if (!activeJobId || !activeJob) return;
 
-    // Only process events for this specific job
-    if (lastEvent.job?.id !== activeJobId) return;
-
-    const eventType = lastEvent.eventType;
-
-    if (eventType === JobEventType.COMPLETED) {
+    if (activeJob.status === GenerationJobStatus.COMPLETED) {
       // Success - close modal
       setActiveJobId(null);
       setJobError(null);
@@ -84,13 +84,12 @@ export function RealignmentModal({
       setSelectedLOIds(new Set());
       setCustomPrompt('');
       onClose();
-    } else if (eventType === JobEventType.FAILED) {
+    } else if (activeJob.status === GenerationJobStatus.FAILED) {
       // Error - show message, allow retry
       setActiveJobId(null);
-      setJobError(lastEvent.job?.errorMessage || 'Regeneration failed. Please try again.');
+      setJobError(activeJob.errorMessage || 'Regeneration failed. Please try again.');
     }
-    // UPDATED events indicate progress - job still running (no action needed)
-  }, [activeJobId, lastEvent, onClose]);
+  }, [activeJobId, activeJob, onClose]);
 
   // Reset job state when modal closes
   useEffect(() => {

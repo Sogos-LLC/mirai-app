@@ -31,8 +31,11 @@ type WorkflowStarter interface {
 	// StartCourseCreation starts the unified course creation workflow (Python).
 	StartCourseCreation(ctx context.Context, input interface{}) (string, error)
 
-	// SignalWorkflow sends a named signal with payload to a running workflow.
-	SignalWorkflow(ctx context.Context, workflowID, signalName string, payload interface{}) error
+	// QueryWorkflow queries a running workflow for its current state.
+	QueryWorkflow(ctx context.Context, workflowID, queryType string) (map[string]interface{}, error)
+
+	// UpdateWorkflow sends a synchronous update to a running workflow.
+	UpdateWorkflow(ctx context.Context, workflowID, updateName string, args interface{}) error
 
 	// CancelWorkflow cancels a running workflow by its execution ID.
 	CancelWorkflow(ctx context.Context, workflowID, runID string) error
@@ -157,6 +160,39 @@ func (s *workflowStarter) CancelWorkflow(ctx context.Context, workflowID, runID 
 	return s.client.CancelWorkflow(ctx, workflowID, runID)
 }
 
+func (s *workflowStarter) QueryWorkflow(ctx context.Context, workflowID, queryType string) (map[string]interface{}, error) {
+	resp, err := s.client.QueryWorkflow(ctx, workflowID, "", queryType)
+	if err != nil {
+		return nil, fmt.Errorf("query workflow %s: %w", workflowID, err)
+	}
+
+	var result map[string]interface{}
+	if err := resp.Get(&result); err != nil {
+		return nil, fmt.Errorf("decode query result: %w", err)
+	}
+
+	return result, nil
+}
+
+func (s *workflowStarter) UpdateWorkflow(ctx context.Context, workflowID, updateName string, args interface{}) error {
+	handle, err := s.client.UpdateWorkflow(ctx, temporalclient.UpdateWorkflowOptions{
+		WorkflowID:   workflowID,
+		UpdateName:   updateName,
+		Args:         []interface{}{args},
+		WaitForStage: temporalclient.WorkflowUpdateStageCompleted,
+	})
+	if err != nil {
+		return fmt.Errorf("update workflow %s/%s: %w", workflowID, updateName, err)
+	}
+
+	// Wait for the update to complete
+	if err := handle.Get(ctx, nil); err != nil {
+		return fmt.Errorf("update workflow result %s/%s: %w", workflowID, updateName, err)
+	}
+
+	return nil
+}
+
 // CourseCreationInput is the input for the unified Python CourseCreationWorkflow.
 // Defined here (not in workflow package) because the workflow runs on the Python ai-tasks queue.
 type CourseCreationInput struct {
@@ -194,6 +230,3 @@ func (s *workflowStarter) StartCourseCreation(ctx context.Context, input interfa
 	return run.GetID(), nil
 }
 
-func (s *workflowStarter) SignalWorkflow(ctx context.Context, workflowID, signalName string, payload interface{}) error {
-	return s.client.SignalWorkflow(ctx, workflowID, "", signalName, payload)
-}

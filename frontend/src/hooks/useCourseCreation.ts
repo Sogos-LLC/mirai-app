@@ -16,6 +16,7 @@ import {
   approveWorkflowStep,
   rejectWorkflowStep,
   getGraphVisualization,
+  getWorkflowState,
   listJobs,
   getJob,
 } from '@/gen/mirai/v1/ai_generation_service-AIGenerationService_connectquery';
@@ -174,6 +175,36 @@ export function useGraphVisualization(jobId?: string) {
   return {
     mermaidCode: query.data?.mermaidCode ?? '',
     currentNode: query.data?.currentNode ?? '',
+    isLoading: query.isLoading,
+    error: query.error,
+  };
+}
+
+// =============================================================================
+// Workflow State Polling
+// =============================================================================
+
+/**
+ * Poll the Temporal workflow for its current state.
+ * Replaces SSE streaming with 2s interval polling via Temporal queries.
+ * Stops polling when the workflow is completed or failed.
+ */
+export function useWorkflowState(jobId: string | null, enabled: boolean) {
+  const query = useQuery(
+    getWorkflowState,
+    { jobId: jobId ?? '' },
+    {
+      enabled: enabled && !!jobId,
+      refetchInterval: (query) => {
+        const status = query.state.data?.status;
+        if (status === 'completed' || status === 'failed') return false;
+        return 2000;
+      },
+    },
+  );
+
+  return {
+    state: query.data ?? null,
     isLoading: query.isLoading,
     error: query.error,
   };

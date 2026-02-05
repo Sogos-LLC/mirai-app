@@ -18,13 +18,6 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
 
-// JobEventPublisher abstracts job event publishing for SSE streaming.
-// This decouples activities from the pubsub package's proto dependency.
-type JobEventPublisher interface {
-	PublishJobEventByID(ctx context.Context, userID, jobID uuid.UUID, eventType string) error
-	PublishJobStepEventByID(ctx context.Context, userID, jobID uuid.UUID, step, dataJSON string) error
-}
-
 // APIKeyDecryptor abstracts per-tenant API key decryption.
 type APIKeyDecryptor interface {
 	DecryptAPIKey(ctx context.Context, tenantID uuid.UUID) (string, error)
@@ -35,7 +28,6 @@ type APIKeyDecryptor interface {
 type GoActivities struct {
 	JobRepo        repository.GenerationJobRepository
 	ContentStorage storage.StorageAdapter
-	EventPublisher JobEventPublisher
 	KeyDecryptor   APIKeyDecryptor
 	Logger         *slog.Logger
 }
@@ -103,11 +95,6 @@ func (a *GoActivities) UpdateJobStatus(ctx context.Context, input UpdateJobStatu
 		return fmt.Errorf("get job: %w", err)
 	}
 
-	// Clear pending step fields when transitioning away from awaiting_approval
-	if job.PendingStep != nil && input.Status != string(valueobject.GenerationJobStatusAwaitingApproval) {
-		_ = a.JobRepo.ClearPendingStep(ctx, jobID)
-	}
-
 	job.Status = valueobject.GenerationJobStatus(input.Status)
 	if input.ProgressPercent > 0 {
 		job.ProgressPercent = input.ProgressPercent
@@ -160,55 +147,6 @@ func (a *GoActivities) FinalizeParentJob(ctx context.Context, input FinalizePare
 		AllComplete: result != nil,
 		AnyFailed:   result != nil && result.FailedCount > 0,
 	}, nil
-}
-
-// ---------------------------------------------------------------------------
-// Event Publishing Activities
-// ---------------------------------------------------------------------------
-
-// PublishJobEventInput is the input for the PublishJobEvent activity.
-type PublishJobEventInput struct {
-	UserID    string `json:"user_id"`
-	EventType string `json:"event_type"`
-	JobID     string `json:"job_id"`
-}
-
-// PublishJobEvent publishes a job event via Redis pub/sub for SSE streaming.
-func (a *GoActivities) PublishJobEvent(ctx context.Context, input PublishJobEventInput) error {
-	userID, err := uuid.Parse(input.UserID)
-	if err != nil {
-		return fmt.Errorf("parse user ID: %w", err)
-	}
-
-	jobID, err := uuid.Parse(input.JobID)
-	if err != nil {
-		return fmt.Errorf("parse job ID: %w", err)
-	}
-
-	return a.EventPublisher.PublishJobEventByID(ctx, userID, jobID, input.EventType)
-}
-
-// PublishJobStepEventInput is the input for the PublishJobStepEvent activity.
-type PublishJobStepEventInput struct {
-	UserID   string `json:"user_id"`
-	JobID    string `json:"job_id"`
-	Step     string `json:"step"`
-	DataJSON string `json:"data_json"`
-}
-
-// PublishJobStepEvent publishes an awaiting-approval event with step data for the frontend.
-func (a *GoActivities) PublishJobStepEvent(ctx context.Context, input PublishJobStepEventInput) error {
-	userID, err := uuid.Parse(input.UserID)
-	if err != nil {
-		return fmt.Errorf("parse user ID: %w", err)
-	}
-
-	jobID, err := uuid.Parse(input.JobID)
-	if err != nil {
-		return fmt.Errorf("parse job ID: %w", err)
-	}
-
-	return a.EventPublisher.PublishJobStepEventByID(ctx, userID, jobID, input.Step, input.DataJSON)
 }
 
 // ---------------------------------------------------------------------------

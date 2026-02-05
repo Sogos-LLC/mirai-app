@@ -350,42 +350,6 @@ func (r *GenerationJobRepository) FinalizeParentJob(ctx context.Context, parentI
 	})
 }
 
-// UpdatePendingStep updates the job's status and pending step fields for workflow resumption.
-func (r *GenerationJobRepository) UpdatePendingStep(ctx context.Context, id uuid.UUID, status string, pendingStep *int32, stepDataJSON *string) error {
-	var pendingStepVal sql.NullInt32
-	if pendingStep != nil {
-		pendingStepVal = sql.NullInt32{Int32: *pendingStep, Valid: true}
-	}
-	var stepDataVal sql.NullString
-	if stepDataJSON != nil {
-		stepDataVal = sql.NullString{String: *stepDataJSON, Valid: true}
-	}
-
-	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
-		return q.UpdateJobPendingStep(ctx, gen.UpdateJobPendingStepParams{
-			Status:       toGenerationJobStatus(status),
-			PendingStep:  pendingStepVal,
-			StepDataJson: stepDataVal,
-			ID:           id,
-		})
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update job pending step: %w", err)
-	}
-	return nil
-}
-
-// ClearPendingStep clears the pending step fields after a step is approved/rejected.
-func (r *GenerationJobRepository) ClearPendingStep(ctx context.Context, id uuid.UUID) error {
-	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
-		return q.ClearJobPendingStep(ctx, id)
-	})
-	if err != nil {
-		return fmt.Errorf("failed to clear job pending step: %w", err)
-	}
-	return nil
-}
-
 // =============================================================================
 // Type Conversion Helpers
 // =============================================================================
@@ -419,13 +383,6 @@ func toGenerationJobEntity(j *gen.GenerationJob) (*entity.GenerationJob, error) 
 		StartedAt:       fromDoublePointerTime(j.StartedAt),
 		CompletedAt:     fromDoublePointerTime(j.CompletedAt),
 	}
-	if j.PendingStep.Valid {
-		v := j.PendingStep.Int32
-		job.PendingStep = &v
-	}
-	if j.StepDataJson.Valid {
-		job.StepDataJSON = &j.StepDataJson.String
-	}
 	return job, nil
 }
 
@@ -453,13 +410,6 @@ func toGenerationJobEntityNoError(j *gen.GenerationJob) *entity.GenerationJob {
 		CreatedAt:       j.CreatedAt,
 		StartedAt:       fromDoublePointerTime(j.StartedAt),
 		CompletedAt:     fromDoublePointerTime(j.CompletedAt),
-	}
-	if j.PendingStep.Valid {
-		v := j.PendingStep.Int32
-		job.PendingStep = &v
-	}
-	if j.StepDataJson.Valid {
-		job.StepDataJSON = &j.StepDataJson.String
 	}
 	return job
 }

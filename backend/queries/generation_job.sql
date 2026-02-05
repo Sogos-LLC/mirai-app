@@ -72,16 +72,6 @@ WHERE id = (
 )
 RETURNING *;
 
--- name: UpdateJobPendingStep :exec
-UPDATE generation_jobs
-SET status = $1, pending_step = $2, step_data_json = $3
-WHERE id = $4;
-
--- name: ClearJobPendingStep :exec
-UPDATE generation_jobs
-SET pending_step = NULL, step_data_json = NULL
-WHERE id = $1;
-
 -- name: ClaimJobByID :one
 -- Claim a specific job by ID, only if queued
 UPDATE generation_jobs

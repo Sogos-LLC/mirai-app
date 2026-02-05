@@ -158,15 +158,6 @@ export const UpdateLessonComponentsRequestSchema = z.object({
 export type UpdateLessonComponentsRequest = z.infer<typeof UpdateLessonComponentsRequestSchema>;
 
 /**
- * Zod schema for SubscribeJobsRequest
- * @generated from message mirai.v1.SubscribeJobsRequest
- */
-export const SubscribeJobsRequestSchema = z.object({
-});
-
-export type SubscribeJobsRequest = z.infer<typeof SubscribeJobsRequestSchema>;
-
-/**
  * Zod schema for GetCoursePlanRequest
  * @generated from message mirai.v1.GetCoursePlanRequest
  */
@@ -236,4 +227,14 @@ export const GetGraphVisualizationRequestSchema = z.object({
 });
 
 export type GetGraphVisualizationRequest = z.infer<typeof GetGraphVisualizationRequestSchema>;
+
+/**
+ * Zod schema for GetWorkflowStateRequest
+ * @generated from message mirai.v1.GetWorkflowStateRequest
+ */
+export const GetWorkflowStateRequestSchema = z.object({
+  jobId: z.string(),
+});
+
+export type GetWorkflowStateRequest = z.infer<typeof GetWorkflowStateRequestSchema>;
 

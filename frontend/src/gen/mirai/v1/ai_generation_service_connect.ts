@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveCoursePlanRequest, ApproveCoursePlanResponse, ApproveWorkflowStepRequest, ApproveWorkflowStepResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetGraphVisualizationRequest, GetGraphVisualizationResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectWorkflowStepRequest, RejectWorkflowStepResponse, StartCourseCreationRequest, StartCourseCreationResponse, SubscribeJobsRequest, SubscribeJobsResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
+import { ApproveCoursePlanRequest, ApproveCoursePlanResponse, ApproveWorkflowStepRequest, ApproveWorkflowStepResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetGraphVisualizationRequest, GetGraphVisualizationResponse, GetJobRequest, GetJobResponse, GetWorkflowStateRequest, GetWorkflowStateResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectWorkflowStepRequest, RejectWorkflowStepResponse, StartCourseCreationRequest, StartCourseCreationResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -123,15 +123,6 @@ export const AIGenerationService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc mirai.v1.AIGenerationService.SubscribeJobs
-     */
-    subscribeJobs: {
-      name: "SubscribeJobs",
-      I: SubscribeJobsRequest,
-      O: SubscribeJobsResponse,
-      kind: MethodKind.ServerStreaming,
-    },
-    /**
      * @generated from rpc mirai.v1.AIGenerationService.GetCoursePlan
      */
     getCoursePlan: {
@@ -185,6 +176,15 @@ export const AIGenerationService = {
       name: "GetGraphVisualization",
       I: GetGraphVisualizationRequest,
       O: GetGraphVisualizationResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc mirai.v1.AIGenerationService.GetWorkflowState
+     */
+    getWorkflowState: {
+      name: "GetWorkflowState",
+      I: GetWorkflowStateRequest,
+      O: GetWorkflowStateResponse,
       kind: MethodKind.Unary,
     },
   }

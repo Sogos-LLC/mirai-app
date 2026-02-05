@@ -95,3 +95,8 @@ export const rejectWorkflowStep = AIGenerationService.method.rejectWorkflowStep;
  * @generated from rpc mirai.v1.AIGenerationService.GetGraphVisualization
  */
 export const getGraphVisualization = AIGenerationService.method.getGraphVisualization;
+
+/**
+ * @generated from rpc mirai.v1.AIGenerationService.GetWorkflowState
+ */
+export const getWorkflowState = AIGenerationService.method.getWorkflowState;

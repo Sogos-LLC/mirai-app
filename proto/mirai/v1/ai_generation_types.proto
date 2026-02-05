@@ -45,18 +45,6 @@ enum OutlineApprovalStatus {
   OUTLINE_APPROVAL_STATUS_REVISION_REQUESTED = 4;
 }
 
-// JobEventType for real-time streaming job events.
-enum JobEventType {
-  JOB_EVENT_TYPE_UNSPECIFIED = 0;
-  JOB_EVENT_TYPE_CREATED = 1;
-  JOB_EVENT_TYPE_UPDATED = 2;
-  JOB_EVENT_TYPE_COMPLETED = 3;
-  JOB_EVENT_TYPE_FAILED = 4;
-  JOB_EVENT_TYPE_CANCELLED = 5;
-  JOB_EVENT_TYPE_KEEPALIVE = 6;
-  JOB_EVENT_TYPE_AWAITING_APPROVAL = 7;
-}
-
 // GenerationJob represents an AI generation job.
 message GenerationJob {
   string id = 1;
@@ -77,8 +65,7 @@ message GenerationJob {
   optional google.protobuf.Timestamp started_at = 18;
   optional google.protobuf.Timestamp completed_at = 19;
   optional string parent_job_id = 20;
-  optional int32 pending_step = 21;      // WorkflowStepType enum value, set when status is AWAITING_APPROVAL
-  optional string step_data_json = 22;   // JSON string for step review data, set when status is AWAITING_APPROVAL
+  reserved 21, 22;
 }
 
 // CourseOutline represents the generated course structure.

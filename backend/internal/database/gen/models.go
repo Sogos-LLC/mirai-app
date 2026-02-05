@@ -611,8 +611,6 @@ type GenerationJob struct {
 	StartedAt       **time.Time         `db:"started_at" json:"started_at"`
 	CompletedAt     **time.Time         `db:"completed_at" json:"completed_at"`
 	ParentJobID     uuid.NullUUID       `db:"parent_job_id" json:"parent_job_id"`
-	PendingStep     sql.NullInt32       `db:"pending_step" json:"pending_step"`
-	StepDataJson    sql.NullString      `db:"step_data_json" json:"step_data_json"`
 }
 
 type Invitation struct {

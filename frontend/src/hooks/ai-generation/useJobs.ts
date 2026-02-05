@@ -17,17 +17,18 @@ import { invalidateJobQueries } from './shared';
 
 /**
  * Hook to get a generation job by ID.
- * Relies on useJobStream() to invalidate queries via SSE events.
+ * Fetches a generation job by ID with optional polling.
  */
 export function useGetJob(
   jobId: string | undefined,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; refetchInterval?: number | false }
 ) {
   const query = useQuery(
     getJob,
     jobId ? { jobId } : undefined,
     {
       enabled: options?.enabled ?? !!jobId,
+      refetchInterval: options?.refetchInterval,
     }
   );
 
@@ -57,7 +58,7 @@ export function useCancelJob() {
 
 /**
  * Hook to get active generation jobs (queued or processing).
- * Relies on useJobStream() to invalidate queries via SSE events.
+ * Fetches a generation job by ID with optional polling.
  * Only shows top-level jobs (course_outline, full_course) - not individual lesson jobs.
  */
 export function useActiveGenerationJobs() {

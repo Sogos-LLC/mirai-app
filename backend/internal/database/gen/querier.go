@@ -25,7 +25,6 @@ type Querier interface {
 	// Atomic claim: UPDATE with subquery SELECT FOR UPDATE SKIP LOCKED
 	// This ensures only one worker can claim each job
 	ClaimQueuedJob(ctx context.Context) (GenerationJob, error)
-	ClearJobPendingStep(ctx context.Context, id uuid.UUID) error
 	// Count active wizards for a tenant (for analytics)
 	CountActiveWizards(ctx context.Context, tenantID uuid.UUID) (int32, error)
 	CountAuditLogByCourse(ctx context.Context, courseID uuid.UUID) (int64, error)
@@ -219,7 +218,6 @@ type Querier interface {
 	UpdateFolder(ctx context.Context, arg UpdateFolderParams) (Folder, error)
 	UpdateGenerationJob(ctx context.Context, arg UpdateGenerationJobParams) error
 	UpdateInvitation(ctx context.Context, arg UpdateInvitationParams) (Invitation, error)
-	UpdateJobPendingStep(ctx context.Context, arg UpdateJobPendingStepParams) error
 	// Update the content hash for a knowledge source
 	UpdateKnowledgeSourceContentHash(ctx context.Context, arg UpdateKnowledgeSourceContentHashParams) error
 	UpdateKnowledgeSourceStatus(ctx context.Context, arg UpdateKnowledgeSourceStatusParams) (KnowledgeSource, error)

@@ -27,7 +27,6 @@ service AIGenerationService {
   rpc ListGeneratedLessons(ListGeneratedLessonsRequest) returns (ListGeneratedLessonsResponse);
   rpc GenerateComponentImage(GenerateComponentImageRequest) returns (GenerateComponentImageResponse);
   rpc UpdateLessonComponents(UpdateLessonComponentsRequest) returns (UpdateLessonComponentsResponse);
-  rpc SubscribeJobs(SubscribeJobsRequest) returns (stream SubscribeJobsResponse);
   rpc GetCoursePlan(GetCoursePlanRequest) returns (GetCoursePlanResponse);
   rpc ApproveCoursePlan(ApproveCoursePlanRequest) returns (ApproveCoursePlanResponse);
 
@@ -36,6 +35,7 @@ service AIGenerationService {
   rpc ApproveWorkflowStep(ApproveWorkflowStepRequest) returns (ApproveWorkflowStepResponse);
   rpc RejectWorkflowStep(RejectWorkflowStepRequest) returns (RejectWorkflowStepResponse);
   rpc GetGraphVisualization(GetGraphVisualizationRequest) returns (GetGraphVisualizationResponse);
+  rpc GetWorkflowState(GetWorkflowStateRequest) returns (GetWorkflowStateResponse);
 }
 
 // StoredWizardData represents wizard selections persisted with the course.
@@ -161,15 +161,6 @@ message UpdateLessonComponentsResponse {
   GeneratedLesson lesson = 1;
 }
 
-message SubscribeJobsRequest {}
-
-message SubscribeJobsResponse {
-  JobEventType event_type = 1;
-  GenerationJob job = 2;
-  optional WorkflowStepType pending_step = 3;
-  optional string step_data_json = 4;
-}
-
 // Course Plan RPCs
 message GetCoursePlanRequest {
   string course_id = 1;
@@ -229,4 +220,16 @@ message GetGraphVisualizationRequest {
 message GetGraphVisualizationResponse {
   string mermaid_code = 1;
   string current_node = 2;
+}
+
+message GetWorkflowStateRequest {
+  string job_id = 1;
+}
+
+message GetWorkflowStateResponse {
+  string status = 1;
+  string current_step = 2;
+  string step_data_json = 3;
+  int32 progress_percent = 4;
+  string progress_message = 5;
 }

@@ -7,19 +7,17 @@ import { fromPromise } from 'xstate';
 import { ArrowLeft, Sparkles, Check, RotateCcw, Loader2 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
 
-import { JobEventType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import {
   courseCreationMachine,
-  parseStepData,
   getWorkflowStepLabel,
 } from '@/machines/courseCreationMachine';
 import {
   useStartCourseCreation,
   useApproveWorkflowStep,
   useRejectWorkflowStep,
+  useWorkflowState,
 } from '@/hooks/useCourseCreation';
 import { useCreateCourse } from '@/hooks/useCourses';
-import { useJobStream } from '@/hooks/useJobStream';
 import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
 import { GenerationJobStatus } from '@/gen/mirai/v1/ai_generation_types_pb';
 import dynamic from 'next/dynamic';
@@ -92,50 +90,20 @@ export default function CourseWizardPage() {
     });
   }, [activeJob, state, send]);
 
-  // SSE stream for real-time job events
-  const { lastEvent } = useJobStream();
+  // Derive active state for polling
+  const isIdle = state.matches('idle');
+  const isCompleted = state.matches('completed');
+  const isFailed = state.matches('failed');
+  const isActive = !isIdle && !isCompleted && !isFailed;
 
-  // Bridge SSE events to XState machine
+  // Poll Temporal workflow state (replaces SSE stream)
+  const { state: workflowState } = useWorkflowState(state.context.jobId, isActive);
+
+  // Bridge polling state to XState machine
   useEffect(() => {
-    if (!lastEvent || !state.context.jobId) return;
-
-    const { eventType, job, pendingStep, stepDataJson } = lastEvent;
-
-    // Only handle events for our job
-    if (job?.id && job.id !== state.context.jobId) return;
-
-    switch (eventType) {
-      case JobEventType.AWAITING_APPROVAL:
-        if (pendingStep) {
-          send({
-            type: 'AWAITING_APPROVAL',
-            pendingStep,
-            stepData: parseStepData(stepDataJson),
-            job,
-          });
-        }
-        break;
-
-      case JobEventType.UPDATED:
-        if (job) {
-          send({ type: 'JOB_UPDATED', job });
-        }
-        break;
-
-      case JobEventType.COMPLETED:
-        if (job) {
-          send({ type: 'JOB_COMPLETED', job });
-        }
-        break;
-
-      case JobEventType.FAILED:
-      case JobEventType.CANCELLED:
-        if (job) {
-          send({ type: 'JOB_FAILED', job });
-        }
-        break;
-    }
-  }, [lastEvent, state.context.jobId, send]);
+    if (!workflowState) return;
+    send({ type: 'STATE_UPDATE', state: workflowState });
+  }, [workflowState, send]);
 
   // Start the workflow: create a course record, then start the Temporal workflow
   const handleStart = useCallback(async () => {
@@ -190,13 +158,9 @@ export default function CourseWizardPage() {
     setFeedback('');
   }, [feedback, send]);
 
-  const isIdle = state.matches('idle');
   const isProcessing = state.matches('processing');
   const isAwaitingApproval = state.matches('awaitingApproval');
   const isSendingSignal = state.matches('sendingApproval') || state.matches('sendingRejection');
-  const isCompleted = state.matches('completed');
-  const isFailed = state.matches('failed');
-  const isActive = !isIdle && !isCompleted && !isFailed;
 
   return (
     <div className="min-h-[calc(100vh-8rem)]">

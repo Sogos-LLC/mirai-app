@@ -12,15 +12,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 )
 
-// publishJobEvent publishes a job event for real-time streaming.
-func (s *AIGenerationService) publishJobEvent(ctx context.Context, eventType string, job *entity.GenerationJob) {
-	if s.jobEventPublisher == nil {
-		return
-	}
-	_ = s.jobEventPublisher.PublishJobEvent(ctx, job.CreatedByUserID, eventType, job)
-}
-
-// failJob marks a job as failed and publishes the event.
+// failJob marks a job as failed.
 func (s *AIGenerationService) failJob(ctx context.Context, job *entity.GenerationJob, errMsg string) error {
 	job.Status = valueobject.GenerationJobStatusFailed
 	job.ErrorMessage = &errMsg
@@ -32,7 +24,6 @@ func (s *AIGenerationService) failJob(ctx context.Context, job *entity.Generatio
 		return err
 	}
 
-	s.publishJobEvent(ctx, "failed", job)
 	return nil
 }
 
@@ -87,7 +78,6 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	s.publishJobEvent(ctx, "created", job)
 	log.Info("course creation job created", "jobID", job.ID)
 
 	// Build RAG filters
@@ -123,7 +113,7 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 	return &StartCourseCreationResult{Job: job}, nil
 }
 
-// StepApproval is the signal payload for approving/rejecting a workflow step.
+// StepApproval is the update payload for approving/rejecting a workflow step.
 type StepApproval struct {
 	Step          string            `json:"step"`
 	Approved      bool              `json:"approved"`
@@ -132,7 +122,7 @@ type StepApproval struct {
 	Modifications map[string]string `json:"modifications"`
 }
 
-// ApproveWorkflowStep sends an approval signal to a running course creation workflow.
+// ApproveWorkflowStep sends an approval update to a running course creation workflow.
 func (s *AIGenerationService) ApproveWorkflowStep(ctx context.Context, kratosID uuid.UUID, jobID uuid.UUID, step string, selectedIDs []string, modifications map[string]string) error {
 	log := s.logger.With("kratosID", kratosID, "jobID", jobID, "step", step)
 
@@ -149,8 +139,8 @@ func (s *AIGenerationService) ApproveWorkflowStep(ctx context.Context, kratosID 
 		Modifications: modifications,
 	}
 
-	if err := s.workflowStarter.SignalWorkflow(ctx, workflowID, "approve_step", approval); err != nil {
-		log.Error("failed to signal workflow approval", "error", err)
+	if err := s.workflowStarter.UpdateWorkflow(ctx, workflowID, "approve_step", approval); err != nil {
+		log.Error("failed to send workflow approval update", "error", err)
 		return domainerrors.ErrInternal.WithMessage("failed to approve workflow step")
 	}
 
@@ -158,7 +148,7 @@ func (s *AIGenerationService) ApproveWorkflowStep(ctx context.Context, kratosID 
 	return nil
 }
 
-// RejectWorkflowStep sends a rejection signal to a running course creation workflow.
+// RejectWorkflowStep sends a rejection update to a running course creation workflow.
 func (s *AIGenerationService) RejectWorkflowStep(ctx context.Context, kratosID uuid.UUID, jobID uuid.UUID, step string, feedback string) error {
 	log := s.logger.With("kratosID", kratosID, "jobID", jobID, "step", step)
 
@@ -174,11 +164,81 @@ func (s *AIGenerationService) RejectWorkflowStep(ctx context.Context, kratosID u
 		Feedback: feedback,
 	}
 
-	if err := s.workflowStarter.SignalWorkflow(ctx, workflowID, "reject_step", rejection); err != nil {
-		log.Error("failed to signal workflow rejection", "error", err)
+	if err := s.workflowStarter.UpdateWorkflow(ctx, workflowID, "reject_step", rejection); err != nil {
+		log.Error("failed to send workflow rejection update", "error", err)
 		return domainerrors.ErrInternal.WithMessage("failed to reject workflow step")
 	}
 
 	log.Info("workflow step rejected")
 	return nil
+}
+
+// WorkflowState represents the current state of a course creation workflow.
+type WorkflowState struct {
+	Status          string
+	CurrentStep     string
+	StepDataJSON    string
+	ProgressPercent int32
+	ProgressMessage string
+}
+
+// GetWorkflowState queries the Temporal workflow for its current state.
+// Falls back to the DB job record if the workflow is not running.
+func (s *AIGenerationService) GetWorkflowState(ctx context.Context, kratosID uuid.UUID, jobID uuid.UUID) (*WorkflowState, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	workflowID := fmt.Sprintf("course-creation-%s", jobID.String())
+
+	// Try to query the Temporal workflow
+	result, err := s.workflowStarter.QueryWorkflow(ctx, workflowID, "get_state")
+	if err == nil && result != nil {
+		state := &WorkflowState{}
+
+		if v, ok := result["status"].(string); ok {
+			state.Status = v
+		}
+		if v, ok := result["current_step"].(string); ok {
+			state.CurrentStep = v
+		}
+		if v, ok := result["step_data_json"].(string); ok {
+			state.StepDataJSON = v
+		}
+		if v, ok := result["progress_percent"].(float64); ok {
+			state.ProgressPercent = int32(v)
+		}
+		if v, ok := result["progress_message"].(string); ok {
+			state.ProgressMessage = v
+		}
+
+		return state, nil
+	}
+
+	// Fallback: read from DB job record
+	job, err := s.jobRepo.GetByID(ctx, jobID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	state := &WorkflowState{
+		ProgressPercent: job.ProgressPercent,
+	}
+	if job.ProgressMessage != nil {
+		state.ProgressMessage = *job.ProgressMessage
+	}
+
+	switch job.Status {
+	case valueobject.GenerationJobStatusCompleted:
+		state.Status = "completed"
+	case valueobject.GenerationJobStatusFailed:
+		state.Status = "failed"
+	case valueobject.GenerationJobStatusAwaitingApproval:
+		state.Status = "awaiting_approval"
+	default:
+		state.Status = "processing"
+	}
+
+	return state, nil
 }

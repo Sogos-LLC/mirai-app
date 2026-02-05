@@ -79,12 +79,6 @@ type GenerationJobRepository interface {
 	// This is the preferred method as it ensures the status update is inside the atomic lock.
 	// Returns nil if parent was already finalized or not found.
 	FinalizeParentJob(ctx context.Context, parentID uuid.UUID, completedStatus, failedStatus string, progressMessage string) (*ParentJobFinalizationResult, error)
-
-	// UpdatePendingStep updates the job's status and persists pending step data for workflow resumption.
-	UpdatePendingStep(ctx context.Context, id uuid.UUID, status string, pendingStep *int32, stepDataJSON *string) error
-
-	// ClearPendingStep clears the pending step fields after a step is approved/rejected.
-	ClearPendingStep(ctx context.Context, id uuid.UUID) error
 }
 
 // ParentJobFinalizationResult contains the result of trying to finalize a parent job.

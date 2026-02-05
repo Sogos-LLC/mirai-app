@@ -341,10 +341,6 @@ func main() {
 			logger,
 		)
 
-		// Set up job event publisher for real-time streaming
-		jobEventAdapter := service.NewJobEventAdapter(notificationPubSub, logger)
-		aiGenerationService.SetJobEventPublisher(jobEventAdapter)
-
 		// Set up knowledge settings provider for tenant-level configuration
 		aiGenerationService.SetKnowledgeSettingsProvider(tenantSettingsService)
 
@@ -365,11 +361,10 @@ func main() {
 	// ---------------------------------------------------------------------------
 
 	if temporalClient != nil {
-		// GoActivities: database, storage, event publishing, API key decryption
+		// GoActivities: database, storage, API key decryption
 		goActivities := &activities.GoActivities{
 			JobRepo:        generationJobRepo,
 			ContentStorage: baseStorage,
-			EventPublisher: temporalinfra.NewPubSubJobEventPublisher(notificationPubSub, generationJobRepo),
 			Logger:         slogLogger,
 		}
 

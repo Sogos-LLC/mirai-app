@@ -37,7 +37,8 @@ type CourseCreationInput struct {
 type WorkflowStarter interface {
 	StartCourseCreation(ctx context.Context, input interface{}) (string, error)
 	StartCourseExport(ctx context.Context, exportID, tenantID string) (string, error)
-	SignalWorkflow(ctx context.Context, workflowID, signalName string, payload interface{}) error
+	QueryWorkflow(ctx context.Context, workflowID, queryType string) (map[string]interface{}, error)
+	UpdateWorkflow(ctx context.Context, workflowID, updateName string, args interface{}) error
 	CancelWorkflow(ctx context.Context, workflowID, runID string) error
 }
 
@@ -45,11 +46,6 @@ type WorkflowStarter interface {
 type ImageStorage interface {
 	PutContent(ctx context.Context, path string, content []byte, contentType string) error
 	GenerateDownloadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
-}
-
-// JobEventPublisher publishes real-time job events via pub/sub.
-type JobEventPublisher interface {
-	PublishJobEvent(ctx context.Context, userID uuid.UUID, eventType string, job *entity.GenerationJob) error
 }
 
 // KnowledgeSettingsProvider provides access to tenant knowledge settings.
@@ -72,7 +68,6 @@ type AIGenerationService struct {
 	workflowStarter          WorkflowStarter
 	imageStorage             ImageStorage
 	contentStorage           *storage.TenantAwareStorage
-	jobEventPublisher        JobEventPublisher
 	knowledgeSettingsProvider KnowledgeSettingsProvider // For tenant knowledge settings
 	logger                   service.Logger
 }
@@ -98,11 +93,6 @@ func NewAIGenerationService(
 		contentStorage:    contentStorage,
 		logger:            logger,
 	}
-}
-
-// SetJobEventPublisher sets the optional job event publisher for real-time streaming.
-func (s *AIGenerationService) SetJobEventPublisher(publisher JobEventPublisher) {
-	s.jobEventPublisher = publisher
 }
 
 // SetKnowledgeSettingsProvider sets the provider for tenant knowledge settings.
