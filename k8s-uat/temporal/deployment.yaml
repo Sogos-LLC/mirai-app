@@ -48,6 +48,8 @@ spec:
           value: "false"
         - name: TEMPORAL_ADDRESS
           value: "0.0.0.0:7233"
+        - name: TEMPORAL_CLI_ADDRESS
+          value: "127.0.0.1:7233"
         - name: LOG_LEVEL
           value: "info"
         resources:
