@@ -21,6 +21,9 @@ import { BASE_URL, AUTH } from './e2e/config';
  *   npx playwright test --ui                      # Run with Playwright UI
  */
 export default defineConfig({
+  // Programmatic login — refreshes auth state before all tests
+  globalSetup: './e2e/global-setup.ts',
+
   testDir: './e2e/tests',
 
   // Run tests sequentially - auth state is shared
@@ -59,8 +62,8 @@ export default defineConfig({
   // Output directory for test artifacts
   outputDir: 'playwright/test-results',
 
-  // 10 minute timeout - wizard with AI generation can take time
-  timeout: 600000,
+  // 5 min max — full wizard is ~8 steps at 30s SLA each
+  timeout: 300000,
 
   projects: [
     {

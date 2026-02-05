@@ -22,19 +22,22 @@ export const PATHS = {
 } as const;
 
 // ===== Timeouts (in milliseconds) =====
+// Enterprise SaaS SLA: no user-facing wait > 30s
 export const TIMEOUTS = {
   /** Default page load timeout */
-  pageLoad: 15000,
-  /** AI generation steps (~7-20 seconds, use 25s for safety) */
-  aiGeneration: 25000,
-  /** Background job polling (outline generation) */
+  pageLoad: 10000,
+  /** AI generation steps — each must complete within 30s (enterprise SLA) */
+  aiGeneration: 30000,
+  /** Background job polling (legacy — non-wizard flows) */
   backgroundJob: 180000,
   /** Short wait for UI transitions */
   uiTransition: 2000,
   /** Element visibility check */
-  elementVisible: 10000,
+  elementVisible: 5000,
   /** Button to become enabled */
-  buttonEnabled: 30000,
+  buttonEnabled: 5000,
+  /** Navigation after click (e.g. wizard → editor redirect) */
+  navigation: 10000,
 } as const;
 
 // ===== Polling Configuration =====

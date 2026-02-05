@@ -9,6 +9,7 @@ import (
 	temporalclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/interceptor"
 
+	"github.com/sogos/mirai-backend/internal/application/service"
 	"github.com/sogos/mirai-backend/internal/application/workflow"
 	"github.com/sogos/mirai-backend/internal/application/workflow/activities"
 )
@@ -195,26 +196,10 @@ func (s *workflowStarter) UpdateWorkflow(ctx context.Context, workflowID, update
 	return nil
 }
 
-// CourseCreationInput is the input for the unified Python CourseCreationWorkflow.
-// Defined here (not in workflow package) because the workflow runs on the Python ai-tasks queue.
-type CourseCreationInput struct {
-	JobID                string            `json:"job_id"`
-	TenantID             string            `json:"tenant_id"`
-	CourseID             string            `json:"course_id"`
-	UserID               string            `json:"user_id"`
-	CourseName           string            `json:"course_name"`
-	DesiredOutcomes      string            `json:"desired_outcomes"`
-	AdditionalContext    string            `json:"additional_context"`
-	InternalDataOnly     bool              `json:"internal_data_only"`
-	SelectedTeamDocIDs   []string          `json:"selected_team_doc_ids"`
-	SelectedGlobalDocIDs []string          `json:"selected_global_doc_ids"`
-	RAGFilters           map[string]string `json:"rag_filters"`
-}
-
 const aiTaskQueue = "ai-tasks"
 
 func (s *workflowStarter) StartCourseCreation(ctx context.Context, input interface{}) (string, error) {
-	ccInput, ok := input.(CourseCreationInput)
+	ccInput, ok := input.(service.CourseCreationInput)
 	if !ok {
 		return "", fmt.Errorf("invalid input type for course creation workflow")
 	}
