@@ -1,0 +1,80 @@
+# AI Service - Temporal activity worker for AI generation
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+  namespace: mirai-uat
+  labels:
+    app: ai-service
+    environment: uat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-service
+  template:
+    metadata:
+      labels:
+        app: ai-service
+        environment: uat
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: ai-service
+        image: ghcr.io/sogos-llc/mirai-app/ai-service:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: TEMPORAL_ADDRESS
+          value: "temporal.mirai-uat.svc.cluster.local:7233"
+        - name: TEMPORAL_NAMESPACE
+          value: "default"
+        - name: TEMPORAL_TASK_QUEUE
+          value: "ai-tasks"
+        - name: QDRANT_URL
+          value: "http://qdrant.mirai-uat.svc.cluster.local:6333"
+        - name: EMBEDDING_URL
+          value: "http://embedding.mirai-uat.svc.cluster.local:8080"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: LOGFIRE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: logfire-secret
+              key: token
+              optional: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault

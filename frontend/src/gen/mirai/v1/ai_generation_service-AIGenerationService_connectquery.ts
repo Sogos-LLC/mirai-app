@@ -73,3 +73,25 @@ export const getCoursePlan = AIGenerationService.method.getCoursePlan;
  * @generated from rpc mirai.v1.AIGenerationService.ApproveCoursePlan
  */
 export const approveCoursePlan = AIGenerationService.method.approveCoursePlan;
+
+/**
+ * Unified course creation workflow (Phase 7)
+ *
+ * @generated from rpc mirai.v1.AIGenerationService.StartCourseCreation
+ */
+export const startCourseCreation = AIGenerationService.method.startCourseCreation;
+
+/**
+ * @generated from rpc mirai.v1.AIGenerationService.ApproveWorkflowStep
+ */
+export const approveWorkflowStep = AIGenerationService.method.approveWorkflowStep;
+
+/**
+ * @generated from rpc mirai.v1.AIGenerationService.RejectWorkflowStep
+ */
+export const rejectWorkflowStep = AIGenerationService.method.rejectWorkflowStep;
+
+/**
+ * @generated from rpc mirai.v1.AIGenerationService.GetGraphVisualization
+ */
+export const getGraphVisualization = AIGenerationService.method.getGraphVisualization;

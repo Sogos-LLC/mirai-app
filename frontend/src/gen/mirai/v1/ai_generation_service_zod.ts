@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { AudiencePersonaSchema, SMEPersonaSchema, ToneOptionSchema } from "./course_wizard_zod";
 import { ComponentAlignmentTargetsSchema, CourseGenerationInputSchema, LessonComponentSchema, OutlineSectionSchema } from "./ai_generation_types_zod";
-import { GenerationJobStatus, GenerationJobType } from "./ai_generation_types_pb";
+import { GenerationJobStatus, GenerationJobType, WorkflowStepType } from "./ai_generation_types_pb";
 
 /**
  * Zod schema for StoredWizardData
@@ -185,4 +185,55 @@ export const ApproveCoursePlanRequestSchema = z.object({
 });
 
 export type ApproveCoursePlanRequest = z.infer<typeof ApproveCoursePlanRequestSchema>;
+
+/**
+ * Zod schema for StartCourseCreationRequest
+ * @generated from message mirai.v1.StartCourseCreationRequest
+ */
+export const StartCourseCreationRequestSchema = z.object({
+  courseId: z.string(),
+  courseName: z.string(),
+  desiredOutcomes: z.string().optional(),
+  additionalContext: z.string().optional(),
+  internalDataOnly: z.boolean(),
+  selectedTeamDocIds: z.array(z.string()),
+  selectedGlobalDocIds: z.array(z.string()),
+});
+
+export type StartCourseCreationRequest = z.infer<typeof StartCourseCreationRequestSchema>;
+
+/**
+ * Zod schema for ApproveWorkflowStepRequest
+ * @generated from message mirai.v1.ApproveWorkflowStepRequest
+ */
+export const ApproveWorkflowStepRequestSchema = z.object({
+  jobId: z.string(),
+  step: z.nativeEnum(WorkflowStepType),
+  selectedIds: z.array(z.string()),
+  modifications: z.record(z.string(), z.string()),
+});
+
+export type ApproveWorkflowStepRequest = z.infer<typeof ApproveWorkflowStepRequestSchema>;
+
+/**
+ * Zod schema for RejectWorkflowStepRequest
+ * @generated from message mirai.v1.RejectWorkflowStepRequest
+ */
+export const RejectWorkflowStepRequestSchema = z.object({
+  jobId: z.string(),
+  step: z.nativeEnum(WorkflowStepType),
+  feedback: z.string(),
+});
+
+export type RejectWorkflowStepRequest = z.infer<typeof RejectWorkflowStepRequestSchema>;
+
+/**
+ * Zod schema for GetGraphVisualizationRequest
+ * @generated from message mirai.v1.GetGraphVisualizationRequest
+ */
+export const GetGraphVisualizationRequestSchema = z.object({
+  jobId: z.string(),
+});
+
+export type GetGraphVisualizationRequest = z.infer<typeof GetGraphVisualizationRequestSchema>;
 

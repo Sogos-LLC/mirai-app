@@ -31,7 +31,7 @@ const claimJobByID = `-- name: ClaimJobByID :one
 UPDATE generation_jobs
 SET status = 'processing', started_at = NOW()
 WHERE id = $1 AND status = 'queued'
-RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id
+RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, pending_step, step_data_json
 `
 
 // Claim a specific job by ID, only if queued
@@ -58,6 +58,8 @@ func (q *Queries) ClaimJobByID(ctx context.Context, id uuid.UUID) (GenerationJob
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ParentJobID,
+		&i.PendingStep,
+		&i.StepDataJson,
 	)
 	return i, err
 }
@@ -75,7 +77,7 @@ WHERE id = (
     LIMIT 1
     FOR UPDATE SKIP LOCKED
 )
-RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id
+RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, pending_step, step_data_json
 `
 
 // Atomic claim: UPDATE with subquery SELECT FOR UPDATE SKIP LOCKED
@@ -103,15 +105,28 @@ func (q *Queries) ClaimQueuedJob(ctx context.Context) (GenerationJob, error) {
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ParentJobID,
+		&i.PendingStep,
+		&i.StepDataJson,
 	)
 	return i, err
+}
+
+const clearJobPendingStep = `-- name: ClearJobPendingStep :exec
+UPDATE generation_jobs
+SET pending_step = NULL, step_data_json = NULL
+WHERE id = $1
+`
+
+func (q *Queries) ClearJobPendingStep(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, clearJobPendingStep, id)
+	return err
 }
 
 const createGenerationJob = `-- name: CreateGenerationJob :one
 
 INSERT INTO generation_jobs (tenant_id, type, status, course_id, parent_job_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id
+RETURNING id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, pending_step, step_data_json
 `
 
 type CreateGenerationJobParams struct {
@@ -169,6 +184,8 @@ func (q *Queries) CreateGenerationJob(ctx context.Context, arg CreateGenerationJ
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ParentJobID,
+		&i.PendingStep,
+		&i.StepDataJson,
 	)
 	return i, err
 }
@@ -274,7 +291,7 @@ func (q *Queries) GetChildJobStats(ctx context.Context, parentJobID uuid.NullUUI
 }
 
 const getGenerationJobByID = `-- name: GetGenerationJobByID :one
-SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id FROM generation_jobs WHERE id = $1
+SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, pending_step, step_data_json FROM generation_jobs WHERE id = $1
 `
 
 func (q *Queries) GetGenerationJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error) {
@@ -300,6 +317,8 @@ func (q *Queries) GetGenerationJobByID(ctx context.Context, id uuid.UUID) (Gener
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ParentJobID,
+		&i.PendingStep,
+		&i.StepDataJson,
 	)
 	return i, err
 }
@@ -321,7 +340,7 @@ func (q *Queries) GetParentJobStatus(ctx context.Context, id uuid.UUID) (GetPare
 }
 
 const listGenerationJobs = `-- name: ListGenerationJobs :many
-SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id FROM generation_jobs
+SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, pending_step, step_data_json FROM generation_jobs
 WHERE ($1::text IS NULL OR type::text = $1)
   AND ($2::text IS NULL OR status::text = $2)
   AND ($3::uuid IS NULL OR course_id = $3)
@@ -363,6 +382,8 @@ func (q *Queries) ListGenerationJobs(ctx context.Context, arg ListGenerationJobs
 			&i.StartedAt,
 			&i.CompletedAt,
 			&i.ParentJobID,
+			&i.PendingStep,
+			&i.StepDataJson,
 		); err != nil {
 			return nil, err
 		}
@@ -378,7 +399,7 @@ func (q *Queries) ListGenerationJobs(ctx context.Context, arg ListGenerationJobs
 }
 
 const listGenerationJobsByParentID = `-- name: ListGenerationJobsByParentID :many
-SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id FROM generation_jobs
+SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id, pending_step, step_data_json FROM generation_jobs
 WHERE parent_job_id = $1
 ORDER BY created_at ASC
 `
@@ -412,6 +433,8 @@ func (q *Queries) ListGenerationJobsByParentID(ctx context.Context, parentJobID 
 			&i.StartedAt,
 			&i.CompletedAt,
 			&i.ParentJobID,
+			&i.PendingStep,
+			&i.StepDataJson,
 		); err != nil {
 			return nil, err
 		}
@@ -456,6 +479,29 @@ func (q *Queries) UpdateGenerationJob(ctx context.Context, arg UpdateGenerationJ
 		arg.RetryCount,
 		arg.StartedAt,
 		arg.CompletedAt,
+		arg.ID,
+	)
+	return err
+}
+
+const updateJobPendingStep = `-- name: UpdateJobPendingStep :exec
+UPDATE generation_jobs
+SET status = $1, pending_step = $2, step_data_json = $3
+WHERE id = $4
+`
+
+type UpdateJobPendingStepParams struct {
+	Status       GenerationJobStatus `db:"status" json:"status"`
+	PendingStep  sql.NullInt32       `db:"pending_step" json:"pending_step"`
+	StepDataJson sql.NullString      `db:"step_data_json" json:"step_data_json"`
+	ID           uuid.UUID           `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateJobPendingStep(ctx context.Context, arg UpdateJobPendingStepParams) error {
+	_, err := q.db.ExecContext(ctx, updateJobPendingStep,
+		arg.Status,
+		arg.PendingStep,
+		arg.StepDataJson,
 		arg.ID,
 	)
 	return err

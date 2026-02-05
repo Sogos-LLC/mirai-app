@@ -30,6 +30,12 @@ service AIGenerationService {
   rpc SubscribeJobs(SubscribeJobsRequest) returns (stream SubscribeJobsResponse);
   rpc GetCoursePlan(GetCoursePlanRequest) returns (GetCoursePlanResponse);
   rpc ApproveCoursePlan(ApproveCoursePlanRequest) returns (ApproveCoursePlanResponse);
+
+  // Unified course creation workflow (Phase 7)
+  rpc StartCourseCreation(StartCourseCreationRequest) returns (StartCourseCreationResponse);
+  rpc ApproveWorkflowStep(ApproveWorkflowStepRequest) returns (ApproveWorkflowStepResponse);
+  rpc RejectWorkflowStep(RejectWorkflowStepRequest) returns (RejectWorkflowStepResponse);
+  rpc GetGraphVisualization(GetGraphVisualizationRequest) returns (GetGraphVisualizationResponse);
 }
 
 // StoredWizardData represents wizard selections persisted with the course.
@@ -160,6 +166,8 @@ message SubscribeJobsRequest {}
 message SubscribeJobsResponse {
   JobEventType event_type = 1;
   GenerationJob job = 2;
+  optional WorkflowStepType pending_step = 3;
+  optional string step_data_json = 4;
 }
 
 // Course Plan RPCs
@@ -177,4 +185,48 @@ message ApproveCoursePlanRequest {
 
 message ApproveCoursePlanResponse {
   CoursePlan plan = 1;
+}
+
+// =============================================================================
+// UNIFIED COURSE CREATION (Phase 7)
+// =============================================================================
+
+message StartCourseCreationRequest {
+  string course_id = 1;
+  string course_name = 2;
+  optional string desired_outcomes = 3;
+  optional string additional_context = 4;
+  bool internal_data_only = 5;
+  repeated string selected_team_doc_ids = 6;
+  repeated string selected_global_doc_ids = 7;
+}
+
+message StartCourseCreationResponse {
+  GenerationJob job = 1;
+}
+
+message ApproveWorkflowStepRequest {
+  string job_id = 1;
+  WorkflowStepType step = 2;
+  repeated string selected_ids = 3;
+  map<string, string> modifications = 4;
+}
+
+message ApproveWorkflowStepResponse {}
+
+message RejectWorkflowStepRequest {
+  string job_id = 1;
+  WorkflowStepType step = 2;
+  string feedback = 3;
+}
+
+message RejectWorkflowStepResponse {}
+
+message GetGraphVisualizationRequest {
+  string job_id = 1;
+}
+
+message GetGraphVisualizationResponse {
+  string mermaid_code = 1;
+  string current_node = 2;
 }

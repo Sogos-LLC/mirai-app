@@ -9,17 +9,25 @@ import (
 	"connectrpc.com/connect"
 	"github.com/sogos/mirai-backend/gen/mirai/v1/miraiv1connect"
 	"github.com/sogos/mirai-backend/internal/application/service"
+	"github.com/sogos/mirai-backend/internal/application/workflow/activities"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/infrastructure/cache"
 	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
-	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 )
 
 // StorageAdapter interface for storage operations.
 type StorageAdapter interface {
 	GenerateUploadURL(ctx context.Context, path string, expiry time.Duration) (string, error)
 	PutContent(ctx context.Context, path string, content []byte, contentType string) error
+}
+
+// BackgroundWorkflowStarter starts Temporal workflows for background processing.
+// This is the combined interface used by presentation-layer handlers.
+type BackgroundWorkflowStarter interface {
+	StartKnowledgeIngestion(ctx context.Context, sourceID, tenantID, teamID, filePath string) (string, error)
+	StartFeedbackSync(ctx context.Context, input activities.FeedbackSyncInput) (string, error)
+	StartStripeProvision(ctx context.Context, sessionID, customerID, subscriptionID string) (string, error)
 }
 
 // ServerConfig contains all dependencies needed for the Connect server.
@@ -34,8 +42,7 @@ type ServerConfig struct {
 	CourseExportService   *service.CourseExportService
 	TenantSettingsService *service.TenantSettingsService
 	NotificationService   *service.NotificationService
-	AIGenerationService   *service.AIGenerationService
-	CourseWizardService    *service.CourseWizardService
+	AIGenerationService    *service.AIGenerationService
 	KnowledgeSourceService *service.KnowledgeSourceService
 	TeamKnowledgeService   *service.TeamKnowledgeService
 	CurriculumService      *service.CurriculumService
@@ -47,7 +54,7 @@ type ServerConfig struct {
 	NotificationSubscriber pubsub.Subscriber         // For real-time notification streaming
 	Identity               domainservice.IdentityProvider
 	Payments               domainservice.PaymentProvider
-	WorkerClient           *worker.Client // For enqueueing background tasks
+	WorkflowStarter        BackgroundWorkflowStarter // For starting background workflows
 	Logger                 domainservice.Logger
 	AllowedOrigin          string
 	FrontendURL            string
@@ -145,15 +152,6 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 		mux.Handle(path, handler)
 	}
 
-	// CourseWizardService - AI-guided course creation wizard
-	if cfg.CourseWizardService != nil {
-		path, handler = miraiv1connect.NewCourseWizardServiceHandler(
-			NewCourseWizardServiceServer(cfg.CourseWizardService, cfg.AIGenerationService, cfg.CourseService),
-			interceptors,
-		)
-		mux.Handle(path, handler)
-	}
-
 	// KnowledgeSourceService - RAG knowledge management
 	if cfg.KnowledgeSourceService != nil && cfg.BaseStorage != nil {
 		path, handler = miraiv1connect.NewKnowledgeSourceServiceHandler(
@@ -166,7 +164,7 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	// TeamKnowledgeService - Team-level knowledge management
 	if cfg.TeamKnowledgeService != nil && cfg.TeamService != nil && cfg.BaseStorage != nil {
 		path, handler = miraiv1connect.NewTeamKnowledgeServiceHandler(
-			NewTeamKnowledgeServiceServer(cfg.TeamKnowledgeService, cfg.TeamService, cfg.BaseStorage, cfg.WorkerClient),
+			NewTeamKnowledgeServiceServer(cfg.TeamKnowledgeService, cfg.TeamService, cfg.BaseStorage, cfg.WorkflowStarter),
 			interceptors,
 		)
 		mux.Handle(path, handler)
@@ -182,16 +180,16 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	}
 
 	// FeedbackService - user feedback collection
-	if cfg.UserService != nil && cfg.WorkerClient != nil {
+	if cfg.UserService != nil && cfg.WorkflowStarter != nil {
 		path, handler = miraiv1connect.NewFeedbackServiceHandler(
-			NewFeedbackServiceServer(cfg.UserService, cfg.WorkerClient),
+			NewFeedbackServiceServer(cfg.UserService, cfg.WorkflowStarter),
 			interceptors,
 		)
 		mux.Handle(path, handler)
 	}
 
 	// Add webhook handler (no interceptors - Stripe handles its own auth)
-	webhookHandler := NewWebhookHandler(cfg.BillingService, cfg.PendingRegRepo, cfg.Payments, cfg.WorkerClient, cfg.Logger)
+	webhookHandler := NewWebhookHandler(cfg.BillingService, cfg.PendingRegRepo, cfg.Payments, cfg.WorkflowStarter, cfg.Logger)
 	mux.HandleFunc("/api/v1/billing/webhook", webhookHandler.HandleStripeWebhook)
 
 	// Checkout completion redirect handler

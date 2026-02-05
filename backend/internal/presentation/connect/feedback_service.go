@@ -8,25 +8,29 @@ import (
 	v1 "github.com/sogos/mirai-backend/gen/mirai/v1"
 	"github.com/sogos/mirai-backend/gen/mirai/v1/miraiv1connect"
 	"github.com/sogos/mirai-backend/internal/application/service"
-	"github.com/sogos/mirai-backend/internal/domain/worker"
-	infraworker "github.com/sogos/mirai-backend/internal/infrastructure/worker"
+	"github.com/sogos/mirai-backend/internal/application/workflow/activities"
 )
+
+// FeedbackWorkflowStarter starts feedback sync workflows.
+type FeedbackWorkflowStarter interface {
+	StartFeedbackSync(ctx context.Context, input activities.FeedbackSyncInput) (string, error)
+}
 
 // FeedbackServiceServer implements the FeedbackService Connect handler.
 type FeedbackServiceServer struct {
 	miraiv1connect.UnimplementedFeedbackServiceHandler
-	userService  *service.UserService
-	workerClient *infraworker.Client
+	userService     *service.UserService
+	workflowStarter FeedbackWorkflowStarter
 }
 
 // NewFeedbackServiceServer creates a new FeedbackServiceServer.
 func NewFeedbackServiceServer(
 	userService *service.UserService,
-	workerClient *infraworker.Client,
+	workflowStarter FeedbackWorkflowStarter,
 ) *FeedbackServiceServer {
 	return &FeedbackServiceServer{
-		userService:  userService,
-		workerClient: workerClient,
+		userService:     userService,
+		workflowStarter: workflowStarter,
 	}
 }
 
@@ -63,8 +67,8 @@ func (s *FeedbackServiceServer) SubmitFeedback(
 	// Map proto feedback type to string
 	feedbackType := feedbackTypeToString(req.Msg.Type)
 
-	// Enqueue feedback sync job
-	payload := worker.FeedbackSyncPayload{
+	// Start feedback sync workflow
+	input := activities.FeedbackSyncInput{
 		UserID:       userResult.User.ID.String(),
 		UserEmail:    userResult.User.Email,
 		UserName:     userName,
@@ -74,7 +78,7 @@ func (s *FeedbackServiceServer) SubmitFeedback(
 		UserAgent:    req.Msg.UserAgent,
 	}
 
-	if err := s.workerClient.EnqueueFeedbackSync(payload); err != nil {
+	if _, err := s.workflowStarter.StartFeedbackSync(ctx, input); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 

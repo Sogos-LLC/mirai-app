@@ -6,6 +6,7 @@ import { transport } from '@/lib/connect';
 import {
   JobEventType,
   type GenerationJob,
+  type WorkflowStepType,
 } from '@/gen/mirai/v1/ai_generation_types_pb';
 import {
   AIGenerationService,
@@ -38,10 +39,12 @@ export function useJobStream() {
   const [lastEvent, setLastEvent] = useState<{
     eventType: JobEventType;
     job: GenerationJob | undefined;
+    pendingStep?: WorkflowStepType;
+    stepDataJson?: string;
   } | null>(null);
 
   const handleEvent = useCallback(
-    (eventType: JobEventType | string, job: GenerationJob | undefined) => {
+    (eventType: JobEventType | string, job: GenerationJob | undefined, pendingStep?: WorkflowStepType, stepDataJson?: string) => {
       // Normalize event type - protojson may send as string or number
       const normalizedType = typeof eventType === 'string'
         ? JobEventType[eventType.replace('JOB_EVENT_TYPE_', '') as keyof typeof JobEventType]
@@ -56,12 +59,24 @@ export function useJobStream() {
       }
 
       // Track the last meaningful event for subscribers
-      setLastEvent({ eventType: normalizedType, job });
+      setLastEvent({ eventType: normalizedType, job, pendingStep, stepDataJson });
 
       switch (normalizedType) {
         case JobEventType.CREATED:
         case JobEventType.UPDATED:
           // Invalidate job queries to show new/updated jobs
+          queryClient.invalidateQueries({
+            queryKey: createConnectQueryKey({ schema: listJobs, cardinality: undefined }),
+          });
+          if (job?.id) {
+            queryClient.invalidateQueries({
+              queryKey: createConnectQueryKey({ schema: getJob, cardinality: undefined }),
+            });
+          }
+          break;
+
+        case JobEventType.AWAITING_APPROVAL:
+          // Workflow is paused waiting for user approval
           queryClient.invalidateQueries({
             queryKey: createConnectQueryKey({ schema: listJobs, cardinality: undefined }),
           });
@@ -149,7 +164,7 @@ export function useJobStream() {
       for await (const event of client.subscribeJobs(request, {
         signal: abortControllerRef.current.signal,
       })) {
-        handleEvent(event.eventType, event.job);
+        handleEvent(event.eventType, event.job, event.pendingStep, event.stepDataJson);
       }
 
       // Stream ended normally (server closed it)

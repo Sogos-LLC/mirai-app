@@ -17,9 +17,9 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
 
-// ExportTaskEnqueuer enqueues export background tasks.
-type ExportTaskEnqueuer interface {
-	EnqueueCourseExport(exportID, tenantID string) error
+// ExportWorkflowStarter starts export workflows.
+type ExportWorkflowStarter interface {
+	StartCourseExport(ctx context.Context, exportID, tenantID string) (string, error)
 }
 
 // ExportNotifier sends notifications for export events.
@@ -44,7 +44,7 @@ type CourseExportService struct {
 	scormPackager  *scorm.Packager
 	storage        ExportStorage
 	contentStorage *storage.TenantAwareStorage
-	taskEnqueuer   ExportTaskEnqueuer
+	workflowStarter ExportWorkflowStarter
 	notifier       ExportNotifier
 	logger         service.Logger
 }
@@ -57,7 +57,7 @@ func NewCourseExportService(
 	scormPackager *scorm.Packager,
 	storage ExportStorage,
 	contentStorage *storage.TenantAwareStorage,
-	taskEnqueuer ExportTaskEnqueuer,
+	workflowStarter ExportWorkflowStarter,
 	notifier ExportNotifier,
 	logger service.Logger,
 ) *CourseExportService {
@@ -68,7 +68,7 @@ func NewCourseExportService(
 		scormPackager:  scormPackager,
 		storage:        storage,
 		contentStorage: contentStorage,
-		taskEnqueuer:   taskEnqueuer,
+		workflowStarter: workflowStarter,
 		notifier:       notifier,
 		logger:         logger,
 	}
@@ -134,10 +134,10 @@ func (s *CourseExportService) ExportCourse(ctx context.Context, kratosID uuid.UU
 
 	log.Info("export job created", "exportID", export.ID)
 
-	// Push: Enqueue for immediate processing (if task enqueuer available)
-	if s.taskEnqueuer != nil {
-		if err := s.taskEnqueuer.EnqueueCourseExport(export.ID.String(), export.TenantID.String()); err != nil {
-			log.Warn("failed to enqueue export job, will be picked up by poll", "error", err)
+	// Start the Temporal export workflow
+	if s.workflowStarter != nil {
+		if _, err := s.workflowStarter.StartCourseExport(ctx, export.ID.String(), export.TenantID.String()); err != nil {
+			log.Error("failed to start export workflow", "error", err)
 		}
 	}
 

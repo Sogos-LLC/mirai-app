@@ -33,12 +33,13 @@ func ParseAIProvider(str string) (AIProvider, error) {
 type GenerationJobType string
 
 const (
-	GenerationJobTypeSMEIngestion   GenerationJobType = "sme_ingestion"
-	GenerationJobTypeCoursePlanning GenerationJobType = "course_planning"
-	GenerationJobTypeCourseOutline  GenerationJobType = "course_outline"
-	GenerationJobTypeLessonContent  GenerationJobType = "lesson_content"
-	GenerationJobTypeComponentRegen GenerationJobType = "component_regen"
-	GenerationJobTypeFullCourse     GenerationJobType = "full_course"
+	GenerationJobTypeSMEIngestion    GenerationJobType = "sme_ingestion"
+	GenerationJobTypeCoursePlanning  GenerationJobType = "course_planning"
+	GenerationJobTypeCourseOutline   GenerationJobType = "course_outline"
+	GenerationJobTypeLessonContent   GenerationJobType = "lesson_content"
+	GenerationJobTypeComponentRegen  GenerationJobType = "component_regen"
+	GenerationJobTypeFullCourse      GenerationJobType = "full_course"
+	GenerationJobTypeCourseCreation  GenerationJobType = "course_creation"
 )
 
 func (t GenerationJobType) String() string {
@@ -49,7 +50,8 @@ func (t GenerationJobType) IsValid() bool {
 	switch t {
 	case GenerationJobTypeSMEIngestion, GenerationJobTypeCoursePlanning,
 		GenerationJobTypeCourseOutline, GenerationJobTypeLessonContent,
-		GenerationJobTypeComponentRegen, GenerationJobTypeFullCourse:
+		GenerationJobTypeComponentRegen, GenerationJobTypeFullCourse,
+		GenerationJobTypeCourseCreation:
 		return true
 	}
 	return false
@@ -67,11 +69,12 @@ func ParseGenerationJobType(str string) (GenerationJobType, error) {
 type GenerationJobStatus string
 
 const (
-	GenerationJobStatusQueued     GenerationJobStatus = "queued"
-	GenerationJobStatusProcessing GenerationJobStatus = "processing"
-	GenerationJobStatusCompleted  GenerationJobStatus = "completed"
-	GenerationJobStatusFailed     GenerationJobStatus = "failed"
-	GenerationJobStatusCancelled  GenerationJobStatus = "cancelled"
+	GenerationJobStatusQueued            GenerationJobStatus = "queued"
+	GenerationJobStatusProcessing        GenerationJobStatus = "processing"
+	GenerationJobStatusCompleted         GenerationJobStatus = "completed"
+	GenerationJobStatusFailed            GenerationJobStatus = "failed"
+	GenerationJobStatusCancelled         GenerationJobStatus = "cancelled"
+	GenerationJobStatusAwaitingApproval  GenerationJobStatus = "awaiting_approval"
 )
 
 func (s GenerationJobStatus) String() string {
@@ -81,7 +84,8 @@ func (s GenerationJobStatus) String() string {
 func (s GenerationJobStatus) IsValid() bool {
 	switch s {
 	case GenerationJobStatusQueued, GenerationJobStatusProcessing,
-		GenerationJobStatusCompleted, GenerationJobStatusFailed, GenerationJobStatusCancelled:
+		GenerationJobStatusCompleted, GenerationJobStatusFailed, GenerationJobStatusCancelled,
+		GenerationJobStatusAwaitingApproval:
 		return true
 	}
 	return false

@@ -74,6 +74,13 @@ type Config struct {
 	// Twenty CRM
 	TwentyAPIURL string // Twenty CRM URL (e.g., "https://crm.sogos.io")
 	TwentyAPIKey string // Twenty CRM API key
+
+	// Temporal
+	TemporalAddress   string // Temporal server address (e.g., "temporal:7233")
+	TemporalNamespace string // Temporal namespace (e.g., "mirai")
+
+	// Observability
+	LogfireToken string // Logfire API token for OTLP trace export (optional)
 }
 
 // Load loads configuration from environment variables with environment-aware validation.
@@ -147,6 +154,11 @@ func Load() (*Config, error) {
 		// Twenty CRM
 		TwentyAPIURL: getEnv("TWENTY_API_URL", ""),
 		TwentyAPIKey: getEnv("TWENTY_API_KEY", ""),
+		// Temporal
+		TemporalAddress:   getEnv("TEMPORAL_ADDRESS", ""),
+		TemporalNamespace: getEnv("TEMPORAL_NAMESPACE", "default"),
+		// Observability
+		LogfireToken: getEnv("LOGFIRE_TOKEN", ""),
 	}
 
 	// Step 4: Validate configuration matches the detected environment

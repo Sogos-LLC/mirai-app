@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/sogos/mirai-backend/internal/application/service/generation"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
@@ -14,30 +13,32 @@ import (
 )
 
 // AIProviderFactory creates AIProvider instances per-tenant.
+// Used for synchronous image generation only.
 type AIProviderFactory interface {
 	GetProvider(ctx context.Context, tenantID uuid.UUID) (service.AIProvider, error)
 }
 
-// JobNotifier sends notifications about generation job status changes.
-type JobNotifier interface {
-	NotifyJobProgress(ctx context.Context, userID uuid.UUID, jobID uuid.UUID, jobType string, status string, progress int) error
+// CourseCreationInput is the input for the unified Python CourseCreationWorkflow.
+type CourseCreationInput struct {
+	JobID                string            `json:"job_id"`
+	TenantID             string            `json:"tenant_id"`
+	CourseID             string            `json:"course_id"`
+	UserID               string            `json:"user_id"`
+	CourseName           string            `json:"course_name"`
+	DesiredOutcomes      string            `json:"desired_outcomes"`
+	AdditionalContext    string            `json:"additional_context"`
+	InternalDataOnly     bool              `json:"internal_data_only"`
+	SelectedTeamDocIDs   []string          `json:"selected_team_doc_ids"`
+	SelectedGlobalDocIDs []string          `json:"selected_global_doc_ids"`
+	RAGFilters           map[string]string `json:"rag_filters"`
 }
 
-// CourseCompletionNotifier sends notifications when full course generation completes.
-type CourseCompletionNotifier interface {
-	NotifyCourseComplete(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string) error
-	NotifyCourseFailed(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string, errorMsg string) error
-}
-
-// OutlineCompletionNotifier sends notifications when outline generation completes.
-type OutlineCompletionNotifier interface {
-	NotifyOutlineReady(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string, sectionCount, lessonCount int) error
-	NotifyOutlineFailed(ctx context.Context, userID uuid.UUID, courseID uuid.UUID, courseTitle string, errorMsg string) error
-}
-
-// TaskEnqueuer enqueues background tasks for processing.
-type TaskEnqueuer interface {
-	EnqueueAIGeneration(jobID, jobType string) error
+// WorkflowStarter starts Temporal workflows for async processing.
+type WorkflowStarter interface {
+	StartCourseCreation(ctx context.Context, input interface{}) (string, error)
+	StartCourseExport(ctx context.Context, exportID, tenantID string) (string, error)
+	SignalWorkflow(ctx context.Context, workflowID, signalName string, payload interface{}) error
+	CancelWorkflow(ctx context.Context, workflowID, runID string) error
 }
 
 // ImageStorage abstracts image storage operations.
@@ -51,23 +52,6 @@ type JobEventPublisher interface {
 	PublishJobEvent(ctx context.Context, userID uuid.UUID, eventType string, job *entity.GenerationJob) error
 }
 
-// KnowledgeSearcher provides RAG search capabilities for internal data only mode.
-type KnowledgeSearcher interface {
-	SearchKnowledge(ctx context.Context, courseID uuid.UUID, query string, topK int) ([]*entity.RetrievedChunk, error)
-	ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeSource, error)
-}
-
-// TeamKnowledgeSearcher provides RAG search capabilities for team-level knowledge.
-type TeamKnowledgeSearcher interface {
-	SearchByTeam(ctx context.Context, teamID uuid.UUID, query string, topK int) ([]*entity.RetrievedChunk, error)
-	GetReadyByTeam(ctx context.Context, teamID uuid.UUID) ([]*entity.KnowledgeSource, error)
-}
-
-// TeamResolver resolves the team for a tenant.
-type TeamResolver interface {
-	GetTeamByTenant(ctx context.Context, tenantID uuid.UUID) (*entity.Team, error)
-}
-
 // KnowledgeSettingsProvider provides access to tenant knowledge settings.
 type KnowledgeSettingsProvider interface {
 	GetKnowledgeSettingsByTenantID(ctx context.Context, tenantID uuid.UUID) (*entity.TenantKnowledgeSettings, error)
@@ -78,26 +62,18 @@ type KnowledgeSettingsProvider interface {
 //
 // Methods are split across files for maintainability:
 //   - ai_generation_service.go: struct, constructor, setters (this file)
-//   - job_orchestrator.go:      job creation, routing, processing, lifecycle
+//   - job_orchestrator.go:      job creation, workflow triggering, lifecycle
 //   - content_editor.go:        synchronous content CRUD operations
 type AIGenerationService struct {
 	userRepo                 repository.UserRepository
 	jobRepo                  repository.GenerationJobRepository
 	aiSettingsRepo           repository.TenantAISettingsRepository
-	aiProviderFactory        AIProviderFactory
-	notifier                 JobNotifier
-	completionNotifier       CourseCompletionNotifier
-	outlineNotifier          OutlineCompletionNotifier
-	taskEnqueuer             TaskEnqueuer
+	aiProviderFactory        AIProviderFactory // Used for image generation
+	workflowStarter          WorkflowStarter
 	imageStorage             ImageStorage
 	contentStorage           *storage.TenantAwareStorage
 	jobEventPublisher        JobEventPublisher
-	knowledgeSearcher        KnowledgeSearcher         // For course-level RAG queries
-	teamKnowledgeSearcher    TeamKnowledgeSearcher     // For team-level RAG queries
-	teamResolver             TeamResolver              // Resolves team for tenant
 	knowledgeSettingsProvider KnowledgeSettingsProvider // For tenant knowledge settings
-	ragPipeline              *StagedRAGPipeline        // Composable RAG retrieval with provenance
-	planHandler              *generation.PlanHandler   // Handles course planning jobs
 	logger                   service.Logger
 }
 
@@ -107,42 +83,21 @@ func NewAIGenerationService(
 	jobRepo repository.GenerationJobRepository,
 	aiSettingsRepo repository.TenantAISettingsRepository,
 	aiProviderFactory AIProviderFactory,
-	notifier JobNotifier,
-	completionNotifier CourseCompletionNotifier,
-	outlineNotifier OutlineCompletionNotifier,
-	taskEnqueuer TaskEnqueuer,
+	workflowStarter WorkflowStarter,
 	imageStorage ImageStorage,
 	contentStorage *storage.TenantAwareStorage,
 	logger service.Logger,
 ) *AIGenerationService {
 	return &AIGenerationService{
-		userRepo:           userRepo,
-		jobRepo:            jobRepo,
-		aiSettingsRepo:     aiSettingsRepo,
-		aiProviderFactory:  aiProviderFactory,
-		notifier:           notifier,
-		completionNotifier: completionNotifier,
-		outlineNotifier:    outlineNotifier,
-		taskEnqueuer:       taskEnqueuer,
-		imageStorage:       imageStorage,
-		contentStorage:     contentStorage,
-		logger:             logger,
+		userRepo:          userRepo,
+		jobRepo:           jobRepo,
+		aiSettingsRepo:    aiSettingsRepo,
+		aiProviderFactory: aiProviderFactory,
+		workflowStarter:   workflowStarter,
+		imageStorage:      imageStorage,
+		contentStorage:    contentStorage,
+		logger:            logger,
 	}
-}
-
-// SetKnowledgeSearcher sets the knowledge searcher for Internal Data Only mode.
-func (s *AIGenerationService) SetKnowledgeSearcher(searcher KnowledgeSearcher) {
-	s.knowledgeSearcher = searcher
-}
-
-// SetTeamKnowledgeSearcher sets the team knowledge searcher for team-level RAG.
-func (s *AIGenerationService) SetTeamKnowledgeSearcher(searcher TeamKnowledgeSearcher) {
-	s.teamKnowledgeSearcher = searcher
-}
-
-// SetTeamResolver sets the team resolver for looking up team by tenant.
-func (s *AIGenerationService) SetTeamResolver(resolver TeamResolver) {
-	s.teamResolver = resolver
 }
 
 // SetJobEventPublisher sets the optional job event publisher for real-time streaming.
@@ -153,14 +108,4 @@ func (s *AIGenerationService) SetJobEventPublisher(publisher JobEventPublisher) 
 // SetKnowledgeSettingsProvider sets the provider for tenant knowledge settings.
 func (s *AIGenerationService) SetKnowledgeSettingsProvider(provider KnowledgeSettingsProvider) {
 	s.knowledgeSettingsProvider = provider
-}
-
-// SetRAGPipeline sets the composable RAG pipeline for knowledge retrieval.
-func (s *AIGenerationService) SetRAGPipeline(pipeline *StagedRAGPipeline) {
-	s.ragPipeline = pipeline
-}
-
-// SetPlanHandler sets the plan handler for course planning jobs.
-func (s *AIGenerationService) SetPlanHandler(handler *generation.PlanHandler) {
-	s.planHandler = handler
 }

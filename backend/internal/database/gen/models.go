@@ -192,11 +192,12 @@ func (ns NullExportStatus) Value() (driver.Value, error) {
 type GenerationJobStatus string
 
 const (
-	GenerationJobStatusQueued     GenerationJobStatus = "queued"
-	GenerationJobStatusProcessing GenerationJobStatus = "processing"
-	GenerationJobStatusCompleted  GenerationJobStatus = "completed"
-	GenerationJobStatusFailed     GenerationJobStatus = "failed"
-	GenerationJobStatusCancelled  GenerationJobStatus = "cancelled"
+	GenerationJobStatusQueued           GenerationJobStatus = "queued"
+	GenerationJobStatusProcessing       GenerationJobStatus = "processing"
+	GenerationJobStatusCompleted        GenerationJobStatus = "completed"
+	GenerationJobStatusFailed           GenerationJobStatus = "failed"
+	GenerationJobStatusCancelled        GenerationJobStatus = "cancelled"
+	GenerationJobStatusAwaitingApproval GenerationJobStatus = "awaiting_approval"
 )
 
 func (e *GenerationJobStatus) Scan(src interface{}) error {
@@ -242,6 +243,8 @@ const (
 	GenerationJobTypeLessonContent  GenerationJobType = "lesson_content"
 	GenerationJobTypeComponentRegen GenerationJobType = "component_regen"
 	GenerationJobTypeFullCourse     GenerationJobType = "full_course"
+	GenerationJobTypeCourseCreation GenerationJobType = "course_creation"
+	GenerationJobTypeCoursePlanning GenerationJobType = "course_planning"
 )
 
 func (e *GenerationJobType) Scan(src interface{}) error {
@@ -608,6 +611,8 @@ type GenerationJob struct {
 	StartedAt       **time.Time         `db:"started_at" json:"started_at"`
 	CompletedAt     **time.Time         `db:"completed_at" json:"completed_at"`
 	ParentJobID     uuid.NullUUID       `db:"parent_job_id" json:"parent_job_id"`
+	PendingStep     sql.NullInt32       `db:"pending_step" json:"pending_step"`
+	StepDataJson    sql.NullString      `db:"step_data_json" json:"step_data_json"`
 }
 
 type Invitation struct {

@@ -17,9 +17,9 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 )
 
-// TeamKnowledgeTaskEnqueuer defines the interface for enqueueing team knowledge tasks.
-type TeamKnowledgeTaskEnqueuer interface {
-	EnqueueTeamKnowledgeIngestion(sourceID, tenantID, teamID, filePath string) error
+// KnowledgeWorkflowStarter starts knowledge ingestion workflows.
+type KnowledgeWorkflowStarter interface {
+	StartKnowledgeIngestion(ctx context.Context, sourceID, tenantID, teamID, filePath string) (string, error)
 }
 
 // TeamKnowledgeServiceServer implements the TeamKnowledgeService Connect handler.
@@ -28,7 +28,7 @@ type TeamKnowledgeServiceServer struct {
 	teamKnowledgeService *service.TeamKnowledgeService
 	teamService          *service.TeamService
 	storageClient        StorageAdapter
-	taskEnqueuer         TeamKnowledgeTaskEnqueuer
+	workflowStarter      KnowledgeWorkflowStarter
 }
 
 // NewTeamKnowledgeServiceServer creates a new TeamKnowledgeServiceServer.
@@ -36,14 +36,14 @@ func NewTeamKnowledgeServiceServer(
 	teamKnowledgeService *service.TeamKnowledgeService,
 	teamService *service.TeamService,
 	storageClient StorageAdapter,
-	taskEnqueuer TeamKnowledgeTaskEnqueuer,
+	workflowStarter KnowledgeWorkflowStarter,
 ) *TeamKnowledgeServiceServer {
 	log.Printf("[TeamKnowledgeService] Handler initialized")
 	return &TeamKnowledgeServiceServer{
 		teamKnowledgeService: teamKnowledgeService,
 		teamService:          teamService,
 		storageClient:        storageClient,
-		taskEnqueuer:         taskEnqueuer,
+		workflowStarter:      workflowStarter,
 	}
 }
 
@@ -119,17 +119,18 @@ func (s *TeamKnowledgeServiceServer) UploadTeamKnowledge(
 
 	// Step 5: Enqueue worker task for async processing
 	log.Printf("[Knowledge.Upload] Step 5: Enqueueing worker task")
-	if s.taskEnqueuer != nil {
-		if err := s.taskEnqueuer.EnqueueTeamKnowledgeIngestion(
+	if s.workflowStarter != nil {
+		if _, err := s.workflowStarter.StartKnowledgeIngestion(
+			ctx,
 			source.ID.String(),
 			tenantID.String(),
 			teamIDStr, // Empty for global knowledge
 			storagePath,
 		); err != nil {
-			log.Printf("[Knowledge.Upload] ERROR: Failed to enqueue task: %v", err)
-			// Don't fail the request - the source is created, worker poll can pick it up
+			log.Printf("[Knowledge.Upload] ERROR: Failed to start ingestion workflow: %v", err)
+			// Don't fail the request - the source is created
 		} else {
-			log.Printf("[Knowledge.Upload] Worker task enqueued successfully")
+			log.Printf("[Knowledge.Upload] Ingestion workflow started successfully")
 		}
 	} else {
 		log.Printf("[Knowledge.Upload] WARNING: No task enqueuer configured, processing will not happen")

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  namespace: mirai
+  labels:
+    app: temporal
+spec:
+  type: ClusterIP
+  ports:
+  - port: 7233
+    targetPort: 7233
+    name: grpc
+  selector:
+    app: temporal

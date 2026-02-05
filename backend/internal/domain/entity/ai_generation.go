@@ -100,6 +100,10 @@ type GenerationJob struct {
 	RetryCount int32
 	MaxRetries int32
 
+	// Workflow resumption - persisted pending step data for AWAITING_APPROVAL jobs
+	PendingStep  *int32
+	StepDataJSON *string
+
 	CreatedByUserID uuid.UUID
 	CreatedAt       time.Time
 	StartedAt       *time.Time

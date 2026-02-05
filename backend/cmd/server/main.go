@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -24,12 +24,17 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/twenty"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/vectordb"
 	"github.com/sogos/mirai-backend/internal/infrastructure/logging"
+	"github.com/sogos/mirai-backend/internal/infrastructure/observability"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/postgres"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/sqlc"
 	"github.com/sogos/mirai-backend/internal/infrastructure/pubsub"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
-	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
+	temporalinfra "github.com/sogos/mirai-backend/internal/infrastructure/temporal"
 	"github.com/sogos/mirai-backend/pkg/httputil"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.temporal.io/sdk/contrib/opentelemetry"
+	"go.temporal.io/sdk/interceptor"
 
 	// Domain
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
@@ -37,7 +42,7 @@ import (
 
 	// Application services
 	"github.com/sogos/mirai-backend/internal/application/service"
-	"github.com/sogos/mirai-backend/internal/application/service/generation"
+	"github.com/sogos/mirai-backend/internal/application/workflow/activities"
 
 	// Presentation
 	connectserver "github.com/sogos/mirai-backend/internal/presentation/connect"
@@ -60,6 +65,18 @@ func main() {
 		"environment", cfg.Environment.String(),
 		"requiresStrictValidation", cfg.Environment.RequiresStrictValidation(),
 	)
+
+	// Set up OpenTelemetry tracing (exports to Logfire via OTLP HTTP)
+	tracingShutdown, err := observability.SetupTracing(context.Background(), cfg.LogfireToken, cfg.Environment.String(), slog.Default())
+	if err != nil {
+		logger.Error("failed to set up tracing", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := tracingShutdown(context.Background()); err != nil {
+			logger.Error("tracing shutdown error", "error", err)
+		}
+	}()
 
 	// Connect to database
 	db, err := postgres.NewDB(cfg.DatabaseURL)
@@ -88,7 +105,6 @@ func main() {
 	knowledgeSettingsRepo := sqlc.NewTenantKnowledgeSettingsRepository(db.DB)
 	notificationRepo := sqlc.NewNotificationRepository(db.DB)
 	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
-	wizardStateRepo := sqlc.NewWizardStateRepository(db.DB)
 	knowledgeRepo := sqlc.NewKnowledgeSourceRepository(db.DB)
 	teamKnowledgeRepo := sqlc.NewTeamKnowledgeRepository(db.DB)
 
@@ -143,9 +159,6 @@ func main() {
 	tenantStorage := storage.NewTenantAwareStorage(baseStorage)
 
 	// Initialize Redis cache
-	// Create two cache wrappers:
-	// 1. TenantCache - for tenant-scoped data (courses, folders, etc.)
-	// 2. GlobalCache - for system-level data (user->tenant mapping)
 	var baseCache cache.Cache
 	if cfg.RedisURL != "" {
 		redisCache, err := cache.NewRedisCache(cache.RedisConfig{
@@ -165,11 +178,9 @@ func main() {
 	}
 
 	// Wrap cache with tenant isolation for application services
-	// This ensures all cache keys are prefixed with tenant:{id}:
 	tenantCache := cache.NewTenantCache(baseCache)
 
 	// Create global cache for system-level operations (user->tenant mapping)
-	// WARNING: Only use for non-tenant-specific data
 	globalCache := cache.NewGlobalCache(baseCache)
 
 	// Initialize Redis pub/sub for real-time notifications
@@ -226,7 +237,46 @@ func main() {
 		logger.Warn("Twenty CRM not configured (TWENTY_API_URL and/or TWENTY_API_KEY not set), feedback will not sync to CRM")
 	}
 
-	// Initialize application services
+	// ---------------------------------------------------------------------------
+	// Temporal Client & Worker
+	// ---------------------------------------------------------------------------
+
+	slogLogger := slog.Default()
+
+	// Initialize Temporal client (required for workflow orchestration)
+	var workflowStarter temporalinfra.WorkflowStarter
+	var temporalClient *temporalinfra.Client
+	if cfg.TemporalAddress != "" {
+		// Build Temporal interceptors (OTel tracing if Logfire is configured)
+		var temporalInterceptors []interceptor.ClientInterceptor
+		if cfg.LogfireToken != "" {
+			tracingInterceptor, err := opentelemetry.NewTracingInterceptor(opentelemetry.TracerOptions{})
+			if err != nil {
+				logger.Error("failed to create Temporal tracing interceptor", "error", err)
+				os.Exit(1)
+			}
+			temporalInterceptors = append(temporalInterceptors, tracingInterceptor)
+			logger.Info("Temporal OTel tracing interceptor enabled")
+		}
+
+		var err error
+		temporalClient, err = temporalinfra.NewClient(cfg.TemporalAddress, cfg.TemporalNamespace, slogLogger, temporalInterceptors...)
+		if err != nil {
+			logger.Error("failed to connect to Temporal", "error", err)
+			os.Exit(1)
+		}
+		defer temporalClient.Close()
+		logger.Info("Temporal client connected", "address", cfg.TemporalAddress, "namespace", cfg.TemporalNamespace)
+
+		workflowStarter = temporalClient.Starter(temporalinfra.GoTaskQueue)
+	} else {
+		logger.Warn("TEMPORAL_ADDRESS not configured, background workflows will not be available")
+	}
+
+	// ---------------------------------------------------------------------------
+	// Application Services
+	// ---------------------------------------------------------------------------
+
 	authService := service.NewAuthService(userRepo, companyRepo, invitationRepo, pendingRegRepo, kratosClient, stripeClient, encryptor, logger, cfg.FrontendURL, cfg.MarketingURL, cfg.BackendURL)
 	billingService := service.NewBillingService(userRepo, companyRepo, stripeClient, logger, cfg.FrontendURL)
 	userService := service.NewUserService(userRepo, companyRepo, kratosClient, stripeClient, logger, cfg.FrontendURL)
@@ -235,74 +285,59 @@ func main() {
 	invitationService := service.NewInvitationService(userRepo, companyRepo, invitationRepo, stripeClient, emailClient, logger, cfg.FrontendURL)
 	courseService := service.NewCourseService(courseRepo, folderRepo, userRepo, tenantStorage, tenantCache, logger)
 
-	// Notification service (created first for dependency injection)
+	// Notification service
 	notificationService := service.NewNotificationService(userRepo, notificationRepo, kratosClient, emailClient, notificationPubSub, cfg.FrontendURL, logger)
 
-	// SCORM packager for course exports (no external dependencies)
+	// SCORM packager for course exports
 	scormPackager := scorm.NewPackager()
 
-	// Initialize Asynq worker client for enqueueing tasks (needed by AI services)
-	// Strip redis:// prefix if present (Asynq expects host:port format)
-	redisAddr := strings.TrimPrefix(cfg.RedisURL, "redis://")
-	workerClient := worker.NewClient(redisAddr, logger)
-	defer workerClient.Close()
-	logger.Info("Asynq worker client initialized", "redisAddr", redisAddr)
-
-	// Course export service (uses baseStorage for exports bucket)
+	// Course export service (uses WorkflowStarter instead of Asynq)
 	courseExportService := service.NewCourseExportService(
 		userRepo,
 		courseRepo,
 		exportRepo,
 		scormPackager,
-		baseStorage,          // Use base storage for export files
-		tenantStorage,        // For reading course content.json
-		workerClient,         // Implements ExportTaskEnqueuer
-		notificationService,  // Implements ExportNotifier
+		baseStorage,
+		tenantStorage,
+		workflowStarter,
+		notificationService,
 		logger,
 	)
 	logger.Info("course export service initialized")
 
-	// Unified Knowledge service (shared chunking, embedding, vector logic for all scopes)
+	// Unified Knowledge service
 	unifiedKnowledgeService := service.NewUnifiedKnowledgeService(
 		knowledgeRepo, teamKnowledgeRepo, embeddingClient, vectorClient, baseStorage,
 	)
 	logger.Info("unified knowledge service initialized")
 
-	// Course-scoped knowledge facade (delegates to unified service)
+	// Course-scoped knowledge facade
 	knowledgeSourceService := service.NewKnowledgeSourceService(unifiedKnowledgeService)
 	logger.Info("knowledge source service initialized")
 
-	// Team-scoped knowledge facade (delegates to unified service)
+	// Team-scoped knowledge facade
 	teamKnowledgeService := service.NewTeamKnowledgeService(unifiedKnowledgeService)
 	logger.Info("team knowledge service initialized")
-
-	// Team Knowledge worker handler (for async processing)
-	teamKnowledgeHandler := worker.NewTeamKnowledgeHandler(teamKnowledgeService, baseStorage)
-	logger.Info("team knowledge handler initialized")
 
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
-	var courseWizardService *service.CourseWizardService
 	var curriculumService *service.CurriculumService
 	if encryptor != nil {
 		tenantSettingsService = service.NewTenantSettingsService(userRepo, aiSettingsRepo, knowledgeSettingsRepo, encryptor, logger)
 
-		// Create Gemini provider factory for per-tenant API key management
+		// Create Gemini provider factory (still used for wizard + image generation)
 		geminiProviderFactory := gemini.NewProviderFactory(tenantSettingsService, logger)
 
-		// AI Generation service (simplified - all content in MinIO)
+		// AI Generation service (simplified - Temporal handles all async processing)
 		aiGenerationService = service.NewAIGenerationService(
 			userRepo,
 			generationJobRepo,
 			aiSettingsRepo,
 			geminiProviderFactory,
-			notificationService, // For tenant-isolated job notifications
-			notificationService, // For course completion notifications (implements CourseCompletionNotifier)
-			notificationService, // For outline completion notifications (implements OutlineCompletionNotifier)
-			workerClient,        // For event-driven job processing (push)
-			baseStorage,         // For storing generated images
-			tenantStorage,       // For storing course content.json
+			workflowStarter,
+			baseStorage,
+			tenantStorage,
 			logger,
 		)
 
@@ -310,42 +345,10 @@ func main() {
 		jobEventAdapter := service.NewJobEventAdapter(notificationPubSub, logger)
 		aiGenerationService.SetJobEventPublisher(jobEventAdapter)
 
-		// Set up knowledge searcher for Internal Data Only mode (RAG-grounded generation)
-		aiGenerationService.SetKnowledgeSearcher(knowledgeSourceService)
-
-		// Set up team knowledge searcher for team-level RAG
-		aiGenerationService.SetTeamKnowledgeSearcher(teamKnowledgeService)
-		aiGenerationService.SetTeamResolver(teamService)
-
 		// Set up knowledge settings provider for tenant-level configuration
 		aiGenerationService.SetKnowledgeSettingsProvider(tenantSettingsService)
 
-		// Set up plan handler for knowledge-grounded course planning
-		planHandler := generation.NewPlanHandler(
-			generationJobRepo,
-			aiSettingsRepo,
-			geminiProviderFactory,
-			tenantStorage,
-			jobEventAdapter,
-			logger,
-		)
-		planHandler.SetKnowledgeSearcher(knowledgeSourceService)
-		if vectorClient != nil {
-			planHandler.SetVectorDB(vectorClient)
-		}
-		aiGenerationService.SetPlanHandler(planHandler)
-
-		// Course Wizard service (AI-guided course creation with RAG support)
-		courseWizardService = service.NewCourseWizardService(
-			userRepo,
-			wizardStateRepo,
-			geminiProviderFactory,
-			aiSettingsRepo,
-			knowledgeSourceService, // For RAG context in outcome generation
-			logger,
-		)
-
-		// Curriculum service (curriculum map and validation)
+		// Curriculum service
 		curriculumService = service.NewCurriculumService(aiGenerationService, userRepo)
 
 		logger.Info("AI services initialized")
@@ -357,31 +360,70 @@ func main() {
 	provisioningService := service.NewProvisioningService(pendingRegRepo, tenantRepo, userRepo, companyRepo, kratosClient, emailClient, encryptor, logger, cfg.FrontendURL)
 	cleanupService := service.NewCleanupService(pendingRegRepo, logger)
 
-	// Create Connect server mux
+	// ---------------------------------------------------------------------------
+	// Temporal Worker (Go-side activities)
+	// ---------------------------------------------------------------------------
+
+	if temporalClient != nil {
+		// GoActivities: database, storage, event publishing, API key decryption
+		goActivities := &activities.GoActivities{
+			JobRepo:        generationJobRepo,
+			ContentStorage: baseStorage,
+			EventPublisher: temporalinfra.NewPubSubJobEventPublisher(notificationPubSub, generationJobRepo),
+			Logger:         slogLogger,
+		}
+
+		// Set up API key decryptor if tenant settings are available
+		if tenantSettingsService != nil {
+			goActivities.KeyDecryptor = temporalinfra.NewSettingsAPIKeyDecryptor(tenantSettingsService)
+		}
+
+		// OpsActivities: provisioning, cleanup, feedback sync
+		opsActivities := &activities.OpsActivities{
+			Provisioner: provisioningService,
+			Cleanup:     cleanupService,
+			CRMProvider: crmProvider,
+			UserRepo:    userRepo,
+		}
+
+		// Create and start the Temporal worker
+		worker := temporalinfra.NewWorker(temporalClient.Inner(), goActivities, opsActivities, slogLogger)
+
+		go func() {
+			if err := worker.Run(nil); err != nil {
+				logger.Error("Temporal worker error", "error", err)
+			}
+		}()
+		logger.Info("Temporal worker started", "taskQueue", temporalinfra.GoTaskQueue)
+	}
+
+	// ---------------------------------------------------------------------------
+	// HTTP Server
+	// ---------------------------------------------------------------------------
+
 	mux := connectserver.NewServeMux(connectserver.ServerConfig{
 		AuthService:            authService,
-		UserService:           userService,
-		CompanyService:        companyService,
-		TeamService:           teamService,
-		BillingService:        billingService,
-		InvitationService:     invitationService,
-		CourseService:         courseService,
-		CourseExportService:   courseExportService,
-		TenantSettingsService: tenantSettingsService,
-		NotificationService:   notificationService,
+		UserService:            userService,
+		CompanyService:         companyService,
+		TeamService:            teamService,
+		BillingService:         billingService,
+		InvitationService:      invitationService,
+		CourseService:          courseService,
+		CourseExportService:    courseExportService,
+		TenantSettingsService:  tenantSettingsService,
+		NotificationService:    notificationService,
 		AIGenerationService:    aiGenerationService,
-		CourseWizardService:    courseWizardService,
 		KnowledgeSourceService: knowledgeSourceService,
 		TeamKnowledgeService:   teamKnowledgeService,
 		CurriculumService:      curriculumService,
 		BaseStorage:            baseStorage,
 		PendingRegRepo:         pendingRegRepo,
-		UserRepo:               userRepo,               // For tenant context in auth interceptor
-		Cache:                  globalCache,            // For caching user tenant mappings (not tenant-scoped)
-		NotificationSubscriber: notificationSubscriber, // For real-time notification streaming
+		UserRepo:               userRepo,
+		Cache:                  globalCache,
+		NotificationSubscriber: notificationSubscriber,
 		Identity:               kratosClient,
 		Payments:               stripeClient,
-		WorkerClient:           workerClient, // For enqueueing background tasks
+		WorkflowStarter:        workflowStarter,
 		Logger:                 logger,
 		AllowedOrigin:          cfg.AllowedOrigin,
 		FrontendURL:            cfg.FrontendURL,
@@ -390,16 +432,21 @@ func main() {
 	// Wrap with CORS middleware
 	handler := connectserver.CORSMiddleware(cfg.AllowedOrigin, mux)
 
+	// Wrap with OTel HTTP tracing (skips /health to reduce noise)
+	tracedHandler := otelhttp.NewHandler(handler, "mirai-backend",
+		otelhttp.WithFilter(func(r *http.Request) bool {
+			return r.URL.Path != "/health"
+		}),
+	)
+
 	// Optionally wrap with h2c for HTTP/2 cleartext (local dev with Envoy)
-	var finalHandler http.Handler = handler
+	var finalHandler http.Handler = tracedHandler
 	if cfg.EnableH2C {
 		finalHandler = h2c.NewHandler(handler, &http2.Server{})
 		logger.Info("h2c enabled for HTTP/2 cleartext connections")
 	}
 
 	// Create HTTP server
-	// ReadTimeout increased to 120s for file upload endpoints (UploadAndProcess)
-	// WriteTimeout disabled for streaming support (SubscribeNotifications, SubscribeJobs)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      finalHandler,
@@ -407,28 +454,6 @@ func main() {
 		WriteTimeout: 0,
 		IdleTimeout:  60 * time.Second,
 	}
-
-	// Initialize Asynq worker server for processing background tasks
-	workerServer := worker.NewServer(
-		redisAddr,
-		provisioningService,
-		cleanupService,
-		aiGenerationService,
-		courseExportService,
-		workerClient,
-		logger,
-		crmProvider,
-		userRepo,
-		teamKnowledgeHandler,
-	)
-
-	// Start Asynq worker server in goroutine
-	go func() {
-		if err := workerServer.Run(); err != nil {
-			logger.Error("Asynq worker server error", "error", err)
-		}
-	}()
-	logger.Info("Asynq worker server started")
 
 	// Start HTTP server in goroutine
 	go func() {
@@ -445,10 +470,6 @@ func main() {
 	<-quit
 
 	logger.Info("shutting down server")
-
-	// Shutdown Asynq worker server (stops processing new tasks, waits for current tasks)
-	workerServer.Shutdown()
-	logger.Info("Asynq worker server stopped")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

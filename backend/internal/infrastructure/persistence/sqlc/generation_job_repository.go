@@ -350,6 +350,42 @@ func (r *GenerationJobRepository) FinalizeParentJob(ctx context.Context, parentI
 	})
 }
 
+// UpdatePendingStep updates the job's status and pending step fields for workflow resumption.
+func (r *GenerationJobRepository) UpdatePendingStep(ctx context.Context, id uuid.UUID, status string, pendingStep *int32, stepDataJSON *string) error {
+	var pendingStepVal sql.NullInt32
+	if pendingStep != nil {
+		pendingStepVal = sql.NullInt32{Int32: *pendingStep, Valid: true}
+	}
+	var stepDataVal sql.NullString
+	if stepDataJSON != nil {
+		stepDataVal = sql.NullString{String: *stepDataJSON, Valid: true}
+	}
+
+	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
+		return q.UpdateJobPendingStep(ctx, gen.UpdateJobPendingStepParams{
+			Status:       toGenerationJobStatus(status),
+			PendingStep:  pendingStepVal,
+			StepDataJson: stepDataVal,
+			ID:           id,
+		})
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update job pending step: %w", err)
+	}
+	return nil
+}
+
+// ClearPendingStep clears the pending step fields after a step is approved/rejected.
+func (r *GenerationJobRepository) ClearPendingStep(ctx context.Context, id uuid.UUID) error {
+	err := database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
+		return q.ClearJobPendingStep(ctx, id)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to clear job pending step: %w", err)
+	}
+	return nil
+}
+
 // =============================================================================
 // Type Conversion Helpers
 // =============================================================================
@@ -364,34 +400,7 @@ func toGenerationJobEntity(j *gen.GenerationJob) (*entity.GenerationJob, error) 
 		return nil, fmt.Errorf("failed to parse job status '%s': %w", j.Status, err)
 	}
 
-	return &entity.GenerationJob{
-		ID:              j.ID,
-		TenantID:        j.TenantID,
-		Type:            jobType,
-		Status:          jobStatus,
-		CourseID:        fromNullUUIDPtr(j.CourseID),
-		ParentJobID:     fromNullUUIDPtr(j.ParentJobID),
-		ProgressPercent: int32(j.ProgressPercent),
-		ProgressMessage: fromNullStringPtr(j.ProgressMessage),
-		ResultPath:      fromNullStringPtr(j.ResultPath),
-		ErrorMessage:    fromNullStringPtr(j.ErrorMessage),
-		TokensUsed:      j.TokensUsed,
-		RetryCount:      int32(j.RetryCount),
-		MaxRetries:      int32(j.MaxRetries),
-		CreatedByUserID: j.CreatedByUserID,
-		CreatedAt:       j.CreatedAt,
-		StartedAt:       fromDoublePointerTime(j.StartedAt),
-		CompletedAt:     fromDoublePointerTime(j.CompletedAt),
-	}, nil
-}
-
-// toGenerationJobEntityNoError converts without returning errors on parse failure.
-// Used for atomically claimed jobs where we can't rollback.
-func toGenerationJobEntityNoError(j *gen.GenerationJob) *entity.GenerationJob {
-	jobType, _ := valueobject.ParseGenerationJobType(string(j.Type))
-	jobStatus, _ := valueobject.ParseGenerationJobStatus(string(j.Status))
-
-	return &entity.GenerationJob{
+	job := &entity.GenerationJob{
 		ID:              j.ID,
 		TenantID:        j.TenantID,
 		Type:            jobType,
@@ -410,4 +419,47 @@ func toGenerationJobEntityNoError(j *gen.GenerationJob) *entity.GenerationJob {
 		StartedAt:       fromDoublePointerTime(j.StartedAt),
 		CompletedAt:     fromDoublePointerTime(j.CompletedAt),
 	}
+	if j.PendingStep.Valid {
+		v := j.PendingStep.Int32
+		job.PendingStep = &v
+	}
+	if j.StepDataJson.Valid {
+		job.StepDataJSON = &j.StepDataJson.String
+	}
+	return job, nil
+}
+
+// toGenerationJobEntityNoError converts without returning errors on parse failure.
+// Used for atomically claimed jobs where we can't rollback.
+func toGenerationJobEntityNoError(j *gen.GenerationJob) *entity.GenerationJob {
+	jobType, _ := valueobject.ParseGenerationJobType(string(j.Type))
+	jobStatus, _ := valueobject.ParseGenerationJobStatus(string(j.Status))
+
+	job := &entity.GenerationJob{
+		ID:              j.ID,
+		TenantID:        j.TenantID,
+		Type:            jobType,
+		Status:          jobStatus,
+		CourseID:        fromNullUUIDPtr(j.CourseID),
+		ParentJobID:     fromNullUUIDPtr(j.ParentJobID),
+		ProgressPercent: int32(j.ProgressPercent),
+		ProgressMessage: fromNullStringPtr(j.ProgressMessage),
+		ResultPath:      fromNullStringPtr(j.ResultPath),
+		ErrorMessage:    fromNullStringPtr(j.ErrorMessage),
+		TokensUsed:      j.TokensUsed,
+		RetryCount:      int32(j.RetryCount),
+		MaxRetries:      int32(j.MaxRetries),
+		CreatedByUserID: j.CreatedByUserID,
+		CreatedAt:       j.CreatedAt,
+		StartedAt:       fromDoublePointerTime(j.StartedAt),
+		CompletedAt:     fromDoublePointerTime(j.CompletedAt),
+	}
+	if j.PendingStep.Valid {
+		v := j.PendingStep.Int32
+		job.PendingStep = &v
+	}
+	if j.StepDataJson.Valid {
+		job.StepDataJSON = &j.StepDataJson.String
+	}
+	return job
 }

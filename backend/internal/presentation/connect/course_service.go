@@ -127,12 +127,7 @@ func (s *CourseServiceServer) CreateCourse(
 	if req.Msg.AssessmentSettings != nil {
 		input.AssessmentSettings = assessmentSettingsFromProto(req.Msg.AssessmentSettings)
 	}
-	// Convert wizard data if provided
-	if req.Msg.WizardData != nil {
-		entityData := protoToWizardStepData(req.Msg.WizardData)
-		input.WizardData = wizardStepDataToS3WizardData(entityData)
-	}
-	// Personas and LearningObjectives would need conversion too
+	// Wizard data is now handled by the Python CourseCreationWorkflow
 
 	course, err := s.courseService.CreateCourse(ctx, kratosID, input)
 	if err != nil {

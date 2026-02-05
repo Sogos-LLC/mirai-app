@@ -21,8 +21,10 @@ type NotificationEvent struct {
 
 // JobEvent represents a job event for pub/sub.
 type JobEvent struct {
-	EventType v1.JobEventType  `json:"event_type"`
-	Job       *v1.GenerationJob `json:"job"`
+	EventType    v1.JobEventType    `json:"event_type"`
+	Job          *v1.GenerationJob  `json:"job"`
+	PendingStep  *v1.WorkflowStepType `json:"pending_step,omitempty"`
+	StepDataJSON *string              `json:"step_data_json,omitempty"`
 }
 
 // notificationEventWire is the wire format for NotificationEvent using protojson for Notification.

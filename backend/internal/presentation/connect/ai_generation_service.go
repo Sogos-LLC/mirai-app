@@ -32,63 +32,6 @@ func NewAIGenerationServiceServer(aiService *service.AIGenerationService, subscr
 	}
 }
 
-// GenerateCourseOutline starts outline generation job.
-func (s *AIGenerationServiceServer) GenerateCourseOutline(
-	ctx context.Context,
-	req *connect.Request[v1.GenerateCourseOutlineRequest],
-) (*connect.Response[v1.GenerateCourseOutlineResponse], error) {
-	slog.Info("[GenerateCourseOutline] Request received", "courseId", req.Msg.Input.GetCourseId())
-
-	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
-	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
-	}
-
-	kratosID, err := parseUUID(kratosIDStr)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	input := req.Msg.Input
-	if input == nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errUnauthenticated)
-	}
-
-	courseID, err := parseUUID(input.CourseId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	// SME and TargetAudience removed in Phase 3
-
-	var additionalContext string
-	if input.AdditionalContext != nil {
-		additionalContext = *input.AdditionalContext
-	}
-
-	serviceReq := service.GenerateCourseOutlineRequest{
-		CourseID:          courseID,
-		DesiredOutcome:    input.DesiredOutcome,
-		AdditionalContext: additionalContext,
-	}
-
-	result, err := s.aiService.GenerateCourseOutline(ctx, kratosID, serviceReq)
-	if err != nil {
-		slog.Error("[GenerateCourseOutline] Service error", "courseId", courseID.String(), "error", err)
-		return nil, toConnectError(err)
-	}
-
-	slog.Info("[GenerateCourseOutline] Job created",
-		"jobId", result.Job.ID.String(),
-		"courseId", result.Job.CourseID,
-		"status", result.Job.Status.String(),
-	)
-
-	return connect.NewResponse(&v1.GenerateCourseOutlineResponse{
-		Job: generationJobToProto(result.Job),
-	}), nil
-}
-
 // GetCourseOutline returns the generated outline for a course.
 func (s *AIGenerationServiceServer) GetCourseOutline(
 	ctx context.Context,
@@ -205,91 +148,6 @@ func (s *AIGenerationServiceServer) UpdateCourseOutline(
 
 	return connect.NewResponse(&v1.UpdateCourseOutlineResponse{
 		Outline: courseOutlineToProto(outline),
-	}), nil
-}
-
-// GenerateAllLessons generates content for all lessons in outline.
-func (s *AIGenerationServiceServer) GenerateAllLessons(
-	ctx context.Context,
-	req *connect.Request[v1.GenerateAllLessonsRequest],
-) (*connect.Response[v1.GenerateAllLessonsResponse], error) {
-	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
-	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
-	}
-
-	kratosID, err := parseUUID(kratosIDStr)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	courseID, err := parseUUID(req.Msg.CourseId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	result, err := s.aiService.GenerateAllLessons(ctx, kratosID, courseID)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-
-	return connect.NewResponse(&v1.GenerateAllLessonsResponse{
-		Job: generationJobToProto(result.Job),
-	}), nil
-}
-
-// RegenerateComponent regenerates a single component with modifications.
-func (s *AIGenerationServiceServer) RegenerateComponent(
-	ctx context.Context,
-	req *connect.Request[v1.RegenerateComponentRequest],
-) (*connect.Response[v1.RegenerateComponentResponse], error) {
-	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
-	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
-	}
-
-	kratosID, err := parseUUID(kratosIDStr)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	courseID, err := parseUUID(req.Msg.CourseId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	generatedLessonID, err := parseUUID(req.Msg.GeneratedLessonId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	componentID, err := parseUUID(req.Msg.ComponentId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	serviceReq := service.RegenerateComponentRequest{
-		CourseID:           courseID,
-		LessonID:           generatedLessonID,
-		ComponentID:        componentID,
-		ModificationPrompt: req.Msg.ModificationPrompt,
-	}
-
-	// Pass alignment targets if provided
-	if req.Msg.AlignmentTargets != nil {
-		serviceReq.AlignmentTargets = &service.AlignmentTargets{
-			PersonaIDs:           req.Msg.AlignmentTargets.PersonaIds,
-			LearningObjectiveIDs: req.Msg.AlignmentTargets.LearningObjectiveIds,
-		}
-	}
-
-	result, err := s.aiService.RegenerateComponent(ctx, kratosID, serviceReq)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-
-	return connect.NewResponse(&v1.RegenerateComponentResponse{
-		Job: generationJobToProto(result.Job),
 	}), nil
 }
 
@@ -701,6 +559,30 @@ func (s *AIGenerationServiceServer) SubscribeJobs(
 	}
 	defer cleanup()
 
+	// Re-emit pending approval events for workflow resumption
+	awaitingStatus := valueobject.GenerationJobStatusAwaitingApproval
+	awaitingJobs, err := s.aiService.ListJobs(ctx, kratosID, entity.GenerationJobListOptions{
+		Status: &awaitingStatus,
+	})
+	if err != nil {
+		slog.Warn("failed to list awaiting approval jobs for re-emit", "error", err)
+	} else {
+		for _, job := range awaitingJobs {
+			if job.PendingStep != nil {
+				pendingStep := v1.WorkflowStepType(*job.PendingStep)
+				resp := &v1.SubscribeJobsResponse{
+					EventType:    v1.JobEventType_JOB_EVENT_TYPE_AWAITING_APPROVAL,
+					Job:          generationJobToProto(job),
+					PendingStep:  &pendingStep,
+					StepDataJson: job.StepDataJSON,
+				}
+				if err := stream.Send(resp); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	// Heartbeat ticker to keep connection alive through Cloudflare/proxy timeouts
 	// Send a keep-alive every 15 seconds (proxy timeout is ~30s)
 	heartbeat := time.NewTicker(15 * time.Second)
@@ -731,8 +613,10 @@ func (s *AIGenerationServiceServer) SubscribeJobs(
 			}
 			// Send event to client
 			resp := &v1.SubscribeJobsResponse{
-				EventType: event.EventType,
-				Job:       event.Job,
+				EventType:    event.EventType,
+				Job:          event.Job,
+				PendingStep:  event.PendingStep,
+				StepDataJson: event.StepDataJSON,
 			}
 			if err := stream.Send(resp); err != nil {
 				return err
@@ -782,6 +666,13 @@ func generationJobToProto(job *entity.GenerationJob) *v1.GenerationJob {
 	}
 	if job.CompletedAt != nil {
 		proto.CompletedAt = timestamppb.New(*job.CompletedAt)
+	}
+	if job.PendingStep != nil {
+		v := *job.PendingStep
+		proto.PendingStep = &v
+	}
+	if job.StepDataJSON != nil {
+		proto.StepDataJson = job.StepDataJSON
 	}
 
 	return proto
@@ -1127,6 +1018,10 @@ func generationJobTypeToProto(t valueobject.GenerationJobType) v1.GenerationJobT
 		return v1.GenerationJobType_GENERATION_JOB_TYPE_LESSON_CONTENT
 	case valueobject.GenerationJobTypeComponentRegen:
 		return v1.GenerationJobType_GENERATION_JOB_TYPE_COMPONENT_REGEN
+	case valueobject.GenerationJobTypeFullCourse:
+		return v1.GenerationJobType_GENERATION_JOB_TYPE_FULL_COURSE
+	case valueobject.GenerationJobTypeCourseCreation:
+		return v1.GenerationJobType_GENERATION_JOB_TYPE_COURSE_CREATION
 	default:
 		return v1.GenerationJobType_GENERATION_JOB_TYPE_UNSPECIFIED
 	}
@@ -1142,6 +1037,10 @@ func protoToGenerationJobType(t v1.GenerationJobType) valueobject.GenerationJobT
 		return valueobject.GenerationJobTypeLessonContent
 	case v1.GenerationJobType_GENERATION_JOB_TYPE_COMPONENT_REGEN:
 		return valueobject.GenerationJobTypeComponentRegen
+	case v1.GenerationJobType_GENERATION_JOB_TYPE_FULL_COURSE:
+		return valueobject.GenerationJobTypeFullCourse
+	case v1.GenerationJobType_GENERATION_JOB_TYPE_COURSE_CREATION:
+		return valueobject.GenerationJobTypeCourseCreation
 	default:
 		return valueobject.GenerationJobTypeCourseOutline
 	}
@@ -1159,6 +1058,8 @@ func generationJobStatusToProto(s valueobject.GenerationJobStatus) v1.Generation
 		return v1.GenerationJobStatus_GENERATION_JOB_STATUS_FAILED
 	case valueobject.GenerationJobStatusCancelled:
 		return v1.GenerationJobStatus_GENERATION_JOB_STATUS_CANCELLED
+	case valueobject.GenerationJobStatusAwaitingApproval:
+		return v1.GenerationJobStatus_GENERATION_JOB_STATUS_AWAITING_APPROVAL
 	default:
 		return v1.GenerationJobStatus_GENERATION_JOB_STATUS_UNSPECIFIED
 	}
@@ -1176,6 +1077,8 @@ func protoToGenerationJobStatus(s v1.GenerationJobStatus) valueobject.Generation
 		return valueobject.GenerationJobStatusFailed
 	case v1.GenerationJobStatus_GENERATION_JOB_STATUS_CANCELLED:
 		return valueobject.GenerationJobStatusCancelled
+	case v1.GenerationJobStatus_GENERATION_JOB_STATUS_AWAITING_APPROVAL:
+		return valueobject.GenerationJobStatusAwaitingApproval
 	default:
 		return valueobject.GenerationJobStatusQueued
 	}
@@ -1323,4 +1226,205 @@ func s3CoursePlanToProto(plan *service.S3CoursePlan) *v1.CoursePlan {
 	}
 
 	return proto
+}
+
+// protoToWorkflowStepString converts a proto WorkflowStepType enum to the string used by the service layer.
+func protoToWorkflowStepString(step v1.WorkflowStepType) string {
+	switch step {
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_TITLE:
+		return "title"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_OUTCOMES:
+		return "outcomes"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_SME_PERSONAS:
+		return "sme_personas"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS:
+		return "audience_personas"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_TONE_OPTIONS:
+		return "tone_options"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_COURSE_PLAN:
+		return "course_plan"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_OUTLINE:
+		return "outline"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_LESSONS:
+		return "lessons"
+	default:
+		return ""
+	}
+}
+
+// StartCourseCreation starts the unified course creation workflow (Python).
+func (s *AIGenerationServiceServer) StartCourseCreation(
+	ctx context.Context,
+	req *connect.Request[v1.StartCourseCreationRequest],
+) (*connect.Response[v1.StartCourseCreationResponse], error) {
+	slog.Info("[StartCourseCreation] Request received", "courseId", req.Msg.GetCourseId())
+
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	courseID, err := parseUUID(req.Msg.GetCourseId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	var desiredOutcomes string
+	if req.Msg.DesiredOutcomes != nil {
+		desiredOutcomes = *req.Msg.DesiredOutcomes
+	}
+
+	var additionalContext string
+	if req.Msg.AdditionalContext != nil {
+		additionalContext = *req.Msg.AdditionalContext
+	}
+
+	serviceReq := service.StartCourseCreationRequest{
+		CourseID:             courseID,
+		CourseName:           req.Msg.GetCourseName(),
+		DesiredOutcomes:      desiredOutcomes,
+		AdditionalContext:    additionalContext,
+		InternalDataOnly:     req.Msg.GetInternalDataOnly(),
+		SelectedTeamDocIDs:   req.Msg.GetSelectedTeamDocIds(),
+		SelectedGlobalDocIDs: req.Msg.GetSelectedGlobalDocIds(),
+	}
+
+	result, err := s.aiService.StartCourseCreation(ctx, kratosID, serviceReq)
+	if err != nil {
+		slog.Error("[StartCourseCreation] Service error", "courseId", courseID.String(), "error", err)
+		return nil, toConnectError(err)
+	}
+
+	slog.Info("[StartCourseCreation] Job created",
+		"jobId", result.Job.ID.String(),
+		"courseId", result.Job.CourseID,
+	)
+
+	return connect.NewResponse(&v1.StartCourseCreationResponse{
+		Job: generationJobToProto(result.Job),
+	}), nil
+}
+
+// ApproveWorkflowStep sends an approval signal to a paused course creation workflow.
+func (s *AIGenerationServiceServer) ApproveWorkflowStep(
+	ctx context.Context,
+	req *connect.Request[v1.ApproveWorkflowStepRequest],
+) (*connect.Response[v1.ApproveWorkflowStepResponse], error) {
+	slog.Info("[ApproveWorkflowStep] Request received", "jobId", req.Msg.GetJobId(), "step", req.Msg.GetStep())
+
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	jobID, err := parseUUID(req.Msg.GetJobId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	step := protoToWorkflowStepString(req.Msg.GetStep())
+	if step == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errUnauthenticated)
+	}
+
+	err = s.aiService.ApproveWorkflowStep(ctx, kratosID, jobID, step, req.Msg.GetSelectedIds(), req.Msg.GetModifications())
+	if err != nil {
+		slog.Error("[ApproveWorkflowStep] Service error", "jobId", jobID.String(), "error", err)
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.ApproveWorkflowStepResponse{}), nil
+}
+
+// RejectWorkflowStep sends a rejection signal to a paused course creation workflow.
+func (s *AIGenerationServiceServer) RejectWorkflowStep(
+	ctx context.Context,
+	req *connect.Request[v1.RejectWorkflowStepRequest],
+) (*connect.Response[v1.RejectWorkflowStepResponse], error) {
+	slog.Info("[RejectWorkflowStep] Request received", "jobId", req.Msg.GetJobId(), "step", req.Msg.GetStep())
+
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	jobID, err := parseUUID(req.Msg.GetJobId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	step := protoToWorkflowStepString(req.Msg.GetStep())
+	if step == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errUnauthenticated)
+	}
+
+	err = s.aiService.RejectWorkflowStep(ctx, kratosID, jobID, step, req.Msg.GetFeedback())
+	if err != nil {
+		slog.Error("[RejectWorkflowStep] Service error", "jobId", jobID.String(), "error", err)
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.RejectWorkflowStepResponse{}), nil
+}
+
+// GetGraphVisualization returns the mermaid diagram for the course creation graph.
+func (s *AIGenerationServiceServer) GetGraphVisualization(
+	ctx context.Context,
+	req *connect.Request[v1.GetGraphVisualizationRequest],
+) (*connect.Response[v1.GetGraphVisualizationResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	if _, err := parseUUID(kratosIDStr); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	mermaidCode := `graph TD
+    A[GenerateTitle] --> B{AwaitTitleApproval}
+    B -->|Approved| C[GenerateOutcomes]
+    B -->|Rejected| A
+    C --> D{AwaitOutcomesApproval}
+    D -->|Approved| E[GenerateSMEPersonas]
+    D -->|Rejected| C
+    E --> F{AwaitSMEApproval}
+    F -->|Approved| G[GenerateAudiencePersonas]
+    F -->|Rejected| E
+    G --> H{AwaitAudienceApproval}
+    H -->|Approved| I[GenerateToneOptions]
+    H -->|Rejected| G
+    I --> J{AwaitToneApproval}
+    J -->|Approved| K{HasKnowledgeSources?}
+    J -->|Rejected| I
+    K -->|Yes| L[AnalyzeDocuments]
+    K -->|No| N[GenerateOutline]
+    L --> M{AwaitPlanApproval}
+    M -->|Approved| N
+    M -->|Rejected| L
+    N --> O{AwaitOutlineApproval}
+    O -->|Approved| P[GenerateLessons]
+    O -->|Rejected| N
+    P --> Q[FinalizeContent]
+    Q --> R((End))`
+
+	return connect.NewResponse(&v1.GetGraphVisualizationResponse{
+		MermaidCode: mermaidCode,
+		CurrentNode: "",
+	}), nil
 }

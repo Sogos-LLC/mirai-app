@@ -1,0 +1,199 @@
+"""Temporal activities for AI generation (outline, lesson, component, image)."""
+
+from dataclasses import dataclass
+
+import structlog
+from temporalio import activity
+
+from src.graphs.outline_graph import run_outline_graph
+from src.graphs.lesson_graph import run_lesson_graph
+from src.models.knowledge import KnowledgeChunk
+from src.models.lesson import LessonContent, LessonComponent
+from src.models.outline import CourseOutline, OutlineLesson
+from src.models.persona import SMEPersona
+
+log = structlog.get_logger()
+
+
+@dataclass
+class GenerateOutlineInput:
+    """Input for outline generation activity."""
+
+    api_key: str
+    course_title: str
+    desired_outcome: str
+    desired_outcomes: list[str]
+    sme_knowledge: list[dict]
+    target_audience: list[dict]
+    additional_context: str = ""
+    internal_data_only: bool = False
+    course_plan_context: dict | None = None
+    rag_filters: dict[str, str] | None = None
+
+
+@dataclass
+class GenerateOutlineOutput:
+    """Output from outline generation activity."""
+
+    outline: dict
+    constraint_violations: list[str]
+    rag_chunks_used: int
+
+
+@activity.defn
+async def generate_outline(input: GenerateOutlineInput) -> GenerateOutlineOutput:
+    """Generate a course outline using the outline graph."""
+    activity.heartbeat("starting outline generation")
+
+    personas = [SMEPersona(**p) for p in input.sme_knowledge]
+    target_audience = [SMEPersona(**p) for p in input.target_audience]
+
+    outline, violations, chunks_used = await run_outline_graph(
+        api_key=input.api_key,
+        course_title=input.course_title,
+        desired_outcome=input.desired_outcome,
+        desired_outcomes=input.desired_outcomes,
+        personas=personas,
+        target_audience=target_audience,
+        additional_context=input.additional_context,
+        internal_data_only=input.internal_data_only,
+        course_plan_context=input.course_plan_context,
+        rag_filters=input.rag_filters,
+    )
+
+    activity.heartbeat("outline generation completed")
+
+    return GenerateOutlineOutput(
+        outline=outline.model_dump(),
+        constraint_violations=violations,
+        rag_chunks_used=chunks_used,
+    )
+
+
+@dataclass
+class GenerateLessonInput:
+    """Input for lesson content generation activity."""
+
+    api_key: str
+    lesson: dict
+    course_title: str
+    course_context: str
+    section_title: str
+    section_index: int
+    lesson_index: int
+    sme_knowledge: list[dict]
+    rag_filters: dict[str, str] | None = None
+
+
+@dataclass
+class GenerateLessonOutput:
+    """Output from lesson content generation activity."""
+
+    lesson_content: dict
+    rag_chunks_used: int
+
+
+@activity.defn
+async def generate_lesson(input: GenerateLessonInput) -> GenerateLessonOutput:
+    """Generate lesson content using the lesson graph."""
+    activity.heartbeat("starting lesson generation")
+
+    lesson = OutlineLesson(**input.lesson)
+    personas = [SMEPersona(**p) for p in input.sme_knowledge]
+
+    content, chunks_used = await run_lesson_graph(
+        api_key=input.api_key,
+        lesson=lesson,
+        course_title=input.course_title,
+        course_context=input.course_context,
+        section_title=input.section_title,
+        section_index=input.section_index,
+        lesson_index=input.lesson_index,
+        personas=personas,
+        rag_filters=input.rag_filters,
+    )
+
+    activity.heartbeat("lesson generation completed")
+
+    return GenerateLessonOutput(
+        lesson_content=content.model_dump(),
+        rag_chunks_used=chunks_used,
+    )
+
+
+@dataclass
+class RegenerateComponentInput:
+    """Input for component regeneration activity."""
+
+    api_key: str
+    component: dict
+    modification_prompt: str
+    lesson_context: str
+    course_title: str
+
+
+@dataclass
+class RegenerateComponentOutput:
+    """Output from component regeneration activity."""
+
+    component: dict
+
+
+@activity.defn
+async def regenerate_component(
+    input: RegenerateComponentInput,
+) -> RegenerateComponentOutput:
+    """Regenerate a single lesson component."""
+    from src.agents.component_agent import run_component_regeneration
+
+    activity.heartbeat("regenerating component")
+
+    component = LessonComponent(**input.component)
+    result = await run_component_regeneration(
+        api_key=input.api_key,
+        component=component,
+        modification_prompt=input.modification_prompt,
+        lesson_context=input.lesson_context,
+        course_title=input.course_title,
+    )
+
+    return RegenerateComponentOutput(component=result.model_dump())
+
+
+@dataclass
+class GenerateImageDescriptionInput:
+    """Input for image description generation activity."""
+
+    api_key: str
+    image_context: str
+    lesson_context: str
+    course_title: str
+
+
+@dataclass
+class GenerateImageDescriptionOutput:
+    """Output from image description generation activity."""
+
+    description: str
+    alt_text: str
+
+
+@activity.defn
+async def generate_image_description(
+    input: GenerateImageDescriptionInput,
+) -> GenerateImageDescriptionOutput:
+    """Generate an image description and alt text."""
+    from src.agents.image_agent import run_image_description
+
+    activity.heartbeat("generating image description")
+
+    description, alt_text = await run_image_description(
+        api_key=input.api_key,
+        image_context=input.image_context,
+        lesson_context=input.lesson_context,
+        course_title=input.course_title,
+    )
+
+    return GenerateImageDescriptionOutput(
+        description=description, alt_text=alt_text
+    )

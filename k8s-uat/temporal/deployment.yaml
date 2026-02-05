@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  namespace: mirai-uat
+  labels:
+    app: temporal
+    environment: uat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+        environment: uat
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: temporal
+        image: temporalio/auto-setup:1.25.2
+        ports:
+        - containerPort: 7233
+          name: grpc
+        env:
+        - name: DB
+          value: "sqlite"
+        - name: DYNAMIC_CONFIG_FILE_PATH
+          value: "config/dynamicconfig/development-sql.yaml"
+        - name: TEMPORAL_ADDRESS
+          value: "0.0.0.0:7233"
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: temporal-data
+          mountPath: /etc/temporal/data
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        livenessProbe:
+          tcpSocket:
+            port: 7233
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 7233
+          initialDelaySeconds: 15
+          periodSeconds: 10
+      volumes:
+      - name: temporal-data
+        emptyDir: {}

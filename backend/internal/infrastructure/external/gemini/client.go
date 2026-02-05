@@ -124,23 +124,3 @@ func (c *Client) generateWithRetry(ctx context.Context, operation string, fn fun
 	return nil, fmt.Errorf("%s failed after %d retries: %w", operation, c.maxRetries, lastErr)
 }
 
-// TestConnection tests if the API key is valid by making a simple request.
-func (c *Client) TestConnection(ctx context.Context) error {
-	config := &genai.GenerateContentConfig{
-		MaxOutputTokens: 10,
-	}
-
-	_, err := c.generateWithRetry(ctx, "test connection", func() (*genai.GenerateContentResponse, error) {
-		return c.client.Models.GenerateContent(
-			ctx,
-			c.model,
-			genai.Text("Say 'OK' if you can read this."),
-			config,
-		)
-	})
-	if err != nil {
-		return fmt.Errorf("API key validation failed: %w", err)
-	}
-
-	return nil
-}

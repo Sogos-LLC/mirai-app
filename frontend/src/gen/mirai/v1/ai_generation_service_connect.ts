@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveCoursePlanRequest, ApproveCoursePlanResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, SubscribeJobsRequest, SubscribeJobsResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
+import { ApproveCoursePlanRequest, ApproveCoursePlanResponse, ApproveWorkflowStepRequest, ApproveWorkflowStepResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetGraphVisualizationRequest, GetGraphVisualizationResponse, GetJobRequest, GetJobResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectWorkflowStepRequest, RejectWorkflowStepResponse, StartCourseCreationRequest, StartCourseCreationResponse, SubscribeJobsRequest, SubscribeJobsResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -147,6 +147,44 @@ export const AIGenerationService = {
       name: "ApproveCoursePlan",
       I: ApproveCoursePlanRequest,
       O: ApproveCoursePlanResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Unified course creation workflow (Phase 7)
+     *
+     * @generated from rpc mirai.v1.AIGenerationService.StartCourseCreation
+     */
+    startCourseCreation: {
+      name: "StartCourseCreation",
+      I: StartCourseCreationRequest,
+      O: StartCourseCreationResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc mirai.v1.AIGenerationService.ApproveWorkflowStep
+     */
+    approveWorkflowStep: {
+      name: "ApproveWorkflowStep",
+      I: ApproveWorkflowStepRequest,
+      O: ApproveWorkflowStepResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc mirai.v1.AIGenerationService.RejectWorkflowStep
+     */
+    rejectWorkflowStep: {
+      name: "RejectWorkflowStep",
+      I: RejectWorkflowStepRequest,
+      O: RejectWorkflowStepResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc mirai.v1.AIGenerationService.GetGraphVisualization
+     */
+    getGraphVisualization: {
+      name: "GetGraphVisualization",
+      I: GetGraphVisualizationRequest,
+      O: GetGraphVisualizationResponse,
       kind: MethodKind.Unary,
     },
   }

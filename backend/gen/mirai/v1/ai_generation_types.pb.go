@@ -32,6 +32,7 @@ const (
 	GenerationJobType_GENERATION_JOB_TYPE_COMPONENT_REGEN GenerationJobType = 4
 	GenerationJobType_GENERATION_JOB_TYPE_FULL_COURSE     GenerationJobType = 5
 	GenerationJobType_GENERATION_JOB_TYPE_COURSE_PLANNING GenerationJobType = 6
+	GenerationJobType_GENERATION_JOB_TYPE_COURSE_CREATION GenerationJobType = 7
 )
 
 // Enum value maps for GenerationJobType.
@@ -43,6 +44,7 @@ var (
 		4: "GENERATION_JOB_TYPE_COMPONENT_REGEN",
 		5: "GENERATION_JOB_TYPE_FULL_COURSE",
 		6: "GENERATION_JOB_TYPE_COURSE_PLANNING",
+		7: "GENERATION_JOB_TYPE_COURSE_CREATION",
 	}
 	GenerationJobType_value = map[string]int32{
 		"GENERATION_JOB_TYPE_UNSPECIFIED":     0,
@@ -51,6 +53,7 @@ var (
 		"GENERATION_JOB_TYPE_COMPONENT_REGEN": 4,
 		"GENERATION_JOB_TYPE_FULL_COURSE":     5,
 		"GENERATION_JOB_TYPE_COURSE_PLANNING": 6,
+		"GENERATION_JOB_TYPE_COURSE_CREATION": 7,
 	}
 )
 
@@ -85,12 +88,13 @@ func (GenerationJobType) EnumDescriptor() ([]byte, []int) {
 type GenerationJobStatus int32
 
 const (
-	GenerationJobStatus_GENERATION_JOB_STATUS_UNSPECIFIED GenerationJobStatus = 0
-	GenerationJobStatus_GENERATION_JOB_STATUS_QUEUED      GenerationJobStatus = 1
-	GenerationJobStatus_GENERATION_JOB_STATUS_PROCESSING  GenerationJobStatus = 2
-	GenerationJobStatus_GENERATION_JOB_STATUS_COMPLETED   GenerationJobStatus = 3
-	GenerationJobStatus_GENERATION_JOB_STATUS_FAILED      GenerationJobStatus = 4
-	GenerationJobStatus_GENERATION_JOB_STATUS_CANCELLED   GenerationJobStatus = 5
+	GenerationJobStatus_GENERATION_JOB_STATUS_UNSPECIFIED       GenerationJobStatus = 0
+	GenerationJobStatus_GENERATION_JOB_STATUS_QUEUED            GenerationJobStatus = 1
+	GenerationJobStatus_GENERATION_JOB_STATUS_PROCESSING        GenerationJobStatus = 2
+	GenerationJobStatus_GENERATION_JOB_STATUS_COMPLETED         GenerationJobStatus = 3
+	GenerationJobStatus_GENERATION_JOB_STATUS_FAILED            GenerationJobStatus = 4
+	GenerationJobStatus_GENERATION_JOB_STATUS_CANCELLED         GenerationJobStatus = 5
+	GenerationJobStatus_GENERATION_JOB_STATUS_AWAITING_APPROVAL GenerationJobStatus = 6
 )
 
 // Enum value maps for GenerationJobStatus.
@@ -102,14 +106,16 @@ var (
 		3: "GENERATION_JOB_STATUS_COMPLETED",
 		4: "GENERATION_JOB_STATUS_FAILED",
 		5: "GENERATION_JOB_STATUS_CANCELLED",
+		6: "GENERATION_JOB_STATUS_AWAITING_APPROVAL",
 	}
 	GenerationJobStatus_value = map[string]int32{
-		"GENERATION_JOB_STATUS_UNSPECIFIED": 0,
-		"GENERATION_JOB_STATUS_QUEUED":      1,
-		"GENERATION_JOB_STATUS_PROCESSING":  2,
-		"GENERATION_JOB_STATUS_COMPLETED":   3,
-		"GENERATION_JOB_STATUS_FAILED":      4,
-		"GENERATION_JOB_STATUS_CANCELLED":   5,
+		"GENERATION_JOB_STATUS_UNSPECIFIED":       0,
+		"GENERATION_JOB_STATUS_QUEUED":            1,
+		"GENERATION_JOB_STATUS_PROCESSING":        2,
+		"GENERATION_JOB_STATUS_COMPLETED":         3,
+		"GENERATION_JOB_STATUS_FAILED":            4,
+		"GENERATION_JOB_STATUS_CANCELLED":         5,
+		"GENERATION_JOB_STATUS_AWAITING_APPROVAL": 6,
 	}
 )
 
@@ -200,13 +206,14 @@ func (OutlineApprovalStatus) EnumDescriptor() ([]byte, []int) {
 type JobEventType int32
 
 const (
-	JobEventType_JOB_EVENT_TYPE_UNSPECIFIED JobEventType = 0
-	JobEventType_JOB_EVENT_TYPE_CREATED     JobEventType = 1
-	JobEventType_JOB_EVENT_TYPE_UPDATED     JobEventType = 2
-	JobEventType_JOB_EVENT_TYPE_COMPLETED   JobEventType = 3
-	JobEventType_JOB_EVENT_TYPE_FAILED      JobEventType = 4
-	JobEventType_JOB_EVENT_TYPE_CANCELLED   JobEventType = 5
-	JobEventType_JOB_EVENT_TYPE_KEEPALIVE   JobEventType = 6
+	JobEventType_JOB_EVENT_TYPE_UNSPECIFIED       JobEventType = 0
+	JobEventType_JOB_EVENT_TYPE_CREATED           JobEventType = 1
+	JobEventType_JOB_EVENT_TYPE_UPDATED           JobEventType = 2
+	JobEventType_JOB_EVENT_TYPE_COMPLETED         JobEventType = 3
+	JobEventType_JOB_EVENT_TYPE_FAILED            JobEventType = 4
+	JobEventType_JOB_EVENT_TYPE_CANCELLED         JobEventType = 5
+	JobEventType_JOB_EVENT_TYPE_KEEPALIVE         JobEventType = 6
+	JobEventType_JOB_EVENT_TYPE_AWAITING_APPROVAL JobEventType = 7
 )
 
 // Enum value maps for JobEventType.
@@ -219,15 +226,17 @@ var (
 		4: "JOB_EVENT_TYPE_FAILED",
 		5: "JOB_EVENT_TYPE_CANCELLED",
 		6: "JOB_EVENT_TYPE_KEEPALIVE",
+		7: "JOB_EVENT_TYPE_AWAITING_APPROVAL",
 	}
 	JobEventType_value = map[string]int32{
-		"JOB_EVENT_TYPE_UNSPECIFIED": 0,
-		"JOB_EVENT_TYPE_CREATED":     1,
-		"JOB_EVENT_TYPE_UPDATED":     2,
-		"JOB_EVENT_TYPE_COMPLETED":   3,
-		"JOB_EVENT_TYPE_FAILED":      4,
-		"JOB_EVENT_TYPE_CANCELLED":   5,
-		"JOB_EVENT_TYPE_KEEPALIVE":   6,
+		"JOB_EVENT_TYPE_UNSPECIFIED":       0,
+		"JOB_EVENT_TYPE_CREATED":           1,
+		"JOB_EVENT_TYPE_UPDATED":           2,
+		"JOB_EVENT_TYPE_COMPLETED":         3,
+		"JOB_EVENT_TYPE_FAILED":            4,
+		"JOB_EVENT_TYPE_CANCELLED":         5,
+		"JOB_EVENT_TYPE_KEEPALIVE":         6,
+		"JOB_EVENT_TYPE_AWAITING_APPROVAL": 7,
 	}
 )
 
@@ -417,6 +426,74 @@ func (SectionEmphasis) EnumDescriptor() ([]byte, []int) {
 	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{6}
 }
 
+// WorkflowStepType identifies which step the workflow is waiting for approval on.
+type WorkflowStepType int32
+
+const (
+	WorkflowStepType_WORKFLOW_STEP_TYPE_UNSPECIFIED       WorkflowStepType = 0
+	WorkflowStepType_WORKFLOW_STEP_TYPE_TITLE             WorkflowStepType = 1
+	WorkflowStepType_WORKFLOW_STEP_TYPE_OUTCOMES          WorkflowStepType = 2
+	WorkflowStepType_WORKFLOW_STEP_TYPE_SME_PERSONAS      WorkflowStepType = 3
+	WorkflowStepType_WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS WorkflowStepType = 4
+	WorkflowStepType_WORKFLOW_STEP_TYPE_TONE_OPTIONS      WorkflowStepType = 5
+	WorkflowStepType_WORKFLOW_STEP_TYPE_COURSE_PLAN       WorkflowStepType = 6
+	WorkflowStepType_WORKFLOW_STEP_TYPE_OUTLINE           WorkflowStepType = 7
+	WorkflowStepType_WORKFLOW_STEP_TYPE_LESSONS           WorkflowStepType = 8
+)
+
+// Enum value maps for WorkflowStepType.
+var (
+	WorkflowStepType_name = map[int32]string{
+		0: "WORKFLOW_STEP_TYPE_UNSPECIFIED",
+		1: "WORKFLOW_STEP_TYPE_TITLE",
+		2: "WORKFLOW_STEP_TYPE_OUTCOMES",
+		3: "WORKFLOW_STEP_TYPE_SME_PERSONAS",
+		4: "WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS",
+		5: "WORKFLOW_STEP_TYPE_TONE_OPTIONS",
+		6: "WORKFLOW_STEP_TYPE_COURSE_PLAN",
+		7: "WORKFLOW_STEP_TYPE_OUTLINE",
+		8: "WORKFLOW_STEP_TYPE_LESSONS",
+	}
+	WorkflowStepType_value = map[string]int32{
+		"WORKFLOW_STEP_TYPE_UNSPECIFIED":       0,
+		"WORKFLOW_STEP_TYPE_TITLE":             1,
+		"WORKFLOW_STEP_TYPE_OUTCOMES":          2,
+		"WORKFLOW_STEP_TYPE_SME_PERSONAS":      3,
+		"WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS": 4,
+		"WORKFLOW_STEP_TYPE_TONE_OPTIONS":      5,
+		"WORKFLOW_STEP_TYPE_COURSE_PLAN":       6,
+		"WORKFLOW_STEP_TYPE_OUTLINE":           7,
+		"WORKFLOW_STEP_TYPE_LESSONS":           8,
+	}
+)
+
+func (x WorkflowStepType) Enum() *WorkflowStepType {
+	p := new(WorkflowStepType)
+	*p = x
+	return p
+}
+
+func (x WorkflowStepType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WorkflowStepType) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_ai_generation_types_proto_enumTypes[7].Descriptor()
+}
+
+func (WorkflowStepType) Type() protoreflect.EnumType {
+	return &file_mirai_v1_ai_generation_types_proto_enumTypes[7]
+}
+
+func (x WorkflowStepType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WorkflowStepType.Descriptor instead.
+func (WorkflowStepType) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{7}
+}
+
 // GenerationJob represents an AI generation job.
 type GenerationJob struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -438,6 +515,8 @@ type GenerationJob struct {
 	StartedAt       *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
 	CompletedAt     *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
 	ParentJobId     *string                `protobuf:"bytes,20,opt,name=parent_job_id,json=parentJobId,proto3,oneof" json:"parent_job_id,omitempty"`
+	PendingStep     *int32                 `protobuf:"varint,21,opt,name=pending_step,json=pendingStep,proto3,oneof" json:"pending_step,omitempty"`     // WorkflowStepType enum value, set when status is AWAITING_APPROVAL
+	StepDataJson    *string                `protobuf:"bytes,22,opt,name=step_data_json,json=stepDataJson,proto3,oneof" json:"step_data_json,omitempty"` // JSON string for step review data, set when status is AWAITING_APPROVAL
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -594,6 +673,20 @@ func (x *GenerationJob) GetCompletedAt() *timestamppb.Timestamp {
 func (x *GenerationJob) GetParentJobId() string {
 	if x != nil && x.ParentJobId != nil {
 		return *x.ParentJobId
+	}
+	return ""
+}
+
+func (x *GenerationJob) GetPendingStep() int32 {
+	if x != nil && x.PendingStep != nil {
+		return *x.PendingStep
+	}
+	return 0
+}
+
+func (x *GenerationJob) GetStepDataJson() string {
+	if x != nil && x.StepDataJson != nil {
+		return *x.StepDataJson
 	}
 	return ""
 }
@@ -2038,7 +2131,7 @@ var File_mirai_v1_ai_generation_types_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\n" +
-	"\"mirai/v1/ai_generation_types.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1emirai/v1/component_enums.proto\x1a\x1cmirai/v1/course_wizard.proto\"\x90\a\n" +
+	"\"mirai/v1/ai_generation_types.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1emirai/v1/component_enums.proto\x1a\x1cmirai/v1/course_wizard.proto\"\x87\b\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12/\n" +
@@ -2064,7 +2157,9 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\n" +
 	"started_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\x05R\tstartedAt\x88\x01\x01\x12B\n" +
 	"\fcompleted_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\vcompletedAt\x88\x01\x01\x12'\n" +
-	"\rparent_job_id\x18\x14 \x01(\tH\aR\vparentJobId\x88\x01\x01B\f\n" +
+	"\rparent_job_id\x18\x14 \x01(\tH\aR\vparentJobId\x88\x01\x01\x12&\n" +
+	"\fpending_step\x18\x15 \x01(\x05H\bR\vpendingStep\x88\x01\x01\x12)\n" +
+	"\x0estep_data_json\x18\x16 \x01(\tH\tR\fstepDataJson\x88\x01\x01B\f\n" +
 	"\n" +
 	"_course_idB\f\n" +
 	"\n" +
@@ -2074,7 +2169,9 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x0e_error_messageB\r\n" +
 	"\v_started_atB\x0f\n" +
 	"\r_completed_atB\x10\n" +
-	"\x0e_parent_job_id\"\xf8\x03\n" +
+	"\x0e_parent_job_idB\x0f\n" +
+	"\r_pending_stepB\x11\n" +
+	"\x0f_step_data_json\"\xf8\x03\n" +
 	"\rCourseOutline\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12\x18\n" +
@@ -2227,27 +2324,29 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12!\n" +
 	"\fsearch_terms\x18\x03 \x03(\tR\vsearchTerms\x12%\n" +
-	"\x0elearning_goals\x18\x04 \x03(\tR\rlearningGoals*\xff\x01\n" +
+	"\x0elearning_goals\x18\x04 \x03(\tR\rlearningGoals*\xa8\x02\n" +
 	"\x11GenerationJobType\x12#\n" +
 	"\x1fGENERATION_JOB_TYPE_UNSPECIFIED\x10\x00\x12&\n" +
 	"\"GENERATION_JOB_TYPE_COURSE_OUTLINE\x10\x02\x12&\n" +
 	"\"GENERATION_JOB_TYPE_LESSON_CONTENT\x10\x03\x12'\n" +
 	"#GENERATION_JOB_TYPE_COMPONENT_REGEN\x10\x04\x12#\n" +
 	"\x1fGENERATION_JOB_TYPE_FULL_COURSE\x10\x05\x12'\n" +
-	"#GENERATION_JOB_TYPE_COURSE_PLANNING\x10\x06*\xf0\x01\n" +
+	"#GENERATION_JOB_TYPE_COURSE_PLANNING\x10\x06\x12'\n" +
+	"#GENERATION_JOB_TYPE_COURSE_CREATION\x10\a*\x9d\x02\n" +
 	"\x13GenerationJobStatus\x12%\n" +
 	"!GENERATION_JOB_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cGENERATION_JOB_STATUS_QUEUED\x10\x01\x12$\n" +
 	" GENERATION_JOB_STATUS_PROCESSING\x10\x02\x12#\n" +
 	"\x1fGENERATION_JOB_STATUS_COMPLETED\x10\x03\x12 \n" +
 	"\x1cGENERATION_JOB_STATUS_FAILED\x10\x04\x12#\n" +
-	"\x1fGENERATION_JOB_STATUS_CANCELLED\x10\x05*\xe8\x01\n" +
+	"\x1fGENERATION_JOB_STATUS_CANCELLED\x10\x05\x12+\n" +
+	"'GENERATION_JOB_STATUS_AWAITING_APPROVAL\x10\x06*\xe8\x01\n" +
 	"\x15OutlineApprovalStatus\x12'\n" +
 	"#OUTLINE_APPROVAL_STATUS_UNSPECIFIED\x10\x00\x12*\n" +
 	"&OUTLINE_APPROVAL_STATUS_PENDING_REVIEW\x10\x01\x12$\n" +
 	" OUTLINE_APPROVAL_STATUS_APPROVED\x10\x02\x12$\n" +
 	" OUTLINE_APPROVAL_STATUS_REJECTED\x10\x03\x12.\n" +
-	"*OUTLINE_APPROVAL_STATUS_REVISION_REQUESTED\x10\x04*\xdb\x01\n" +
+	"*OUTLINE_APPROVAL_STATUS_REVISION_REQUESTED\x10\x04*\x81\x02\n" +
 	"\fJobEventType\x12\x1e\n" +
 	"\x1aJOB_EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16JOB_EVENT_TYPE_CREATED\x10\x01\x12\x1a\n" +
@@ -2255,7 +2354,8 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x18JOB_EVENT_TYPE_COMPLETED\x10\x03\x12\x19\n" +
 	"\x15JOB_EVENT_TYPE_FAILED\x10\x04\x12\x1c\n" +
 	"\x18JOB_EVENT_TYPE_CANCELLED\x10\x05\x12\x1c\n" +
-	"\x18JOB_EVENT_TYPE_KEEPALIVE\x10\x06*\x7f\n" +
+	"\x18JOB_EVENT_TYPE_KEEPALIVE\x10\x06\x12$\n" +
+	" JOB_EVENT_TYPE_AWAITING_APPROVAL\x10\a*\x7f\n" +
 	"\fSectionLevel\x12\x1d\n" +
 	"\x19SECTION_LEVEL_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17SECTION_LEVEL_INTRODUCE\x10\x01\x12\x19\n" +
@@ -2270,7 +2370,17 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x1cSECTION_EMPHASIS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14SECTION_EMPHASIS_LOW\x10\x01\x12\x1b\n" +
 	"\x17SECTION_EMPHASIS_MEDIUM\x10\x02\x12\x19\n" +
-	"\x15SECTION_EMPHASIS_HIGH\x10\x03B\x9c\x01\n" +
+	"\x15SECTION_EMPHASIS_HIGH\x10\x03*\xcd\x02\n" +
+	"\x10WorkflowStepType\x12\"\n" +
+	"\x1eWORKFLOW_STEP_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18WORKFLOW_STEP_TYPE_TITLE\x10\x01\x12\x1f\n" +
+	"\x1bWORKFLOW_STEP_TYPE_OUTCOMES\x10\x02\x12#\n" +
+	"\x1fWORKFLOW_STEP_TYPE_SME_PERSONAS\x10\x03\x12(\n" +
+	"$WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS\x10\x04\x12#\n" +
+	"\x1fWORKFLOW_STEP_TYPE_TONE_OPTIONS\x10\x05\x12\"\n" +
+	"\x1eWORKFLOW_STEP_TYPE_COURSE_PLAN\x10\x06\x12\x1e\n" +
+	"\x1aWORKFLOW_STEP_TYPE_OUTLINE\x10\a\x12\x1e\n" +
+	"\x1aWORKFLOW_STEP_TYPE_LESSONS\x10\bB\x9c\x01\n" +
 	"\fcom.mirai.v1B\x16AiGenerationTypesProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -2285,7 +2395,7 @@ func file_mirai_v1_ai_generation_types_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_ai_generation_types_proto_rawDescData
 }
 
-var file_mirai_v1_ai_generation_types_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_mirai_v1_ai_generation_types_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
 var file_mirai_v1_ai_generation_types_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_mirai_v1_ai_generation_types_proto_goTypes = []any{
 	(GenerationJobType)(0),            // 0: mirai.v1.GenerationJobType
@@ -2295,56 +2405,57 @@ var file_mirai_v1_ai_generation_types_proto_goTypes = []any{
 	(SectionLevel)(0),                 // 4: mirai.v1.SectionLevel
 	(SectionIntent)(0),                // 5: mirai.v1.SectionIntent
 	(SectionEmphasis)(0),              // 6: mirai.v1.SectionEmphasis
-	(*GenerationJob)(nil),             // 7: mirai.v1.GenerationJob
-	(*CourseOutline)(nil),             // 8: mirai.v1.CourseOutline
-	(*OutlineSection)(nil),            // 9: mirai.v1.OutlineSection
-	(*OutlineLesson)(nil),             // 10: mirai.v1.OutlineLesson
-	(*GeneratedLesson)(nil),           // 11: mirai.v1.GeneratedLesson
-	(*LessonComponent)(nil),           // 12: mirai.v1.LessonComponent
-	(*ComponentAlignment)(nil),        // 13: mirai.v1.ComponentAlignment
-	(*ComponentProvenance)(nil),       // 14: mirai.v1.ComponentProvenance
-	(*ProvenanceChunk)(nil),           // 15: mirai.v1.ProvenanceChunk
-	(*LessonProvenance)(nil),          // 16: mirai.v1.LessonProvenance
-	(*ComponentAlignmentTargets)(nil), // 17: mirai.v1.ComponentAlignmentTargets
-	(*CourseGenerationInput)(nil),     // 18: mirai.v1.CourseGenerationInput
-	(*CoursePlan)(nil),                // 19: mirai.v1.CoursePlan
-	(*DocumentAnalysis)(nil),          // 20: mirai.v1.DocumentAnalysis
-	(*SectionHint)(nil),               // 21: mirai.v1.SectionHint
-	(*PlannedSection)(nil),            // 22: mirai.v1.PlannedSection
-	(*PlannedLesson)(nil),             // 23: mirai.v1.PlannedLesson
-	(*timestamppb.Timestamp)(nil),     // 24: google.protobuf.Timestamp
-	(*KnowledgeCitation)(nil),         // 25: mirai.v1.KnowledgeCitation
-	(LessonComponentType)(0),          // 26: mirai.v1.LessonComponentType
+	(WorkflowStepType)(0),             // 7: mirai.v1.WorkflowStepType
+	(*GenerationJob)(nil),             // 8: mirai.v1.GenerationJob
+	(*CourseOutline)(nil),             // 9: mirai.v1.CourseOutline
+	(*OutlineSection)(nil),            // 10: mirai.v1.OutlineSection
+	(*OutlineLesson)(nil),             // 11: mirai.v1.OutlineLesson
+	(*GeneratedLesson)(nil),           // 12: mirai.v1.GeneratedLesson
+	(*LessonComponent)(nil),           // 13: mirai.v1.LessonComponent
+	(*ComponentAlignment)(nil),        // 14: mirai.v1.ComponentAlignment
+	(*ComponentProvenance)(nil),       // 15: mirai.v1.ComponentProvenance
+	(*ProvenanceChunk)(nil),           // 16: mirai.v1.ProvenanceChunk
+	(*LessonProvenance)(nil),          // 17: mirai.v1.LessonProvenance
+	(*ComponentAlignmentTargets)(nil), // 18: mirai.v1.ComponentAlignmentTargets
+	(*CourseGenerationInput)(nil),     // 19: mirai.v1.CourseGenerationInput
+	(*CoursePlan)(nil),                // 20: mirai.v1.CoursePlan
+	(*DocumentAnalysis)(nil),          // 21: mirai.v1.DocumentAnalysis
+	(*SectionHint)(nil),               // 22: mirai.v1.SectionHint
+	(*PlannedSection)(nil),            // 23: mirai.v1.PlannedSection
+	(*PlannedLesson)(nil),             // 24: mirai.v1.PlannedLesson
+	(*timestamppb.Timestamp)(nil),     // 25: google.protobuf.Timestamp
+	(*KnowledgeCitation)(nil),         // 26: mirai.v1.KnowledgeCitation
+	(LessonComponentType)(0),          // 27: mirai.v1.LessonComponentType
 }
 var file_mirai_v1_ai_generation_types_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.GenerationJob.type:type_name -> mirai.v1.GenerationJobType
 	1,  // 1: mirai.v1.GenerationJob.status:type_name -> mirai.v1.GenerationJobStatus
-	24, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
-	24, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
-	24, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
-	9,  // 5: mirai.v1.CourseOutline.sections:type_name -> mirai.v1.OutlineSection
+	25, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
+	25, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
+	25, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
+	10, // 5: mirai.v1.CourseOutline.sections:type_name -> mirai.v1.OutlineSection
 	2,  // 6: mirai.v1.CourseOutline.approval_status:type_name -> mirai.v1.OutlineApprovalStatus
-	24, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
-	24, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
-	10, // 9: mirai.v1.OutlineSection.lessons:type_name -> mirai.v1.OutlineLesson
+	25, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
+	25, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
+	11, // 9: mirai.v1.OutlineSection.lessons:type_name -> mirai.v1.OutlineLesson
 	4,  // 10: mirai.v1.OutlineSection.level:type_name -> mirai.v1.SectionLevel
 	5,  // 11: mirai.v1.OutlineSection.intent:type_name -> mirai.v1.SectionIntent
 	6,  // 12: mirai.v1.OutlineSection.emphasis:type_name -> mirai.v1.SectionEmphasis
-	25, // 13: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
-	12, // 14: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
-	24, // 15: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
-	16, // 16: mirai.v1.GeneratedLesson.aggregate_provenance:type_name -> mirai.v1.LessonProvenance
-	26, // 17: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
-	13, // 18: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
-	14, // 19: mirai.v1.LessonComponent.provenance:type_name -> mirai.v1.ComponentProvenance
-	15, // 20: mirai.v1.ComponentProvenance.source_chunks:type_name -> mirai.v1.ProvenanceChunk
-	24, // 21: mirai.v1.ComponentProvenance.generated_at:type_name -> google.protobuf.Timestamp
-	20, // 22: mirai.v1.CoursePlan.document_analyses:type_name -> mirai.v1.DocumentAnalysis
-	22, // 23: mirai.v1.CoursePlan.planned_sections:type_name -> mirai.v1.PlannedSection
-	24, // 24: mirai.v1.CoursePlan.generated_at:type_name -> google.protobuf.Timestamp
-	24, // 25: mirai.v1.CoursePlan.approved_at:type_name -> google.protobuf.Timestamp
-	21, // 26: mirai.v1.DocumentAnalysis.section_hints:type_name -> mirai.v1.SectionHint
-	23, // 27: mirai.v1.PlannedSection.lessons:type_name -> mirai.v1.PlannedLesson
+	26, // 13: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
+	13, // 14: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
+	25, // 15: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
+	17, // 16: mirai.v1.GeneratedLesson.aggregate_provenance:type_name -> mirai.v1.LessonProvenance
+	27, // 17: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
+	14, // 18: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
+	15, // 19: mirai.v1.LessonComponent.provenance:type_name -> mirai.v1.ComponentProvenance
+	16, // 20: mirai.v1.ComponentProvenance.source_chunks:type_name -> mirai.v1.ProvenanceChunk
+	25, // 21: mirai.v1.ComponentProvenance.generated_at:type_name -> google.protobuf.Timestamp
+	21, // 22: mirai.v1.CoursePlan.document_analyses:type_name -> mirai.v1.DocumentAnalysis
+	23, // 23: mirai.v1.CoursePlan.planned_sections:type_name -> mirai.v1.PlannedSection
+	25, // 24: mirai.v1.CoursePlan.generated_at:type_name -> google.protobuf.Timestamp
+	25, // 25: mirai.v1.CoursePlan.approved_at:type_name -> google.protobuf.Timestamp
+	22, // 26: mirai.v1.DocumentAnalysis.section_hints:type_name -> mirai.v1.SectionHint
+	24, // 27: mirai.v1.PlannedSection.lessons:type_name -> mirai.v1.PlannedLesson
 	28, // [28:28] is the sub-list for method output_type
 	28, // [28:28] is the sub-list for method input_type
 	28, // [28:28] is the sub-list for extension type_name
@@ -2370,7 +2481,7 @@ func file_mirai_v1_ai_generation_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_ai_generation_types_proto_rawDesc), len(file_mirai_v1_ai_generation_types_proto_rawDesc)),
-			NumEnums:      7,
+			NumEnums:      8,
 			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,

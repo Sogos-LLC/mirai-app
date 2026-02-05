@@ -5,6 +5,8 @@ import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2, X, PartyPopper } fro
 import { useListCourses, useDeleteCourse, type LibraryEntry } from '@/hooks/useCourses';
 import { CourseStatus } from '@/gen/mirai/v1/course_pb';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
+import { ActiveWorkflowCard } from '@/components/course/ActiveWorkflowCard';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
@@ -87,6 +89,7 @@ export default function Dashboard() {
     status: statusFilter,
   });
   const deleteCourseMutation = useDeleteCourse();
+  const { activeJob } = useActiveCourseCreation();
 
   const filteredCourses = courses || [];
 
@@ -176,6 +179,9 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* Active Workflow Card */}
+      {activeJob && <ActiveWorkflowCard job={activeJob} />}
 
       {/* Your Courses Section */}
       <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-200 dark:border-dark-border p-6">

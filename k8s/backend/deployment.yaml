@@ -153,6 +153,16 @@ spec:
             secretKeyRef:
               name: twenty-credentials
               key: api-key
+        - name: TEMPORAL_ADDRESS
+          value: "temporal.mirai.svc.cluster.local:7233"
+        - name: TEMPORAL_NAMESPACE
+          value: "mirai"
+        - name: LOGFIRE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: logfire-secret
+              key: token
+              optional: true
         resources:
           requests:
             memory: "4Gi"

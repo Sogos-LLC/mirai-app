@@ -22,6 +22,7 @@ enum GenerationJobType {
   GENERATION_JOB_TYPE_COMPONENT_REGEN = 4;
   GENERATION_JOB_TYPE_FULL_COURSE = 5;
   GENERATION_JOB_TYPE_COURSE_PLANNING = 6;
+  GENERATION_JOB_TYPE_COURSE_CREATION = 7;
 }
 
 // GenerationJobStatus represents job state.
@@ -32,6 +33,7 @@ enum GenerationJobStatus {
   GENERATION_JOB_STATUS_COMPLETED = 3;
   GENERATION_JOB_STATUS_FAILED = 4;
   GENERATION_JOB_STATUS_CANCELLED = 5;
+  GENERATION_JOB_STATUS_AWAITING_APPROVAL = 6;
 }
 
 // OutlineApprovalStatus for generated content review.
@@ -52,6 +54,7 @@ enum JobEventType {
   JOB_EVENT_TYPE_FAILED = 4;
   JOB_EVENT_TYPE_CANCELLED = 5;
   JOB_EVENT_TYPE_KEEPALIVE = 6;
+  JOB_EVENT_TYPE_AWAITING_APPROVAL = 7;
 }
 
 // GenerationJob represents an AI generation job.
@@ -74,6 +77,8 @@ message GenerationJob {
   optional google.protobuf.Timestamp started_at = 18;
   optional google.protobuf.Timestamp completed_at = 19;
   optional string parent_job_id = 20;
+  optional int32 pending_step = 21;      // WorkflowStepType enum value, set when status is AWAITING_APPROVAL
+  optional string step_data_json = 22;   // JSON string for step review data, set when status is AWAITING_APPROVAL
 }
 
 // CourseOutline represents the generated course structure.
@@ -277,4 +282,21 @@ message PlannedLesson {
   string description = 2;
   repeated string search_terms = 3;
   repeated string learning_goals = 4;
+}
+
+// =============================================================================
+// UNIFIED COURSE CREATION WORKFLOW (Phase 7)
+// =============================================================================
+
+// WorkflowStepType identifies which step the workflow is waiting for approval on.
+enum WorkflowStepType {
+  WORKFLOW_STEP_TYPE_UNSPECIFIED = 0;
+  WORKFLOW_STEP_TYPE_TITLE = 1;
+  WORKFLOW_STEP_TYPE_OUTCOMES = 2;
+  WORKFLOW_STEP_TYPE_SME_PERSONAS = 3;
+  WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS = 4;
+  WORKFLOW_STEP_TYPE_TONE_OPTIONS = 5;
+  WORKFLOW_STEP_TYPE_COURSE_PLAN = 6;
+  WORKFLOW_STEP_TYPE_OUTLINE = 7;
+  WORKFLOW_STEP_TYPE_LESSONS = 8;
 }

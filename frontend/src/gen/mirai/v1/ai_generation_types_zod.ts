@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import { z } from "zod";
-import { GenerationJobStatus, GenerationJobType, JobEventType, OutlineApprovalStatus, SectionEmphasis, SectionIntent, SectionLevel } from "./ai_generation_types_pb";
+import { GenerationJobStatus, GenerationJobType, JobEventType, OutlineApprovalStatus, SectionEmphasis, SectionIntent, SectionLevel, WorkflowStepType } from "./ai_generation_types_pb";
 import { KnowledgeCitationSchema } from "./course_wizard_zod";
 import { LessonComponentType } from "./component_enums_pb";
 
@@ -57,6 +57,13 @@ export const SectionEmphasisSchema = z.nativeEnum(SectionEmphasis);
 export type SectionEmphasisType = z.infer<typeof SectionEmphasisSchema>;
 
 /**
+ * Zod schema for WorkflowStepType enum
+ * @generated from enum mirai.v1.WorkflowStepType
+ */
+export const WorkflowStepTypeSchema = z.nativeEnum(WorkflowStepType);
+export type WorkflowStepTypeType = z.infer<typeof WorkflowStepTypeSchema>;
+
+/**
  * Zod schema for GenerationJob
  * @generated from message mirai.v1.GenerationJob
  */
@@ -79,6 +86,8 @@ export const GenerationJobSchema = z.object({
   startedAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
   parentJobId: z.string().optional(),
+  pendingStep: z.number().int().optional(),
+  stepDataJson: z.string().optional(),
 });
 
 export type GenerationJob = z.infer<typeof GenerationJobSchema>;

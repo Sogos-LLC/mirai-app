@@ -11,17 +11,21 @@ import (
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
-	"github.com/sogos/mirai-backend/internal/infrastructure/worker"
 	"github.com/stripe/stripe-go/v76"
 )
 
+// ProvisionWorkflowStarter starts Stripe provisioning workflows.
+type ProvisionWorkflowStarter interface {
+	StartStripeProvision(ctx context.Context, sessionID, customerID, subscriptionID string) (string, error)
+}
+
 // WebhookHandler handles Stripe webhook callbacks.
 type WebhookHandler struct {
-	billingService *service.BillingService
-	pendingRegRepo repository.PendingRegistrationRepository
-	payments       domainservice.PaymentProvider
-	workerClient   *worker.Client
-	logger         domainservice.Logger
+	billingService  *service.BillingService
+	pendingRegRepo  repository.PendingRegistrationRepository
+	payments        domainservice.PaymentProvider
+	workflowStarter ProvisionWorkflowStarter
+	logger          domainservice.Logger
 }
 
 // NewWebhookHandler creates a new webhook handler.
@@ -29,15 +33,15 @@ func NewWebhookHandler(
 	billingService *service.BillingService,
 	pendingRegRepo repository.PendingRegistrationRepository,
 	payments domainservice.PaymentProvider,
-	workerClient *worker.Client,
+	workflowStarter ProvisionWorkflowStarter,
 	logger domainservice.Logger,
 ) *WebhookHandler {
 	return &WebhookHandler{
-		billingService: billingService,
-		pendingRegRepo: pendingRegRepo,
-		payments:       payments,
-		workerClient:   workerClient,
-		logger:         logger,
+		billingService:  billingService,
+		pendingRegRepo:  pendingRegRepo,
+		payments:        payments,
+		workflowStarter: workflowStarter,
+		logger:          logger,
 	}
 }
 
@@ -127,7 +131,7 @@ func (h *WebhookHandler) HandleStripeWebhook(w http.ResponseWriter, r *http.Requ
 }
 
 // handlePendingRegistrationPayment marks a pending registration as paid after successful checkout
-// and enqueues a provisioning task for background processing.
+// and starts a provisioning workflow for background processing.
 func (h *WebhookHandler) handlePendingRegistrationPayment(ctx context.Context, checkoutSessionID, customerID, subscriptionID string) {
 	log := h.logger.With("checkoutSessionID", checkoutSessionID)
 
@@ -170,12 +174,10 @@ func (h *WebhookHandler) handlePendingRegistrationPayment(ctx context.Context, c
 
 	log.Info("pending registration marked as paid", "seatCount", pending.SeatCount)
 
-	// Enqueue provisioning task for background processing
-	if h.workerClient != nil {
-		if err := h.workerClient.EnqueueStripeProvision(checkoutSessionID, customerID, subscriptionID); err != nil {
-			log.Error("failed to enqueue provisioning task", "error", err)
-			// Don't return error - the registration is marked as paid and can still be
-			// picked up by the background worker if it falls back to polling
+	// Start provisioning workflow for background processing
+	if h.workflowStarter != nil {
+		if _, err := h.workflowStarter.StartStripeProvision(ctx, checkoutSessionID, customerID, subscriptionID); err != nil {
+			log.Error("failed to start provisioning workflow", "error", err)
 		}
 	}
 }

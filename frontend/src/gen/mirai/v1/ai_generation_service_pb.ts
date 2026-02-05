@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { ComponentAlignmentTargets, CourseGenerationInput, CourseOutline, CoursePlan, GeneratedLesson, GenerationJob, GenerationJobStatus, GenerationJobType, JobEventType, LessonComponent, OutlineSection } from "./ai_generation_types_pb";
+import type { ComponentAlignmentTargets, CourseGenerationInput, CourseOutline, CoursePlan, GeneratedLesson, GenerationJob, GenerationJobStatus, GenerationJobType, JobEventType, LessonComponent, OutlineSection, WorkflowStepType } from "./ai_generation_types_pb";
 import { file_mirai_v1_ai_generation_types } from "./ai_generation_types_pb";
 import type { AudiencePersona, SMEPersona, ToneOption } from "./course_wizard_pb";
 import { file_mirai_v1_course_wizard } from "./course_wizard_pb";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file mirai/v1/ai_generation_service.proto.
  */
 export const file_mirai_v1_ai_generation_service: GenFile = /*@__PURE__*/
-  fileDesc("CiRtaXJhaS92MS9haV9nZW5lcmF0aW9uX3NlcnZpY2UucHJvdG8SCG1pcmFpLnYxIvQBChBTdG9yZWRXaXphcmREYXRhEioKDHNtZV9wZXJzb25hcxgBIAMoCzIULm1pcmFpLnYxLlNNRVBlcnNvbmESGAoQc2VsZWN0ZWRfc21lX2lkcxgCIAMoCRI0ChFhdWRpZW5jZV9wZXJzb25hcxgDIAMoCzIZLm1pcmFpLnYxLkF1ZGllbmNlUGVyc29uYRIdChVzZWxlY3RlZF9hdWRpZW5jZV9pZHMYBCADKAkSKwoNc2VsZWN0ZWRfdG9uZRgFIAEoCzIULm1pcmFpLnYxLlRvbmVPcHRpb24SGAoQZGVzaXJlZF9vdXRjb21lcxgGIAEoCSJOChxHZW5lcmF0ZUNvdXJzZU91dGxpbmVSZXF1ZXN0Ei4KBWlucHV0GAEgASgLMh8ubWlyYWkudjEuQ291cnNlR2VuZXJhdGlvbklucHV0IkUKHUdlbmVyYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiTgoXR2V0Q291cnNlT3V0bGluZVJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhQKB3ZlcnNpb24YAiABKAVIAIgBAUIKCghfdmVyc2lvbiJ1ChhHZXRDb3Vyc2VPdXRsaW5lUmVzcG9uc2USKAoHb3V0bGluZRgBIAEoCzIXLm1pcmFpLnYxLkNvdXJzZU91dGxpbmUSLwoLd2l6YXJkX2RhdGEYAiABKAsyGi5taXJhaS52MS5TdG9yZWRXaXphcmREYXRhIm8KGlVwZGF0ZUNvdXJzZU91dGxpbmVSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRISCgpvdXRsaW5lX2lkGAIgASgJEioKCHNlY3Rpb25zGAMgAygLMhgubWlyYWkudjEuT3V0bGluZVNlY3Rpb24iRwobVXBkYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlEigKB291dGxpbmUYASABKAsyFy5taXJhaS52MS5Db3Vyc2VPdXRsaW5lIi4KGUdlbmVyYXRlQWxsTGVzc29uc1JlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJIkIKGkdlbmVyYXRlQWxsTGVzc29uc1Jlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2Ii2gEKGlJlZ2VuZXJhdGVDb21wb25lbnRSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRIbChNnZW5lcmF0ZWRfbGVzc29uX2lkGAIgASgJEhQKDGNvbXBvbmVudF9pZBgDIAEoCRIbChNtb2RpZmljYXRpb25fcHJvbXB0GAQgASgJEkMKEWFsaWdubWVudF90YXJnZXRzGAUgASgLMiMubWlyYWkudjEuQ29tcG9uZW50QWxpZ25tZW50VGFyZ2V0c0gAiAEBQhQKEl9hbGlnbm1lbnRfdGFyZ2V0cyJDChtSZWdlbmVyYXRlQ29tcG9uZW50UmVzcG9uc2USJAoDam9iGAEgASgLMhcubWlyYWkudjEuR2VuZXJhdGlvbkpvYiIfCg1HZXRKb2JSZXF1ZXN0Eg4KBmpvYl9pZBgBIAEoCSI2Cg5HZXRKb2JSZXNwb25zZRIkCgNqb2IYASABKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iIq8BCg9MaXN0Sm9ic1JlcXVlc3QSLgoEdHlwZRgBIAEoDjIbLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2JUeXBlSACIAQESMgoGc3RhdHVzGAIgASgOMh0ubWlyYWkudjEuR2VuZXJhdGlvbkpvYlN0YXR1c0gBiAEBEhYKCWNvdXJzZV9pZBgDIAEoCUgCiAEBQgcKBV90eXBlQgkKB19zdGF0dXNCDAoKX2NvdXJzZV9pZCI5ChBMaXN0Sm9ic1Jlc3BvbnNlEiUKBGpvYnMYASADKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iIiIKEENhbmNlbEpvYlJlcXVlc3QSDgoGam9iX2lkGAEgASgJIjkKEUNhbmNlbEpvYlJlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiLgoZR2V0R2VuZXJhdGVkTGVzc29uUmVxdWVzdBIRCglsZXNzb25faWQYASABKAkiRwoaR2V0R2VuZXJhdGVkTGVzc29uUmVzcG9uc2USKQoGbGVzc29uGAEgASgLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIjAKG0xpc3RHZW5lcmF0ZWRMZXNzb25zUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkiSgocTGlzdEdlbmVyYXRlZExlc3NvbnNSZXNwb25zZRIqCgdsZXNzb25zGAEgAygLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIqEBCh1HZW5lcmF0ZUNvbXBvbmVudEltYWdlUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkSGwoTZ2VuZXJhdGVkX2xlc3Nvbl9pZBgCIAEoCRIUCgxjb21wb25lbnRfaWQYAyABKAkSDgoGcHJvbXB0GAQgASgJEhkKDGFzcGVjdF9yYXRpbxgFIAEoCUgAiAEBQg8KDV9hc3BlY3RfcmF0aW8iYQoeR2VuZXJhdGVDb21wb25lbnRJbWFnZVJlc3BvbnNlEhEKCWltYWdlX3VybBgBIAEoCRIsCgljb21wb25lbnQYAiABKAsyGS5taXJhaS52MS5MZXNzb25Db21wb25lbnQifgodVXBkYXRlTGVzc29uQ29tcG9uZW50c1JlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhsKE2dlbmVyYXRlZF9sZXNzb25faWQYAiABKAkSLQoKY29tcG9uZW50cxgDIAMoCzIZLm1pcmFpLnYxLkxlc3NvbkNvbXBvbmVudCJLCh5VcGRhdGVMZXNzb25Db21wb25lbnRzUmVzcG9uc2USKQoGbGVzc29uGAEgASgLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIhYKFFN1YnNjcmliZUpvYnNSZXF1ZXN0ImkKFVN1YnNjcmliZUpvYnNSZXNwb25zZRIqCgpldmVudF90eXBlGAEgASgOMhYubWlyYWkudjEuSm9iRXZlbnRUeXBlEiQKA2pvYhgCIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiKQoUR2V0Q291cnNlUGxhblJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJIjsKFUdldENvdXJzZVBsYW5SZXNwb25zZRIiCgRwbGFuGAEgASgLMhQubWlyYWkudjEuQ291cnNlUGxhbiItChhBcHByb3ZlQ291cnNlUGxhblJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJIj8KGUFwcHJvdmVDb3Vyc2VQbGFuUmVzcG9uc2USIgoEcGxhbhgBIAEoCzIULm1pcmFpLnYxLkNvdXJzZVBsYW4y7woKE0FJR2VuZXJhdGlvblNlcnZpY2USaAoVR2VuZXJhdGVDb3Vyc2VPdXRsaW5lEiYubWlyYWkudjEuR2VuZXJhdGVDb3Vyc2VPdXRsaW5lUmVxdWVzdBonLm1pcmFpLnYxLkdlbmVyYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlElkKEEdldENvdXJzZU91dGxpbmUSIS5taXJhaS52MS5HZXRDb3Vyc2VPdXRsaW5lUmVxdWVzdBoiLm1pcmFpLnYxLkdldENvdXJzZU91dGxpbmVSZXNwb25zZRJiChNVcGRhdGVDb3Vyc2VPdXRsaW5lEiQubWlyYWkudjEuVXBkYXRlQ291cnNlT3V0bGluZVJlcXVlc3QaJS5taXJhaS52MS5VcGRhdGVDb3Vyc2VPdXRsaW5lUmVzcG9uc2USXwoSR2VuZXJhdGVBbGxMZXNzb25zEiMubWlyYWkudjEuR2VuZXJhdGVBbGxMZXNzb25zUmVxdWVzdBokLm1pcmFpLnYxLkdlbmVyYXRlQWxsTGVzc29uc1Jlc3BvbnNlEmIKE1JlZ2VuZXJhdGVDb21wb25lbnQSJC5taXJhaS52MS5SZWdlbmVyYXRlQ29tcG9uZW50UmVxdWVzdBolLm1pcmFpLnYxLlJlZ2VuZXJhdGVDb21wb25lbnRSZXNwb25zZRI7CgZHZXRKb2ISFy5taXJhaS52MS5HZXRKb2JSZXF1ZXN0GhgubWlyYWkudjEuR2V0Sm9iUmVzcG9uc2USQQoITGlzdEpvYnMSGS5taXJhaS52MS5MaXN0Sm9ic1JlcXVlc3QaGi5taXJhaS52MS5MaXN0Sm9ic1Jlc3BvbnNlEkQKCUNhbmNlbEpvYhIaLm1pcmFpLnYxLkNhbmNlbEpvYlJlcXVlc3QaGy5taXJhaS52MS5DYW5jZWxKb2JSZXNwb25zZRJfChJHZXRHZW5lcmF0ZWRMZXNzb24SIy5taXJhaS52MS5HZXRHZW5lcmF0ZWRMZXNzb25SZXF1ZXN0GiQubWlyYWkudjEuR2V0R2VuZXJhdGVkTGVzc29uUmVzcG9uc2USZQoUTGlzdEdlbmVyYXRlZExlc3NvbnMSJS5taXJhaS52MS5MaXN0R2VuZXJhdGVkTGVzc29uc1JlcXVlc3QaJi5taXJhaS52MS5MaXN0R2VuZXJhdGVkTGVzc29uc1Jlc3BvbnNlEmsKFkdlbmVyYXRlQ29tcG9uZW50SW1hZ2USJy5taXJhaS52MS5HZW5lcmF0ZUNvbXBvbmVudEltYWdlUmVxdWVzdBooLm1pcmFpLnYxLkdlbmVyYXRlQ29tcG9uZW50SW1hZ2VSZXNwb25zZRJrChZVcGRhdGVMZXNzb25Db21wb25lbnRzEicubWlyYWkudjEuVXBkYXRlTGVzc29uQ29tcG9uZW50c1JlcXVlc3QaKC5taXJhaS52MS5VcGRhdGVMZXNzb25Db21wb25lbnRzUmVzcG9uc2USUgoNU3Vic2NyaWJlSm9icxIeLm1pcmFpLnYxLlN1YnNjcmliZUpvYnNSZXF1ZXN0Gh8ubWlyYWkudjEuU3Vic2NyaWJlSm9ic1Jlc3BvbnNlMAESUAoNR2V0Q291cnNlUGxhbhIeLm1pcmFpLnYxLkdldENvdXJzZVBsYW5SZXF1ZXN0Gh8ubWlyYWkudjEuR2V0Q291cnNlUGxhblJlc3BvbnNlElwKEUFwcHJvdmVDb3Vyc2VQbGFuEiIubWlyYWkudjEuQXBwcm92ZUNvdXJzZVBsYW5SZXF1ZXN0GiMubWlyYWkudjEuQXBwcm92ZUNvdXJzZVBsYW5SZXNwb25zZUKeAQoMY29tLm1pcmFpLnYxQhhBaUdlbmVyYXRpb25TZXJ2aWNlUHJvdG9QAVozZ2l0aHViLmNvbS9zb2dvcy9taXJhaS1iYWNrZW5kL2dlbi9taXJhaS92MTttaXJhaXYxogIDTVhYqgIITWlyYWkuVjHKAghNaXJhaVxWMeICFE1pcmFpXFYxXEdQQk1ldGFkYXRh6gIJTWlyYWk6OlYxYgZwcm90bzM", [file_mirai_v1_ai_generation_types, file_mirai_v1_course_wizard]);
+  fileDesc("CiRtaXJhaS92MS9haV9nZW5lcmF0aW9uX3NlcnZpY2UucHJvdG8SCG1pcmFpLnYxIvQBChBTdG9yZWRXaXphcmREYXRhEioKDHNtZV9wZXJzb25hcxgBIAMoCzIULm1pcmFpLnYxLlNNRVBlcnNvbmESGAoQc2VsZWN0ZWRfc21lX2lkcxgCIAMoCRI0ChFhdWRpZW5jZV9wZXJzb25hcxgDIAMoCzIZLm1pcmFpLnYxLkF1ZGllbmNlUGVyc29uYRIdChVzZWxlY3RlZF9hdWRpZW5jZV9pZHMYBCADKAkSKwoNc2VsZWN0ZWRfdG9uZRgFIAEoCzIULm1pcmFpLnYxLlRvbmVPcHRpb24SGAoQZGVzaXJlZF9vdXRjb21lcxgGIAEoCSJOChxHZW5lcmF0ZUNvdXJzZU91dGxpbmVSZXF1ZXN0Ei4KBWlucHV0GAEgASgLMh8ubWlyYWkudjEuQ291cnNlR2VuZXJhdGlvbklucHV0IkUKHUdlbmVyYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiTgoXR2V0Q291cnNlT3V0bGluZVJlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhQKB3ZlcnNpb24YAiABKAVIAIgBAUIKCghfdmVyc2lvbiJ1ChhHZXRDb3Vyc2VPdXRsaW5lUmVzcG9uc2USKAoHb3V0bGluZRgBIAEoCzIXLm1pcmFpLnYxLkNvdXJzZU91dGxpbmUSLwoLd2l6YXJkX2RhdGEYAiABKAsyGi5taXJhaS52MS5TdG9yZWRXaXphcmREYXRhIm8KGlVwZGF0ZUNvdXJzZU91dGxpbmVSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRISCgpvdXRsaW5lX2lkGAIgASgJEioKCHNlY3Rpb25zGAMgAygLMhgubWlyYWkudjEuT3V0bGluZVNlY3Rpb24iRwobVXBkYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlEigKB291dGxpbmUYASABKAsyFy5taXJhaS52MS5Db3Vyc2VPdXRsaW5lIi4KGUdlbmVyYXRlQWxsTGVzc29uc1JlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJIkIKGkdlbmVyYXRlQWxsTGVzc29uc1Jlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2Ii2gEKGlJlZ2VuZXJhdGVDb21wb25lbnRSZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCRIbChNnZW5lcmF0ZWRfbGVzc29uX2lkGAIgASgJEhQKDGNvbXBvbmVudF9pZBgDIAEoCRIbChNtb2RpZmljYXRpb25fcHJvbXB0GAQgASgJEkMKEWFsaWdubWVudF90YXJnZXRzGAUgASgLMiMubWlyYWkudjEuQ29tcG9uZW50QWxpZ25tZW50VGFyZ2V0c0gAiAEBQhQKEl9hbGlnbm1lbnRfdGFyZ2V0cyJDChtSZWdlbmVyYXRlQ29tcG9uZW50UmVzcG9uc2USJAoDam9iGAEgASgLMhcubWlyYWkudjEuR2VuZXJhdGlvbkpvYiIfCg1HZXRKb2JSZXF1ZXN0Eg4KBmpvYl9pZBgBIAEoCSI2Cg5HZXRKb2JSZXNwb25zZRIkCgNqb2IYASABKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iIq8BCg9MaXN0Sm9ic1JlcXVlc3QSLgoEdHlwZRgBIAEoDjIbLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2JUeXBlSACIAQESMgoGc3RhdHVzGAIgASgOMh0ubWlyYWkudjEuR2VuZXJhdGlvbkpvYlN0YXR1c0gBiAEBEhYKCWNvdXJzZV9pZBgDIAEoCUgCiAEBQgcKBV90eXBlQgkKB19zdGF0dXNCDAoKX2NvdXJzZV9pZCI5ChBMaXN0Sm9ic1Jlc3BvbnNlEiUKBGpvYnMYASADKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iIiIKEENhbmNlbEpvYlJlcXVlc3QSDgoGam9iX2lkGAEgASgJIjkKEUNhbmNlbEpvYlJlc3BvbnNlEiQKA2pvYhgBIAEoCzIXLm1pcmFpLnYxLkdlbmVyYXRpb25Kb2IiLgoZR2V0R2VuZXJhdGVkTGVzc29uUmVxdWVzdBIRCglsZXNzb25faWQYASABKAkiRwoaR2V0R2VuZXJhdGVkTGVzc29uUmVzcG9uc2USKQoGbGVzc29uGAEgASgLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIjAKG0xpc3RHZW5lcmF0ZWRMZXNzb25zUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkiSgocTGlzdEdlbmVyYXRlZExlc3NvbnNSZXNwb25zZRIqCgdsZXNzb25zGAEgAygLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIqEBCh1HZW5lcmF0ZUNvbXBvbmVudEltYWdlUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkSGwoTZ2VuZXJhdGVkX2xlc3Nvbl9pZBgCIAEoCRIUCgxjb21wb25lbnRfaWQYAyABKAkSDgoGcHJvbXB0GAQgASgJEhkKDGFzcGVjdF9yYXRpbxgFIAEoCUgAiAEBQg8KDV9hc3BlY3RfcmF0aW8iYQoeR2VuZXJhdGVDb21wb25lbnRJbWFnZVJlc3BvbnNlEhEKCWltYWdlX3VybBgBIAEoCRIsCgljb21wb25lbnQYAiABKAsyGS5taXJhaS52MS5MZXNzb25Db21wb25lbnQifgodVXBkYXRlTGVzc29uQ29tcG9uZW50c1JlcXVlc3QSEQoJY291cnNlX2lkGAEgASgJEhsKE2dlbmVyYXRlZF9sZXNzb25faWQYAiABKAkSLQoKY29tcG9uZW50cxgDIAMoCzIZLm1pcmFpLnYxLkxlc3NvbkNvbXBvbmVudCJLCh5VcGRhdGVMZXNzb25Db21wb25lbnRzUmVzcG9uc2USKQoGbGVzc29uGAEgASgLMhkubWlyYWkudjEuR2VuZXJhdGVkTGVzc29uIhYKFFN1YnNjcmliZUpvYnNSZXF1ZXN0IuEBChVTdWJzY3JpYmVKb2JzUmVzcG9uc2USKgoKZXZlbnRfdHlwZRgBIAEoDjIWLm1pcmFpLnYxLkpvYkV2ZW50VHlwZRIkCgNqb2IYAiABKAsyFy5taXJhaS52MS5HZW5lcmF0aW9uSm9iEjUKDHBlbmRpbmdfc3RlcBgDIAEoDjIaLm1pcmFpLnYxLldvcmtmbG93U3RlcFR5cGVIAIgBARIbCg5zdGVwX2RhdGFfanNvbhgEIAEoCUgBiAEBQg8KDV9wZW5kaW5nX3N0ZXBCEQoPX3N0ZXBfZGF0YV9qc29uIikKFEdldENvdXJzZVBsYW5SZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCSI7ChVHZXRDb3Vyc2VQbGFuUmVzcG9uc2USIgoEcGxhbhgBIAEoCzIULm1pcmFpLnYxLkNvdXJzZVBsYW4iLQoYQXBwcm92ZUNvdXJzZVBsYW5SZXF1ZXN0EhEKCWNvdXJzZV9pZBgBIAEoCSI/ChlBcHByb3ZlQ291cnNlUGxhblJlc3BvbnNlEiIKBHBsYW4YASABKAsyFC5taXJhaS52MS5Db3Vyc2VQbGFuIowCChpTdGFydENvdXJzZUNyZWF0aW9uUmVxdWVzdBIRCgljb3Vyc2VfaWQYASABKAkSEwoLY291cnNlX25hbWUYAiABKAkSHQoQZGVzaXJlZF9vdXRjb21lcxgDIAEoCUgAiAEBEh8KEmFkZGl0aW9uYWxfY29udGV4dBgEIAEoCUgBiAEBEhoKEmludGVybmFsX2RhdGFfb25seRgFIAEoCBIdChVzZWxlY3RlZF90ZWFtX2RvY19pZHMYBiADKAkSHwoXc2VsZWN0ZWRfZ2xvYmFsX2RvY19pZHMYByADKAlCEwoRX2Rlc2lyZWRfb3V0Y29tZXNCFQoTX2FkZGl0aW9uYWxfY29udGV4dCJDChtTdGFydENvdXJzZUNyZWF0aW9uUmVzcG9uc2USJAoDam9iGAEgASgLMhcubWlyYWkudjEuR2VuZXJhdGlvbkpvYiLyAQoaQXBwcm92ZVdvcmtmbG93U3RlcFJlcXVlc3QSDgoGam9iX2lkGAEgASgJEigKBHN0ZXAYAiABKA4yGi5taXJhaS52MS5Xb3JrZmxvd1N0ZXBUeXBlEhQKDHNlbGVjdGVkX2lkcxgDIAMoCRJOCg1tb2RpZmljYXRpb25zGAQgAygLMjcubWlyYWkudjEuQXBwcm92ZVdvcmtmbG93U3RlcFJlcXVlc3QuTW9kaWZpY2F0aW9uc0VudHJ5GjQKEk1vZGlmaWNhdGlvbnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIh0KG0FwcHJvdmVXb3JrZmxvd1N0ZXBSZXNwb25zZSJnChlSZWplY3RXb3JrZmxvd1N0ZXBSZXF1ZXN0Eg4KBmpvYl9pZBgBIAEoCRIoCgRzdGVwGAIgASgOMhoubWlyYWkudjEuV29ya2Zsb3dTdGVwVHlwZRIQCghmZWVkYmFjaxgDIAEoCSIcChpSZWplY3RXb3JrZmxvd1N0ZXBSZXNwb25zZSIuChxHZXRHcmFwaFZpc3VhbGl6YXRpb25SZXF1ZXN0Eg4KBmpvYl9pZBgBIAEoCSJLCh1HZXRHcmFwaFZpc3VhbGl6YXRpb25SZXNwb25zZRIUCgxtZXJtYWlkX2NvZGUYASABKAkSFAoMY3VycmVudF9ub2RlGAIgASgJMoIOChNBSUdlbmVyYXRpb25TZXJ2aWNlEmgKFUdlbmVyYXRlQ291cnNlT3V0bGluZRImLm1pcmFpLnYxLkdlbmVyYXRlQ291cnNlT3V0bGluZVJlcXVlc3QaJy5taXJhaS52MS5HZW5lcmF0ZUNvdXJzZU91dGxpbmVSZXNwb25zZRJZChBHZXRDb3Vyc2VPdXRsaW5lEiEubWlyYWkudjEuR2V0Q291cnNlT3V0bGluZVJlcXVlc3QaIi5taXJhaS52MS5HZXRDb3Vyc2VPdXRsaW5lUmVzcG9uc2USYgoTVXBkYXRlQ291cnNlT3V0bGluZRIkLm1pcmFpLnYxLlVwZGF0ZUNvdXJzZU91dGxpbmVSZXF1ZXN0GiUubWlyYWkudjEuVXBkYXRlQ291cnNlT3V0bGluZVJlc3BvbnNlEl8KEkdlbmVyYXRlQWxsTGVzc29ucxIjLm1pcmFpLnYxLkdlbmVyYXRlQWxsTGVzc29uc1JlcXVlc3QaJC5taXJhaS52MS5HZW5lcmF0ZUFsbExlc3NvbnNSZXNwb25zZRJiChNSZWdlbmVyYXRlQ29tcG9uZW50EiQubWlyYWkudjEuUmVnZW5lcmF0ZUNvbXBvbmVudFJlcXVlc3QaJS5taXJhaS52MS5SZWdlbmVyYXRlQ29tcG9uZW50UmVzcG9uc2USOwoGR2V0Sm9iEhcubWlyYWkudjEuR2V0Sm9iUmVxdWVzdBoYLm1pcmFpLnYxLkdldEpvYlJlc3BvbnNlEkEKCExpc3RKb2JzEhkubWlyYWkudjEuTGlzdEpvYnNSZXF1ZXN0GhoubWlyYWkudjEuTGlzdEpvYnNSZXNwb25zZRJECglDYW5jZWxKb2ISGi5taXJhaS52MS5DYW5jZWxKb2JSZXF1ZXN0GhsubWlyYWkudjEuQ2FuY2VsSm9iUmVzcG9uc2USXwoSR2V0R2VuZXJhdGVkTGVzc29uEiMubWlyYWkudjEuR2V0R2VuZXJhdGVkTGVzc29uUmVxdWVzdBokLm1pcmFpLnYxLkdldEdlbmVyYXRlZExlc3NvblJlc3BvbnNlEmUKFExpc3RHZW5lcmF0ZWRMZXNzb25zEiUubWlyYWkudjEuTGlzdEdlbmVyYXRlZExlc3NvbnNSZXF1ZXN0GiYubWlyYWkudjEuTGlzdEdlbmVyYXRlZExlc3NvbnNSZXNwb25zZRJrChZHZW5lcmF0ZUNvbXBvbmVudEltYWdlEicubWlyYWkudjEuR2VuZXJhdGVDb21wb25lbnRJbWFnZVJlcXVlc3QaKC5taXJhaS52MS5HZW5lcmF0ZUNvbXBvbmVudEltYWdlUmVzcG9uc2USawoWVXBkYXRlTGVzc29uQ29tcG9uZW50cxInLm1pcmFpLnYxLlVwZGF0ZUxlc3NvbkNvbXBvbmVudHNSZXF1ZXN0GigubWlyYWkudjEuVXBkYXRlTGVzc29uQ29tcG9uZW50c1Jlc3BvbnNlElIKDVN1YnNjcmliZUpvYnMSHi5taXJhaS52MS5TdWJzY3JpYmVKb2JzUmVxdWVzdBofLm1pcmFpLnYxLlN1YnNjcmliZUpvYnNSZXNwb25zZTABElAKDUdldENvdXJzZVBsYW4SHi5taXJhaS52MS5HZXRDb3Vyc2VQbGFuUmVxdWVzdBofLm1pcmFpLnYxLkdldENvdXJzZVBsYW5SZXNwb25zZRJcChFBcHByb3ZlQ291cnNlUGxhbhIiLm1pcmFpLnYxLkFwcHJvdmVDb3Vyc2VQbGFuUmVxdWVzdBojLm1pcmFpLnYxLkFwcHJvdmVDb3Vyc2VQbGFuUmVzcG9uc2USYgoTU3RhcnRDb3Vyc2VDcmVhdGlvbhIkLm1pcmFpLnYxLlN0YXJ0Q291cnNlQ3JlYXRpb25SZXF1ZXN0GiUubWlyYWkudjEuU3RhcnRDb3Vyc2VDcmVhdGlvblJlc3BvbnNlEmIKE0FwcHJvdmVXb3JrZmxvd1N0ZXASJC5taXJhaS52MS5BcHByb3ZlV29ya2Zsb3dTdGVwUmVxdWVzdBolLm1pcmFpLnYxLkFwcHJvdmVXb3JrZmxvd1N0ZXBSZXNwb25zZRJfChJSZWplY3RXb3JrZmxvd1N0ZXASIy5taXJhaS52MS5SZWplY3RXb3JrZmxvd1N0ZXBSZXF1ZXN0GiQubWlyYWkudjEuUmVqZWN0V29ya2Zsb3dTdGVwUmVzcG9uc2USaAoVR2V0R3JhcGhWaXN1YWxpemF0aW9uEiYubWlyYWkudjEuR2V0R3JhcGhWaXN1YWxpemF0aW9uUmVxdWVzdBonLm1pcmFpLnYxLkdldEdyYXBoVmlzdWFsaXphdGlvblJlc3BvbnNlQp4BCgxjb20ubWlyYWkudjFCGEFpR2VuZXJhdGlvblNlcnZpY2VQcm90b1ABWjNnaXRodWIuY29tL3NvZ29zL21pcmFpLWJhY2tlbmQvZ2VuL21pcmFpL3YxO21pcmFpdjGiAgNNWFiqAghNaXJhaS5WMcoCCE1pcmFpXFYx4gIUTWlyYWlcVjFcR1BCTWV0YWRhdGHqAglNaXJhaTo6VjFiBnByb3RvMw", [file_mirai_v1_ai_generation_types, file_mirai_v1_course_wizard]);
 
 /**
  * StoredWizardData represents wizard selections persisted with the course.
@@ -579,6 +579,16 @@ export type SubscribeJobsResponse = Message<"mirai.v1.SubscribeJobsResponse"> & 
    * @generated from field: mirai.v1.GenerationJob job = 2;
    */
   job?: GenerationJob;
+
+  /**
+   * @generated from field: optional mirai.v1.WorkflowStepType pending_step = 3;
+   */
+  pendingStep?: WorkflowStepType;
+
+  /**
+   * @generated from field: optional string step_data_json = 4;
+   */
+  stepDataJson?: string;
 };
 
 /**
@@ -657,6 +667,194 @@ export type ApproveCoursePlanResponse = Message<"mirai.v1.ApproveCoursePlanRespo
  */
 export const ApproveCoursePlanResponseSchema: GenMessage<ApproveCoursePlanResponse> = /*@__PURE__*/
   messageDesc(file_mirai_v1_ai_generation_service, 30);
+
+/**
+ * @generated from message mirai.v1.StartCourseCreationRequest
+ */
+export type StartCourseCreationRequest = Message<"mirai.v1.StartCourseCreationRequest"> & {
+  /**
+   * @generated from field: string course_id = 1;
+   */
+  courseId: string;
+
+  /**
+   * @generated from field: string course_name = 2;
+   */
+  courseName: string;
+
+  /**
+   * @generated from field: optional string desired_outcomes = 3;
+   */
+  desiredOutcomes?: string;
+
+  /**
+   * @generated from field: optional string additional_context = 4;
+   */
+  additionalContext?: string;
+
+  /**
+   * @generated from field: bool internal_data_only = 5;
+   */
+  internalDataOnly: boolean;
+
+  /**
+   * @generated from field: repeated string selected_team_doc_ids = 6;
+   */
+  selectedTeamDocIds: string[];
+
+  /**
+   * @generated from field: repeated string selected_global_doc_ids = 7;
+   */
+  selectedGlobalDocIds: string[];
+};
+
+/**
+ * Describes the message mirai.v1.StartCourseCreationRequest.
+ * Use `create(StartCourseCreationRequestSchema)` to create a new message.
+ */
+export const StartCourseCreationRequestSchema: GenMessage<StartCourseCreationRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_service, 31);
+
+/**
+ * @generated from message mirai.v1.StartCourseCreationResponse
+ */
+export type StartCourseCreationResponse = Message<"mirai.v1.StartCourseCreationResponse"> & {
+  /**
+   * @generated from field: mirai.v1.GenerationJob job = 1;
+   */
+  job?: GenerationJob;
+};
+
+/**
+ * Describes the message mirai.v1.StartCourseCreationResponse.
+ * Use `create(StartCourseCreationResponseSchema)` to create a new message.
+ */
+export const StartCourseCreationResponseSchema: GenMessage<StartCourseCreationResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_service, 32);
+
+/**
+ * @generated from message mirai.v1.ApproveWorkflowStepRequest
+ */
+export type ApproveWorkflowStepRequest = Message<"mirai.v1.ApproveWorkflowStepRequest"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+
+  /**
+   * @generated from field: mirai.v1.WorkflowStepType step = 2;
+   */
+  step: WorkflowStepType;
+
+  /**
+   * @generated from field: repeated string selected_ids = 3;
+   */
+  selectedIds: string[];
+
+  /**
+   * @generated from field: map<string, string> modifications = 4;
+   */
+  modifications: { [key: string]: string };
+};
+
+/**
+ * Describes the message mirai.v1.ApproveWorkflowStepRequest.
+ * Use `create(ApproveWorkflowStepRequestSchema)` to create a new message.
+ */
+export const ApproveWorkflowStepRequestSchema: GenMessage<ApproveWorkflowStepRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_service, 33);
+
+/**
+ * @generated from message mirai.v1.ApproveWorkflowStepResponse
+ */
+export type ApproveWorkflowStepResponse = Message<"mirai.v1.ApproveWorkflowStepResponse"> & {
+};
+
+/**
+ * Describes the message mirai.v1.ApproveWorkflowStepResponse.
+ * Use `create(ApproveWorkflowStepResponseSchema)` to create a new message.
+ */
+export const ApproveWorkflowStepResponseSchema: GenMessage<ApproveWorkflowStepResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_service, 34);
+
+/**
+ * @generated from message mirai.v1.RejectWorkflowStepRequest
+ */
+export type RejectWorkflowStepRequest = Message<"mirai.v1.RejectWorkflowStepRequest"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+
+  /**
+   * @generated from field: mirai.v1.WorkflowStepType step = 2;
+   */
+  step: WorkflowStepType;
+
+  /**
+   * @generated from field: string feedback = 3;
+   */
+  feedback: string;
+};
+
+/**
+ * Describes the message mirai.v1.RejectWorkflowStepRequest.
+ * Use `create(RejectWorkflowStepRequestSchema)` to create a new message.
+ */
+export const RejectWorkflowStepRequestSchema: GenMessage<RejectWorkflowStepRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_service, 35);
+
+/**
+ * @generated from message mirai.v1.RejectWorkflowStepResponse
+ */
+export type RejectWorkflowStepResponse = Message<"mirai.v1.RejectWorkflowStepResponse"> & {
+};
+
+/**
+ * Describes the message mirai.v1.RejectWorkflowStepResponse.
+ * Use `create(RejectWorkflowStepResponseSchema)` to create a new message.
+ */
+export const RejectWorkflowStepResponseSchema: GenMessage<RejectWorkflowStepResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_service, 36);
+
+/**
+ * @generated from message mirai.v1.GetGraphVisualizationRequest
+ */
+export type GetGraphVisualizationRequest = Message<"mirai.v1.GetGraphVisualizationRequest"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message mirai.v1.GetGraphVisualizationRequest.
+ * Use `create(GetGraphVisualizationRequestSchema)` to create a new message.
+ */
+export const GetGraphVisualizationRequestSchema: GenMessage<GetGraphVisualizationRequest> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_service, 37);
+
+/**
+ * @generated from message mirai.v1.GetGraphVisualizationResponse
+ */
+export type GetGraphVisualizationResponse = Message<"mirai.v1.GetGraphVisualizationResponse"> & {
+  /**
+   * @generated from field: string mermaid_code = 1;
+   */
+  mermaidCode: string;
+
+  /**
+   * @generated from field: string current_node = 2;
+   */
+  currentNode: string;
+};
+
+/**
+ * Describes the message mirai.v1.GetGraphVisualizationResponse.
+ * Use `create(GetGraphVisualizationResponseSchema)` to create a new message.
+ */
+export const GetGraphVisualizationResponseSchema: GenMessage<GetGraphVisualizationResponse> = /*@__PURE__*/
+  messageDesc(file_mirai_v1_ai_generation_service, 38);
 
 /**
  * AIGenerationService handles AI generation operations.
@@ -783,6 +981,40 @@ export const AIGenerationService: GenService<{
     methodKind: "unary";
     input: typeof ApproveCoursePlanRequestSchema;
     output: typeof ApproveCoursePlanResponseSchema;
+  },
+  /**
+   * Unified course creation workflow (Phase 7)
+   *
+   * @generated from rpc mirai.v1.AIGenerationService.StartCourseCreation
+   */
+  startCourseCreation: {
+    methodKind: "unary";
+    input: typeof StartCourseCreationRequestSchema;
+    output: typeof StartCourseCreationResponseSchema;
+  },
+  /**
+   * @generated from rpc mirai.v1.AIGenerationService.ApproveWorkflowStep
+   */
+  approveWorkflowStep: {
+    methodKind: "unary";
+    input: typeof ApproveWorkflowStepRequestSchema;
+    output: typeof ApproveWorkflowStepResponseSchema;
+  },
+  /**
+   * @generated from rpc mirai.v1.AIGenerationService.RejectWorkflowStep
+   */
+  rejectWorkflowStep: {
+    methodKind: "unary";
+    input: typeof RejectWorkflowStepRequestSchema;
+    output: typeof RejectWorkflowStepResponseSchema;
+  },
+  /**
+   * @generated from rpc mirai.v1.AIGenerationService.GetGraphVisualization
+   */
+  getGraphVisualization: {
+    methodKind: "unary";
+    input: typeof GetGraphVisualizationRequestSchema;
+    output: typeof GetGraphVisualizationResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_mirai_v1_ai_generation_service, 0);
