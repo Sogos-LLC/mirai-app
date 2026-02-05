@@ -1,5 +1,7 @@
 """Input, output, and signal types for the CourseCreationWorkflow."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 
 
@@ -19,11 +21,21 @@ class CourseCreationInput:
     internal_data_only: bool = False
 
     # Knowledge source IDs (for RAG + planning)
-    selected_team_doc_ids: list[str] = field(default_factory=list)
-    selected_global_doc_ids: list[str] = field(default_factory=list)
+    # Optional to tolerate Go nil slices (serialized as JSON null)
+    selected_team_doc_ids: list[str] | None = field(default_factory=list)
+    selected_global_doc_ids: list[str] | None = field(default_factory=list)
 
     # RAG filters (course_id, team_id, etc.)
-    rag_filters: dict[str, str] = field(default_factory=dict)
+    rag_filters: dict[str, str] | None = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Normalize None → empty for optional collection fields."""
+        if self.selected_team_doc_ids is None:
+            self.selected_team_doc_ids = []
+        if self.selected_global_doc_ids is None:
+            self.selected_global_doc_ids = []
+        if self.rag_filters is None:
+            self.rag_filters = {}
 
 
 @dataclass
@@ -44,5 +56,12 @@ class StepApproval:
     feedback: str = ""
 
     # User selections forwarded back to workflow
-    selected_ids: list[str] = field(default_factory=list)
-    modifications: dict[str, str] = field(default_factory=dict)
+    selected_ids: list[str] | None = field(default_factory=list)
+    modifications: dict[str, str] | None = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Normalize None → empty for optional collection fields."""
+        if self.selected_ids is None:
+            self.selected_ids = []
+        if self.modifications is None:
+            self.modifications = {}

@@ -89,6 +89,17 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 
 	// Start the Python CourseCreationWorkflow
 	if s.workflowStarter != nil {
+		// Ensure non-nil slices/maps — Go nil serializes as JSON null,
+		// which Python's Temporal SDK rejects for list[str] / dict[str,str].
+		teamDocIDs := req.SelectedTeamDocIDs
+		if teamDocIDs == nil {
+			teamDocIDs = []string{}
+		}
+		globalDocIDs := req.SelectedGlobalDocIDs
+		if globalDocIDs == nil {
+			globalDocIDs = []string{}
+		}
+
 		input := CourseCreationInput{
 			JobID:                job.ID.String(),
 			TenantID:             user.TenantID.String(),
@@ -98,8 +109,8 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 			DesiredOutcomes:      req.DesiredOutcomes,
 			AdditionalContext:    req.AdditionalContext,
 			InternalDataOnly:     req.InternalDataOnly,
-			SelectedTeamDocIDs:   req.SelectedTeamDocIDs,
-			SelectedGlobalDocIDs: req.SelectedGlobalDocIDs,
+			SelectedTeamDocIDs:   teamDocIDs,
+			SelectedGlobalDocIDs: globalDocIDs,
 			RAGFilters:           ragFilters,
 		}
 
