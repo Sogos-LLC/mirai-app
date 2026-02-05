@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 // SetupTracing initializes an OTLP HTTP trace exporter pointed at Logfire.
@@ -38,7 +38,7 @@ func SetupTracing(ctx context.Context, logfireToken, environment string, logger 
 			semconv.SchemaURL,
 			semconv.ServiceName("mirai-backend"),
 			semconv.ServiceVersion("1.0.0"),
-			semconv.DeploymentEnvironment(environment),
+			semconv.DeploymentEnvironmentName(environment),
 		),
 	)
 	if err != nil {
