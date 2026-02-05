@@ -184,8 +184,4 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-backend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-backend
-<<<<<<< Updated upstream
-  newTag: uat-1f5b23d
-=======
   newTag: uat-187c270
->>>>>>> Stashed changes
