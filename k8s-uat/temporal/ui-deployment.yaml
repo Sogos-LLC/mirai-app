@@ -39,13 +39,7 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "200m"
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          seccompProfile:
-            type: RuntimeDefault
+        securityContext: {}
         livenessProbe:
           httpGet:
             path: /
