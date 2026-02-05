@@ -381,15 +381,20 @@ func main() {
 			UserRepo:    userRepo,
 		}
 
-		// Create and start the Temporal worker
-		worker := temporalinfra.NewWorker(temporalClient.Inner(), goActivities, opsActivities, slogLogger)
-
+		// Create and start the Temporal worker with retry on connection failures
 		go func() {
-			if err := worker.Run(nil); err != nil {
-				logger.Error("Temporal worker error", "error", err)
+			for attempt := 1; ; attempt++ {
+				w := temporalinfra.NewWorker(temporalClient.Inner(), goActivities, opsActivities, slogLogger)
+				logger.Info("Temporal worker started", "taskQueue", temporalinfra.GoTaskQueue, "attempt", attempt)
+
+				if err := w.Run(nil); err != nil {
+					logger.Error("Temporal worker error, retrying in 5s", "error", err, "attempt", attempt)
+					time.Sleep(5 * time.Second)
+					continue
+				}
+				return // clean shutdown
 			}
 		}()
-		logger.Info("Temporal worker started", "taskQueue", temporalinfra.GoTaskQueue)
 	}
 
 	// ---------------------------------------------------------------------------
