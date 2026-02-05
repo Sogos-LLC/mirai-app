@@ -12,9 +12,12 @@ interface ActiveJobItemProps {
 
 const JOB_TYPE_LABELS: Record<number, string> = {
   [GenerationJobType.UNSPECIFIED]: 'Generation',
-  [GenerationJobType.COURSE_OUTLINE]: 'Course Outline',
-  [GenerationJobType.FULL_COURSE]: 'Full Course',
-  [GenerationJobType.COMPONENT_REGEN]: 'Component',
+  [GenerationJobType.COURSE_OUTLINE]: 'Course Outline Generation',
+  [GenerationJobType.FULL_COURSE]: 'Full Course Generation',
+  [GenerationJobType.LESSON_CONTENT]: 'Lesson Content Generation',
+  [GenerationJobType.COMPONENT_REGEN]: 'Component Regeneration',
+  [GenerationJobType.COURSE_PLANNING]: 'Course Planning',
+  [GenerationJobType.COURSE_CREATION]: 'Course Creation',
 };
 
 const STATUS_CONFIG: Record<number, { label: string; color: string; bgColor: string }> = {
@@ -31,7 +34,7 @@ export function ActiveJobItem({ job, onCancel }: ActiveJobItemProps) {
     e.stopPropagation();
     if (!onCancel || cancelling) return;
 
-    if (confirm(`Cancel ${typeLabel.toLowerCase()} generation?`)) {
+    if (confirm(`Cancel ${typeLabel.toLowerCase()}?`)) {
       setCancelling(true);
       try {
         await onCancel(job.id);
@@ -54,7 +57,7 @@ export function ActiveJobItem({ job, onCancel }: ActiveJobItemProps) {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {typeLabel} Generation
+                {typeLabel}
               </p>
               <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                 {statusConfig.label}
