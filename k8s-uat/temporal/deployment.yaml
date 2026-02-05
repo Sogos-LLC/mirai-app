@@ -47,7 +47,7 @@ spec:
         - name: SKIP_DEFAULT_NAMESPACE_CREATION
           value: "false"
         - name: DEFAULT_NAMESPACE
-          value: "mirai"
+          value: "mirai-uat"
         - name: LOG_LEVEL
           value: "info"
         resources:
