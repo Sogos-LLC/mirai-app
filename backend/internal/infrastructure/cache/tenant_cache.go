@@ -163,6 +163,8 @@ func (c *GlobalCache) ReleaseLock(ctx context.Context, key string, lockID string
 // These keys are NOT tenant-scoped and should only be used for cross-tenant mappings.
 var GlobalCacheKeys = struct {
 	UserTenantMapping func(kratosID string) string
+	SessionValidation func(cookieHash string) string
 }{
 	UserTenantMapping: func(kratosID string) string { return "user:tenant:" + kratosID },
+	SessionValidation: func(cookieHash string) string { return "session:" + cookieHash },
 }
