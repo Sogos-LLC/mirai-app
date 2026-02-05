@@ -1,8 +1,7 @@
 """Outline generation agents - two-phase: sections-only then lesson details."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
-from pydantic_ai.builtin_tools import WebSearchTool
+from pydantic_ai import Agent, WebSearchTool
 
 from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
@@ -90,7 +89,7 @@ sections_agent = Agent(
     output_type=SectionsOnlyOutput,
     system_prompt=SECTIONS_SYSTEM,
     name="outline-sections",
-    tools=[WebSearchTool()],
+    builtin_tools=[WebSearchTool()],
 )
 
 internal_data_sections_agent = Agent(

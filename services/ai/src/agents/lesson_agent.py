@@ -1,8 +1,7 @@
 """Lesson content generation agents - plan components, generate each, segue."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
-from pydantic_ai.builtin_tools import WebSearchTool
+from pydantic_ai import Agent, WebSearchTool
 
 from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
@@ -197,7 +196,7 @@ single_component_agent = Agent(
     output_type=LessonComponent,
     system_prompt=SINGLE_COMPONENT_SYSTEM,
     name="lesson-component-gen",
-    tools=[WebSearchTool()],
+    builtin_tools=[WebSearchTool()],
 )
 
 
