@@ -17,6 +17,7 @@ spec:
         app: temporal-ui
         environment: uat
     spec:
+      enableServiceLinks: false
       tolerations:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
