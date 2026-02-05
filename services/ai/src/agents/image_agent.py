@@ -38,7 +38,6 @@ Given the context of where an image appears in a lesson, generate:
 """
 
 _image_description_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=ImageDescriptionOutput,
     system_prompt=IMAGE_DESCRIPTION_SYSTEM,
     name="image-description",

@@ -33,7 +33,6 @@ Component type rules:
 """
 
 _component_regen_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=LessonComponent,
     system_prompt=COMPONENT_REGEN_SYSTEM,
     name="component-regen",

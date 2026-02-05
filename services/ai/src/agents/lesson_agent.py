@@ -80,7 +80,6 @@ Plan 8-12 components. Each purpose MUST reference which learning objective it ad
 """
 
 component_plan_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=ComponentPlanOutput,
     system_prompt=COMPONENT_PLAN_SYSTEM,
     name="lesson-component-plan",
@@ -195,7 +194,6 @@ Generate exactly ONE component matching the specified type and purpose.
 """
 
 single_component_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=LessonComponent,
     system_prompt=SINGLE_COMPONENT_SYSTEM,
     name="lesson-component-gen",
@@ -283,7 +281,6 @@ course sections. Write natural, motivating transitions that connect concepts.
 """
 
 segue_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=SegueOutput,
     system_prompt=SEGUE_SYSTEM,
     name="lesson-segue",

@@ -87,7 +87,6 @@ CONSTRAINT ENFORCEMENT:
 """
 
 sections_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=SectionsOnlyOutput,
     system_prompt=SECTIONS_SYSTEM,
     name="outline-sections",
@@ -95,7 +94,6 @@ sections_agent = Agent(
 )
 
 internal_data_sections_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=SectionsOnlyOutput,
     system_prompt=INTERNAL_DATA_ONLY_SECTIONS_SYSTEM,
     name="outline-sections-internal",
@@ -197,7 +195,6 @@ Ensure logical flow within the section. Each lesson should build on the previous
 """
 
 lesson_detail_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=LessonDetailOutput,
     system_prompt=LESSON_DETAIL_SYSTEM,
     name="outline-lesson-detail",

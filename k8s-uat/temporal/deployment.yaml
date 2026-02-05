@@ -29,7 +29,21 @@ spec:
           name: grpc
         env:
         - name: DB
-          value: "sqlite"
+          value: "postgres12_pgx"
+        - name: DB_PORT
+          value: "5432"
+        - name: POSTGRES_SEEDS
+          value: "mirai-uat-db-rw.mirai-uat.svc.cluster.local"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: temporal-db-credentials
+              key: username
+        - name: POSTGRES_PWD
+          valueFrom:
+            secretKeyRef:
+              name: temporal-db-credentials
+              key: password
         - name: DYNAMIC_CONFIG_FILE_PATH
           value: "config/dynamicconfig/development-sql.yaml"
         - name: TEMPORAL_ADDRESS
@@ -43,9 +57,6 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "1000m"
-        volumeMounts:
-        - name: temporal-data
-          mountPath: /etc/temporal/data
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -63,6 +74,3 @@ spec:
             port: 7233
           initialDelaySeconds: 15
           periodSeconds: 10
-      volumes:
-      - name: temporal-data
-        emptyDir: {}

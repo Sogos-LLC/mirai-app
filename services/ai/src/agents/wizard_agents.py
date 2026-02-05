@@ -27,7 +27,6 @@ You are an expert course designer who creates compelling course titles and descr
 """
 
 title_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=ImprovedTitleOutput,
     system_prompt=TITLE_SYSTEM,
     name="wizard-title",
@@ -75,7 +74,6 @@ for professional courses.
 """
 
 outcomes_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=CourseOutcomesOutput,
     system_prompt=OUTCOMES_SYSTEM,
     name="wizard-outcomes",
@@ -155,7 +153,6 @@ personas for a course.
 """
 
 sme_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=SMEPersonasOutput,
     system_prompt=SME_SYSTEM,
     name="wizard-sme",
@@ -201,7 +198,6 @@ You are an expert instructional designer creating target audience personas for a
 """
 
 audience_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=AudiencePersonasOutput,
     system_prompt=AUDIENCE_SYSTEM,
     name="wizard-audience",
@@ -264,7 +260,6 @@ You are an expert instructional designer creating tone and style options for a c
 """
 
 tone_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=ToneOptionsOutput,
     system_prompt=TONE_SYSTEM,
     name="wizard-tone",

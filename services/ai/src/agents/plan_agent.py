@@ -34,7 +34,6 @@ procedure names, specific concepts. This precision is critical for later retriev
 """
 
 _analyze_document_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=DocumentAnalysis,
     system_prompt=ANALYZE_DOCUMENT_SYSTEM,
     name="plan-analyze-doc",
@@ -128,7 +127,6 @@ If the material is limited, create a SMALLER course — quality over quantity.
 """
 
 _course_plan_agent = Agent(
-    "google-gla:gemini-2.5-flash",
     output_type=CoursePlan,
     system_prompt=COURSE_PLAN_SYSTEM,
     name="plan-course-plan",
