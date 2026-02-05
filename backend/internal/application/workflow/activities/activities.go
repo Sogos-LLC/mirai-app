@@ -180,6 +180,9 @@ type DecryptAPIKeyOutput struct {
 
 // DecryptAPIKey decrypts the per-tenant Gemini API key.
 func (a *GoActivities) DecryptAPIKey(ctx context.Context, input DecryptAPIKeyInput) (*DecryptAPIKeyOutput, error) {
+	// Temporal activities run without tenant context — use superadmin to bypass RLS.
+	ctx = tenant.WithSuperAdmin(ctx, true)
+
 	tenantID, err := uuid.Parse(input.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("parse tenant ID: %w", err)
