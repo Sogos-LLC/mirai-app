@@ -48,6 +48,8 @@ type Client struct {
 }
 
 // NewClient creates a new Temporal client with optional interceptors (e.g. OTel tracing).
+// Uses NewLazyClient to avoid blocking startup on the gRPC connection — the connection
+// is established on first RPC call instead.
 func NewClient(address, namespace string, logger *slog.Logger, interceptors ...interceptor.ClientInterceptor) (*Client, error) {
 	opts := temporalclient.Options{
 		HostPort:  address,
@@ -58,12 +60,12 @@ func NewClient(address, namespace string, logger *slog.Logger, interceptors ...i
 		opts.Interceptors = interceptors
 	}
 
-	c, err := temporalclient.Dial(opts)
+	c, err := temporalclient.NewLazyClient(opts)
 	if err != nil {
-		return nil, fmt.Errorf("temporal dial: %w", err)
+		return nil, fmt.Errorf("temporal lazy client: %w", err)
 	}
 
-	logger.Info("temporal client connected", "address", address, "namespace", namespace)
+	logger.Info("temporal client initialized (lazy)", "address", address, "namespace", namespace)
 	return &Client{inner: c, logger: logger}, nil
 }
 
