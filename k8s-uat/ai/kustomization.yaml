@@ -14,4 +14,4 @@ labels:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/ai-service
   newName: ghcr.io/sogos-llc/mirai-app/ai-service
-  newTag: uat-latest
+  newTag: uat-34e2dd5
