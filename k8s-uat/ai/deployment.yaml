@@ -45,7 +45,7 @@ spec:
         - name: LOGFIRE_TOKEN
           valueFrom:
             secretKeyRef:
-              name: logfire-secret
+              name: logfire-uat
               key: token
               optional: true
         resources:
