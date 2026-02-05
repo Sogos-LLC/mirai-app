@@ -92,3 +92,41 @@ spec:
     ports:
     - protocol: TCP
       port: 9768
+---
+# Allow CNPG pods to reach the Kubernetes API server
+# Required for CloudNativePG operator communication
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-cnpg-to-apiserver
+  namespace: mirai-uat
+spec:
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: mirai-uat-db
+  egress:
+  - toEntities:
+    - kube-apiserver
+---
+# Allow CNPG operator (cnpg-system namespace) to reach DB pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-cnpg-operator
+  namespace: mirai-uat
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: mirai-uat-db
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cnpg-system
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 5432
