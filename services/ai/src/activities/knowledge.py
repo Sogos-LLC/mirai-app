@@ -2,11 +2,14 @@
 
 from dataclasses import dataclass
 
+from pydantic import BaseModel, Field
+
 import structlog
 from temporalio import activity
 
 from src.adapters.embedding import EmbeddingClient
 from src.adapters.qdrant import QdrantAdapter
+from src.models.knowledge import KnowledgeChunk
 from src.rag.ingest import ingest_document as _ingest
 from src.rag.search import search_knowledge as _search
 
@@ -45,8 +48,7 @@ async def ingest_document(input: IngestDocumentInput) -> IngestDocumentOutput:
     return IngestDocumentOutput(chunk_count=chunk_count)
 
 
-@dataclass
-class SearchKnowledgeInput:
+class SearchKnowledgeInput(BaseModel):
     """Input for knowledge search activity."""
 
     query: str
@@ -54,11 +56,10 @@ class SearchKnowledgeInput:
     top_k: int = 15
 
 
-@dataclass
-class SearchKnowledgeOutput:
+class SearchKnowledgeOutput(BaseModel):
     """Output from knowledge search activity."""
 
-    chunks: list[dict]
+    chunks: list[KnowledgeChunk]
 
 
 @activity.defn
@@ -70,9 +71,7 @@ async def search_knowledge(input: SearchKnowledgeInput) -> SearchKnowledgeOutput
         top_k=input.top_k,
     )
 
-    return SearchKnowledgeOutput(
-        chunks=[c.model_dump() for c in chunks],
-    )
+    return SearchKnowledgeOutput(chunks=chunks)
 
 
 @dataclass

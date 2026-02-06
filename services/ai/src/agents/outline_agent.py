@@ -6,7 +6,8 @@ from pydantic_ai import Agent, WebSearchTool
 from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
 from src.models.outline import CourseOutline, OutlineLesson, OutlineSection
-from src.models.persona import SMEPersona
+from src.models.plan import CoursePlan
+from src.models.wizard import SMEPersona, AudiencePersona
 
 # ---------------------------------------------------------------------------
 # Phase 1: Sections-only generation (flat schema to avoid Gemini depth limits)
@@ -105,10 +106,10 @@ def build_sections_prompt(
     desired_outcome: str,
     desired_outcomes: list[str],
     personas: list[SMEPersona],
-    target_audience: list[SMEPersona],
+    target_audience: list[AudiencePersona],
     additional_context: str = "",
     rag_chunks: list[KnowledgeChunk] | None = None,
-    course_plan_context: dict | None = None,
+    course_plan_context: CoursePlan | None = None,
 ) -> str:
     """Build the user prompt for Phase 1 sections generation."""
     parts: list[str] = []
@@ -120,13 +121,13 @@ def build_sections_prompt(
     if target_audience:
         parts.append("\n## Target Audience")
         for p in target_audience:
-            parts.append(f"- **{p.name}** ({p.role}): {p.expertise}. {p.perspective}")
+            parts.append(f"- **{p.name}** ({p.role}): {p.description}. Goals: {', '.join(p.goals)}")
 
     # SME knowledge
     if personas:
         parts.append("\n## Subject Matter Expert Knowledge")
         for p in personas:
-            parts.append(f"- **{p.name}** ({p.role}): {p.expertise}. {p.perspective}")
+            parts.append(f"- **{p.job_title}** — {p.description} Skills: {', '.join(p.skills)}. Voice: {p.voice}")
 
     # RAG content
     if rag_chunks:
@@ -145,12 +146,11 @@ def build_sections_prompt(
         parts.append(
             "Follow this planned structure as closely as possible:\n"
         )
-        sections = course_plan_context.get("planned_sections", [])
-        for s in sections:
-            parts.append(f"### {s.get('title', 'Untitled')}")
-            parts.append(f"{s.get('description', '')}")
-            for lesson in s.get("lessons", []):
-                parts.append(f"  - {lesson.get('title', '')}")
+        for s in course_plan_context.planned_sections:
+            parts.append(f"### {s.title}")
+            parts.append(f"{s.description}")
+            for lesson in s.lessons:
+                parts.append(f"  - {lesson.title}")
 
     # Desired outcomes with indices
     parts.append("\n## Desired Learning Outcomes")
@@ -208,20 +208,20 @@ def build_lesson_detail_prompt(
     section_description: str,
     section_index: int,
     lesson_titles: list[str],
-    target_audience: list[SMEPersona],
+    target_audience: list[AudiencePersona],
     personas: list[SMEPersona],
 ) -> str:
     """Build prompt for Phase 2 lesson detail generation."""
     audience_text = ""
     if target_audience:
         audience_text = "\n## Target Audience\n" + "\n".join(
-            f"- {p.name} ({p.role}): {p.perspective}" for p in target_audience
+            f"- {p.name} ({p.role}): {p.description}" for p in target_audience
         )
 
     sme_text = ""
     if personas:
         sme_text = "\n## SME Knowledge\n" + "\n".join(
-            f"- {p.name}: {p.expertise}" for p in personas
+            f"- {p.job_title}: {p.description}" for p in personas
         )
 
     titles_text = "\n".join(
@@ -250,11 +250,11 @@ async def generate_sections(
     desired_outcome: str,
     desired_outcomes: list[str],
     personas: list[SMEPersona],
-    target_audience: list[SMEPersona],
+    target_audience: list[AudiencePersona],
     additional_context: str = "",
     internal_data_only: bool = False,
     rag_chunks: list[KnowledgeChunk] | None = None,
-    course_plan_context: dict | None = None,
+    course_plan_context: CoursePlan | None = None,
 ) -> SectionsOnlyOutput:
     """Phase 1: Generate sections with lesson titles only."""
     prompt = build_sections_prompt(
@@ -282,7 +282,7 @@ async def generate_lesson_details(
     desired_outcome: str,
     section: SectionSkeleton,
     section_index: int,
-    target_audience: list[SMEPersona],
+    target_audience: list[AudiencePersona],
     personas: list[SMEPersona],
 ) -> list[OutlineLesson]:
     """Phase 2: Generate detailed lesson metadata for a section."""

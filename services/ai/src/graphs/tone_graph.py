@@ -23,7 +23,7 @@ from src.graphs.wizard_utils import (
     search_wizard_knowledge,
 )
 from src.models.knowledge import KnowledgeChunk
-from src.models.wizard import WizardAudiencePersona, WizardToneOption
+from src.models.wizard import AudiencePersona, ToneOption
 
 log = structlog.get_logger()
 
@@ -38,7 +38,7 @@ VALID_DETAIL_LEVELS: set[str] = {"brief", "moderate", "comprehensive"}
 @dataclass
 class ToneState:
     rag_chunks: list[KnowledgeChunk] = field(default_factory=list)
-    options: list[WizardToneOption] | None = None
+    options: list[ToneOption] | None = None
     constraint_violations: list[str] = field(default_factory=list)
     retry_count: int = 0
     chunks_used: int = 0
@@ -50,7 +50,7 @@ class ToneDeps:
     api_key: str
     title: str
     description: str
-    audience_personas: list[WizardAudiencePersona]
+    audience_personas: list[AudiencePersona]
     qdrant: QdrantAdapter
     embedding_client: EmbeddingClient
     rag_filters: dict[str, str] | None
@@ -58,7 +58,7 @@ class ToneDeps:
 
 @dataclass
 class ToneResult:
-    options: list[dict]
+    options: list[ToneOption]
     violations: list[str]
     chunks_used: int
 
@@ -159,7 +159,7 @@ class ValidateToneNode(BaseNode[ToneState, ToneDeps]):
             log.warn("tone_proceeding_with_violations", violations=violations)
 
         return End(ToneResult(
-            options=[o.model_dump() for o in state.options],
+            options=state.options,
             violations=violations,
             chunks_used=state.chunks_used,
         ))
@@ -198,7 +198,7 @@ async def run_tone_graph(
     api_key: str,
     title: str,
     description: str,
-    audience_personas: list[WizardAudiencePersona],
+    audience_personas: list[AudiencePersona],
     rag_filters: dict[str, str] | None = None,
 ) -> ToneResult:
     """Run the tone options generation graph."""

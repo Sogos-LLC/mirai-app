@@ -11,13 +11,13 @@ from pydantic_ai import Agent
 from src.graphs.wizard_utils import build_rag_section
 from src.models.knowledge import KnowledgeChunk
 from src.models.wizard import (
+    AudiencePersona,
     AudiencePersonasOutput,
     ImprovedTitleOutput,
     CourseOutcomesOutput,
+    SMEPersona,
     SMEPersonasOutput,
     ToneOptionsOutput,
-    WizardAudiencePersona,
-    WizardSMEPersona,
 )
 
 # ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ audience_agent = Agent(
 def build_audience_prompt(
     title: str,
     description: str,
-    sme_personas: list[WizardSMEPersona],
+    sme_personas: list[SMEPersona],
     rag_chunks: list[KnowledgeChunk] | None = None,
 ) -> str:
     parts: list[str] = []
@@ -242,7 +242,7 @@ tone_agent = Agent(
 def build_tone_prompt(
     title: str,
     description: str,
-    audience_personas: list[WizardAudiencePersona],
+    audience_personas: list[AudiencePersona],
     rag_chunks: list[KnowledgeChunk] | None = None,
 ) -> str:
     parts: list[str] = []

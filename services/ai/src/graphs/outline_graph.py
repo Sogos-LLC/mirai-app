@@ -24,7 +24,8 @@ from src.agents.outline_agent import (
 )
 from src.models.knowledge import KnowledgeChunk
 from src.models.outline import CourseOutline, OutlineLesson
-from src.models.persona import SMEPersona
+from src.models.plan import CoursePlan
+from src.models.wizard import SMEPersona, AudiencePersona
 from src.rag.search import search_knowledge
 
 log = structlog.get_logger()
@@ -60,10 +61,10 @@ class OutlineDeps:
     desired_outcome: str
     desired_outcomes: list[str]
     personas: list[SMEPersona]
-    target_audience: list[SMEPersona]
+    target_audience: list[AudiencePersona]
     additional_context: str
     internal_data_only: bool
-    course_plan_context: dict | None
+    course_plan_context: CoursePlan | None
     qdrant: QdrantAdapter
     embedding_client: EmbeddingClient
     rag_filters: dict[str, str] | None
@@ -101,10 +102,8 @@ class SearchKnowledgeNode(BaseNode[OutlineState, OutlineDeps]):
             # Build search queries from course plan or course metadata
             queries: list[str] = []
             if deps.course_plan_context:
-                sections = deps.course_plan_context.get("planned_sections", [])
-                for s in sections:
-                    terms = s.get("search_terms", [])
-                    queries.extend(terms[:3])
+                for s in deps.course_plan_context.planned_sections:
+                    queries.extend(s.search_terms[:3])
             if not queries:
                 queries = [
                     deps.course_title,
@@ -328,10 +327,10 @@ async def run_outline_graph(
     desired_outcome: str,
     desired_outcomes: list[str],
     personas: list[SMEPersona],
-    target_audience: list[SMEPersona],
+    target_audience: list[AudiencePersona],
     additional_context: str = "",
     internal_data_only: bool = False,
-    course_plan_context: dict | None = None,
+    course_plan_context: CoursePlan | None = None,
     rag_filters: dict[str, str] | None = None,
 ) -> tuple[CourseOutline, list[str], int]:
     """Run the full outline generation graph.

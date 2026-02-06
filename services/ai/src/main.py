@@ -8,6 +8,7 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from temporalio.client import Client
+from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 
 from src.activities.generation import (
@@ -106,6 +107,7 @@ async def run_worker() -> None:
         settings.temporal_address,
         namespace=settings.temporal_namespace,
         interceptors=interceptors,
+        data_converter=pydantic_data_converter,
     )
 
     worker = Worker(

@@ -1,6 +1,10 @@
 """Course outline models - structured output from outline generation."""
 
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
+
+from src.models.lesson import LessonContent
 
 
 class LearningObjective(BaseModel):
@@ -27,6 +31,9 @@ class OutlineLesson(BaseModel):
     )
     key_topics: list[str] = Field(
         default_factory=list, description="Key topics covered"
+    )
+    content: LessonContent | None = Field(
+        default=None, description="Populated during lesson generation phase"
     )
 
 

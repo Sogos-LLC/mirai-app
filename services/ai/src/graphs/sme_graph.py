@@ -23,7 +23,7 @@ from src.graphs.wizard_utils import (
     search_wizard_knowledge,
 )
 from src.models.knowledge import KnowledgeChunk
-from src.models.wizard import WizardSMEPersona
+from src.models.wizard import SMEPersona
 
 log = structlog.get_logger()
 
@@ -36,7 +36,7 @@ log = structlog.get_logger()
 @dataclass
 class SMEState:
     rag_chunks: list[KnowledgeChunk] = field(default_factory=list)
-    personas: list[WizardSMEPersona] | None = None
+    personas: list[SMEPersona] | None = None
     constraint_violations: list[str] = field(default_factory=list)
     retry_count: int = 0
     chunks_used: int = 0
@@ -55,7 +55,7 @@ class SMEDeps:
 
 @dataclass
 class SMEResult:
-    personas: list[dict]
+    personas: list[SMEPersona]
     violations: list[str]
     chunks_used: int
 
@@ -154,7 +154,7 @@ class ValidateSMENode(BaseNode[SMEState, SMEDeps]):
             log.warn("sme_proceeding_with_violations", violations=violations)
 
         return End(SMEResult(
-            personas=[p.model_dump() for p in state.personas],
+            personas=state.personas,
             violations=violations,
             chunks_used=state.chunks_used,
         ))

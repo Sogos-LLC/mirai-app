@@ -36,7 +36,14 @@ with workflow.unsafe.imports_passed_through():
         GenerateToneOptionsInput,
         GenerateToneOptionsOutput,
     )
-    from src.workflows.types import CourseCreationInput, CourseCreationOutput, StepApproval
+    from src.models.outline import CourseOutline, OutlineSection
+    from src.models.wizard import SMEPersona, AudiencePersona, ToneOption
+    from src.workflows.types import (
+        CourseCreationInput,
+        CourseCreationOutput,
+        StepApproval,
+        WizardResult,
+    )
 
 log = structlog.get_logger()
 
@@ -233,13 +240,15 @@ class CourseCreationWorkflow:
             timeout=AI_SHORT_TIMEOUT,
         )
         sme_approval = await self._publish_and_wait(
-            input, "sme_personas", json.dumps({"personas": sme_result.personas}), 15,
+            input, "sme_personas",
+            json.dumps({"personas": [p.model_dump() for p in sme_result.personas]}),
+            15,
         )
         selected_sme_ids = sme_approval.selected_ids or [
-            p["id"] for p in sme_result.personas
+            p.id for p in sme_result.personas
         ]
         selected_smes = [
-            p for p in sme_result.personas if p["id"] in selected_sme_ids
+            p for p in sme_result.personas if p.id in selected_sme_ids
         ]
 
         # Step 4: Generate audience personas
@@ -259,13 +268,14 @@ class CourseCreationWorkflow:
         )
         audience_approval = await self._publish_and_wait(
             input, "audience_personas",
-            json.dumps({"personas": audience_result.personas}), 20,
+            json.dumps({"personas": [p.model_dump() for p in audience_result.personas]}),
+            20,
         )
         selected_audience_ids = audience_approval.selected_ids or [
-            p["id"] for p in audience_result.personas
+            p.id for p in audience_result.personas
         ]
         selected_audiences = [
-            p for p in audience_result.personas if p["id"] in selected_audience_ids
+            p for p in audience_result.personas if p.id in selected_audience_ids
         ]
 
         # Step 5: Generate tone options
@@ -285,15 +295,16 @@ class CourseCreationWorkflow:
         )
         tone_approval = await self._publish_and_wait(
             input, "tone_options",
-            json.dumps({"options": tone_result.options}), 25,
+            json.dumps({"options": [o.model_dump() for o in tone_result.options]}),
+            25,
         )
         selected_tone_id = (
             tone_approval.selected_ids[0]
             if tone_approval.selected_ids
-            else tone_result.options[0]["id"]
+            else tone_result.options[0].id
         )
         selected_tone = next(
-            (o for o in tone_result.options if o["id"] == selected_tone_id),
+            (o for o in tone_result.options if o.id == selected_tone_id),
             tone_result.options[0],
         )
 
@@ -304,21 +315,21 @@ class CourseCreationWorkflow:
             if extra_context:
                 additional_context = (additional_context + "\n" + extra_context).strip()
 
-        # Build wizard context for later phases
-        wizard_context = {
-            "improved_title": improved_title,
-            "description": description,
-            "desired_outcomes": desired_outcomes,
-            "sme_personas": selected_smes,
-            "audience_personas": selected_audiences,
-            "tone": selected_tone,
-            "additional_context": additional_context,
-            "internal_data_only": input.internal_data_only,
-        }
+        # Build wizard result for later phases
+        wizard_result = WizardResult(
+            improved_title=improved_title,
+            description=description,
+            desired_outcomes=desired_outcomes,
+            sme_personas=selected_smes,
+            audience_personas=selected_audiences,
+            tone=selected_tone,
+            additional_context=additional_context,
+            internal_data_only=input.internal_data_only,
+        )
 
-        # Save wizard data to course content (Go activity)
+        # Save wizard data to course content (Go activity) — model_dump() for Go boundary
         await self._write_course_content(
-            input.tenant_id, input.course_id, {"wizard": wizard_context},
+            input.tenant_id, input.course_id, {"wizard": wizard_result.model_dump()},
         )
 
         # ---------------------------------------------------------------
@@ -376,7 +387,7 @@ class CourseCreationWorkflow:
                         api_key=api_key,
                         course_title=improved_title,
                         desired_outcome=desired_outcomes,
-                        document_analyses=[a for a in analyses],
+                        document_analyses=analyses,
                         internal_data_only=input.internal_data_only,
                         additional_context=additional_context,
                     ),
@@ -387,7 +398,7 @@ class CourseCreationWorkflow:
                 course_plan_context = plan_result.plan
                 await self._publish_and_wait(
                     input, "course_plan",
-                    json.dumps({"plan": course_plan_context}), 35,
+                    json.dumps({"plan": course_plan_context.model_dump()}), 35,
                 )
 
         # ---------------------------------------------------------------
@@ -413,9 +424,9 @@ class CourseCreationWorkflow:
                 course_title=improved_title,
                 desired_outcome=desired_outcomes,
                 desired_outcomes=outcome_lines,
-                sme_knowledge=selected_smes,
-                target_audience=selected_audiences,
-                additional_context=input.additional_context,
+                sme_personas=selected_smes,
+                audience_personas=selected_audiences,
+                additional_context=additional_context,
                 internal_data_only=input.internal_data_only,
                 course_plan_context=course_plan_context,
                 rag_filters=input.rag_filters or None,
@@ -427,7 +438,7 @@ class CourseCreationWorkflow:
         outline_approval = await self._publish_and_wait(
             input, "outline",
             json.dumps({
-                "outline": outline_result.outline,
+                "outline": outline_result.outline.model_dump(),
                 "constraint_violations": outline_result.constraint_violations,
             }), 50,
         )
@@ -441,8 +452,8 @@ class CourseCreationWorkflow:
                     course_title=improved_title,
                     desired_outcome=desired_outcomes,
                     desired_outcomes=outcome_lines,
-                    sme_knowledge=selected_smes,
-                    target_audience=selected_audiences,
+                    sme_personas=selected_smes,
+                    audience_personas=selected_audiences,
                     additional_context=(
                         additional_context + "\n\n"
                         + f"FEEDBACK FROM REVIEWER:\n{outline_approval.feedback}"
@@ -457,13 +468,16 @@ class CourseCreationWorkflow:
             await self._publish_and_wait(
                 input, "outline",
                 json.dumps({
-                    "outline": outline_result.outline,
+                    "outline": outline_result.outline.model_dump(),
                     "constraint_violations": outline_result.constraint_violations,
                 }), 50,
             )
 
-        # Write outline to course content
-        course_content = {"wizard": wizard_context, "outline": outline_result.outline}
+        # Write outline to course content (Go boundary — model_dump())
+        course_content = {
+            "wizard": wizard_result.model_dump(),
+            "outline": outline_result.outline.model_dump(),
+        }
         await self._write_course_content(
             input.tenant_id, input.course_id, course_content,
         )
@@ -477,20 +491,16 @@ class CourseCreationWorkflow:
         await self._update_job(input, "PROCESSING", 55, "Generating lessons")
 
         outline = outline_result.outline
-        sections = outline.get("sections", [])
 
         # Count total lessons
-        total_lessons = sum(len(s.get("lessons", [])) for s in sections)
+        total_lessons = sum(len(s.lessons) for s in outline.sections)
         completed_lessons = 0
 
         # Build course context for deduplication
-        course_context = self._build_course_context(sections)
+        course_context = self._build_course_context(outline.sections)
 
-        for s_idx, section in enumerate(sections):
-            section_lessons = section.get("lessons", [])
-            section_title = section.get("title", f"Section {s_idx + 1}")
-
-            for l_idx, lesson in enumerate(section_lessons):
+        for s_idx, section in enumerate(outline.sections):
+            for l_idx, lesson in enumerate(section.lessons):
                 lesson_result = await self._run_ai_activity(
                     "generate_lesson",
                     GenerateLessonInput(
@@ -498,10 +508,10 @@ class CourseCreationWorkflow:
                         lesson=lesson,
                         course_title=improved_title,
                         course_context=course_context,
-                        section_title=section_title,
+                        section_title=section.title,
                         section_index=s_idx,
                         lesson_index=l_idx,
-                        sme_knowledge=selected_smes,
+                        sme_personas=selected_smes,
                         rag_filters=input.rag_filters or None,
                     ),
                     GenerateLessonOutput,
@@ -509,9 +519,7 @@ class CourseCreationWorkflow:
                 )
 
                 # Merge lesson content into outline
-                if "lessons" not in sections[s_idx]:
-                    sections[s_idx]["lessons"] = section_lessons
-                sections[s_idx]["lessons"][l_idx]["content"] = (
+                outline.sections[s_idx].lessons[l_idx].content = (
                     lesson_result.lesson_content
                 )
 
@@ -529,8 +537,11 @@ class CourseCreationWorkflow:
         # FINALIZE
         # ---------------------------------------------------------------
 
-        # Write final course content
-        course_content["outline"] = outline
+        # Write final course content (Go boundary — model_dump())
+        course_content = {
+            "wizard": wizard_result.model_dump(),
+            "outline": outline.model_dump(),
+        }
         await self._write_course_content(
             input.tenant_id, input.course_id, course_content,
         )
@@ -665,13 +676,12 @@ class CourseCreationWorkflow:
         )
 
     @staticmethod
-    def _build_course_context(sections: list[dict]) -> str:
+    def _build_course_context(sections: list[OutlineSection]) -> str:
         """Build a text summary of the course structure for deduplication."""
         parts: list[str] = []
         for i, section in enumerate(sections):
-            parts.append(f"Section {i + 1}: {section.get('title', '')}")
-            for j, lesson in enumerate(section.get("lessons", [])):
-                title = lesson.get("title", "")
-                desc = lesson.get("description", "")[:100]
-                parts.append(f"  Lesson {j + 1}: {title} — {desc}")
+            parts.append(f"Section {i + 1}: {section.title}")
+            for j, lesson in enumerate(section.lessons):
+                desc = lesson.description[:100]
+                parts.append(f"  Lesson {j + 1}: {lesson.title} — {desc}")
         return "\n".join(parts)

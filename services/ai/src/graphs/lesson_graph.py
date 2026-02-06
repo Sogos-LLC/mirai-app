@@ -26,7 +26,7 @@ from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
 from src.models.lesson import LessonComponent, LessonContent
 from src.models.outline import OutlineLesson
-from src.models.persona import SMEPersona
+from src.models.wizard import SMEPersona
 from src.rag.search import search_knowledge
 
 log = structlog.get_logger()

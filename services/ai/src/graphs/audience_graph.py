@@ -22,7 +22,7 @@ from src.graphs.wizard_utils import (
     search_wizard_knowledge,
 )
 from src.models.knowledge import KnowledgeChunk
-from src.models.wizard import WizardAudiencePersona, WizardSMEPersona
+from src.models.wizard import AudiencePersona, SMEPersona
 
 log = structlog.get_logger()
 
@@ -35,7 +35,7 @@ log = structlog.get_logger()
 @dataclass
 class AudienceState:
     rag_chunks: list[KnowledgeChunk] = field(default_factory=list)
-    personas: list[WizardAudiencePersona] | None = None
+    personas: list[AudiencePersona] | None = None
     constraint_violations: list[str] = field(default_factory=list)
     retry_count: int = 0
     chunks_used: int = 0
@@ -47,7 +47,7 @@ class AudienceDeps:
     api_key: str
     title: str
     description: str
-    sme_personas: list[WizardSMEPersona]
+    sme_personas: list[SMEPersona]
     qdrant: QdrantAdapter
     embedding_client: EmbeddingClient
     rag_filters: dict[str, str] | None
@@ -55,7 +55,7 @@ class AudienceDeps:
 
 @dataclass
 class AudienceResult:
-    personas: list[dict]
+    personas: list[AudiencePersona]
     violations: list[str]
     chunks_used: int
 
@@ -157,7 +157,7 @@ class ValidateAudienceNode(BaseNode[AudienceState, AudienceDeps]):
             log.warn("audience_proceeding_with_violations", violations=violations)
 
         return End(AudienceResult(
-            personas=[p.model_dump() for p in state.personas],
+            personas=state.personas,
             violations=violations,
             chunks_used=state.chunks_used,
         ))
@@ -196,7 +196,7 @@ async def run_audience_graph(
     api_key: str,
     title: str,
     description: str,
-    sme_personas: list[WizardSMEPersona],
+    sme_personas: list[SMEPersona],
     rag_filters: dict[str, str] | None = None,
 ) -> AudienceResult:
     """Run the audience persona generation graph."""

@@ -1,6 +1,6 @@
 """Temporal activities for wizard steps — thin wrappers around wizard graphs."""
 
-from dataclasses import dataclass, field
+from pydantic import BaseModel, Field
 
 import structlog
 from temporalio import activity
@@ -10,7 +10,7 @@ from src.graphs.outcomes_graph import run_outcomes_graph
 from src.graphs.sme_graph import run_sme_graph
 from src.graphs.title_graph import run_title_graph
 from src.graphs.tone_graph import run_tone_graph
-from src.models.wizard import WizardAudiencePersona, WizardSMEPersona
+from src.models.wizard import AudiencePersona, SMEPersona, ToneOption
 
 log = structlog.get_logger()
 
@@ -20,19 +20,17 @@ log = structlog.get_logger()
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class GenerateTitleInput:
+class GenerateTitleInput(BaseModel):
     api_key: str
     course_name: str
     feedback: str = ""
     rag_filters: dict[str, str] | None = None
 
 
-@dataclass
-class GenerateTitleOutput:
+class GenerateTitleOutput(BaseModel):
     improved_title: str
     description: str
-    constraint_violations: list[str] = field(default_factory=list)
+    constraint_violations: list[str] = Field(default_factory=list)
     rag_chunks_used: int = 0
 
 
@@ -61,18 +59,16 @@ async def generate_title_activity(input: GenerateTitleInput) -> GenerateTitleOut
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class GenerateOutcomesInput:
+class GenerateOutcomesInput(BaseModel):
     api_key: str
     course_name: str
     feedback: str = ""
     rag_filters: dict[str, str] | None = None
 
 
-@dataclass
-class GenerateOutcomesOutput:
+class GenerateOutcomesOutput(BaseModel):
     outcomes: str
-    constraint_violations: list[str] = field(default_factory=list)
+    constraint_violations: list[str] = Field(default_factory=list)
     rag_chunks_used: int = 0
 
 
@@ -102,18 +98,16 @@ async def generate_outcomes_activity(
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class GenerateSMEPersonasInput:
+class GenerateSMEPersonasInput(BaseModel):
     api_key: str
     title: str
     description: str
     rag_filters: dict[str, str] | None = None
 
 
-@dataclass
-class GenerateSMEPersonasOutput:
-    personas: list[dict] = field(default_factory=list)
-    constraint_violations: list[str] = field(default_factory=list)
+class GenerateSMEPersonasOutput(BaseModel):
+    personas: list[SMEPersona] = Field(default_factory=list)
+    constraint_violations: list[str] = Field(default_factory=list)
     rag_chunks_used: int = 0
 
 
@@ -143,19 +137,17 @@ async def generate_sme_personas_activity(
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class GenerateAudiencePersonasInput:
+class GenerateAudiencePersonasInput(BaseModel):
     api_key: str
     title: str
     description: str
-    sme_personas: list[dict] = field(default_factory=list)
+    sme_personas: list[SMEPersona] = Field(default_factory=list)
     rag_filters: dict[str, str] | None = None
 
 
-@dataclass
-class GenerateAudiencePersonasOutput:
-    personas: list[dict] = field(default_factory=list)
-    constraint_violations: list[str] = field(default_factory=list)
+class GenerateAudiencePersonasOutput(BaseModel):
+    personas: list[AudiencePersona] = Field(default_factory=list)
+    constraint_violations: list[str] = Field(default_factory=list)
     rag_chunks_used: int = 0
 
 
@@ -166,13 +158,11 @@ async def generate_audience_personas_activity(
     """Generate 3 audience personas via graph."""
     log.info("generate_audience_personas_activity", title=input.title)
 
-    sme_list = [WizardSMEPersona(**p) for p in input.sme_personas]
-
     result = await run_audience_graph(
         api_key=input.api_key,
         title=input.title,
         description=input.description,
-        sme_personas=sme_list,
+        sme_personas=input.sme_personas,
         rag_filters=input.rag_filters,
     )
 
@@ -188,19 +178,17 @@ async def generate_audience_personas_activity(
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class GenerateToneOptionsInput:
+class GenerateToneOptionsInput(BaseModel):
     api_key: str
     title: str
     description: str
-    audience_personas: list[dict] = field(default_factory=list)
+    audience_personas: list[AudiencePersona] = Field(default_factory=list)
     rag_filters: dict[str, str] | None = None
 
 
-@dataclass
-class GenerateToneOptionsOutput:
-    options: list[dict] = field(default_factory=list)
-    constraint_violations: list[str] = field(default_factory=list)
+class GenerateToneOptionsOutput(BaseModel):
+    options: list[ToneOption] = Field(default_factory=list)
+    constraint_violations: list[str] = Field(default_factory=list)
     rag_chunks_used: int = 0
 
 
@@ -211,13 +199,11 @@ async def generate_tone_options_activity(
     """Generate 3 tone/style options via graph."""
     log.info("generate_tone_options_activity", title=input.title)
 
-    audience_list = [WizardAudiencePersona(**p) for p in input.audience_personas]
-
     result = await run_tone_graph(
         api_key=input.api_key,
         title=input.title,
         description=input.description,
-        audience_personas=audience_list,
+        audience_personas=input.audience_personas,
         rag_filters=input.rag_filters,
     )
 

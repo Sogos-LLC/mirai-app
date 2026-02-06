@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from pydantic import BaseModel
+
+from src.models.wizard import SMEPersona, AudiencePersona, ToneOption
+
 
 @dataclass
 class CourseCreationInput:
@@ -65,3 +69,16 @@ class StepApproval:
             self.selected_ids = []
         if self.modifications is None:
             self.modifications = {}
+
+
+class WizardResult(BaseModel):
+    """Typed accumulator for wizard phase outputs."""
+
+    improved_title: str
+    description: str
+    desired_outcomes: str
+    sme_personas: list[SMEPersona]
+    audience_personas: list[AudiencePersona]
+    tone: ToneOption
+    additional_context: str
+    internal_data_only: bool

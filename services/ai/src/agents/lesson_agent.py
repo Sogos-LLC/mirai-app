@@ -7,7 +7,7 @@ from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
 from src.models.lesson import LessonComponent, LessonContent
 from src.models.outline import OutlineLesson
-from src.models.persona import SMEPersona
+from src.models.wizard import SMEPersona
 
 # ---------------------------------------------------------------------------
 # Phase 1: Component Plan
@@ -131,7 +131,7 @@ Quality over quantity.
     if personas:
         parts.append("\n## SME Perspectives")
         for p in personas:
-            parts.append(f"- **{p.name}** ({p.role}): {p.perspective}")
+            parts.append(f"- **{p.job_title}** — {p.description} Voice: {p.voice}")
 
     # RAG content
     if rag_chunks:
