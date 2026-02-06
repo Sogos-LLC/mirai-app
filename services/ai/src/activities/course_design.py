@@ -13,6 +13,7 @@ from temporalio import activity
 from src.agents.model import make_model
 from src.agents.course_design_agents import (
     analysis_agent,
+    make_analysis_agent,
     build_analysis_prompt,
     outcomes_agent,
     build_outcomes_prompt,
@@ -59,6 +60,7 @@ class GenerateAnalysisInput:
     audience: str
     use_context: str = ""
     rag_context: str = ""
+    enable_web_research: bool = False
 
 
 @dataclass
@@ -175,7 +177,7 @@ class RunQAOutput:
 @activity.defn
 async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnalysisOutput:
     """Step 1: Generate CourseAnalysis from intent."""
-    log.info("generate_course_analysis", topic=input.topic)
+    log.info("generate_course_analysis", topic=input.topic, web_research=input.enable_web_research)
     activity.heartbeat()
 
     model = make_model(input.api_key)
@@ -186,7 +188,8 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
         rag_context=input.rag_context,
     )
 
-    result = await analysis_agent.run(prompt, model=model)
+    agent = make_analysis_agent(input.enable_web_research) if input.enable_web_research else analysis_agent
+    result = await agent.run(prompt, model=model)
     activity.heartbeat()
 
     return GenerateAnalysisOutput(analysis=result.output)

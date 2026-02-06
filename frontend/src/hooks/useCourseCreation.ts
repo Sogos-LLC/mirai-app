@@ -52,6 +52,7 @@ export function useStartCourseCreation() {
       internalDataOnly?: boolean;
       selectedTeamDocIds?: string[];
       selectedGlobalDocIds?: string[];
+      enableWebResearch?: boolean;
     }) => {
       const request = create(StartCourseCreationRequestSchema, {
         courseId: params.courseId,
@@ -61,6 +62,7 @@ export function useStartCourseCreation() {
         internalDataOnly: params.internalDataOnly ?? false,
         selectedTeamDocIds: params.selectedTeamDocIds ?? [],
         selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],
+        enableWebResearch: params.enableWebResearch ?? false,
       });
 
       const result = await mutation.mutateAsync(request);

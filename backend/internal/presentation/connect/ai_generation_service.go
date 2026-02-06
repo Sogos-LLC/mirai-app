@@ -1168,6 +1168,7 @@ func (s *AIGenerationServiceServer) StartCourseCreation(
 		InternalDataOnly:     req.Msg.GetInternalDataOnly(),
 		SelectedTeamDocIDs:   req.Msg.GetSelectedTeamDocIds(),
 		SelectedGlobalDocIDs: req.Msg.GetSelectedGlobalDocIds(),
+		EnableWebResearch:    req.Msg.GetEnableWebResearch(),
 	}
 
 	result, err := s.aiService.StartCourseCreation(ctx, kratosID, serviceReq)

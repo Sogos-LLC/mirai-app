@@ -32,6 +32,7 @@ class CourseCreationInput:
     audience: str = ""
     use_context: str = ""
     internal_data_only: bool = False
+    enable_web_research: bool = False
 
     # Knowledge source IDs (for RAG)
     selected_team_doc_ids: list[str] | None = field(default_factory=list)

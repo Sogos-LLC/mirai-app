@@ -190,6 +190,7 @@ message StartCourseCreationRequest {
   bool internal_data_only = 5;
   repeated string selected_team_doc_ids = 6;
   repeated string selected_global_doc_ids = 7;
+  bool enable_web_research = 8;
 }
 
 message StartCourseCreationResponse {

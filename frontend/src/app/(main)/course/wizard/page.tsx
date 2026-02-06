@@ -12,6 +12,7 @@ import {
   ArrowRight,
   AlertCircle,
   Paperclip,
+  Globe,
 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
 import { KnowledgeSelectionModal } from '@/components/course/KnowledgeSelectionModal';
@@ -45,6 +46,7 @@ export default function CourseWizardPage() {
   const [topic, setTopic] = useState('');
   const [audience, setAudience] = useState('');
   const [useContext, setUseContext] = useState('');
+  const [enableWebResearch, setEnableWebResearch] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
 
@@ -150,6 +152,7 @@ export default function CourseWizardPage() {
         audience: audienceVal,
         useContext: useContext.trim() || undefined,
         selectedGlobalDocIds: selectedKnowledgeIds.length > 0 ? selectedKnowledgeIds : undefined,
+        enableWebResearch,
       });
 
       if (result.job?.id) {
@@ -164,7 +167,7 @@ export default function CourseWizardPage() {
     } finally {
       setIsStarting(false);
     }
-  }, [topic, audience, useContext, selectedKnowledgeIds, createCourse, startCreation, send]);
+  }, [topic, audience, useContext, selectedKnowledgeIds, enableWebResearch, createCourse, startCreation, send]);
 
   // Approve current step
   const handleApprove = useCallback(() => {
@@ -295,6 +298,33 @@ export default function CourseWizardPage() {
                     className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
+
+                {/* Web Research Toggle */}
+                <label
+                  htmlFor="webResearch"
+                  className="mt-5 flex items-center gap-3 cursor-pointer select-none"
+                >
+                  <div className="relative">
+                    <input
+                      id="webResearch"
+                      type="checkbox"
+                      checked={enableWebResearch}
+                      onChange={(e) => setEnableWebResearch(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-colors" />
+                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-secondary" />
+                    <span className="text-sm font-medium text-primary">
+                      Web Research
+                    </span>
+                    <span className="text-xs text-muted">
+                      — enrich analysis with live web data
+                    </span>
+                  </div>
+                </label>
 
                 {startError && (
                   <div className="mt-4 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">

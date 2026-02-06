@@ -4,7 +4,7 @@ Each agent produces a validated Pydantic model.
 Validation failures trigger regeneration, not user prompts.
 """
 
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent, NativeOutput, WebSearchTool
 
 from src.models.course_design import (
     CourseAnalysis,
@@ -38,6 +38,18 @@ analysis_agent = Agent(
     system_prompt=ANALYSIS_SYSTEM,
     name="course-analysis",
 )
+
+
+def make_analysis_agent(enable_web_search: bool = False) -> Agent:
+    """Create an analysis agent, optionally with web search."""
+    if not enable_web_search:
+        return analysis_agent
+    return Agent(
+        output_type=NativeOutput(CourseAnalysis),
+        system_prompt=ANALYSIS_SYSTEM,
+        name="course-analysis-web",
+        builtin_tools=[WebSearchTool()],
+    )
 
 
 def build_analysis_prompt(

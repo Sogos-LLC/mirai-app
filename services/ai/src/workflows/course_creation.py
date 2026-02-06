@@ -252,6 +252,7 @@ class CourseCreationWorkflow:
                 topic=input.topic,
                 audience=input.audience,
                 use_context=input.use_context,
+                enable_web_research=input.enable_web_research,
             ),
             GenerateAnalysisOutput,
         )
@@ -272,6 +273,7 @@ class CourseCreationWorkflow:
                     topic=input.topic,
                     audience=input.audience,
                     use_context=input.use_context + f"\n\nFEEDBACK: {approval.feedback}",
+                    enable_web_research=input.enable_web_research,
                 ),
                 GenerateAnalysisOutput,
             )

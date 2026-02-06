@@ -40,6 +40,7 @@ type StartCourseCreationRequest struct {
 	InternalDataOnly     bool
 	SelectedTeamDocIDs   []string
 	SelectedGlobalDocIDs []string
+	EnableWebResearch    bool
 }
 
 // StartCourseCreationResult contains the created job.
@@ -112,6 +113,7 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 			SelectedTeamDocIDs:   teamDocIDs,
 			SelectedGlobalDocIDs: globalDocIDs,
 			RAGFilters:           ragFilters,
+			EnableWebResearch:    req.EnableWebResearch,
 		}
 
 		if _, err := s.workflowStarter.StartCourseCreation(ctx, input); err != nil {

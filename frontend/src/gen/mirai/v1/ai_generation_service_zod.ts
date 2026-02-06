@@ -189,6 +189,7 @@ export const StartCourseCreationRequestSchema = z.object({
   internalDataOnly: z.boolean(),
   selectedTeamDocIds: z.array(z.string()),
   selectedGlobalDocIds: z.array(z.string()),
+  enableWebResearch: z.boolean(),
 });
 
 export type StartCourseCreationRequest = z.infer<typeof StartCourseCreationRequestSchema>;
