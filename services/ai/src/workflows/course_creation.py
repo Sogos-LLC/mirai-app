@@ -661,6 +661,7 @@ class CourseCreationWorkflow:
             start_to_close_timeout=timeout,
             heartbeat_timeout=AI_HEARTBEAT,
             retry_policy=RetryPolicy(**AI_RETRY),
+            result_type=output_type,
         )
 
     @staticmethod
