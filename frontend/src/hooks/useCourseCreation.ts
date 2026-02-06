@@ -65,8 +65,8 @@ export function useStartCourseCreation() {
 
       const result = await mutation.mutateAsync(request);
 
-      // Invalidate job queries so the new job appears
-      await queryClient.invalidateQueries({
+      // Fire-and-forget: don't block on refetch
+      void queryClient.invalidateQueries({
         queryKey: createConnectQueryKey({ schema: listJobs, cardinality: undefined }),
       });
 
@@ -106,8 +106,8 @@ export function useApproveWorkflowStep() {
 
       const result = await mutation.mutateAsync(request);
 
-      // Invalidate job query to reflect the approval
-      await queryClient.invalidateQueries({
+      // Fire-and-forget: don't block on refetch
+      void queryClient.invalidateQueries({
         queryKey: createConnectQueryKey({ schema: getJob, cardinality: undefined }),
       });
 
@@ -145,8 +145,8 @@ export function useRejectWorkflowStep() {
 
       const result = await mutation.mutateAsync(request);
 
-      // Invalidate job query to reflect the rejection
-      await queryClient.invalidateQueries({
+      // Fire-and-forget: don't block on refetch
+      void queryClient.invalidateQueries({
         queryKey: createConnectQueryKey({ schema: getJob, cardinality: undefined }),
       });
 

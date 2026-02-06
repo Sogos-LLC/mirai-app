@@ -34,8 +34,8 @@ export const transport = createConnectTransport({
   // Use JSON format for better compatibility with Cloudflare proxying
   // Binary format can cause 404 errors when passing through certain proxies
   useBinaryFormat: false,
-  // 120s deadline - homelab cluster ops (MinIO + DB + cache) can be slow on cold start
-  defaultTimeoutMs: 120_000,
+  // 60s deadline - enough for all operations while catching stale connections
+  defaultTimeoutMs: 60_000,
   interceptors: [retryInterceptor],
   // Use custom fetch to include credentials for cookie-based auth
   fetch: (input, init) =>

@@ -185,7 +185,9 @@ export function useCreateCourse() {
       });
 
       const result = await mutation.mutateAsync(request);
-      await Promise.all([
+      // Fire-and-forget: don't await invalidation — refetches use the transport
+      // timeout and can block the caller for the full duration if queries fail.
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listCourses, cardinality: undefined }) }),
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getFolderHierarchy, cardinality: undefined }) }),
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getLibrary, cardinality: undefined }) }),
@@ -331,7 +333,7 @@ export function useUpdateCourse() {
       });
 
       const result = await mutation.mutateAsync(request);
-      await Promise.all([
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listCourses, cardinality: undefined }) }),
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getCourse, cardinality: undefined }) }),
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getFolderHierarchy, cardinality: undefined }) }),
@@ -352,7 +354,7 @@ export function useDeleteCourse() {
     mutate: async (courseId: string) => {
       const request = create(DeleteCourseRequestSchema, { id: courseId });
       const result = await mutation.mutateAsync(request);
-      await Promise.all([
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: listCourses, cardinality: undefined }) }),
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getFolderHierarchy, cardinality: undefined }) }),
         queryClient.invalidateQueries({ queryKey: createConnectQueryKey({ schema: getLibrary, cardinality: undefined }) }),
