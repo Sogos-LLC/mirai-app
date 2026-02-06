@@ -1,7 +1,7 @@
 """Outline quality judge — evaluates outline against ADDIE rubric."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
 from src.models.outline import CourseOutline
@@ -66,7 +66,7 @@ Be constructive but honest. A course with 5 excellent sections beats 10 mediocre
 """
 
 outline_judge_agent = Agent(
-    output_type=OutlineQualityScore,
+    output_type=NativeOutput(OutlineQualityScore),
     system_prompt=OUTLINE_JUDGE_SYSTEM,
     name="outline-judge",
 )

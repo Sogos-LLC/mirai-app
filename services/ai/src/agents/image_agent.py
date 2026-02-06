@@ -2,7 +2,7 @@
 
 import structlog
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
 
@@ -38,7 +38,7 @@ Given the context of where an image appears in a lesson, generate:
 """
 
 _image_description_agent = Agent(
-    output_type=ImageDescriptionOutput,
+    output_type=NativeOutput(ImageDescriptionOutput),
     system_prompt=IMAGE_DESCRIPTION_SYSTEM,
     name="image-description",
 )

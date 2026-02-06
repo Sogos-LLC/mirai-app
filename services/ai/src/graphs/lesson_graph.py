@@ -20,9 +20,10 @@ from src.agents.lesson_agent import (
     PlannedComponent,
     build_component_plan_prompt,
     build_single_component_prompt,
+    component_gen_agent,
     component_plan_agent,
+    component_research_agent,
     generate_segue,
-    single_component_agent,
 )
 from src.agents.model import make_model
 from src.judges.lesson_judge import judge_lesson
@@ -281,7 +282,11 @@ class RefinePlanNode(BaseNode[LessonState, LessonDeps]):
 
 @dataclass
 class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
-    """Generate each component individually based on the plan."""
+    """Generate each component individually based on the plan.
+
+    Uses a two-step flow: research agent (web search) → gen agent (NativeOutput).
+    Research runs once per lesson; the context is shared across all components.
+    """
 
     async def run(
         self, ctx: GraphRunContext[LessonState, LessonDeps]
@@ -289,8 +294,21 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
         deps = ctx.deps
         state = ctx.state
         plan = state.component_plan
+        model = make_model(deps.api_key)
 
-        # Generate components sequentially (each one sees previous context)
+        # Step 1: Run web research once for the whole lesson
+        research_prompt = (
+            f"Research the topic '{deps.lesson.title}' for a lesson in the course "
+            f"'{deps.course_title}' (section: {deps.section_title}).\n"
+            f"Key topics: {', '.join(deps.lesson.key_topics)}\n"
+            f"Find accurate, current information to support educational content."
+        )
+        research_result = await component_research_agent.run(
+            research_prompt, model=model
+        )
+        web_context = research_result.output
+
+        # Step 2: Generate components sequentially (each one sees previous context)
         components: list[LessonComponent] = []
 
         for i, planned in enumerate(plan):
@@ -304,11 +322,10 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
                 section_title=deps.section_title,
                 previous_components=components,
                 rag_chunks=state.rag_chunks if state.rag_chunks else None,
+                web_context=web_context,
             )
 
-            result = await single_component_agent.run(
-                prompt, model=make_model(deps.api_key)
-            )
+            result = await component_gen_agent.run(prompt, model=model)
             component = result.output
             # Ensure identity fields are set
             component.id = f"component-{i + 1}"

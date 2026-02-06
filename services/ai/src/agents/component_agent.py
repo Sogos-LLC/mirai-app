@@ -1,7 +1,7 @@
 """Component regeneration agent - modifies a single lesson component."""
 
 import structlog
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
 from src.models.lesson import LessonComponent
@@ -33,9 +33,10 @@ Component type rules:
 """
 
 _component_regen_agent = Agent(
-    output_type=LessonComponent,
+    output_type=NativeOutput(LessonComponent),
     system_prompt=COMPONENT_REGEN_SYSTEM,
     name="component-regen",
+    max_result_retries=3,
 )
 
 

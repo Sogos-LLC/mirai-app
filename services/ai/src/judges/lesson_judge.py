@@ -1,7 +1,7 @@
 """Lesson quality judge — evaluates lesson content against pedagogical rubric."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
 from src.models.lesson import LessonContent
@@ -59,7 +59,7 @@ Be constructive. A focused 8-component lesson beats a bloated 15-component one.
 """
 
 lesson_judge_agent = Agent(
-    output_type=LessonQualityScore,
+    output_type=NativeOutput(LessonQualityScore),
     system_prompt=LESSON_JUDGE_SYSTEM,
     name="lesson-judge",
 )

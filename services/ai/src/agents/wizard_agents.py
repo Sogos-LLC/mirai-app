@@ -6,7 +6,7 @@ Orchestration is handled by pydantic-graph (see src/graphs/); this module
 only exposes agents and prompt builders.
 """
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 
 from src.graphs.wizard_utils import build_rag_section
 from src.models.knowledge import KnowledgeChunk
@@ -29,7 +29,7 @@ You are an expert course designer who creates compelling course titles and descr
 """
 
 title_agent = Agent(
-    output_type=ImprovedTitleOutput,
+    output_type=NativeOutput(ImprovedTitleOutput),
     system_prompt=TITLE_SYSTEM,
     name="wizard-title",
 )
@@ -74,7 +74,7 @@ for professional courses.
 """
 
 outcomes_agent = Agent(
-    output_type=CourseOutcomesOutput,
+    output_type=NativeOutput(CourseOutcomesOutput),
     system_prompt=OUTCOMES_SYSTEM,
     name="wizard-outcomes",
 )
@@ -134,7 +134,7 @@ personas for a course.
 """
 
 sme_agent = Agent(
-    output_type=SMEPersonasOutput,
+    output_type=NativeOutput(SMEPersonasOutput),
     system_prompt=SME_SYSTEM,
     name="wizard-sme",
 )
@@ -178,7 +178,7 @@ You are an expert instructional designer creating target audience personas for a
 """
 
 audience_agent = Agent(
-    output_type=AudiencePersonasOutput,
+    output_type=NativeOutput(AudiencePersonasOutput),
     system_prompt=AUDIENCE_SYSTEM,
     name="wizard-audience",
 )
@@ -233,7 +233,7 @@ You are an expert instructional designer creating tone and style options for a c
 """
 
 tone_agent = Agent(
-    output_type=ToneOptionsOutput,
+    output_type=NativeOutput(ToneOptionsOutput),
     system_prompt=TONE_SYSTEM,
     name="wizard-tone",
 )

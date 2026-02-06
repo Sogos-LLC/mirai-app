@@ -1,7 +1,7 @@
 """Lesson content generation agents - plan components, generate each, segue."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, WebSearchTool
+from pydantic_ai import Agent, NativeOutput, WebSearchTool
 
 from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
@@ -79,7 +79,7 @@ Plan 8-12 components. Each purpose MUST reference which learning objective it ad
 """
 
 component_plan_agent = Agent(
-    output_type=ComponentPlanOutput,
+    output_type=NativeOutput(ComponentPlanOutput),
     system_prompt=COMPONENT_PLAN_SYSTEM,
     name="lesson-component-plan",
 )
@@ -210,11 +210,30 @@ Follow these formatting rules strictly by component type:
 Generate exactly ONE component matching the specified type and purpose.
 """
 
-single_component_agent = Agent(
-    output_type=LessonComponent,
+COMPONENT_RESEARCH_SYSTEM = """\
+You are a research assistant gathering information for educational content creation.
+
+Search the web for accurate, up-to-date information about the given topic.
+Focus on:
+- Factual details, definitions, and explanations
+- Current best practices and real-world examples
+- Statistics or data points that support the educational content
+
+Return a plain-text summary of your findings. Be concise and factual.
+"""
+
+component_research_agent = Agent(
+    output_type=str,
+    system_prompt=COMPONENT_RESEARCH_SYSTEM,
+    name="lesson-component-research",
+    builtin_tools=[WebSearchTool()],
+)
+
+component_gen_agent = Agent(
+    output_type=NativeOutput(LessonComponent),
     system_prompt=SINGLE_COMPONENT_SYSTEM,
     name="lesson-component-gen",
-    builtin_tools=[WebSearchTool()],
+    max_result_retries=3,
 )
 
 
@@ -229,6 +248,7 @@ def build_single_component_prompt(
     section_title: str,
     previous_components: list[LessonComponent],
     rag_chunks: list[KnowledgeChunk] | None = None,
+    web_context: str = "",
 ) -> str:
     """Build prompt for generating a single component."""
     is_first = component_index == 0
@@ -261,6 +281,11 @@ def build_single_component_prompt(
         for chunk in rag_chunks:
             rag_text += f"**[{chunk.source_name}]:** {chunk.content[:300]}\n"
 
+    # Web research context
+    web_text = ""
+    if web_context:
+        web_text = f"\n## Web Research Context\n{web_context}\n"
+
     return f"""\
 ## Course: {course_title}
 ## Section: {section_title}
@@ -277,7 +302,7 @@ def build_single_component_prompt(
 {chr(10).join(f"  - {obj.description}" for obj in lesson.learning_objectives)}
 
 {position_guidance}
-{prev_text}{rag_text}
+{prev_text}{rag_text}{web_text}
 Generate this {component_type} component. Set id="component-{component_index + 1}" and order={component_index}."""
 
 
@@ -298,7 +323,7 @@ course sections. Write natural, motivating transitions that connect concepts.
 """
 
 segue_agent = Agent(
-    output_type=SegueOutput,
+    output_type=NativeOutput(SegueOutput),
     system_prompt=SEGUE_SYSTEM,
     name="lesson-segue",
 )

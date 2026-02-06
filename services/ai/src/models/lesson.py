@@ -14,7 +14,12 @@ class ComponentType(str, Enum):
     CODE = "code"
     IMAGE = "image"
     CALLOUT = "callout"
+    STATEMENT = "statement"
+    QUOTE = "quote"
     LIST = "list"
+    GALLERY = "gallery"
+    MULTIMEDIA = "multimedia"
+    CHART = "chart"
     TABLE = "table"
     DIVIDER = "divider"
 

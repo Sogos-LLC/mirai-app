@@ -1,7 +1,7 @@
 """Document analysis and course planning agents."""
 
 import structlog
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
 from src.models.plan import CoursePlan, DocumentAnalysis
@@ -34,7 +34,7 @@ procedure names, specific concepts. This precision is critical for later retriev
 """
 
 _analyze_document_agent = Agent(
-    output_type=DocumentAnalysis,
+    output_type=NativeOutput(DocumentAnalysis),
     system_prompt=ANALYZE_DOCUMENT_SYSTEM,
     name="plan-analyze-doc",
 )
@@ -127,7 +127,7 @@ If the material is limited, create a SMALLER course — quality over quantity.
 """
 
 _course_plan_agent = Agent(
-    output_type=CoursePlan,
+    output_type=NativeOutput(CoursePlan),
     system_prompt=COURSE_PLAN_SYSTEM,
     name="plan-course-plan",
 )

@@ -1,7 +1,7 @@
 """Structural elements agents — section intros, summaries, and course conclusion."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
 from src.models.outline import CourseOutline
@@ -55,7 +55,7 @@ Use the section and lesson titles to make references specific.
 """
 
 structural_agent = Agent(
-    output_type=StructuralElementsOutput,
+    output_type=NativeOutput(StructuralElementsOutput),
     system_prompt=STRUCTURAL_SYSTEM,
     name="structural-elements",
 )

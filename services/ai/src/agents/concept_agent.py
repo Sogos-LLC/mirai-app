@@ -1,6 +1,6 @@
 """Concept map agent — generates cross-lesson concept progression from outline."""
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
 from src.models.outline import ConceptMap, CourseOutline
@@ -24,7 +24,7 @@ Guidelines:
 """
 
 concept_map_agent = Agent(
-    output_type=ConceptMap,
+    output_type=NativeOutput(ConceptMap),
     system_prompt=CONCEPT_MAP_SYSTEM,
     name="concept-map",
 )
