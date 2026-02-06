@@ -66,6 +66,40 @@ async def generate_outline(input: GenerateOutlineInput) -> GenerateOutlineOutput
     )
 
 
+class AnalyzeCourseGapsInput(BaseModel):
+    """Input for course-level gap analysis activity."""
+
+    api_key: str
+    course_title: str
+    outline_summary: str
+    has_rag_content: bool = False
+
+
+class AnalyzeCourseGapsOutput(BaseModel):
+    """Output from course-level gap analysis activity."""
+
+    web_context: str = ""
+
+
+@activity.defn
+async def analyze_course_gaps_activity(
+    input: AnalyzeCourseGapsInput,
+) -> AnalyzeCourseGapsOutput:
+    """Analyze knowledge gaps for the entire course and optionally research."""
+    from src.agents.lesson_agent import analyze_course_gaps
+
+    activity.heartbeat("analyzing course gaps")
+
+    web_context = await analyze_course_gaps(
+        api_key=input.api_key,
+        course_title=input.course_title,
+        outline_summary=input.outline_summary,
+        has_rag_content=input.has_rag_content,
+    )
+
+    return AnalyzeCourseGapsOutput(web_context=web_context)
+
+
 class GenerateLessonInput(BaseModel):
     """Input for lesson content generation activity."""
 
@@ -84,6 +118,7 @@ class GenerateLessonInput(BaseModel):
     is_section_last: bool = False
     is_course_last: bool = False
     next_lesson_title: str = ""
+    web_context: str = ""
 
 
 class GenerateLessonOutput(BaseModel):
@@ -114,6 +149,7 @@ async def generate_lesson(input: GenerateLessonInput) -> GenerateLessonOutput:
         is_section_last=input.is_section_last,
         is_course_last=input.is_course_last,
         next_lesson_title=input.next_lesson_title,
+        web_context=input.web_context,
     )
 
     activity.heartbeat("lesson generation completed")

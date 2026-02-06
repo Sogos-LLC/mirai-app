@@ -12,6 +12,7 @@ from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 
 from src.activities.generation import (
+    analyze_course_gaps_activity,
     generate_outline,
     generate_lesson,
     regenerate_component,
@@ -116,6 +117,7 @@ async def run_worker() -> None:
         task_queue=settings.temporal_task_queue,
         workflows=[CourseCreationWorkflow],
         activities=[
+            analyze_course_gaps_activity,
             generate_outline,
             generate_lesson,
             regenerate_component,

@@ -18,7 +18,7 @@ test.describe('Course Creation Wizard', () => {
 
   test('02 - full course creation end-to-end', async ({ page }) => {
     // Budget: ~20s per approval step (7 steps) + up to 3min for lesson generation
-    test.setTimeout(420_000);
+    test.setTimeout(600_000);
 
     // Capture console messages for debugging
     const consoleLogs: string[] = [];
@@ -119,11 +119,11 @@ test.describe('Course Creation Wizard', () => {
       // Timeout depends on what we're waiting for after the last approval:
       // - First step (stepCount=0): 90s to cover CreateCourse + StartWorkflow + title gen
       // - After tone approval: outline gen+concept map+judge (up to 45s)
-      // - After outline approval: lesson generation (up to 180s)
+      // - After outline approval: gap analysis + sequential lesson gen (up to 420s)
       // - Everything else: 20s (AI gen + Temporal/polling overhead)
       let waitTimeout = 20_000;
       if (stepCount === 0) waitTimeout = 90_000;
-      else if (lastStepHeader.includes('Outline')) waitTimeout = 180_000;
+      else if (lastStepHeader.includes('Outline')) waitTimeout = 420_000;
       else if (lastStepHeader.includes('Tone')) waitTimeout = 45_000;
 
       const result = await Promise.race([

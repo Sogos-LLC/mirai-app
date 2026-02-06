@@ -22,8 +22,6 @@ from src.agents.lesson_agent import (
     build_single_component_prompt,
     component_gen_agent,
     component_plan_agent,
-    gap_analysis_agent,
-    targeted_research_agent,
     generate_segue,
 )
 from src.agents.model import make_model
@@ -80,6 +78,7 @@ class LessonDeps:
     is_section_last: bool = False
     is_course_last: bool = False
     next_lesson_title: str = ""
+    web_context: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -285,10 +284,8 @@ class RefinePlanNode(BaseNode[LessonState, LessonDeps]):
 class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
     """Generate each component individually based on the plan.
 
-    Uses gap analysis to determine if web research is needed:
-    1. Analyze the component plan against available RAG chunks
-    2. Only run targeted web research if genuine knowledge gaps exist
-    3. Generate components with whatever context is available
+    Web research context (if any) is provided at the course level via deps.web_context,
+    avoiding per-lesson research overhead.
     """
 
     async def run(
@@ -299,52 +296,7 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
         plan = state.component_plan
         model = make_model(deps.api_key)
 
-        # Step 1: Gap analysis — determine if web research is needed
-        rag_summary = ""
-        if state.rag_chunks:
-            rag_summary = "\n## Available Source Material\n" + "\n".join(
-                f"- [{c.source_name}]: {c.content[:200]}" for c in state.rag_chunks[:10]
-            )
-
-        plan_summary = "\n".join(
-            f"- [{p.type}] {p.purpose}" for p in plan
-        )
-
-        gap_prompt = (
-            f"## Lesson: {deps.lesson.title}\n"
-            f"## Course: {deps.course_title}\n"
-            f"## Key Topics: {', '.join(deps.lesson.key_topics)}\n\n"
-            f"## Component Plan\n{plan_summary}\n"
-            f"{rag_summary}\n\n"
-            f"Identify specific knowledge gaps that require web research."
-        )
-
-        gap_result = await gap_analysis_agent.run(gap_prompt, model=model)
-        queries = gap_result.output.search_queries
-
-        # Step 2: Targeted web research only if gaps found
-        web_context = ""
-        if queries:
-            research_prompt = (
-                f"Search for the following specific information:\n"
-                + "\n".join(f"- {q}" for q in queries[:3])
-            )
-            research_result = await targeted_research_agent.run(
-                research_prompt, model=model
-            )
-            web_context = research_result.output
-            log.info(
-                "gap_research_complete",
-                lesson=deps.lesson.title,
-                queries=len(queries),
-            )
-        else:
-            log.info(
-                "no_gaps_found",
-                lesson=deps.lesson.title,
-            )
-
-        # Step 3: Generate components sequentially (each one sees previous context)
+        # Generate components sequentially (each one sees previous context)
         components: list[LessonComponent] = []
 
         for i, planned in enumerate(plan):
@@ -358,7 +310,7 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
                 section_title=deps.section_title,
                 previous_components=components,
                 rag_chunks=state.rag_chunks if state.rag_chunks else None,
-                web_context=web_context,
+                web_context=deps.web_context,
             )
 
             result = await component_gen_agent.run(prompt, model=model)
@@ -523,6 +475,7 @@ async def run_lesson_graph(
     is_section_last: bool = False,
     is_course_last: bool = False,
     next_lesson_title: str = "",
+    web_context: str = "",
 ) -> tuple[LessonContent, int]:
     """Run the full lesson generation graph.
 
@@ -550,6 +503,7 @@ async def run_lesson_graph(
         is_section_last=is_section_last,
         is_course_last=is_course_last,
         next_lesson_title=next_lesson_title,
+        web_context=web_context,
     )
 
     state = LessonState()

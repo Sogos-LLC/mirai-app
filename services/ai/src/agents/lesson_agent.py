@@ -211,36 +211,39 @@ Generate exactly ONE component matching the specified type and purpose.
 """
 
 GAP_ANALYSIS_SYSTEM = """\
-You are an instructional content analyst. Given a lesson's component plan and any
-available source material, identify specific knowledge gaps that require web research.
+You are an instructional content analyst. Given a course outline, determine whether
+web research is needed to create accurate lesson content.
 
-A "gap" exists when:
-- The plan references current statistics, dates, or facts that may have changed
-- The plan covers a rapidly-evolving topic (e.g. technology, regulations, market data)
-- No source material is provided AND the topic requires factual accuracy beyond common knowledge
+Return search queries ONLY when ALL of these conditions are met:
+1. The topic requires CURRENT data (statistics, prices, regulations, version numbers)
+2. The information changes frequently (annually or more often)
+3. Getting it wrong would be factually misleading to learners
 
-There is NO gap when:
+Return an EMPTY list (no research needed) when:
 - The topic is conceptual, theoretical, or well-established knowledge
-- Sufficient source material (RAG chunks) already covers the planned content
-- The content is about principles, best practices, or frameworks that don't change frequently
+- Source material (RAG chunks) is provided and covers the topic
+- The content is about principles, frameworks, or best practices
+- The LLM has sufficient knowledge to generate accurate educational content
+- The topic is historical, foundational, or slowly-evolving
 
-Be conservative — only flag genuine gaps. Return an empty list if no web research is needed.
+Most educational courses do NOT need web research. Be extremely conservative.
+Maximum 3 search queries if research IS needed.
 """
 
 
 class GapAnalysis(BaseModel):
-    """Result of analyzing knowledge gaps in a lesson plan."""
+    """Result of analyzing knowledge gaps in a course outline."""
 
     search_queries: list[str] = Field(
         default_factory=list,
-        description="Specific web search queries to fill knowledge gaps. Empty if no gaps.",
+        description="Specific web search queries to fill knowledge gaps. Empty if no gaps. Max 3.",
     )
 
 
 gap_analysis_agent = Agent(
     output_type=NativeOutput(GapAnalysis),
     system_prompt=GAP_ANALYSIS_SYSTEM,
-    name="lesson-gap-analysis",
+    name="course-gap-analysis",
 )
 
 
@@ -255,9 +258,57 @@ Focus only on the specific information requested — do not add tangential conte
 targeted_research_agent = Agent(
     output_type=str,
     system_prompt=TARGETED_RESEARCH_SYSTEM,
-    name="lesson-targeted-research",
+    name="course-targeted-research",
     builtin_tools=[WebSearchTool()],
 )
+
+
+async def analyze_course_gaps(
+    *,
+    api_key: str,
+    course_title: str,
+    outline_summary: str,
+    has_rag_content: bool,
+) -> str:
+    """Run course-level gap analysis and optional targeted research.
+
+    Returns web_context string (empty if no gaps found).
+    Called once per course, not per lesson.
+    """
+    from src.agents.model import make_model
+    import structlog
+
+    log = structlog.get_logger()
+    model = make_model(api_key)
+
+    rag_note = (
+        "Source material (RAG) IS available for this course."
+        if has_rag_content
+        else "No source material provided — content relies on LLM knowledge."
+    )
+
+    gap_prompt = (
+        f"## Course: {course_title}\n\n"
+        f"## Source Material Status\n{rag_note}\n\n"
+        f"## Course Outline\n{outline_summary}\n\n"
+        f"Determine if web research is needed for this course."
+    )
+
+    gap_result = await gap_analysis_agent.run(gap_prompt, model=model)
+    queries = gap_result.output.search_queries
+
+    if not queries:
+        log.info("course_no_gaps", course=course_title)
+        return ""
+
+    research_prompt = (
+        f"Search for the following specific information for a course on '{course_title}':\n"
+        + "\n".join(f"- {q}" for q in queries[:3])
+    )
+    research_result = await targeted_research_agent.run(research_prompt, model=model)
+    log.info("course_gap_research_complete", course=course_title, queries=len(queries))
+    return research_result.output
+
 
 component_gen_agent = Agent(
     output_type=NativeOutput(LessonComponent),

@@ -18,6 +18,8 @@ from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
     from src.activities.generation import (
+        AnalyzeCourseGapsInput,
+        AnalyzeCourseGapsOutput,
         GenerateLessonInput,
         GenerateLessonOutput,
         GenerateOutlineInput,
@@ -485,6 +487,35 @@ class CourseCreationWorkflow:
         )
 
         # ---------------------------------------------------------------
+        # GAP ANALYSIS PHASE (one-time, before lesson generation)
+        # ---------------------------------------------------------------
+
+        self._progress = 52
+        self._progress_message = "Analyzing knowledge gaps"
+
+        # Build outline summary for gap analysis
+        outline_summary_parts: list[str] = []
+        for s in outline_result.outline.sections:
+            outline_summary_parts.append(f"## {s.title}")
+            for lesson in s.lessons:
+                topics = ", ".join(lesson.key_topics[:3]) if lesson.key_topics else ""
+                outline_summary_parts.append(f"  - {lesson.title} ({topics})")
+        outline_summary = "\n".join(outline_summary_parts)
+
+        gaps_result = await self._run_ai_activity(
+            "analyze_course_gaps_activity",
+            AnalyzeCourseGapsInput(
+                api_key=api_key,
+                course_title=improved_title,
+                outline_summary=outline_summary,
+                has_rag_content=has_knowledge,
+            ),
+            AnalyzeCourseGapsOutput,
+            timeout=AI_SHORT_TIMEOUT,
+        )
+        web_context = gaps_result.web_context
+
+        # ---------------------------------------------------------------
         # LESSON PHASE
         # ---------------------------------------------------------------
 
@@ -546,6 +577,7 @@ class CourseCreationWorkflow:
                     is_section_last=is_section_last,
                     is_course_last=is_course_last,
                     next_lesson_title=next_lesson_title,
+                    web_context=web_context,
                 ),
                 GenerateLessonOutput,
                 timeout=AI_LESSON_TIMEOUT,
