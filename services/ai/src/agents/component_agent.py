@@ -36,7 +36,7 @@ _component_regen_agent = Agent(
     output_type=NativeOutput(LessonComponent),
     system_prompt=COMPONENT_REGEN_SYSTEM,
     name="component-regen",
-    max_result_retries=3,
+    output_retries=3,
 )
 
 

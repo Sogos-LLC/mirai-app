@@ -126,7 +126,7 @@ sections_gen_agent = Agent(
     output_type=NativeOutput(SectionsOnlyOutput),
     system_prompt=SECTIONS_SYSTEM,
     name="outline-sections-gen",
-    max_result_retries=3,
+    output_retries=3,
 )
 
 internal_data_sections_agent = Agent(

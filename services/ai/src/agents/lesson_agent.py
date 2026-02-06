@@ -233,7 +233,7 @@ component_gen_agent = Agent(
     output_type=NativeOutput(LessonComponent),
     system_prompt=SINGLE_COMPONENT_SYSTEM,
     name="lesson-component-gen",
-    max_result_retries=3,
+    output_retries=3,
 )
 
 
