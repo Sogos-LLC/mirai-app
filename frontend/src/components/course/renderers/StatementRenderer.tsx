@@ -56,13 +56,15 @@ export function StatementRenderer({ content, isEditing = false, onEdit }: Statem
       <div className="flex items-start gap-3">
         <Lightbulb className="w-6 h-6 flex-shrink-0 text-indigo-500 mt-1" />
         <div className="flex-1">
-          <p className="text-xl font-semibold text-indigo-900 dark:text-indigo-100">
-            {content.statementText}
-          </p>
+          <p
+            className="text-xl font-semibold text-indigo-900 dark:text-indigo-100 [&_code]:text-base [&_code]:font-mono [&_code]:bg-indigo-100 [&_code]:dark:bg-indigo-900/50 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded"
+            dangerouslySetInnerHTML={{ __html: content.statementText }}
+          />
           {content.statementSubtext && (
-            <p className="mt-2 text-sm text-indigo-700 dark:text-indigo-300">
-              {content.statementSubtext}
-            </p>
+            <p
+              className="mt-2 text-sm text-indigo-700 dark:text-indigo-300 [&_code]:font-mono [&_code]:bg-indigo-100 [&_code]:dark:bg-indigo-900/50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs"
+              dangerouslySetInnerHTML={{ __html: content.statementSubtext }}
+            />
           )}
         </div>
       </div>

@@ -92,9 +92,26 @@ structured components that render directly in a learning platform.
 5. Heading levels: use 2 for major sections, 3 for subsections, 4 for minor points
 6. Quiz questions should test understanding, not recall — use application/analysis level
 7. Each quiz must have 3-4 options with exactly one correct answer (a, b, c, or d)
-8. When content follows a "Term: explanation" pattern (e.g., comparing tools,
-   listing types/categories, defining concepts), use an accordion list — NOT a
-   text block. Put the term in `text` and the explanation in `description`.
+8. Statement components are for short, punchy takeaways — NO inline code or HTML.
+   If the takeaway mentions code/commands, use a callout instead.
+
+## Component Selection Rules (CRITICAL — choose the right type)
+Use a **text** component ONLY for prose paragraphs that flow as narrative. If the content
+has any of these structures, use the matching component instead:
+
+| Content Pattern | Correct Component | Style |
+|----------------|-------------------|-------|
+| "Term: explanation" pairs (tools, categories, definitions) | list | accordion |
+| Sequential steps ("Step 1… Step 2…", "First… Then… Finally…") | list | process |
+| Bulleted or numbered items | list | bulleted / numbered |
+| Items with icons or labels | list | icon |
+| A key takeaway, insight, or rule (1-2 sentences) | statement | — |
+| Important warning, tip, or note | callout | info/warning/tip |
+| A notable quote with attribution | quote | — |
+| Code example or command | code | — |
+
+A **text** block containing bold labels followed by descriptions is WRONG — convert it
+to the appropriate list type. Text components should read like paragraphs, not lists.
 
 ## Positional Awareness
 - If this is the FIRST lesson of the FIRST section: include a welcoming introduction
