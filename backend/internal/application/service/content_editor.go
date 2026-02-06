@@ -165,6 +165,40 @@ func (s *AIGenerationService) GetUserIDByKratosID(ctx context.Context, kratosID 
 	return user.ID, nil
 }
 
+// GetCourseOutlineWithWizardDataResult contains both the outline and wizard data from a single S3 read.
+type GetCourseOutlineWithWizardDataResult struct {
+	Outline    *entity.CourseOutline
+	WizardData *S3WizardData
+}
+
+// GetCourseOutlineWithWizardData retrieves both the outline and wizard data
+// from a single S3 read, avoiding duplicate reads that GetCourseOutline + GetWizardData would cause.
+func (s *AIGenerationService) GetCourseOutlineWithWizardData(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*GetCourseOutlineWithWizardDataResult, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	if user.TenantID == nil {
+		return nil, domainerrors.ErrUserHasNoCompany
+	}
+
+	content, err := s.readCourseContent(ctx, *user.TenantID, courseID)
+	if err != nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
+	}
+
+	outline, err := buildOutlineFromContent(content, *user.TenantID, courseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetCourseOutlineWithWizardDataResult{
+		Outline:    outline,
+		WizardData: content.WizardData,
+	}, nil
+}
+
 // GetCourseOutline retrieves the outline for a course from MinIO.
 func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*entity.CourseOutline, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
@@ -181,17 +215,21 @@ func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uui
 		return nil, domainerrors.ErrNotFound.WithMessage("course content not found")
 	}
 
+	return buildOutlineFromContent(content, *user.TenantID, courseID)
+}
+
+// buildOutlineFromContent converts S3 course content sections into an entity.CourseOutline.
+func buildOutlineFromContent(content *S3CourseContent, tenantID uuid.UUID, courseID uuid.UUID) (*entity.CourseOutline, error) {
 	if len(content.Content.Sections) == 0 {
 		return nil, domainerrors.ErrNotFound.WithMessage("outline not found")
 	}
 
-	// Convert to entity
 	outline := &entity.CourseOutline{
-		ID:             uuid.New(), // Generated
-		TenantID:       *user.TenantID,
+		ID:             uuid.New(),
+		TenantID:       tenantID,
 		CourseID:       courseID,
 		Version:        1,
-		ApprovalStatus: valueobject.OutlineApprovalStatusApproved, // Auto-approved in new flow
+		ApprovalStatus: valueobject.OutlineApprovalStatusApproved,
 		GeneratedAt:    time.Now(),
 		Sections:       make([]entity.OutlineSection, 0, len(content.Content.Sections)),
 	}
@@ -203,7 +241,7 @@ func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uui
 
 		sec := entity.OutlineSection{
 			ID:          uuid.MustParse(sectionID),
-			TenantID:    *user.TenantID,
+			TenantID:    tenantID,
 			OutlineID:   outline.ID,
 			Title:       sectionTitle,
 			Description: sectionDesc,
@@ -211,7 +249,6 @@ func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uui
 			Lessons:     []entity.OutlineLesson{},
 		}
 
-		// Extract section metadata
 		if level, ok := section["level"].(string); ok {
 			sec.Level = level
 		}
@@ -252,7 +289,7 @@ func (s *AIGenerationService) GetCourseOutline(ctx context.Context, kratosID uui
 
 			lesson := entity.OutlineLesson{
 				ID:          uuid.MustParse(lessonID),
-				TenantID:    *user.TenantID,
+				TenantID:    tenantID,
 				SectionID:   sec.ID,
 				Title:       lessonTitle,
 				Description: lessonDesc,

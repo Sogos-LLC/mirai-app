@@ -48,24 +48,14 @@ func (s *AIGenerationServiceServer) GetCourseOutline(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	outline, err := s.aiService.GetCourseOutline(ctx, kratosID, courseID)
+	result, err := s.aiService.GetCourseOutlineWithWizardData(ctx, kratosID, courseID)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
-	// Also get wizard data for realignment features
-	wizardData, err := s.aiService.GetWizardData(ctx, kratosID, courseID)
-	if err != nil {
-		// Log the error but don't fail the request - wizard data is supplementary
-		slog.Warn("failed to get wizard data for course",
-			"courseID", courseID.String(),
-			"error", err.Error(),
-		)
-	}
-
 	return connect.NewResponse(&v1.GetCourseOutlineResponse{
-		Outline:    courseOutlineToProto(outline),
-		WizardData: s3WizardDataToProto(wizardData),
+		Outline:    courseOutlineToProto(result.Outline),
+		WizardData: s3WizardDataToProto(result.WizardData),
 	}), nil
 }
 

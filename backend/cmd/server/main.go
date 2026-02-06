@@ -154,10 +154,7 @@ func main() {
 		logger.Warn("S3 credentials not configured, using local storage (not recommended for production)")
 	}
 
-	// Wrap storage with tenant-aware path prefixing
-	tenantStorage := storage.NewTenantAwareStorage(baseStorage)
-
-	// Initialize Redis cache
+	// Initialize Redis cache (before tenant storage so it can be injected)
 	var baseCache cache.Cache
 	if cfg.RedisURL != "" {
 		redisCache, err := cache.NewRedisCache(cache.RedisConfig{
@@ -175,6 +172,9 @@ func main() {
 		baseCache = cache.NewNoOpCache()
 		logger.Warn("Redis URL not configured, using no-op cache")
 	}
+
+	// Wrap storage with tenant-aware path prefixing + course content caching
+	tenantStorage := storage.NewTenantAwareStorage(baseStorage, baseCache)
 
 	// Wrap cache with tenant isolation for application services
 	tenantCache := cache.NewTenantCache(baseCache)
