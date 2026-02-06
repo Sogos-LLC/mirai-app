@@ -1,13 +1,20 @@
-"""Lesson content generation agents - plan components, generate each, segue."""
+"""Lesson content generation agents - plan components, generate each, segue.
+
+The component_gen_agent has a `review_component` tool that delegates to the
+component reviewer agent. The LLM can call it to self-check before finalizing.
+Usage is capped at 1 tool call per component via UsageLimits.
+"""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput, WebSearchTool
+from pydantic_ai import Agent, ModelRetry, NativeOutput, RunContext, WebSearchTool
 
 from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
 from src.models.lesson import LessonComponent, LessonContent
 from src.models.outline import OutlineLesson
 from src.models.wizard import SMEPersona
+
+MIN_COMPONENT_TYPES = 4
 
 # ---------------------------------------------------------------------------
 # Phase 1: Component Plan
@@ -83,7 +90,54 @@ component_plan_agent = Agent(
     output_type=NativeOutput(ComponentPlanOutput),
     system_prompt=COMPONENT_PLAN_SYSTEM,
     name="lesson-component-plan",
+    output_retries=2,
 )
+
+
+@component_plan_agent.output_validator
+def validate_component_plan(ctx: RunContext[None], output: ComponentPlanOutput) -> ComponentPlanOutput:
+    """Validate component plan against structural rules."""
+    plan = output.components
+    violations: list[str] = []
+
+    if len(plan) < 4:
+        violations.append(f"Only {len(plan)} components planned; need at least 4")
+    if len(plan) > 16:
+        violations.append(f"{len(plan)} components is too many; aim for 8-12")
+
+    types = {c.type.upper() for c in plan}
+    if len(types) < MIN_COMPONENT_TYPES:
+        violations.append(
+            f"Only {len(types)} unique types ({types}); need at least {MIN_COMPONENT_TYPES}"
+        )
+
+    quiz_indices = [i for i, c in enumerate(plan) if c.type.upper() == "QUIZ"]
+    if len(quiz_indices) > 1:
+        violations.append("Multiple QUIZ components; only one allowed at the end")
+    if quiz_indices and quiz_indices[0] != len(plan) - 1:
+        violations.append("QUIZ must be the last component")
+
+    for i in range(len(plan) - 1):
+        if plan[i].type.upper() == "HEADING" and plan[i + 1].type.upper() == "HEADING":
+            violations.append(f"Consecutive HEADINGs at positions {i} and {i + 1}")
+        if plan[i].type.upper() == "IMAGE" and plan[i + 1].type.upper() == "IMAGE":
+            violations.append(f"Consecutive IMAGEs at positions {i} and {i + 1}")
+
+    if plan and plan[0].type.upper() != "HEADING":
+        violations.append("First component should be HEADING")
+
+    image_count = sum(1 for c in plan if c.type.upper() == "IMAGE")
+    if image_count > 3:
+        violations.append(f"{image_count} IMAGE components; max 3 allowed")
+
+    has_emphasis = any(c.type.upper() in ("STATEMENT", "CALLOUT") for c in plan)
+    if not has_emphasis:
+        violations.append("Need at least one STATEMENT or CALLOUT for emphasis")
+
+    if violations:
+        raise ModelRetry("Fix these issues:\n" + "\n".join(f"- {v}" for v in violations))
+
+    return output
 
 
 def build_component_plan_prompt(
@@ -315,8 +369,27 @@ component_gen_agent = Agent(
     output_type=NativeOutput(LessonComponent),
     system_prompt=SINGLE_COMPONENT_SYSTEM,
     name="lesson-component-gen",
+    deps_type=str,  # API key for reviewer delegation
     output_retries=3,
 )
+
+
+@component_gen_agent.tool
+async def review_component(
+    ctx: RunContext[str], content_to_review: str
+) -> str:
+    """Request a review of the component you're generating.
+
+    Call this with the component content you plan to output to get feedback
+    before finalizing. Incorporate the feedback into your final output.
+
+    Args:
+        content_to_review: The component content to be reviewed.
+    """
+    from src.agents.reviewers import ReviewerRegistry
+
+    review_fn = ReviewerRegistry.create_tool("component")
+    return await review_fn(ctx, content_to_review)
 
 
 def build_single_component_prompt(

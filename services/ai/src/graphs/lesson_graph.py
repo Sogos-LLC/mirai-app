@@ -1,11 +1,12 @@
 """Lesson content generation graph using pydantic-graph.
 
 Flow:
-  SearchKnowledge -> PlanComponents -> ValidatePlan
-                                            |-> RefinePlan -> PlanComponents (max 2 retries)
-                                            |-> GenerateComponents -> JudgeLesson
-                                                  |-> GenerateSegue -> End (passes)
-                                                  |-> PlanComponents (fails, max 1 retry)
+  SearchKnowledge -> PlanComponents -> GenerateComponents -> JudgeLesson
+                                                                  |-> GenerateSegue -> End (passes)
+                                                                  |-> PlanComponents (fails, max 1 retry)
+
+Component plan structural validation is handled by component_plan_agent's
+@output_validator (see lesson_agent.py). The agent retries internally via ModelRetry.
 """
 
 from collections.abc import Callable
@@ -16,8 +17,9 @@ from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 
 from src.adapters.embedding import EmbeddingClient
 from src.adapters.qdrant import QdrantAdapter
+from pydantic_ai import UsageLimits
+
 from src.agents.lesson_agent import (
-    ComponentPlanOutput,
     PlannedComponent,
     build_component_plan_prompt,
     build_single_component_prompt,
@@ -35,9 +37,7 @@ from src.rag.search import search_knowledge
 
 log = structlog.get_logger()
 
-MAX_PLAN_RETRIES = 2
 MAX_JUDGE_RETRIES = 1
-MIN_COMPONENT_TYPES = 4
 
 
 # ---------------------------------------------------------------------------
@@ -51,8 +51,6 @@ class LessonState:
 
     rag_chunks: list[KnowledgeChunk] = field(default_factory=list)
     component_plan: list[PlannedComponent] = field(default_factory=list)
-    plan_violations: list[str] = field(default_factory=list)
-    plan_retry_count: int = 0
     generated_components: list[LessonComponent] = field(default_factory=list)
     chunks_used: int = 0
     judge_retry_count: int = 0
@@ -152,11 +150,16 @@ class SearchKnowledgeNode(BaseNode[LessonState, LessonDeps]):
 
 @dataclass
 class PlanComponentsNode(BaseNode[LessonState, LessonDeps]):
-    """Plan the component structure for this lesson."""
+    """Plan the component structure for this lesson.
+
+    Structural validation is handled by the component_plan_agent's
+    @output_validator (see lesson_agent.py). The agent retries internally
+    via ModelRetry before returning.
+    """
 
     async def run(
         self, ctx: GraphRunContext[LessonState, LessonDeps]
-    ) -> "ValidatePlanNode":
+    ) -> "GenerateComponentsNode":
         deps = ctx.deps
         state = ctx.state
 
@@ -182,104 +185,8 @@ class PlanComponentsNode(BaseNode[LessonState, LessonDeps]):
             "component_plan_created",
             lesson=deps.lesson.title,
             components=len(state.component_plan),
-            retry=state.plan_retry_count,
         )
-        return ValidatePlanNode()
-
-
-@dataclass
-class ValidatePlanNode(BaseNode[LessonState, LessonDeps]):
-    """Validate the component plan against structural rules."""
-
-    async def run(
-        self, ctx: GraphRunContext[LessonState, LessonDeps]
-    ) -> "GenerateComponentsNode | RefinePlanNode":
-        state = ctx.state
-        plan = state.component_plan
-        violations: list[str] = []
-
-        if len(plan) < 4:
-            violations.append(f"Only {len(plan)} components planned; need at least 4")
-        if len(plan) > 16:
-            violations.append(f"{len(plan)} components is too many; aim for 8-12")
-
-        # Check component type variety
-        types = {c.type.upper() for c in plan}
-        if len(types) < MIN_COMPONENT_TYPES:
-            violations.append(
-                f"Only {len(types)} unique types ({types}); need at least {MIN_COMPONENT_TYPES}"
-            )
-
-        # Check quiz placement
-        quiz_indices = [i for i, c in enumerate(plan) if c.type.upper() == "QUIZ"]
-        if len(quiz_indices) > 1:
-            violations.append("Multiple QUIZ components; only one allowed at the end")
-        if quiz_indices and quiz_indices[0] != len(plan) - 1:
-            violations.append("QUIZ must be the last component")
-
-        # Check no consecutive headings
-        for i in range(len(plan) - 1):
-            if plan[i].type.upper() == "HEADING" and plan[i + 1].type.upper() == "HEADING":
-                violations.append(f"Consecutive HEADINGs at positions {i} and {i + 1}")
-            if plan[i].type.upper() == "IMAGE" and plan[i + 1].type.upper() == "IMAGE":
-                violations.append(f"Consecutive IMAGEs at positions {i} and {i + 1}")
-
-        # Check starts with HEADING
-        if plan and plan[0].type.upper() != "HEADING":
-            violations.append("First component should be HEADING")
-
-        # Check max 3 images
-        image_count = sum(1 for c in plan if c.type.upper() == "IMAGE")
-        if image_count > 3:
-            violations.append(f"{image_count} IMAGE components; max 3 allowed")
-
-        # Check STATEMENT or CALLOUT present
-        has_emphasis = any(
-            c.type.upper() in ("STATEMENT", "CALLOUT") for c in plan
-        )
-        if not has_emphasis:
-            violations.append("Need at least one STATEMENT or CALLOUT for emphasis")
-
-        state.plan_violations = violations
-
-        if violations and state.plan_retry_count < MAX_PLAN_RETRIES:
-            log.warn(
-                "plan_violations",
-                lesson=ctx.deps.lesson.title,
-                violations=violations,
-                retry=state.plan_retry_count,
-            )
-            return RefinePlanNode()
-
-        if violations:
-            log.warn(
-                "proceeding_with_plan_violations",
-                lesson=ctx.deps.lesson.title,
-                violations=violations,
-            )
-
         return GenerateComponentsNode()
-
-
-@dataclass
-class RefinePlanNode(BaseNode[LessonState, LessonDeps]):
-    """Retry component planning with validation feedback."""
-
-    async def run(
-        self, ctx: GraphRunContext[LessonState, LessonDeps]
-    ) -> PlanComponentsNode:
-        state = ctx.state
-        state.plan_retry_count += 1
-
-        # The plan prompt will be regenerated fresh by PlanComponentsNode
-        # The violations are logged for debugging; the system prompt already
-        # contains all the structural rules that should prevent issues.
-        log.info(
-            "refining_component_plan",
-            lesson=ctx.deps.lesson.title,
-            retry=state.plan_retry_count,
-        )
-        return PlanComponentsNode()
 
 
 @dataclass
@@ -315,7 +222,12 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
                 web_context=deps.web_context,
             )
 
-            result = await component_gen_agent.run(prompt, model=model)
+            result = await component_gen_agent.run(
+                prompt,
+                model=model,
+                deps=deps.api_key,
+                usage_limits=UsageLimits(tool_calls_limit=1),
+            )
             component = result.output
             # Ensure identity fields are set
             component.id = f"component-{i + 1}"
@@ -379,8 +291,6 @@ class JudgeLessonNode(BaseNode[LessonState, LessonDeps]):
 
         if not score.passes and state.judge_retry_count < MAX_JUDGE_RETRIES:
             state.judge_retry_count += 1
-            # Reset plan retry count for the new attempt
-            state.plan_retry_count = 0
             log.info(
                 "lesson_judge_retry",
                 lesson=deps.lesson.title,
@@ -458,8 +368,6 @@ lesson_graph = Graph(
     nodes=[
         SearchKnowledgeNode,
         PlanComponentsNode,
-        ValidatePlanNode,
-        RefinePlanNode,
         GenerateComponentsNode,
         JudgeLessonNode,
         GenerateSegueNode,
@@ -493,7 +401,7 @@ async def run_lesson_graph(
         Tuple of (lesson_content, rag_chunks_used)
     """
     qdrant = QdrantAdapter()
-    embedding_client = EmbeddingClient()
+    embedding_client = EmbeddingClient(api_key)
 
     deps = LessonDeps(
         api_key=api_key,

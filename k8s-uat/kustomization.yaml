@@ -15,9 +15,8 @@ resources:
 - frontend
 - frontend-marketing
 
-# RAG Infrastructure (vector database + embedding)
+# RAG Infrastructure (vector database)
 - qdrant
-- embedding
 
 # AI Service (Temporal worker + pydantic-ai agents)
 - temporal

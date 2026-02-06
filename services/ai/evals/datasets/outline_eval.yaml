@@ -1,0 +1,89 @@
+name: outline_evaluation
+cases:
+  - name: python_fundamentals
+    inputs:
+      course_title: "Python Fundamentals for Data Professionals"
+      desired_outcome: "Learn core Python skills for data analysis"
+      desired_outcomes:
+        - "Apply Python data types and control structures to solve analytical problems"
+        - "Design reusable functions and modules for data processing pipelines"
+        - "Analyze datasets using Python's built-in data structures and file I/O"
+        - "Evaluate code quality using testing and debugging techniques"
+    metadata:
+      topic_complexity: moderate
+      target_audience: "Data analysts transitioning to Python"
+      desired_outcomes:
+        - "Apply Python data types and control structures to solve analytical problems"
+        - "Design reusable functions and modules for data processing pipelines"
+        - "Analyze datasets using Python's built-in data structures and file I/O"
+        - "Evaluate code quality using testing and debugging techniques"
+
+  - name: project_management_basics
+    inputs:
+      course_title: "Project Management Essentials"
+      desired_outcome: "Master project management fundamentals and tools"
+      desired_outcomes:
+        - "Identify the five phases of the project management lifecycle"
+        - "Apply work breakdown structures to decompose project deliverables"
+        - "Evaluate project risks and create mitigation strategies"
+    metadata:
+      topic_complexity: low
+      target_audience: "New project managers"
+      desired_outcomes:
+        - "Identify the five phases of the project management lifecycle"
+        - "Apply work breakdown structures to decompose project deliverables"
+        - "Evaluate project risks and create mitigation strategies"
+
+  - name: machine_learning_intro
+    inputs:
+      course_title: "Machine Learning Foundations"
+      desired_outcome: "Understand core ML concepts and build simple models"
+      desired_outcomes:
+        - "Distinguish between supervised and unsupervised learning approaches"
+        - "Implement linear regression and classification models using scikit-learn"
+        - "Evaluate model performance using cross-validation and appropriate metrics"
+        - "Analyze feature importance and apply feature engineering techniques"
+        - "Design an end-to-end ML pipeline from data preparation to deployment"
+    metadata:
+      topic_complexity: high
+      target_audience: "Software developers learning ML"
+      desired_outcomes:
+        - "Distinguish between supervised and unsupervised learning approaches"
+        - "Implement linear regression and classification models using scikit-learn"
+        - "Evaluate model performance using cross-validation and appropriate metrics"
+        - "Analyze feature importance and apply feature engineering techniques"
+        - "Design an end-to-end ML pipeline from data preparation to deployment"
+
+  - name: ux_design_principles
+    inputs:
+      course_title: "UX Design Principles for Product Teams"
+      desired_outcome: "Apply user-centered design principles to product development"
+      desired_outcomes:
+        - "Explain the double diamond design process and its application"
+        - "Construct user personas and journey maps from research data"
+        - "Apply usability heuristics to evaluate interface designs"
+    metadata:
+      topic_complexity: moderate
+      target_audience: "Product managers and developers"
+      desired_outcomes:
+        - "Explain the double diamond design process and its application"
+        - "Construct user personas and journey maps from research data"
+        - "Apply usability heuristics to evaluate interface designs"
+
+  - name: cloud_architecture
+    inputs:
+      course_title: "Cloud Architecture Patterns"
+      desired_outcome: "Design scalable cloud-native applications"
+      desired_outcomes:
+        - "Compare cloud service models (IaaS, PaaS, SaaS) and select appropriate solutions"
+        - "Design microservice architectures with proper service boundaries"
+        - "Implement cloud-native patterns including circuit breakers, service mesh, and event-driven architectures"
+        - "Evaluate cost optimization strategies for cloud deployments"
+    metadata:
+      topic_complexity: high
+      target_audience: "Mid-level developers moving to cloud architecture"
+      desired_outcomes:
+        - "Compare cloud service models (IaaS, PaaS, SaaS) and select appropriate solutions"
+        - "Design microservice architectures with proper service boundaries"
+        - "Implement cloud-native patterns including circuit breakers, service mesh, and event-driven architectures"
+        - "Evaluate cost optimization strategies for cloud deployments"

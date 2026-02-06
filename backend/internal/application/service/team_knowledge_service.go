@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
@@ -97,25 +96,8 @@ func (s *TeamKnowledgeService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.unified.DeleteTeamSource(ctx, id)
 }
 
-// ProcessAndIndex processes content and indexes it in the vector store.
-func (s *TeamKnowledgeService) ProcessAndIndex(ctx context.Context, source *entity.KnowledgeSource, content string) (int32, int32, error) {
-	return s.unified.ProcessAndIndex(ctx, source, content)
-}
-
-// SearchByTeam performs semantic search across team knowledge.
-func (s *TeamKnowledgeService) SearchByTeam(ctx context.Context, teamID uuid.UUID, query string, topK int) ([]*entity.RetrievedChunk, error) {
-	return s.unified.SearchByTeam(ctx, teamID, query, topK)
-}
-
-// generateDocumentSummary generates a brief summary of the document.
-// STUB: Returns first N characters as summary.
-func generateDocumentSummary(content string, name string) string {
-	const maxLen = 500
-	if len(content) <= maxLen {
-		return fmt.Sprintf("Document '%s': %s", name, content)
-	}
-	return fmt.Sprintf("Document '%s': %s...", name, content[:maxLen])
-}
+// NOTE: ProcessAndIndex and SearchByTeam removed — embedding/search now handled
+// by the Python AI service via Temporal workflows.
 
 // CheckDuplicate checks if a file with the same content hash already exists.
 func (s *TeamKnowledgeService) CheckDuplicate(ctx context.Context, contentHash string) (*entity.KnowledgeSource, error) {

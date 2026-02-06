@@ -418,7 +418,7 @@ async def run_outline_graph(
         Tuple of (outline, constraint_violations, rag_chunks_used)
     """
     qdrant = QdrantAdapter()
-    embedding_client = EmbeddingClient()
+    embedding_client = EmbeddingClient(api_key)
 
     deps = OutlineDeps(
         api_key=api_key,

@@ -13,8 +13,9 @@ import (
 // KnowledgeIngestionWorkflow processes a knowledge source document.
 //
 // Flow:
-//  1. ReadFileContent from MinIO
-//  2. [ai-tasks] ingest_document → chunk + embed + store in Qdrant
+//  1. DecryptAPIKey to get per-tenant Gemini key
+//  2. ReadFileContent from MinIO
+//  3. [ai-tasks] ingest_document → chunk + embed (Gemini) + store in Qdrant
 func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionInput) error {
 	logger := workflow.GetLogger(ctx)
 	logger.Info("starting knowledge ingestion", "sourceID", input.SourceID)
@@ -35,7 +36,15 @@ func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionIn
 		},
 	})
 
-	// Step 1: Read file content from MinIO
+	// Step 1: Decrypt per-tenant API key for Gemini embeddings
+	var keyResult activities.DecryptAPIKeyOutput
+	if err := workflow.ExecuteActivity(goCtx, "DecryptAPIKey", activities.DecryptAPIKeyInput{
+		TenantID: input.TenantID,
+	}).Get(ctx, &keyResult); err != nil {
+		return fmt.Errorf("decrypt API key: %w", err)
+	}
+
+	// Step 2: Read file content from MinIO
 	var fileResult activities.ReadFileContentOutput
 	if err := workflow.ExecuteActivity(goCtx, "ReadFileContent", activities.ReadFileContentInput{
 		FilePath: input.FilePath,
@@ -43,11 +52,12 @@ func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionIn
 		return fmt.Errorf("read file: %w", err)
 	}
 
-	// Step 2: Ingest via Python AI service (chunk → embed → store in Qdrant)
+	// Step 3: Ingest via Python AI service (chunk → embed → store in Qdrant)
 	ingestInput := map[string]interface{}{
 		"text":        fileResult.Content,
 		"source_id":   input.SourceID,
 		"source_name": input.FilePath,
+		"api_key":     keyResult.APIKey,
 		"metadata": map[string]string{
 			"tenant_id": input.TenantID,
 			"team_id":   input.TeamID,

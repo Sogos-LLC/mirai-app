@@ -16,7 +16,6 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/cache"
 	"github.com/sogos/mirai-backend/internal/infrastructure/config"
 	"github.com/sogos/mirai-backend/internal/infrastructure/crypto"
-	"github.com/sogos/mirai-backend/internal/infrastructure/external/embedding"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/gemini"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/kratos"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/smtp"
@@ -217,15 +216,13 @@ func main() {
 		logger.Warn("ENCRYPTION_KEY not configured, AI features requiring API keys will not work")
 	}
 
-	// Initialize RAG infrastructure (embedding + vector DB)
-	var embeddingClient *embedding.Client
+	// Initialize RAG infrastructure (vector DB only — embeddings handled by Python AI service)
 	var vectorClient *vectordb.QdrantClient
-	if cfg.EmbeddingURL != "" && cfg.QdrantURL != "" {
-		embeddingClient = embedding.NewClient(cfg.EmbeddingURL)
+	if cfg.QdrantURL != "" {
 		vectorClient = vectordb.NewQdrantClient(cfg.QdrantURL)
-		logger.Info("RAG infrastructure initialized", "embeddingURL", cfg.EmbeddingURL, "qdrantURL", cfg.QdrantURL)
+		logger.Info("RAG infrastructure initialized", "qdrantURL", cfg.QdrantURL)
 	} else {
-		logger.Warn("RAG infrastructure not configured (EMBEDDING_URL and/or QDRANT_URL not set)")
+		logger.Warn("RAG infrastructure not configured (QDRANT_URL not set)")
 	}
 
 	// Initialize Twenty CRM client (optional for feedback sync)
@@ -307,7 +304,7 @@ func main() {
 
 	// Unified Knowledge service
 	unifiedKnowledgeService := service.NewUnifiedKnowledgeService(
-		knowledgeRepo, teamKnowledgeRepo, embeddingClient, vectorClient, baseStorage,
+		knowledgeRepo, teamKnowledgeRepo, vectorClient, baseStorage,
 	)
 	logger.Info("unified knowledge service initialized")
 

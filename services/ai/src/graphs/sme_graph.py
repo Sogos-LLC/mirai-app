@@ -1,8 +1,10 @@
 """SME personas generation graph using pydantic-graph.
 
 Flow:
-  SearchKnowledgeNode -> GenerateSMENode -> ValidateSMENode -> End (valid)
-                                                 |-> RefineSMENode -> GenerateSMENode (max 2 retries)
+  SearchKnowledgeNode -> GenerateSMENode -> End
+
+Validation is handled by the sme_agent's @output_validator (see wizard_agents.py).
+The agent retries internally via ModelRetry before returning.
 """
 
 from dataclasses import dataclass, field
@@ -14,14 +16,7 @@ from src.adapters.embedding import EmbeddingClient
 from src.adapters.qdrant import QdrantAdapter
 from src.agents.model import make_model
 from src.agents.wizard_agents import build_sme_prompt, sme_agent
-from src.graphs.wizard_utils import (
-    MAX_WIZARD_RETRIES,
-    build_refinement_feedback,
-    check_exact_count,
-    check_sentence_count,
-    check_unique_values,
-    search_wizard_knowledge,
-)
+from src.graphs.wizard_utils import search_wizard_knowledge
 from src.models.knowledge import KnowledgeChunk
 from src.models.wizard import SMEPersona
 
@@ -37,8 +32,6 @@ log = structlog.get_logger()
 class SMEState:
     rag_chunks: list[KnowledgeChunk] = field(default_factory=list)
     personas: list[SMEPersona] | None = None
-    constraint_violations: list[str] = field(default_factory=list)
-    retry_count: int = 0
     chunks_used: int = 0
     refinement_feedback: str = ""
 
@@ -86,7 +79,7 @@ class SearchKnowledgeNode(BaseNode[SMEState, SMEDeps]):
 class GenerateSMENode(BaseNode[SMEState, SMEDeps]):
     async def run(
         self, ctx: GraphRunContext[SMEState, SMEDeps],
-    ) -> "ValidateSMENode":
+    ) -> End[SMEResult]:
         deps = ctx.deps
         state = ctx.state
 
@@ -97,81 +90,13 @@ class GenerateSMENode(BaseNode[SMEState, SMEDeps]):
         result = await sme_agent.run(prompt, model=make_model(deps.api_key))
         state.personas = result.output.personas
 
-        log.info("sme_generated", count=len(state.personas), retry=state.retry_count)
-        return ValidateSMENode()
-
-
-@dataclass
-class ValidateSMENode(BaseNode[SMEState, SMEDeps]):
-    async def run(
-        self, ctx: GraphRunContext[SMEState, SMEDeps],
-    ) -> "RefineSMENode | End[SMEResult]":
-        state = ctx.state
-        violations: list[str] = []
-        assert state.personas is not None
-
-        # Exactly 3 personas
-        v = check_exact_count(state.personas, 3, "SME personas")
-        if v:
-            violations.append(v)
-
-        # Unique IDs
-        ids = [p.id for p in state.personas]
-        v = check_unique_values(ids, "SME persona IDs")
-        if v:
-            violations.append(v)
-
-        # Unique job titles
-        titles = [p.job_title for p in state.personas]
-        v = check_unique_values(titles, "SME job titles")
-        if v:
-            violations.append(v)
-
-        # Each has 3-5 skills
-        for p in state.personas:
-            if len(p.skills) < 3:
-                violations.append(
-                    f"SME '{p.id}' has {len(p.skills)} skills; minimum is 3"
-                )
-            elif len(p.skills) > 5:
-                violations.append(
-                    f"SME '{p.id}' has {len(p.skills)} skills; maximum is 5"
-                )
-
-        # Descriptions are 2+ sentences
-        for p in state.personas:
-            v = check_sentence_count(p.description, 2, 10, f"SME '{p.id}' description")
-            if v:
-                violations.append(v)
-
-        state.constraint_violations = violations
-
-        if violations and state.retry_count < MAX_WIZARD_RETRIES:
-            log.warn("sme_violations", violations=violations, retry=state.retry_count)
-            return RefineSMENode()
-
-        if violations:
-            log.warn("sme_proceeding_with_violations", violations=violations)
+        log.info("sme_generated", count=len(state.personas))
 
         return End(SMEResult(
             personas=state.personas,
-            violations=violations,
+            violations=[],
             chunks_used=state.chunks_used,
         ))
-
-
-@dataclass
-class RefineSMENode(BaseNode[SMEState, SMEDeps]):
-    async def run(
-        self, ctx: GraphRunContext[SMEState, SMEDeps],
-    ) -> GenerateSMENode:
-        state = ctx.state
-        state.retry_count += 1
-        state.refinement_feedback = build_refinement_feedback(
-            state.constraint_violations,
-        )
-        log.info("refining_sme", retry=state.retry_count)
-        return GenerateSMENode()
 
 
 # ---------------------------------------------------------------------------
@@ -182,8 +107,6 @@ sme_graph = Graph(
     nodes=[
         SearchKnowledgeNode,
         GenerateSMENode,
-        ValidateSMENode,
-        RefineSMENode,
     ],
 )
 
@@ -197,7 +120,7 @@ async def run_sme_graph(
 ) -> SMEResult:
     """Run the SME persona generation graph."""
     qdrant = QdrantAdapter()
-    embedding_client = EmbeddingClient()
+    embedding_client = EmbeddingClient(api_key)
 
     deps = SMEDeps(
         api_key=api_key,

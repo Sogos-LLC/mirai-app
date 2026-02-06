@@ -24,16 +24,19 @@ type KnowledgeServiceServer struct {
 	miraiv1connect.UnimplementedKnowledgeSourceServiceHandler
 	knowledgeService *service.KnowledgeSourceService
 	storageClient    StorageAdapter
+	workflowStarter  KnowledgeWorkflowStarter
 }
 
 // NewKnowledgeServiceServer creates a new KnowledgeServiceServer.
 func NewKnowledgeServiceServer(
 	knowledgeService *service.KnowledgeSourceService,
 	storageClient StorageAdapter,
+	workflowStarter KnowledgeWorkflowStarter,
 ) *KnowledgeServiceServer {
 	return &KnowledgeServiceServer{
 		knowledgeService: knowledgeService,
 		storageClient:    storageClient,
+		workflowStarter:  workflowStarter,
 	}
 }
 
@@ -173,46 +176,17 @@ func (s *KnowledgeServiceServer) DeleteKnowledgeSource(
 }
 
 // SearchKnowledge performs semantic search across course knowledge.
+// NOTE: Semantic search is now handled by the Python AI service via Temporal activities.
 func (s *KnowledgeServiceServer) SearchKnowledge(
-	ctx context.Context,
-	req *connect.Request[v1.SearchKnowledgeRequest],
+	_ context.Context,
+	_ *connect.Request[v1.SearchKnowledgeRequest],
 ) (*connect.Response[v1.SearchKnowledgeResponse], error) {
-	courseID, err := parseUUID(req.Msg.CourseId)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid course_id"))
-	}
-
-	topK := int(req.Msg.TopK)
-	if topK <= 0 {
-		topK = 5
-	}
-	if topK > 20 {
-		topK = 20
-	}
-
-	chunks, err := s.knowledgeService.SearchKnowledge(ctx, courseID, req.Msg.Query, topK)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-
-	protoChunks := make([]*v1.RetrievedChunk, len(chunks))
-	for i, chunk := range chunks {
-		protoChunks[i] = &v1.RetrievedChunk{
-			Id:              chunk.ID,
-			SourceId:        chunk.SourceID.String(),
-			SourceName:      chunk.SourceName,
-			Content:         chunk.Content,
-			SimilarityScore: chunk.SimilarityScore,
-			ChunkIndex:      chunk.ChunkIndex,
-		}
-	}
-
-	return connect.NewResponse(&v1.SearchKnowledgeResponse{
-		Chunks: protoChunks,
-	}), nil
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("search is handled by the AI service via Temporal"))
 }
 
-// UploadAndProcess handles file upload + synchronous ingestion with RAG verification.
+// UploadAndProcess handles file upload and starts async ingestion via Temporal.
+// The ingestion (chunking, embedding, vector storage) happens asynchronously
+// in the Python AI service. The source is returned in "pending" status.
 func (s *KnowledgeServiceServer) UploadAndProcess(
 	ctx context.Context,
 	req *connect.Request[v1.UploadAndProcessRequest],
@@ -222,10 +196,8 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 
 	tenantID, ok := tenant.FromContext(ctx)
 	if !ok {
-		log.Printf("[UploadAndProcess] ERROR: No tenant in context")
 		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
 	}
-	log.Printf("[UploadAndProcess] TenantID: %s", tenantID.String())
 
 	sessionID := req.Msg.SessionId
 	filename := req.Msg.Filename
@@ -234,12 +206,9 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 
 	// Store file in MinIO
 	filePath := fmt.Sprintf("knowledge/%s/sessions/%s/%s", tenantID.String(), sessionID, filename)
-	log.Printf("[UploadAndProcess] Storing file to MinIO: %s", filePath)
 	if err := s.storageClient.PutContent(ctx, filePath, fileContent, contentType); err != nil {
-		log.Printf("[UploadAndProcess] ERROR storing file: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to store file: %w", err))
 	}
-	log.Printf("[UploadAndProcess] File stored successfully")
 
 	// Create knowledge source entity
 	fileSize := int64(len(fileContent))
@@ -248,7 +217,7 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 		TenantID:      tenantID,
 		SessionID:     &sessionID,
 		Type:          valueobject.KnowledgeSourceTypeFileUpload,
-		Status:        valueobject.KnowledgeSourceStatusProcessing,
+		Status:        valueobject.KnowledgeSourceStatusPending,
 		Name:          filename,
 		FilePath:      &filePath,
 		MimeType:      &contentType,
@@ -260,60 +229,23 @@ func (s *KnowledgeServiceServer) UploadAndProcess(
 		return nil, toConnectError(err)
 	}
 
-	// Extract text content from file
-	log.Printf("[UploadAndProcess] Extracting text content...")
-	textContent := extractTextContent(fileContent, contentType)
-	if textContent == "" {
-		log.Printf("[UploadAndProcess] ERROR: Failed to extract text content")
-		errorMsg := "failed to extract text content from file"
-		_, _ = s.knowledgeService.UpdateStatusWithSummary(ctx, source.ID, valueobject.KnowledgeSourceStatusFailed, &errorMsg, 0, "", 0)
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf(errorMsg))
-	}
-	log.Printf("[UploadAndProcess] Extracted %d chars of text", len(textContent))
-
-	// Detect video URLs
-	videoURLs := service.DetectVideoURLs(textContent)
-	if len(videoURLs) > 0 {
-		source.VideoURLs = videoURLs
+	// Start async ingestion via Temporal workflow
+	if s.workflowStarter != nil {
+		if _, err := s.workflowStarter.StartKnowledgeIngestion(
+			ctx,
+			source.ID.String(),
+			tenantID.String(),
+			"", // No team ID for session-scoped knowledge
+			filePath,
+		); err != nil {
+			log.Printf("[UploadAndProcess] WARNING: Failed to start ingestion workflow: %v", err)
+			// Don't fail the request — the source is created, workflow can be retried
+		}
 	}
 
-	// Process and index the content
-	log.Printf("[UploadAndProcess] Processing and indexing content...")
-	chunkCount, tokenCount, err := s.knowledgeService.ProcessAndIndex(ctx, source, textContent)
-	if err != nil {
-		log.Printf("[UploadAndProcess] ERROR processing content: %v", err)
-		errorMsg := err.Error()
-		_, _ = s.knowledgeService.UpdateStatusWithSummary(ctx, source.ID, valueobject.KnowledgeSourceStatusFailed, &errorMsg, 0, "", 0)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to process content: %w", err))
-	}
-	log.Printf("[UploadAndProcess] Indexed %d chunks, %d tokens", chunkCount, tokenCount)
-
-	// Generate RAG summary to prove system works
-	ragSummary := generateDocumentSummary(textContent, filename)
-
-	// Generate document index for Internal Data Only mode navigation
-	documentIndex := generateDocumentIndex(textContent, filename)
-
-	// Update status to ready with summary
-	log.Printf("[UploadAndProcess] Updating status to ready...")
-	updatedSource, err := s.knowledgeService.UpdateStatusWithSummary(
-		ctx, source.ID,
-		valueobject.KnowledgeSourceStatusReady,
-		nil,
-		chunkCount,
-		ragSummary,
-		tokenCount,
-	)
-	if err != nil {
-		log.Printf("[UploadAndProcess] ERROR updating status: %v", err)
-		return nil, toConnectError(err)
-	}
-
-	log.Printf("[UploadAndProcess] SUCCESS - sourceID: %s, chunks: %d, tokens: %d", updatedSource.ID, chunkCount, tokenCount)
+	log.Printf("[UploadAndProcess] SUCCESS - sourceID: %s, workflow started", source.ID)
 	return connect.NewResponse(&v1.UploadAndProcessResponse{
-		Source:        knowledgeSourceToProto(updatedSource),
-		RagSummary:    ragSummary,
-		DocumentIndex: documentIndex,
+		Source: knowledgeSourceToProto(source),
 	}), nil
 }
 
@@ -358,38 +290,12 @@ func (s *KnowledgeServiceServer) LinkSessionToCourse(
 }
 
 // SearchKnowledgeBySession performs semantic search across session knowledge.
+// NOTE: Semantic search is now handled by the Python AI service via Temporal activities.
 func (s *KnowledgeServiceServer) SearchKnowledgeBySession(
-	ctx context.Context,
-	req *connect.Request[v1.SearchKnowledgeBySessionRequest],
+	_ context.Context,
+	_ *connect.Request[v1.SearchKnowledgeBySessionRequest],
 ) (*connect.Response[v1.SearchKnowledgeBySessionResponse], error) {
-	topK := int(req.Msg.TopK)
-	if topK <= 0 {
-		topK = 5
-	}
-	if topK > 20 {
-		topK = 20
-	}
-
-	chunks, err := s.knowledgeService.SearchKnowledgeBySession(ctx, req.Msg.SessionId, req.Msg.Query, topK)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-
-	protoChunks := make([]*v1.RetrievedChunk, len(chunks))
-	for i, chunk := range chunks {
-		protoChunks[i] = &v1.RetrievedChunk{
-			Id:              chunk.ID,
-			SourceId:        chunk.SourceID.String(),
-			SourceName:      chunk.SourceName,
-			Content:         chunk.Content,
-			SimilarityScore: chunk.SimilarityScore,
-			ChunkIndex:      chunk.ChunkIndex,
-		}
-	}
-
-	return connect.NewResponse(&v1.SearchKnowledgeBySessionResponse{
-		Chunks: protoChunks,
-	}), nil
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("search is handled by the AI service via Temporal"))
 }
 
 // extractTextContent extracts text from file content based on MIME type.

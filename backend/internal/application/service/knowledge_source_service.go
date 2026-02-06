@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"regexp"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
@@ -13,12 +12,8 @@ import (
 const (
 	// VectorCollectionName is the Qdrant collection for knowledge chunks.
 	VectorCollectionName = "knowledge_chunks"
-	// VectorDimensions is the size of embeddings from all-MiniLM-L6-v2.
-	VectorDimensions = 384
-	// ChunkSize is the target size for text chunks.
-	ChunkSize = 500
-	// ChunkOverlap is the overlap between chunks.
-	ChunkOverlap = 50
+	// VectorDimensions is the size of Gemini embedding-001 embeddings (3072).
+	VectorDimensions = 3072
 )
 
 // Video URL patterns for detection.
@@ -78,44 +73,8 @@ func (s *KnowledgeSourceService) Delete(ctx context.Context, id uuid.UUID) error
 	return s.unified.DeleteCourseSource(ctx, id)
 }
 
-// SearchKnowledge performs semantic search across course knowledge.
-func (s *KnowledgeSourceService) SearchKnowledge(
-	ctx context.Context,
-	courseID uuid.UUID,
-	query string,
-	topK int,
-) ([]*entity.RetrievedChunk, error) {
-	return s.unified.SearchKnowledge(ctx, courseID, query, topK)
-}
-
-// SearchKnowledgeBySession performs semantic search across session knowledge.
-func (s *KnowledgeSourceService) SearchKnowledgeBySession(
-	ctx context.Context,
-	sessionID string,
-	query string,
-	topK int,
-) ([]*entity.RetrievedChunk, error) {
-	return s.unified.SearchKnowledgeBySession(ctx, sessionID, query, topK)
-}
-
-// SearchKnowledgeBySourceIDs performs semantic search across specific knowledge sources.
-func (s *KnowledgeSourceService) SearchKnowledgeBySourceIDs(
-	ctx context.Context,
-	sourceIDs []string,
-	query string,
-	topK int,
-) ([]*entity.RetrievedChunk, error) {
-	return s.unified.SearchKnowledgeBySourceIDs(ctx, sourceIDs, query, topK)
-}
-
-// ProcessAndIndex processes document content and stores vectors in the vector DB.
-func (s *KnowledgeSourceService) ProcessAndIndex(
-	ctx context.Context,
-	source *entity.KnowledgeSource,
-	content string,
-) (chunkCount int32, tokenCount int32, err error) {
-	return s.unified.ProcessAndIndex(ctx, source, content)
-}
+// NOTE: SearchKnowledge, SearchKnowledgeBySession, SearchKnowledgeBySourceIDs, ProcessAndIndex
+// have been removed. Embedding/search is now handled by the Python AI service via Temporal.
 
 // UpdateStatusWithSummary updates the source status with summary and counts.
 func (s *KnowledgeSourceService) UpdateStatusWithSummary(
@@ -152,63 +111,3 @@ func DetectVideoURLs(content string) []string {
 	return urls
 }
 
-// ChunkText splits text into overlapping chunks.
-func ChunkText(text string, chunkSize, overlap int) []string {
-	text = strings.TrimSpace(text)
-	if len(text) == 0 {
-		return nil
-	}
-
-	if len(text) <= chunkSize {
-		return []string{text}
-	}
-
-	var chunks []string
-	start := 0
-
-	for start < len(text) {
-		end := start + chunkSize
-		if end >= len(text) {
-			// This is the last chunk - process it and exit
-			end = len(text)
-			chunk := strings.TrimSpace(text[start:end])
-			if len(chunk) > 0 {
-				chunks = append(chunks, chunk)
-			}
-			break
-		}
-
-		// Try to break at sentence boundary
-		lastPeriod := strings.LastIndex(text[start:end], ". ")
-		if lastPeriod > chunkSize/2 {
-			end = start + lastPeriod + 1
-		}
-
-		chunk := strings.TrimSpace(text[start:end])
-		if len(chunk) > 0 {
-			chunks = append(chunks, chunk)
-		}
-
-		// Move start forward with overlap
-		start = end - overlap
-		if start < 0 {
-			start = 0
-		}
-	}
-
-	return chunks
-}
-
-func getStringPayload(payload map[string]interface{}, key string) string {
-	if v, ok := payload[key].(string); ok {
-		return v
-	}
-	return ""
-}
-
-func getIntPayload(payload map[string]interface{}, key string) int32 {
-	if v, ok := payload[key].(float64); ok {
-		return int32(v)
-	}
-	return 0
-}

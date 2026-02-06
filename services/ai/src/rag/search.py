@@ -12,26 +12,25 @@ log = structlog.get_logger()
 
 async def search_knowledge(
     query: str,
+    embedding_client: EmbeddingClient,
     filters: dict[str, str] | None = None,
     top_k: int | None = None,
     qdrant: QdrantAdapter | None = None,
-    embedding_client: EmbeddingClient | None = None,
 ) -> list[KnowledgeChunk]:
     """Perform semantic search over knowledge base.
 
     Args:
         query: Natural language search query
+        embedding_client: Embedding client (requires API key)
         filters: Metadata filters (e.g. course_id, team_id, session_id, source_id)
         top_k: Number of results to return
         qdrant: Optional Qdrant adapter (creates default if not provided)
-        embedding_client: Optional embedding client
 
     Returns:
         List of knowledge chunks sorted by relevance
     """
     top_k = top_k or settings.default_top_k
     qdrant = qdrant or QdrantAdapter()
-    embedding_client = embedding_client or EmbeddingClient()
 
     # Generate query embedding
     query_vector = await embedding_client.embed_single(query)

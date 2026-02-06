@@ -320,66 +320,12 @@ func (s *TeamKnowledgeServiceServer) CheckDuplicateKnowledge(
 }
 
 // SearchTeamKnowledge performs semantic search across team knowledge.
+// NOTE: Semantic search is now handled by the Python AI service via Temporal activities.
 func (s *TeamKnowledgeServiceServer) SearchTeamKnowledge(
-	ctx context.Context,
-	req *connect.Request[v1.SearchTeamKnowledgeRequest],
+	_ context.Context,
+	_ *connect.Request[v1.SearchTeamKnowledgeRequest],
 ) (*connect.Response[v1.SearchTeamKnowledgeResponse], error) {
-	log.Printf("[TeamKnowledge.Search] Step 1: Extracting context")
-
-	tenantID, ok := tenant.FromContext(ctx)
-	if !ok {
-		log.Printf("[TeamKnowledge.Search] ERROR: No tenant in context")
-		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
-	}
-
-	// Step 2: Get user's team
-	log.Printf("[TeamKnowledge.Search] Step 2: Getting user's team")
-	team, err := s.teamService.GetTeamByTenant(ctx, tenantID)
-	if err != nil {
-		log.Printf("[TeamKnowledge.Search] ERROR: Failed to get team: %v", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get team: %w", err))
-	}
-	if team == nil {
-		log.Printf("[TeamKnowledge.Search] No team found, returning empty results")
-		return connect.NewResponse(&v1.SearchTeamKnowledgeResponse{
-			Chunks: []*v1.RetrievedChunk{},
-		}), nil
-	}
-
-	// Step 3: Perform search
-	topK := int(req.Msg.TopK)
-	if topK <= 0 {
-		topK = 5
-	}
-	if topK > 20 {
-		topK = 20
-	}
-
-	log.Printf("[TeamKnowledge.Search] Step 3: Searching: query=%s, topK=%d", req.Msg.Query, topK)
-	chunks, err := s.teamKnowledgeService.SearchByTeam(ctx, team.ID, req.Msg.Query, topK)
-	if err != nil {
-		log.Printf("[TeamKnowledge.Search] ERROR: Search failed: %v", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("search failed: %w", err))
-	}
-
-	protoChunks := make([]*v1.RetrievedChunk, len(chunks))
-	for i, chunk := range chunks {
-		protoChunks[i] = &v1.RetrievedChunk{
-			Id:              chunk.ID,
-			SourceId:        chunk.SourceID.String(),
-			SourceName:      chunk.SourceName,
-			Content:         chunk.Content,
-			SimilarityScore: chunk.SimilarityScore,
-		}
-		if chunk.ChunkIndex != nil {
-			protoChunks[i].ChunkIndex = chunk.ChunkIndex
-		}
-	}
-
-	log.Printf("[TeamKnowledge.Search] SUCCESS: results=%d", len(chunks))
-	return connect.NewResponse(&v1.SearchTeamKnowledgeResponse{
-		Chunks: protoChunks,
-	}), nil
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("search is handled by the AI service via Temporal"))
 }
 
 // teamKnowledgeSourceToProto converts a domain entity to proto message.

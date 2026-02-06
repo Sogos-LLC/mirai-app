@@ -15,9 +15,9 @@ async def ingest_document(
     text: str,
     source_id: str,
     source_name: str,
+    embedding_client: EmbeddingClient,
     metadata: dict[str, str] | None = None,
     qdrant: QdrantAdapter | None = None,
-    embedding_client: EmbeddingClient | None = None,
 ) -> int:
     """Ingest a document into the knowledge base.
 
@@ -27,15 +27,14 @@ async def ingest_document(
         text: Document text content
         source_id: Unique identifier for the source document
         source_name: Human-readable source name
+        embedding_client: Embedding client (requires API key)
         metadata: Additional metadata (tenant_id, course_id, team_id, session_id)
         qdrant: Optional Qdrant adapter
-        embedding_client: Optional embedding client
 
     Returns:
         Number of chunks ingested
     """
     qdrant = qdrant or QdrantAdapter()
-    embedding_client = embedding_client or EmbeddingClient()
     metadata = metadata or {}
 
     # Step 1: Chunk the document

@@ -1,0 +1,80 @@
+name: component_plan_evaluation
+cases:
+  - name: intro_lesson_plan
+    inputs:
+      lesson_title: "Introduction to Variables and Data Types"
+      learning_objectives:
+        - "Identify Python's primitive data types and their use cases"
+        - "Apply type conversion functions to transform data between types"
+      key_topics:
+        - "integers, floats, strings, booleans"
+        - "type() function"
+        - "type casting"
+    metadata:
+      expected_min_components: 8
+      expected_max_components: 12
+      is_first_lesson: true
+
+  - name: advanced_lesson_plan
+    inputs:
+      lesson_title: "Implementing Linear Regression"
+      learning_objectives:
+        - "Implement a linear regression model using scikit-learn"
+        - "Evaluate model fit using R-squared and residual analysis"
+        - "Analyze the effect of feature scaling on model performance"
+      key_topics:
+        - "scikit-learn LinearRegression"
+        - "train_test_split"
+        - "R-squared, MSE, MAE"
+        - "StandardScaler"
+    metadata:
+      expected_min_components: 10
+      expected_max_components: 14
+      is_first_lesson: false
+
+  - name: conceptual_lesson_plan
+    inputs:
+      lesson_title: "Understanding Project Risk Categories"
+      learning_objectives:
+        - "Classify project risks by probability and impact"
+        - "Create risk mitigation strategies"
+      key_topics:
+        - "risk categories"
+        - "probability-impact matrix"
+        - "mitigation vs acceptance"
+    metadata:
+      expected_min_components: 8
+      expected_max_components: 12
+      is_first_lesson: false
+
+  - name: creative_lesson_plan
+    inputs:
+      lesson_title: "Building User Personas from Research"
+      learning_objectives:
+        - "Construct user personas from qualitative and quantitative research data"
+        - "Evaluate persona quality using validation techniques"
+      key_topics:
+        - "persona templates"
+        - "research synthesis"
+        - "validation methods"
+    metadata:
+      expected_min_components: 8
+      expected_max_components: 12
+      is_first_lesson: false
+
+  - name: technical_lesson_plan
+    inputs:
+      lesson_title: "Designing Microservice Boundaries"
+      learning_objectives:
+        - "Apply bounded context analysis to identify service boundaries"
+        - "Evaluate trade-offs between monolithic and microservice decomposition"
+        - "Design API contracts for inter-service communication"
+      key_topics:
+        - "bounded contexts"
+        - "domain-driven design"
+        - "API contracts (REST, gRPC)"
+        - "data ownership"
+    metadata:
+      expected_min_components: 10
+      expected_max_components: 14
+      is_first_lesson: false

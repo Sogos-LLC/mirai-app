@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 import structlog
 from temporalio import activity
@@ -23,6 +23,7 @@ class IngestDocumentInput:
     text: str
     source_id: str
     source_name: str
+    api_key: str
     metadata: dict[str, str]
 
 
@@ -38,10 +39,13 @@ async def ingest_document(input: IngestDocumentInput) -> IngestDocumentOutput:
     """Ingest a document into the knowledge base (chunk → embed → store)."""
     activity.heartbeat(f"ingesting {input.source_name}")
 
+    embedding_client = EmbeddingClient(input.api_key)
+
     chunk_count = await _ingest(
         text=input.text,
         source_id=input.source_id,
         source_name=input.source_name,
+        embedding_client=embedding_client,
         metadata=input.metadata,
     )
 
@@ -52,6 +56,7 @@ class SearchKnowledgeInput(BaseModel):
     """Input for knowledge search activity."""
 
     query: str
+    api_key: str
     filters: dict[str, str]
     top_k: int = 15
 
@@ -65,8 +70,11 @@ class SearchKnowledgeOutput(BaseModel):
 @activity.defn
 async def search_knowledge(input: SearchKnowledgeInput) -> SearchKnowledgeOutput:
     """Search the knowledge base for relevant content."""
+    embedding_client = EmbeddingClient(input.api_key)
+
     chunks = await _search(
         query=input.query,
+        embedding_client=embedding_client,
         filters=input.filters,
         top_k=input.top_k,
     )

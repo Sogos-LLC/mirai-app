@@ -13,7 +13,6 @@ class Settings(BaseSettings):
 
     # External services
     qdrant_url: str = "http://localhost:6333"
-    embedding_url: str = "http://localhost:8080"
 
     # Observability
     logfire_token: str | None = None
@@ -26,8 +25,8 @@ class Settings(BaseSettings):
     # Qdrant collection
     qdrant_collection: str = "knowledge_chunks"
 
-    # Embedding
-    embedding_dimensions: int = 384
+    # Embedding (gemini-embedding-001 via pydantic-ai Embedder)
+    embedding_dimensions: int = 3072
     embedding_batch_size: int = 64
 
     # RAG defaults

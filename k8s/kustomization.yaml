@@ -9,6 +9,5 @@ resources:
 - redis/asynqmon-deployment.yaml
 - mirai-db
 - qdrant
-- embedding
 - temporal
 - ai

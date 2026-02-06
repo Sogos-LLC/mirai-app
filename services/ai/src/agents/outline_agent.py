@@ -1,7 +1,12 @@
-"""Outline generation agents - two-phase: sections-only then lesson details."""
+"""Outline generation agents - two-phase: sections-only then lesson details.
+
+The sections_gen_agent has a `review_outline` tool that delegates to the
+outline reviewer agent. The LLM can call it to self-check before finalizing.
+Usage is capped at 1 tool call per outline via UsageLimits.
+"""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent, NativeOutput, RunContext, UsageLimits
 
 from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
@@ -106,13 +111,34 @@ sections_gen_agent = Agent(
     output_type=NativeOutput(SectionsOnlyOutput),
     system_prompt=SECTIONS_SYSTEM,
     name="outline-sections-gen",
+    deps_type=str,  # API key for reviewer delegation
     output_retries=3,
 )
+
+
+@sections_gen_agent.tool
+async def review_outline(
+    ctx: RunContext[str], outline_summary: str
+) -> str:
+    """Request a review of the outline structure you're generating.
+
+    Call this with a summary of your planned sections and lesson titles to get
+    feedback before finalizing. Incorporate the feedback into your final output.
+
+    Args:
+        outline_summary: Summary of planned sections with lesson titles.
+    """
+    from src.agents.reviewers import ReviewerRegistry
+
+    review_fn = ReviewerRegistry.create_tool("outline")
+    return await review_fn(ctx, outline_summary)
+
 
 internal_data_sections_agent = Agent(
     output_type=NativeOutput(SectionsOnlyOutput),
     system_prompt=INTERNAL_DATA_ONLY_SECTIONS_SYSTEM,
     name="outline-sections-internal",
+    deps_type=str,  # API key (no reviewer tool, but needs consistent deps_type)
 )
 
 
@@ -293,7 +319,12 @@ async def generate_sections(
     agent = (
         internal_data_sections_agent if internal_data_only else sections_gen_agent
     )
-    result = await agent.run(prompt, model=model)
+    result = await agent.run(
+        prompt,
+        model=model,
+        deps=api_key,
+        usage_limits=UsageLimits(tool_calls_limit=1),
+    )
     return result.output
 
 

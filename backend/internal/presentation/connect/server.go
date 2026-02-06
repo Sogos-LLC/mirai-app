@@ -155,7 +155,7 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	// KnowledgeSourceService - RAG knowledge management
 	if cfg.KnowledgeSourceService != nil && cfg.BaseStorage != nil {
 		path, handler = miraiv1connect.NewKnowledgeSourceServiceHandler(
-			NewKnowledgeServiceServer(cfg.KnowledgeSourceService, cfg.BaseStorage),
+			NewKnowledgeServiceServer(cfg.KnowledgeSourceService, cfg.BaseStorage, cfg.WorkflowStarter),
 			interceptors,
 		)
 		mux.Handle(path, handler)

@@ -3,12 +3,25 @@
 Ported from Go backend (gemini/prompts_wizard.go + schemas_wizard.go).
 Each agent uses pydantic-ai with per-tenant Gemini API keys.
 Orchestration is handled by pydantic-graph (see src/graphs/); this module
-only exposes agents and prompt builders.
+only exposes agents, prompt builders, and output validators.
+
+Output validators enforce per-agent structural rules via ModelRetry.
+Graph validation nodes handle cross-artifact checks (retry count gating, etc.).
 """
 
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent, ModelRetry, NativeOutput, RunContext
 
-from src.graphs.wizard_utils import build_rag_section
+from src.graphs.wizard_utils import (
+    BLOOMS_VERBS,
+    GENERIC_TITLE_PREFIXES,
+    TITLE_CASE_MINOR_WORDS,
+    build_rag_section,
+    check_exact_count,
+    check_in_set,
+    check_sentence_count,
+    check_unique_values,
+    check_word_count,
+)
 from src.models.knowledge import KnowledgeChunk
 from src.models.wizard import (
     AudiencePersona,
@@ -19,6 +32,8 @@ from src.models.wizard import (
     SMEPersonasOutput,
     ToneOptionsOutput,
 )
+
+VALID_DETAIL_LEVELS: set[str] = {"brief", "moderate", "comprehensive"}
 
 # ---------------------------------------------------------------------------
 # Title Agent
@@ -32,7 +47,40 @@ title_agent = Agent(
     output_type=NativeOutput(ImprovedTitleOutput),
     system_prompt=TITLE_SYSTEM,
     name="wizard-title",
+    output_retries=2,
 )
+
+
+@title_agent.output_validator
+def validate_title(ctx: RunContext[None], output: ImprovedTitleOutput) -> ImprovedTitleOutput:
+    """Validate title word count, casing, description length, and generic prefixes."""
+    violations: list[str] = []
+
+    v = check_word_count(output.improved_title, 3, 12, "Title")
+    if v:
+        violations.append(v)
+
+    words = output.improved_title.split()
+    for i, word in enumerate(words):
+        if i == 0 or i == len(words) - 1:
+            if word[0].islower():
+                violations.append(f"Title word '{word}' at position {i} should be capitalized")
+        elif word.lower() not in TITLE_CASE_MINOR_WORDS and word[0].islower():
+            violations.append(f"Title word '{word}' should be capitalized (Title Case)")
+
+    v = check_sentence_count(output.description, 2, 4, "Description")
+    if v:
+        violations.append(v)
+
+    title_lower = output.improved_title.lower()
+    for prefix in GENERIC_TITLE_PREFIXES:
+        if title_lower.startswith(prefix):
+            violations.append(f"Title starts with generic filler '{prefix}'")
+
+    if violations:
+        raise ModelRetry("Fix these issues:\n" + "\n".join(f"- {v}" for v in violations))
+
+    return output
 
 
 def build_title_prompt(
@@ -77,7 +125,57 @@ outcomes_agent = Agent(
     output_type=NativeOutput(CourseOutcomesOutput),
     system_prompt=OUTCOMES_SYSTEM,
     name="wizard-outcomes",
+    output_retries=2,
 )
+
+
+def _parse_outcomes(text: str) -> list[str]:
+    """Parse bullet-point outcomes from text."""
+    lines = []
+    for line in text.strip().split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("•"):
+            stripped = stripped[1:].strip()
+        elif stripped.startswith("-"):
+            stripped = stripped[1:].strip()
+        if stripped:
+            lines.append(stripped)
+    return lines
+
+
+@outcomes_agent.output_validator
+def validate_outcomes(ctx: RunContext[None], output: CourseOutcomesOutput) -> CourseOutcomesOutput:
+    """Validate outcome count, word length, Bloom's verbs, and uniqueness."""
+    violations: list[str] = []
+    outcomes = _parse_outcomes(output.outcomes)
+
+    if len(outcomes) < 3:
+        violations.append(f"Expected 3-5 outcomes, got {len(outcomes)}")
+    elif len(outcomes) > 5:
+        violations.append(f"Expected 3-5 outcomes, got {len(outcomes)}")
+
+    starting_verbs: list[str] = []
+    for i, outcome in enumerate(outcomes):
+        first_word = outcome.split()[0].lower().rstrip(",.:;") if outcome.split() else ""
+        if first_word not in BLOOMS_VERBS:
+            violations.append(
+                f"Outcome {i + 1} starts with '{first_word}', not a Bloom's taxonomy verb"
+            )
+        starting_verbs.append(first_word)
+
+    v = check_unique_values(starting_verbs, "Starting verbs")
+    if v:
+        violations.append(v)
+
+    for i, outcome in enumerate(outcomes):
+        v = check_word_count(outcome, 8, 25, f"Outcome {i + 1}")
+        if v:
+            violations.append(v)
+
+    if violations:
+        raise ModelRetry("Fix these issues:\n" + "\n".join(f"- {v}" for v in violations))
+
+    return output
 
 
 def build_outcomes_prompt(
@@ -137,7 +235,44 @@ sme_agent = Agent(
     output_type=NativeOutput(SMEPersonasOutput),
     system_prompt=SME_SYSTEM,
     name="wizard-sme",
+    output_retries=2,
 )
+
+
+@sme_agent.output_validator
+def validate_sme(ctx: RunContext[None], output: SMEPersonasOutput) -> SMEPersonasOutput:
+    """Validate SME persona count, uniqueness, skills, and descriptions."""
+    violations: list[str] = []
+
+    v = check_exact_count(output.personas, 3, "SME personas")
+    if v:
+        violations.append(v)
+
+    ids = [p.id for p in output.personas]
+    v = check_unique_values(ids, "SME persona IDs")
+    if v:
+        violations.append(v)
+
+    titles = [p.job_title for p in output.personas]
+    v = check_unique_values(titles, "SME job titles")
+    if v:
+        violations.append(v)
+
+    for p in output.personas:
+        if len(p.skills) < 3:
+            violations.append(f"SME '{p.id}' has {len(p.skills)} skills; minimum is 3")
+        elif len(p.skills) > 5:
+            violations.append(f"SME '{p.id}' has {len(p.skills)} skills; maximum is 5")
+
+    for p in output.personas:
+        v = check_sentence_count(p.description, 2, 10, f"SME '{p.id}' description")
+        if v:
+            violations.append(v)
+
+    if violations:
+        raise ModelRetry("Fix these issues:\n" + "\n".join(f"- {v}" for v in violations))
+
+    return output
 
 
 def build_sme_prompt(
@@ -181,7 +316,44 @@ audience_agent = Agent(
     output_type=NativeOutput(AudiencePersonasOutput),
     system_prompt=AUDIENCE_SYSTEM,
     name="wizard-audience",
+    output_retries=2,
 )
+
+
+@audience_agent.output_validator
+def validate_audience(ctx: RunContext[None], output: AudiencePersonasOutput) -> AudiencePersonasOutput:
+    """Validate audience persona count, uniqueness, and goals."""
+    violations: list[str] = []
+
+    v = check_exact_count(output.personas, 3, "Audience personas")
+    if v:
+        violations.append(v)
+
+    ids = [p.id for p in output.personas]
+    v = check_unique_values(ids, "Audience persona IDs")
+    if v:
+        violations.append(v)
+
+    roles = [p.role for p in output.personas]
+    v = check_unique_values(roles, "Audience persona roles")
+    if v:
+        violations.append(v)
+
+    names = [p.name for p in output.personas]
+    v = check_unique_values(names, "Audience persona names")
+    if v:
+        violations.append(v)
+
+    for p in output.personas:
+        if len(p.goals) < 2:
+            violations.append(f"Audience '{p.id}' has {len(p.goals)} goals; minimum is 2")
+        elif len(p.goals) > 4:
+            violations.append(f"Audience '{p.id}' has {len(p.goals)} goals; maximum is 4")
+
+    if violations:
+        raise ModelRetry("Fix these issues:\n" + "\n".join(f"- {v}" for v in violations))
+
+    return output
 
 
 def build_audience_prompt(
@@ -236,7 +408,44 @@ tone_agent = Agent(
     output_type=NativeOutput(ToneOptionsOutput),
     system_prompt=TONE_SYSTEM,
     name="wizard-tone",
+    output_retries=2,
 )
+
+
+@tone_agent.output_validator
+def validate_tone(ctx: RunContext[None], output: ToneOptionsOutput) -> ToneOptionsOutput:
+    """Validate tone option count, uniqueness, and detail level coverage."""
+    violations: list[str] = []
+
+    v = check_exact_count(output.options, 3, "Tone options")
+    if v:
+        violations.append(v)
+
+    ids = [o.id for o in output.options]
+    v = check_unique_values(ids, "Tone option IDs")
+    if v:
+        violations.append(v)
+
+    names = [o.name for o in output.options]
+    v = check_unique_values(names, "Tone option names")
+    if v:
+        violations.append(v)
+
+    detail_levels: list[str] = []
+    for o in output.options:
+        v = check_in_set(o.level_of_detail, VALID_DETAIL_LEVELS, f"Tone '{o.id}' level_of_detail")
+        if v:
+            violations.append(v)
+        detail_levels.append(o.level_of_detail.lower().strip())
+
+    v = check_unique_values(detail_levels, "Tone detail levels")
+    if v:
+        violations.append(v)
+
+    if violations:
+        raise ModelRetry("Fix these issues:\n" + "\n".join(f"- {v}" for v in violations))
+
+    return output
 
 
 def build_tone_prompt(

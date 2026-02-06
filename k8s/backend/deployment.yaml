@@ -139,8 +139,6 @@ spec:
           value: "release"
         - name: QDRANT_URL
           value: "http://qdrant.mirai.svc.cluster.local:6333"
-        - name: EMBEDDING_URL
-          value: "http://embedding-service.mirai.svc.cluster.local:8080"
         - name: ENCRYPTION_KEY
           valueFrom:
             secretKeyRef:

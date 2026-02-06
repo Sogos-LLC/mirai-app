@@ -38,8 +38,6 @@ spec:
           value: "ai-tasks"
         - name: QDRANT_URL
           value: "http://qdrant.mirai-uat.svc.cluster.local:6333"
-        - name: EMBEDDING_URL
-          value: "http://embedding.mirai-uat.svc.cluster.local:8080"
         - name: LOG_LEVEL
           value: "info"
         - name: LOGFIRE_TOKEN

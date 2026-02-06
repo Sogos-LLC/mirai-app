@@ -1,0 +1,85 @@
+name: lesson_evaluation
+cases:
+  - name: python_variables_lesson
+    inputs:
+      course_title: "Python Fundamentals for Data Professionals"
+      section_title: "Python Basics"
+      lesson_title: "Variables and Data Types"
+      lesson_description: "Learn about Python's core data types and how to use variables effectively"
+      learning_objectives:
+        - description: "Identify Python's primitive data types and their use cases"
+          bloom_level: "understand"
+        - description: "Apply type conversion functions to transform data between types"
+          bloom_level: "apply"
+    metadata:
+      section_index: 0
+      lesson_index: 0
+      is_first_lesson: true
+
+  - name: ml_linear_regression_lesson
+    inputs:
+      course_title: "Machine Learning Foundations"
+      section_title: "Supervised Learning"
+      lesson_title: "Linear Regression in Practice"
+      lesson_description: "Implement and evaluate linear regression models for prediction tasks"
+      learning_objectives:
+        - description: "Implement a linear regression model using scikit-learn"
+          bloom_level: "apply"
+        - description: "Evaluate model fit using R-squared and residual analysis"
+          bloom_level: "evaluate"
+        - description: "Analyze the effect of feature scaling on model performance"
+          bloom_level: "analyze"
+    metadata:
+      section_index: 1
+      lesson_index: 0
+      is_first_lesson: false
+
+  - name: pm_risk_management_lesson
+    inputs:
+      course_title: "Project Management Essentials"
+      section_title: "Risk and Quality Management"
+      lesson_title: "Identifying and Mitigating Project Risks"
+      lesson_description: "Learn systematic approaches to identify, assess, and manage project risks"
+      learning_objectives:
+        - description: "Classify project risks by probability and impact using a risk matrix"
+          bloom_level: "analyze"
+        - description: "Create risk mitigation strategies for common project threats"
+          bloom_level: "create"
+    metadata:
+      section_index: 2
+      lesson_index: 1
+      is_first_lesson: false
+
+  - name: ux_personas_lesson
+    inputs:
+      course_title: "UX Design Principles for Product Teams"
+      section_title: "User Research Methods"
+      lesson_title: "Building User Personas"
+      lesson_description: "Construct research-backed personas that guide product decisions"
+      learning_objectives:
+        - description: "Construct user personas from qualitative and quantitative research data"
+          bloom_level: "create"
+        - description: "Evaluate persona quality using validation techniques"
+          bloom_level: "evaluate"
+    metadata:
+      section_index: 0
+      lesson_index: 1
+      is_first_lesson: false
+
+  - name: cloud_microservices_lesson
+    inputs:
+      course_title: "Cloud Architecture Patterns"
+      section_title: "Service-Oriented Architecture"
+      lesson_title: "Designing Microservice Boundaries"
+      lesson_description: "Apply domain-driven design to define service boundaries in microservice architectures"
+      learning_objectives:
+        - description: "Apply bounded context analysis to identify service boundaries"
+          bloom_level: "apply"
+        - description: "Evaluate trade-offs between monolithic and microservice decomposition strategies"
+          bloom_level: "evaluate"
+        - description: "Design API contracts for inter-service communication"
+          bloom_level: "create"
+    metadata:
+      section_index: 1
+      lesson_index: 0
+      is_first_lesson: false
