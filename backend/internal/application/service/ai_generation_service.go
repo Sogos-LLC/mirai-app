@@ -40,6 +40,7 @@ type WorkflowStarter interface {
 	QueryWorkflow(ctx context.Context, workflowID, queryType string) (map[string]interface{}, error)
 	UpdateWorkflow(ctx context.Context, workflowID, updateName string, args interface{}) error
 	CancelWorkflow(ctx context.Context, workflowID, runID string) error
+	IsWorkflowRunning(ctx context.Context, workflowID string) (bool, error)
 }
 
 // ImageStorage abstracts image storage operations.

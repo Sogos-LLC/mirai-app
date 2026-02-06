@@ -40,6 +40,9 @@ type WorkflowStarter interface {
 
 	// CancelWorkflow cancels a running workflow by its execution ID.
 	CancelWorkflow(ctx context.Context, workflowID, runID string) error
+
+	// IsWorkflowRunning checks if a workflow execution is still open (running).
+	IsWorkflowRunning(ctx context.Context, workflowID string) (bool, error)
 }
 
 // Client wraps the Temporal SDK client.
@@ -215,5 +218,14 @@ func (s *workflowStarter) StartCourseCreation(ctx context.Context, input interfa
 	s.logger.Info("started course creation workflow",
 		"workflowID", run.GetID(), "jobID", ccInput.JobID, "courseID", ccInput.CourseID)
 	return run.GetID(), nil
+}
+
+func (s *workflowStarter) IsWorkflowRunning(ctx context.Context, workflowID string) (bool, error) {
+	resp, err := s.client.DescribeWorkflowExecution(ctx, workflowID, "")
+	if err != nil {
+		return false, fmt.Errorf("describe workflow %s: %w", workflowID, err)
+	}
+	status := resp.WorkflowExecutionInfo.Status
+	return status == 1, nil // 1 = WORKFLOW_EXECUTION_STATUS_RUNNING
 }
 

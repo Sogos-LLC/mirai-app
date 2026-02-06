@@ -224,7 +224,19 @@ func (s *AIGenerationService) GetWorkflowState(ctx context.Context, kratosID uui
 			state.ProgressMessage = v
 		}
 
-		return state, nil
+		// Temporal serves queries on closed workflows too, returning stale state.
+		// If the query says "processing" but the workflow is no longer running,
+		// treat it as stale and fall through to DB-based detection.
+		if state.Status == "processing" || state.Status == "awaiting_approval" {
+			running, descErr := s.workflowStarter.IsWorkflowRunning(ctx, workflowID)
+			if descErr == nil && !running {
+				// Workflow is closed — fall through to DB stale detection
+			} else {
+				return state, nil
+			}
+		} else {
+			return state, nil
+		}
 	}
 
 	// Fallback: read from DB job record
