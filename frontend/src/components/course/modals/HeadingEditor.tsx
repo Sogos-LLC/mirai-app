@@ -1,11 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-interface HeadingContent {
-  level: number;
-  text: string;
-}
+import type { HeadingContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface HeadingEditorProps {
   contentJson: string;
@@ -14,11 +10,11 @@ interface HeadingEditorProps {
 
 export function HeadingEditor({ contentJson, onSave }: HeadingEditorProps) {
   const parsed = JSON.parse(contentJson) as HeadingContent;
-  const [level, setLevel] = useState(parsed.level || 2);
-  const [text, setText] = useState(parsed.text || '');
+  const [level, setLevel] = useState(parsed.headingLevel || 2);
+  const [text, setText] = useState(parsed.headingText || '');
 
   const handleSave = () => {
-    onSave(JSON.stringify({ level, text }));
+    onSave(JSON.stringify({ headingLevel: level, headingText: text }));
   };
 
   return (

@@ -2,18 +2,7 @@
 
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
-
-export interface ListItem {
-  text: string;
-  icon?: string;
-  description?: string;
-}
-
-export interface ListContent {
-  style: string; // bulleted, numbered, icon, process, accordion
-  items: ListItem[];
-  title?: string;
-}
+import type { ListContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface ListRendererProps {
   content: ListContent | Record<string, unknown>;

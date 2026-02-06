@@ -83,27 +83,27 @@ const COMPONENT_TYPE_LABELS: Record<number, string> = {
 function getDefaultContentForType(type: number): string {
   switch (type) {
     case LessonComponentType.HEADING:
-      return JSON.stringify({ level: 2, text: '' });
+      return JSON.stringify({ headingLevel: 2, headingText: '' });
     case LessonComponentType.TEXT:
-      return JSON.stringify({ html: '<p></p>' });
+      return JSON.stringify({ textHtml: '' });
     case LessonComponentType.IMAGE:
-      return JSON.stringify({ url: '', alt: '', caption: '' });
+      return JSON.stringify({ imageDescription: '', imageAltText: '', imageCaption: '', url: '' });
     case LessonComponentType.QUIZ:
       return JSON.stringify({
-        questionType: 'multiple_choice',
-        questionText: '',
-        choices: [
-          { text: '', isCorrect: false },
-          { text: '', isCorrect: false },
+        quizQuestion: '',
+        quizOptions: [
+          { id: 'a', text: '' },
+          { id: 'b', text: '' },
         ],
-        feedback: { correct: '', incorrect: '' },
+        quizCorrectAnswerId: 'a',
+        quizExplanation: '',
       });
     case LessonComponentType.CODE:
       return JSON.stringify({ language: 'javascript', code: '' });
     case LessonComponentType.CALLOUT:
-      return JSON.stringify({ style: 'info', title: '', body: '' });
+      return JSON.stringify({ style: 'info', title: '', content: '' });
     case LessonComponentType.STATEMENT:
-      return JSON.stringify({ text: '', subtext: '' });
+      return JSON.stringify({ statementText: '', statementSubtext: '' });
     case LessonComponentType.QUOTE:
       return JSON.stringify({ text: '', author: '', title: '', source: '' });
     case LessonComponentType.LIST:

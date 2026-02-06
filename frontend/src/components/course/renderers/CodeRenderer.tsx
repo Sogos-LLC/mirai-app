@@ -2,11 +2,7 @@
 
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
-
-interface CodeContent {
-  code: string;
-  language: string;
-}
+import type { CodeContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface CodeRendererProps {
   content: CodeContent;

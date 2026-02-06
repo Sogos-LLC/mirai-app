@@ -2,19 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, Check } from 'lucide-react';
-
-interface QuizOption {
-  id: string;
-  text: string;
-}
-
-interface QuizContent {
-  question: string;
-  questionType: string;
-  options: QuizOption[];
-  correctAnswerId: string;
-  explanation: string;
-}
+import type { QuizContent, QuizOption } from '@/gen/mirai/v1/component_content_zod';
 
 interface QuizEditorProps {
   contentJson: string;
@@ -23,15 +11,15 @@ interface QuizEditorProps {
 
 export function QuizEditor({ contentJson, onSave }: QuizEditorProps) {
   const parsed = JSON.parse(contentJson) as QuizContent;
-  const [question, setQuestion] = useState(parsed.question || '');
+  const [question, setQuestion] = useState(parsed.quizQuestion || '');
   const [options, setOptions] = useState<QuizOption[]>(
-    parsed.options?.length ? parsed.options : [
+    parsed.quizOptions?.length ? parsed.quizOptions : [
       { id: 'a', text: '' },
       { id: 'b', text: '' },
     ]
   );
-  const [correctAnswerId, setCorrectAnswerId] = useState(parsed.correctAnswerId || 'a');
-  const [explanation, setExplanation] = useState(parsed.explanation || '');
+  const [correctAnswerId, setCorrectAnswerId] = useState(parsed.quizCorrectAnswerId || 'a');
+  const [explanation, setExplanation] = useState(parsed.quizExplanation || '');
 
   const handleAddOption = () => {
     const nextId = String.fromCharCode(97 + options.length); // a, b, c, d...
@@ -53,11 +41,10 @@ export function QuizEditor({ contentJson, onSave }: QuizEditorProps) {
 
   const handleSave = () => {
     onSave(JSON.stringify({
-      question,
-      questionType: 'multiple_choice',
-      options,
-      correctAnswerId,
-      explanation,
+      quizQuestion: question,
+      quizOptions: options,
+      quizCorrectAnswerId: correctAnswerId,
+      quizExplanation: explanation,
     }));
   };
 

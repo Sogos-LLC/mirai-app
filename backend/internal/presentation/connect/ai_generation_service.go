@@ -1020,6 +1020,8 @@ func lessonComponentTypeToProto(t valueobject.LessonComponentType) v1.LessonComp
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CHART
 	case valueobject.LessonComponentTypeDivider:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_DIVIDER
+	case valueobject.LessonComponentTypeTaskList:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_TASK_LIST
 	default:
 		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_UNSPECIFIED
 	}
@@ -1053,6 +1055,8 @@ func protoToLessonComponentType(t v1.LessonComponentType) valueobject.LessonComp
 		return valueobject.LessonComponentTypeChart
 	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_DIVIDER:
 		return valueobject.LessonComponentTypeDivider
+	case v1.LessonComponentType_LESSON_COMPONENT_TYPE_TASK_LIST:
+		return valueobject.LessonComponentTypeTaskList
 	default:
 		return valueobject.LessonComponentTypeText // Default to text
 	}

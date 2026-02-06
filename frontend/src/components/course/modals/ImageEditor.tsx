@@ -4,13 +4,7 @@ import { useState } from 'react';
 import { Image as ImageIcon, Sparkles, RefreshCw } from 'lucide-react';
 import { useGenerateComponentImage } from '@/hooks/useAIGeneration';
 import Button from '@/components/ui/Button';
-
-interface ImageContent {
-  imageDescription: string;
-  altText: string;
-  caption?: string;
-  url?: string;
-}
+import type { ImageContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface ImageEditorProps {
   contentJson: string;
@@ -30,8 +24,8 @@ export function ImageEditor({
 }: ImageEditorProps) {
   const parsed = JSON.parse(contentJson) as ImageContent;
   const [url, setUrl] = useState(parsed.url || '');
-  const [altText, setAltText] = useState(parsed.altText || '');
-  const [caption, setCaption] = useState(parsed.caption || '');
+  const [altText, setAltText] = useState(parsed.imageAltText || '');
+  const [caption, setCaption] = useState(parsed.imageCaption || '');
   const [imageDescription, setImageDescription] = useState(parsed.imageDescription || '');
   const [imageError, setImageError] = useState(false);
 
@@ -77,8 +71,8 @@ export function ImageEditor({
     onSave(
       JSON.stringify({
         imageDescription,
-        altText,
-        caption: caption || undefined,
+        imageAltText: altText,
+        imageCaption: caption || undefined,
         url: url || undefined,
       })
     );

@@ -46,12 +46,6 @@ const COMPONENT_TYPES = {
   TASK_LIST: LessonComponentType.TASK_LIST,
 } as const;
 
-// Quiz option interface for normalization
-interface QuizOption {
-  id: string;
-  text: string;
-}
-
 interface ComponentRendererProps {
   component: LessonComponent;
   isEditing?: boolean;
@@ -67,16 +61,6 @@ function parseContent<T>(contentJson: string): T | null {
   } catch {
     return null;
   }
-}
-
-// Transform snake_case quiz JSON to camelCase matching new proto schema
-function normalizeQuizContent(raw: Record<string, unknown>): QuizContent {
-  return {
-    quizQuestion: (raw.quizQuestion as string) || (raw.quiz_question as string) || (raw.question as string) || '',
-    quizOptions: (raw.quizOptions as QuizOption[]) || (raw.quiz_options as QuizOption[]) || (raw.options as QuizOption[]) || [],
-    quizCorrectAnswerId: (raw.quizCorrectAnswerId as string) || (raw.quiz_correct_answer_id as string) || (raw.correctAnswerId as string) || (raw.correct_answer_id as string) || '',
-    quizExplanation: (raw.quizExplanation as string) || (raw.quiz_explanation as string) || (raw.explanation as string) || '',
-  };
 }
 
 export function ComponentRenderer({
@@ -165,10 +149,10 @@ export function ComponentRenderer({
     }
 
     case COMPONENT_TYPES.QUIZ: {
-      if (!content) {
+      const quizContent = content as QuizContent | null;
+      if (!quizContent) {
         return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid quiz content</div>;
       }
-      const quizContent = normalizeQuizContent(content);
       return (
         <Wrapper>
           <QuizRenderer

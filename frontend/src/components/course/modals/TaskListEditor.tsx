@@ -2,17 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-
-interface TaskListItem {
-  id: string;
-  contentHtml: string;
-}
-
-interface TaskListContent {
-  title: string;
-  emoji?: string;
-  items: TaskListItem[];
-}
+import type { TaskListContent, TaskListItem } from '@/gen/mirai/v1/component_content_zod';
 
 interface TaskListEditorProps {
   contentJson: string;

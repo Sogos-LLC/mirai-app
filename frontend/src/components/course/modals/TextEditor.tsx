@@ -2,11 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Bold, Italic, Link, List, ListOrdered } from 'lucide-react';
-
-interface TextContent {
-  html: string;
-  plaintext: string;
-}
+import type { TextContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface TextEditorProps {
   contentJson: string;
@@ -15,7 +11,7 @@ interface TextEditorProps {
 
 export function TextEditor({ contentJson, onSave }: TextEditorProps) {
   const parsed = JSON.parse(contentJson) as TextContent;
-  const [content, setContent] = useState(parsed.plaintext || parsed.html?.replace(/<[^>]*>/g, '') || '');
+  const [content, setContent] = useState(parsed.textHtml?.replace(/<[^>]*>/g, '') || '');
 
   // Simple markdown-like formatting helpers
   const wrapSelection = useCallback((prefix: string, suffix: string) => {
@@ -80,7 +76,7 @@ export function TextEditor({ contentJson, onSave }: TextEditorProps) {
       .map(p => p.trim() ? `<p>${p}</p>` : '')
       .join('');
 
-    onSave(JSON.stringify({ html, plaintext: content }));
+    onSave(JSON.stringify({ textHtml: html }));
   };
 
   return (

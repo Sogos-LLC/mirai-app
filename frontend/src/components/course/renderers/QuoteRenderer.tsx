@@ -2,13 +2,7 @@
 
 import React from 'react';
 import { Quote } from 'lucide-react';
-
-export interface QuoteContent {
-  text: string;
-  author: string;
-  title?: string;
-  source?: string;
-}
+import type { QuoteContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface QuoteRendererProps {
   content: QuoteContent | Record<string, unknown>;

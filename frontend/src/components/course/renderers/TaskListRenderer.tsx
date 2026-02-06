@@ -1,17 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-export interface TaskListItem {
-  id: string;
-  contentHtml: string;
-}
-
-export interface TaskListContent {
-  title: string;
-  emoji?: string;
-  items: TaskListItem[];
-}
+import type { TaskListContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface TaskListRendererProps {
   content: TaskListContent | Record<string, unknown>;

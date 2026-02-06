@@ -16,6 +16,7 @@ import { GalleryEditor } from './GalleryEditor';
 import { MultimediaEditor } from './MultimediaEditor';
 import { ChartEditor } from './ChartEditor';
 import { DividerEditor } from './DividerEditor';
+import { TaskListEditor } from './TaskListEditor';
 
 const COMPONENT_TYPE_LABELS: Record<number, string> = {
   [LessonComponentType.UNSPECIFIED]: 'Component',
@@ -32,6 +33,7 @@ const COMPONENT_TYPE_LABELS: Record<number, string> = {
   [LessonComponentType.MULTIMEDIA]: 'Multimedia',
   [LessonComponentType.CHART]: 'Chart',
   [LessonComponentType.DIVIDER]: 'Divider',
+  [LessonComponentType.TASK_LIST]: 'Task List',
 };
 
 export function EditModal() {
@@ -83,6 +85,8 @@ export function EditModal() {
         return <ChartEditor contentJson={component.contentJson} onSave={handleSave} />;
       case LessonComponentType.DIVIDER:
         return <DividerEditor contentJson={component.contentJson} onSave={handleSave} />;
+      case LessonComponentType.TASK_LIST:
+        return <TaskListEditor contentJson={component.contentJson} onSave={handleSave} />;
       default:
         return <div className="text-secondary">Unknown component type</div>;
     }

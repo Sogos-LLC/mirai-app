@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { Lightbulb } from 'lucide-react';
-
-interface StatementContent {
-  text: string;
-  subtext?: string;
-}
+import type { StatementContent } from '@/gen/mirai/v1/component_content_zod';
 
 interface StatementEditorProps {
   contentJson: string;
@@ -15,13 +11,13 @@ interface StatementEditorProps {
 
 export function StatementEditor({ contentJson, onSave }: StatementEditorProps) {
   const parsed = JSON.parse(contentJson) as StatementContent;
-  const [text, setText] = useState(parsed.text || '');
-  const [subtext, setSubtext] = useState(parsed.subtext || '');
+  const [text, setText] = useState(parsed.statementText || '');
+  const [subtext, setSubtext] = useState(parsed.statementSubtext || '');
 
   const handleSave = () => {
     onSave(JSON.stringify({
-      text,
-      subtext: subtext || undefined,
+      statementText: text,
+      statementSubtext: subtext || undefined,
     }));
   };
 
