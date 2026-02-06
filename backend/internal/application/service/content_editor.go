@@ -684,7 +684,6 @@ func (s *AIGenerationService) GenerateComponentImage(ctx context.Context, kratos
 				imageContent = make(map[string]interface{})
 			}
 
-			imageContent["storagePath"] = storagePath
 			imageContent["url"] = imageURL
 			if _, exists := imageContent["image_description"]; !exists {
 				imageContent["image_description"] = req.Prompt

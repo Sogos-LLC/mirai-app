@@ -298,10 +298,11 @@ export default function CourseEditorPage() {
   };
 
   const handleComponentClick = useCallback((component: LessonComponent) => {
-    if (selectedLessonId) {
-      openEditModal(courseId, selectedLessonId, component);
+    const generatedLessonId = currentLesson?.generated?.id;
+    if (generatedLessonId) {
+      openEditModal(courseId, generatedLessonId, component);
     }
-  }, [courseId, selectedLessonId, openEditModal]);
+  }, [courseId, currentLesson?.generated?.id, openEditModal]);
 
   // Called by AddComponentModal after user finishes editing the new component
   const handleAddComponent = useCallback((component: LessonComponent, contentJson: string) => {
@@ -575,7 +576,7 @@ export default function CourseEditorPage() {
         onAdd={handleAddComponent}
         insertAfterIndex={addComponentAfterIndex ?? 0}
         courseId={courseId}
-        lessonId={selectedLessonId ?? ''}
+        generatedLessonId={currentLesson?.generated?.id ?? ''}
       />
 
       {/* Edit Modal - for editing existing components */}

@@ -129,7 +129,7 @@ interface AddComponentModalProps {
   onAdd: (component: LessonComponent, contentJson: string) => void;
   insertAfterIndex: number;
   courseId: string;
-  lessonId: string;
+  generatedLessonId: string;
 }
 
 type Phase = 'select' | 'edit';
@@ -140,7 +140,7 @@ export function AddComponentModal({
   onAdd,
   insertAfterIndex,
   courseId,
-  lessonId,
+  generatedLessonId,
 }: AddComponentModalProps) {
   const [phase, setPhase] = useState<Phase>('select');
   const [selectedType, setSelectedType] = useState<number | null>(null);
@@ -217,7 +217,7 @@ export function AddComponentModal({
           <ImageEditor
             {...props}
             courseId={courseId}
-            generatedLessonId={lessonId}
+            generatedLessonId={generatedLessonId}
             componentId={newComponent.id}
           />
         );
