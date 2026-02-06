@@ -462,12 +462,22 @@ export default function CourseWizardPage() {
               <p className="text-sm text-secondary mb-6">
                 {state.context.error ?? 'An unexpected error occurred'}
               </p>
-              <Button
-                variant="secondary"
-                onClick={() => router.push('/dashboard')}
-              >
-                Back to Dashboard
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push('/dashboard')}
+                >
+                  Back to Dashboard
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => send({ type: 'RESET' })}
+                  className="gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Try Again
+                </Button>
+              </div>
             </div>
           </CardContent>
         )}

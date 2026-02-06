@@ -58,7 +58,9 @@ export type CourseCreationEvent =
   // User rejects the current step with feedback
   | { type: 'REJECT'; feedback: string }
   // Dismiss error
-  | { type: 'DISMISS_ERROR' };
+  | { type: 'DISMISS_ERROR' }
+  // Reset to idle (retry after failure)
+  | { type: 'RESET' };
 
 // ============================================================
 // Initial Context
@@ -279,10 +281,15 @@ export const courseCreationMachine = createMachine({
     },
 
     // --------------------------------------------------------
-    // Failed: workflow errored out
+    // Failed: workflow errored out — can retry
     // --------------------------------------------------------
     failed: {
-      type: 'final' as const,
+      on: {
+        RESET: {
+          target: 'idle',
+          actions: assign(initialContext),
+        },
+      },
     },
   },
   on: {
