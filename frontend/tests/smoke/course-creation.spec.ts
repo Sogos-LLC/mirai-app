@@ -4,26 +4,6 @@ import { randomTopic, courseTitle, screenshot, resetScreenshotCounter } from '..
 const topic = randomTopic();
 const title = courseTitle(topic);
 
-/**
- * Wait for the wizard page to render any content inside the Card.
- * Returns the detected state: 'form', 'processing', 'review', 'completed', 'failed', or 'empty'.
- */
-async function detectWizardState(page: import('@playwright/test').Page, timeout = 20_000) {
-  const result = await Promise.race([
-    page.locator('#courseName').waitFor({ state: 'visible', timeout }).then(() => 'form' as const),
-    page.locator('button:has-text("Approve & Continue")').waitFor({ state: 'visible', timeout }).then(() => 'review' as const),
-    page.locator('text=Course Created!').waitFor({ state: 'visible', timeout }).then(() => 'completed' as const),
-    page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout }).then(() => 'failed' as const),
-    // Catch any processing text (spinner state) — broadened to match all possible messages
-    page.locator('text=/Reconnecting|Starting course|Working on|Generating|Generated/i').first()
-      .waitFor({ state: 'visible', timeout }).then(() => 'processing' as const),
-    // Fallback: any animated spinner means processing
-    page.locator('.animate-spin').first()
-      .waitFor({ state: 'visible', timeout }).then(() => 'processing' as const),
-  ]).catch(() => 'empty' as const);
-  return result;
-}
-
 test.describe('Course Creation Wizard', () => {
   test.beforeAll(() => {
     resetScreenshotCounter();
@@ -37,7 +17,7 @@ test.describe('Course Creation Wizard', () => {
   });
 
   test('02 - full course creation end-to-end', async ({ page }) => {
-    // Budget: ~30s per approval step (6 steps) + up to 3min for lesson generation
+    // Budget: ~20s per approval step (7 steps) + up to 3min for lesson generation
     test.setTimeout(420_000);
 
     // Capture console messages for debugging
@@ -55,76 +35,102 @@ test.describe('Course Creation Wizard', () => {
     await page.waitForURL('**/course/wizard');
     await page.waitForLoadState('domcontentloaded');
 
-    // Detect the wizard state — handles stale workflows from previous runs
-    let wizardState = await detectWizardState(page);
-    console.log(`Initial wizard state: ${wizardState}`);
-    await screenshot(page, `wizard-state-${wizardState}`);
+    // Wait for the idle form to appear — retry if a stale workflow briefly shows
+    let started = false;
+    for (let attempt = 1; attempt <= 5 && !started; attempt++) {
+      console.log(`Attempt ${attempt}: waiting for wizard form...`);
 
-    // If the Card is empty (all React conditions false — race between idle → processing),
-    // refresh the page and retry detection
-    if (wizardState === 'empty') {
-      console.log('Card content empty — refreshing page and retrying');
-      await page.reload();
-      await page.waitForLoadState('domcontentloaded');
-      wizardState = await detectWizardState(page);
-      console.log(`Wizard state after refresh: ${wizardState}`);
-      await screenshot(page, `wizard-state-after-refresh-${wizardState}`);
+      const detected = await Promise.race([
+        page.locator('#courseName').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'form' as const),
+        page.locator('button:has-text("Approve & Continue")').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'review' as const),
+        page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'completed' as const),
+        page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'failed' as const),
+        page.locator('.animate-spin').first().waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'processing' as const),
+      ]).catch(() => 'empty' as const);
+
+      console.log(`  detected: ${detected}`);
+      await screenshot(page, `attempt-${attempt}-${detected}`);
+
+      if (detected === 'form') {
+        try {
+          await page.fill('#courseName', title, { timeout: 3_000 });
+          await screenshot(page, 'wizard-filled');
+          await page.click('button:has-text("Generate Title")', { timeout: 3_000 });
+          console.log('Started new workflow');
+          started = true;
+        } catch {
+          // Form disappeared (stale job RESUME) — wait for it to resolve
+          console.log('  form disappeared — stale job fired RESUME, waiting...');
+          await page.waitForTimeout(5_000);
+        }
+      } else if (detected === 'review') {
+        console.log('  found active review — will proceed to approval loop');
+        started = true;
+      } else if (detected === 'failed') {
+        // Stale workflow marked as failed by backend — refresh page
+        console.log('  stale workflow cleaned up — refreshing');
+        await page.goto('/course/wizard');
+        await page.waitForLoadState('domcontentloaded');
+      } else if (detected === 'completed') {
+        // Previous course completed — navigate away and back
+        console.log('  previous course completed — navigating back');
+        await page.goto('/dashboard');
+        await page.click('button:has-text("Create Course")');
+        await page.waitForURL('**/course/wizard');
+        await page.waitForLoadState('domcontentloaded');
+      } else if (detected === 'processing') {
+        // Wait for stale processing to resolve (backend marks it failed)
+        console.log('  stale processing — waiting for backend to clean up...');
+        await page.waitForTimeout(8_000);
+      } else {
+        // Empty card — wait briefly and retry
+        console.log('  card empty — waiting...');
+        await page.waitForTimeout(3_000);
+      }
     }
 
-    // Handle each possible state
-    if (wizardState === 'form') {
-      // Idle: fill in the course name and start
-      await page.fill('#courseName', title);
-      await screenshot(page, 'wizard-filled');
-      await page.click('button:has-text("Generate Title")');
-      console.log('Started new workflow');
-    } else if (wizardState === 'completed') {
-      // A previous course already completed — go back to dashboard and start fresh
-      console.log('Previous course already completed — starting fresh');
-      await page.click('button:has-text("Open in Editor")');
-      await page.waitForURL('**/editor');
-      await page.goto('/dashboard');
-      await page.click('button:has-text("Create Course")');
-      await page.waitForURL('**/course/wizard');
-      await page.waitForLoadState('domcontentloaded');
-      // Now the form should show (no more active job)
-      await page.locator('#courseName').waitFor({ state: 'visible', timeout: 10_000 });
-      await page.fill('#courseName', title);
-      await screenshot(page, 'wizard-filled-fresh');
-      await page.click('button:has-text("Generate Title")');
-      console.log('Started fresh workflow after completed course');
-    } else if (wizardState === 'failed') {
-      // A previous workflow failed — refresh to get idle form
-      console.log('Previous workflow failed — refreshing to start fresh');
-      await page.goto('/course/wizard');
-      await page.waitForLoadState('domcontentloaded');
-      await page.locator('#courseName').waitFor({ state: 'visible', timeout: 10_000 });
-      await page.fill('#courseName', title);
-      await screenshot(page, 'wizard-filled-after-failure');
-      await page.click('button:has-text("Generate Title")');
-      console.log('Started new workflow after previous failure');
-    } else if (wizardState === 'processing' || wizardState === 'review') {
-      console.log(`Resuming active workflow in state: ${wizardState}`);
-    } else {
-      await screenshot(page, 'wizard-unexpected');
+    if (!started) {
+      await screenshot(page, 'wizard-could-not-start');
       console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
-      throw new Error(`Wizard stuck in unexpected empty state after two attempts`);
+      throw new Error('Could not start course creation after 5 attempts');
     }
 
     // =====================================================================
     // APPROVAL LOOP — step through each approval until course is complete
+    //
+    // SLAs per step type:
+    //   Title/Outcomes/Personas/Audience/Tone: 20s
+    //   Outline (with concept map + quality judge): 60s
+    //   Lesson generation → completion: 180s
+    //
+    // We use :not([disabled]) so the locator only matches ENABLED buttons.
+    // During sendingApproval the button is disabled → locator won't match,
+    // preventing the next loop iteration from re-clicking the same step.
     // =====================================================================
     let stepCount = 0;
     const maxSteps = 12;
+    // Track last approved step header to determine next timeout
+    let lastStepHeader = '';
+
+    // Locator that only matches an enabled "Approve & Continue" button
+    const enabledApproveBtn = page.locator('button:has-text("Approve & Continue"):not([disabled])');
 
     while (stepCount < maxSteps) {
-      // Wait for approval, completion, failure, or crash
-      // Use 180s timeout to accommodate lesson generation (can take 2-3 min for many lessons)
+      // Timeout depends on what we're waiting for after the last approval:
+      // - First step (stepCount=0): 90s to cover CreateCourse + StartWorkflow + title gen
+      // - After tone approval: outline gen+concept map+judge (up to 45s)
+      // - After outline approval: lesson generation (up to 180s)
+      // - Everything else: 20s (AI gen + Temporal/polling overhead)
+      let waitTimeout = 20_000;
+      if (stepCount === 0) waitTimeout = 90_000;
+      else if (lastStepHeader.includes('Outline')) waitTimeout = 180_000;
+      else if (lastStepHeader.includes('Tone')) waitTimeout = 45_000;
+
       const result = await Promise.race([
-        page.locator('button:has-text("Approve & Continue")').waitFor({ state: 'visible', timeout: 180_000 }).then(() => 'approval' as const),
-        page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 180_000 }).then(() => 'completed' as const),
-        page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 180_000 }).then(() => 'failed' as const),
-        page.locator('text=Application error').waitFor({ state: 'visible', timeout: 180_000 }).then(() => 'crashed' as const),
+        enabledApproveBtn.waitFor({ state: 'visible', timeout: waitTimeout }).then(() => 'approval' as const),
+        page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: waitTimeout }).then(() => 'completed' as const),
+        page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: waitTimeout }).then(() => 'failed' as const),
+        page.locator('text=Application error').waitFor({ state: 'visible', timeout: waitTimeout }).then(() => 'crashed' as const),
       ]);
 
       if (result === 'completed') {
@@ -149,7 +155,8 @@ test.describe('Course Creation Wizard', () => {
       // Approval step
       stepCount++;
       const stepHeader = await page.locator('h3:has-text("Review:")').textContent().catch(() => 'unknown');
-      console.log(`Step ${stepCount}: ${stepHeader}`);
+      lastStepHeader = stepHeader ?? '';
+      console.log(`Step ${stepCount}: ${stepHeader} (waited up to ${waitTimeout / 1000}s)`);
       await screenshot(page, `step-${stepCount}-review`);
 
       // For persona steps, click "Select All" if visible
@@ -159,9 +166,10 @@ test.describe('Course Creation Wizard', () => {
         await screenshot(page, `step-${stepCount}-selected-all`);
       }
 
-      // Click approve
-      await page.click('button:has-text("Approve & Continue")');
-      await page.waitForTimeout(1000);
+      // Click approve, then wait for the enabled button to disappear
+      // (either disabled during sendingApproval, or fully hidden during processing)
+      await enabledApproveBtn.click();
+      await enabledApproveBtn.waitFor({ state: 'hidden', timeout: 10_000 });
     }
 
     // Verify completion

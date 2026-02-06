@@ -22,7 +22,8 @@ from src.agents.lesson_agent import (
     build_single_component_prompt,
     component_gen_agent,
     component_plan_agent,
-    component_research_agent,
+    gap_analysis_agent,
+    targeted_research_agent,
     generate_segue,
 )
 from src.agents.model import make_model
@@ -284,8 +285,10 @@ class RefinePlanNode(BaseNode[LessonState, LessonDeps]):
 class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
     """Generate each component individually based on the plan.
 
-    Uses a two-step flow: research agent (web search) → gen agent (NativeOutput).
-    Research runs once per lesson; the context is shared across all components.
+    Uses gap analysis to determine if web research is needed:
+    1. Analyze the component plan against available RAG chunks
+    2. Only run targeted web research if genuine knowledge gaps exist
+    3. Generate components with whatever context is available
     """
 
     async def run(
@@ -296,19 +299,52 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
         plan = state.component_plan
         model = make_model(deps.api_key)
 
-        # Step 1: Run web research once for the whole lesson
-        research_prompt = (
-            f"Research the topic '{deps.lesson.title}' for a lesson in the course "
-            f"'{deps.course_title}' (section: {deps.section_title}).\n"
-            f"Key topics: {', '.join(deps.lesson.key_topics)}\n"
-            f"Find accurate, current information to support educational content."
-        )
-        research_result = await component_research_agent.run(
-            research_prompt, model=model
-        )
-        web_context = research_result.output
+        # Step 1: Gap analysis — determine if web research is needed
+        rag_summary = ""
+        if state.rag_chunks:
+            rag_summary = "\n## Available Source Material\n" + "\n".join(
+                f"- [{c.source_name}]: {c.content[:200]}" for c in state.rag_chunks[:10]
+            )
 
-        # Step 2: Generate components sequentially (each one sees previous context)
+        plan_summary = "\n".join(
+            f"- [{p.type}] {p.purpose}" for p in plan
+        )
+
+        gap_prompt = (
+            f"## Lesson: {deps.lesson.title}\n"
+            f"## Course: {deps.course_title}\n"
+            f"## Key Topics: {', '.join(deps.lesson.key_topics)}\n\n"
+            f"## Component Plan\n{plan_summary}\n"
+            f"{rag_summary}\n\n"
+            f"Identify specific knowledge gaps that require web research."
+        )
+
+        gap_result = await gap_analysis_agent.run(gap_prompt, model=model)
+        queries = gap_result.output.search_queries
+
+        # Step 2: Targeted web research only if gaps found
+        web_context = ""
+        if queries:
+            research_prompt = (
+                f"Search for the following specific information:\n"
+                + "\n".join(f"- {q}" for q in queries[:3])
+            )
+            research_result = await targeted_research_agent.run(
+                research_prompt, model=model
+            )
+            web_context = research_result.output
+            log.info(
+                "gap_research_complete",
+                lesson=deps.lesson.title,
+                queries=len(queries),
+            )
+        else:
+            log.info(
+                "no_gaps_found",
+                lesson=deps.lesson.title,
+            )
+
+        # Step 3: Generate components sequentially (each one sees previous context)
         components: list[LessonComponent] = []
 
         for i, planned in enumerate(plan):

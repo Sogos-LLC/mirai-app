@@ -1,7 +1,7 @@
 """Outline generation agents - two-phase: sections-only then lesson details."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput, WebSearchTool
+from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
 from src.models.knowledge import KnowledgeChunk
@@ -101,26 +101,6 @@ CONSTRAINT ENFORCEMENT:
 - EVERY section MUST map to at least one outcome
 - EVERY outcome MUST appear in at least one section's mapping
 """
-
-SECTIONS_RESEARCH_SYSTEM = """\
-You are a research assistant gathering information for an instructional designer.
-
-Search the web for relevant, up-to-date information about the course topic.
-Focus on:
-- Key concepts, terminology, and frameworks
-- Current best practices and industry standards
-- Common misconceptions and learning challenges
-- Real-world applications and examples
-
-Return a plain-text summary of your research findings. Be thorough but concise.
-"""
-
-sections_research_agent = Agent(
-    output_type=str,
-    system_prompt=SECTIONS_RESEARCH_SYSTEM,
-    name="outline-sections-research",
-    builtin_tools=[WebSearchTool()],
-)
 
 sections_gen_agent = Agent(
     output_type=NativeOutput(SectionsOnlyOutput),
@@ -294,29 +274,10 @@ async def generate_sections(
 ) -> SectionsOnlyOutput:
     """Phase 1: Generate sections with lesson titles only.
 
-    For non-internal-data courses, runs a research agent first (web search),
-    then passes the research context to the generation agent (NativeOutput).
-    Internal-data courses skip web search entirely.
+    The wizard steps already provide rich context (personas, audience, outcomes)
+    so no web research is needed at the outline stage.
     """
     model = make_model(api_key)
-
-    # Step 1: Web research (only for non-internal-data courses)
-    web_context = ""
-    if not internal_data_only:
-        research_prompt = (
-            f"Research the topic '{course_title}' for creating an educational course.\n"
-            f"Desired outcome: {desired_outcome}\n"
-            f"Find key concepts, best practices, and current information."
-        )
-        research_result = await sections_research_agent.run(
-            research_prompt, model=model
-        )
-        web_context = research_result.output
-
-    # Step 2: Build prompt with research context
-    enriched_context = additional_context
-    if web_context:
-        enriched_context = f"{additional_context}\n\n## Web Research Context\n{web_context}" if additional_context else f"## Web Research Context\n{web_context}"
 
     prompt = build_sections_prompt(
         course_title=course_title,
@@ -324,12 +285,11 @@ async def generate_sections(
         desired_outcomes=desired_outcomes,
         personas=personas,
         target_audience=target_audience,
-        additional_context=enriched_context,
+        additional_context=additional_context,
         rag_chunks=rag_chunks,
         course_plan_context=course_plan_context,
     )
 
-    # Step 3: Generate structured output
     agent = (
         internal_data_sections_agent if internal_data_only else sections_gen_agent
     )

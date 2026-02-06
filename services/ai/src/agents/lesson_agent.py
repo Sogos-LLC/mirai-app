@@ -210,22 +210,52 @@ Follow these formatting rules strictly by component type:
 Generate exactly ONE component matching the specified type and purpose.
 """
 
-COMPONENT_RESEARCH_SYSTEM = """\
-You are a research assistant gathering information for educational content creation.
+GAP_ANALYSIS_SYSTEM = """\
+You are an instructional content analyst. Given a lesson's component plan and any
+available source material, identify specific knowledge gaps that require web research.
 
-Search the web for accurate, up-to-date information about the given topic.
-Focus on:
-- Factual details, definitions, and explanations
-- Current best practices and real-world examples
-- Statistics or data points that support the educational content
+A "gap" exists when:
+- The plan references current statistics, dates, or facts that may have changed
+- The plan covers a rapidly-evolving topic (e.g. technology, regulations, market data)
+- No source material is provided AND the topic requires factual accuracy beyond common knowledge
 
-Return a plain-text summary of your findings. Be concise and factual.
+There is NO gap when:
+- The topic is conceptual, theoretical, or well-established knowledge
+- Sufficient source material (RAG chunks) already covers the planned content
+- The content is about principles, best practices, or frameworks that don't change frequently
+
+Be conservative — only flag genuine gaps. Return an empty list if no web research is needed.
 """
 
-component_research_agent = Agent(
+
+class GapAnalysis(BaseModel):
+    """Result of analyzing knowledge gaps in a lesson plan."""
+
+    search_queries: list[str] = Field(
+        default_factory=list,
+        description="Specific web search queries to fill knowledge gaps. Empty if no gaps.",
+    )
+
+
+gap_analysis_agent = Agent(
+    output_type=NativeOutput(GapAnalysis),
+    system_prompt=GAP_ANALYSIS_SYSTEM,
+    name="lesson-gap-analysis",
+)
+
+
+TARGETED_RESEARCH_SYSTEM = """\
+You are a research assistant gathering specific information for educational content.
+
+You will receive targeted search queries for specific knowledge gaps.
+Search the web for each query and return a concise, factual summary.
+Focus only on the specific information requested — do not add tangential content.
+"""
+
+targeted_research_agent = Agent(
     output_type=str,
-    system_prompt=COMPONENT_RESEARCH_SYSTEM,
-    name="lesson-component-research",
+    system_prompt=TARGETED_RESEARCH_SYSTEM,
+    name="lesson-targeted-research",
     builtin_tools=[WebSearchTool()],
 )
 
