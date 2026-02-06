@@ -1,16 +1,110 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { randomTopic, screenshot, resetScreenshotCounter } from '../helpers';
 
 const topic = randomTopic();
 
-// Approval steps in order, with their button labels
+// Approval steps in order, with their button labels and per-step timeouts
+// Export step needs longer timeout because QA checks + SCORM export run before the button appears
 const APPROVAL_STEPS = [
-  { name: 'analysis', button: 'Approve Analysis' },
-  { name: 'outcomes', button: 'Approve Outcomes' },
-  { name: 'structure', button: 'Approve Structure' },
-  { name: 'lesson', button: 'Approve Lesson' },
-  { name: 'export', button: 'Approve & Export' },
+  { name: 'analysis', button: 'Approve Analysis', timeout: 180_000 },
+  { name: 'outcomes', button: 'Approve Outcomes', timeout: 180_000 },
+  { name: 'structure', button: 'Approve Structure', timeout: 180_000 },
+  { name: 'lesson', button: 'Approve Lesson', timeout: 180_000 },
+  { name: 'export', button: 'Approve & Export', timeout: 420_000 },
 ];
+
+/**
+ * Delete all courses from the dashboard. Clicks each delete button (title="Delete course")
+ * and accepts the native window.confirm() dialog.
+ * Returns when the dashboard shows no more delete buttons.
+ */
+async function deleteAllCourses(page: Page): Promise<void> {
+  await page.goto('/dashboard');
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(2_000); // Let courses load
+
+  for (let round = 0; round < 50; round++) {
+    const deleteBtn = page.locator('button[title="Delete course"]').first();
+    const isVisible = await deleteBtn.isVisible().catch(() => false);
+    if (!isVisible) break;
+
+    // Set up dialog handler BEFORE clicking (window.confirm is synchronous)
+    page.once('dialog', (dialog) => dialog.accept());
+    console.log(`  deleting course ${round + 1}...`);
+    await deleteBtn.click();
+    await page.waitForTimeout(1_500); // Let the deletion propagate + query refetch
+  }
+
+  const remaining = await page.locator('button[title="Delete course"]').count();
+  console.log(`  dashboard cleanup done — ${remaining} courses remaining`);
+}
+
+/**
+ * Clear any stale workflow by clicking through remaining approval steps.
+ * The wizard page auto-resumes active jobs, so we must finish or wait for any
+ * leftover workflow before starting a fresh one.
+ */
+async function clearStaleWorkflow(page: Page): Promise<void> {
+  console.log('Clearing stale workflow...');
+  for (let i = 0; i < 6; i++) {
+    const state = await Promise.race([
+      page.locator('#topic').waitFor({ state: 'visible', timeout: 5_000 }).then(() => 'form' as const),
+      page.locator('button:has-text("Approve")').first().waitFor({ state: 'visible', timeout: 5_000 }).then(() => 'approval' as const),
+      page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 5_000 }).then(() => 'completed' as const),
+      page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 5_000 }).then(() => 'failed' as const),
+      page.locator('.animate-spin').first().waitFor({ state: 'visible', timeout: 5_000 }).then(() => 'processing' as const),
+    ]).catch(() => 'empty' as const);
+
+    console.log(`  stale cleanup: detected ${state}`);
+
+    if (state === 'form' || state === 'empty') {
+      console.log('  wizard is clean — ready for new workflow');
+      return;
+    }
+
+    if (state === 'completed') {
+      console.log('  old workflow completed — done');
+      return;
+    }
+
+    if (state === 'failed') {
+      console.log('  old workflow failed — done');
+      return;
+    }
+
+    if (state === 'approval') {
+      const approveBtn = page.locator('button:has-text("Approve")').first();
+      const btnText = await approveBtn.textContent();
+      console.log(`  approving stale step: "${btnText}"`);
+      await approveBtn.click();
+
+      await Promise.race([
+        page.locator('.animate-spin').first().waitFor({ state: 'visible', timeout: 10_000 }),
+        page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 10_000 }),
+      ]).catch(() => {});
+      await page.waitForTimeout(3_000);
+
+      if (btnText?.includes('Export')) {
+        console.log('  waiting for stale workflow to finish exporting...');
+        await Promise.race([
+          page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 600_000 }),
+          page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 600_000 }),
+        ]).catch(() => {});
+      }
+      continue;
+    }
+
+    if (state === 'processing') {
+      console.log('  stale workflow processing — waiting...');
+      await Promise.race([
+        page.locator('button:has-text("Approve")').first().waitFor({ state: 'visible', timeout: 300_000 }),
+        page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 300_000 }),
+        page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 300_000 }),
+      ]).catch(() => {});
+      continue;
+    }
+  }
+}
 
 test.describe('Course Creation Wizard', () => {
   test.beforeAll(() => {
@@ -25,7 +119,7 @@ test.describe('Course Creation Wizard', () => {
   });
 
   test('02 - full course creation end-to-end', async ({ page }) => {
-    // Budget: ~2min per step × 5 steps + lesson gen time
+    // Budget: ~2min per step × 5 steps + lesson gen time + cleanup
     test.setTimeout(900_000);
 
     // Capture console messages for debugging
@@ -37,13 +131,39 @@ test.describe('Course Creation Wizard', () => {
       consoleLogs.push(`[PAGE_ERROR] ${err.message}`);
     });
 
-    // Navigate to dashboard and click Create Course
+    // =====================================================================
+    // Phase 0: Clean slate — delete all existing courses from dashboard
+    // =====================================================================
+    console.log('Phase 0: Cleaning up dashboard...');
+    await deleteAllCourses(page);
+    await screenshot(page, 'dashboard-clean');
+
+    // If there's a stale active workflow, clear it via the wizard page
+    await page.goto('/course/wizard');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(3_000);
+
+    const hasStaleApproval = await page.locator('button:has-text("Approve")').first().isVisible().catch(() => false);
+    const hasStaleProcessing = await page.locator('.animate-spin').first().isVisible().catch(() => false);
+    const hasStaleCompleted = await page.locator('text=Course Created!').isVisible().catch(() => false);
+    const hasStaleError = await page.locator('text=Something went wrong').isVisible().catch(() => false);
+
+    if (hasStaleApproval || hasStaleProcessing || hasStaleCompleted || hasStaleError) {
+      console.log('Detected stale workflow — clearing...');
+      await clearStaleWorkflow(page);
+    }
+
+    // Navigate to dashboard → wizard with a clean state
     await page.goto('/dashboard');
+    await page.waitForLoadState('domcontentloaded');
+    await screenshot(page, 'dashboard-ready');
     await page.click('button:has-text("Create Course")');
     await page.waitForURL('**/course/wizard');
     await page.waitForLoadState('domcontentloaded');
 
-    // Wait for the idle form to appear
+    // =====================================================================
+    // Phase 1: Start a new workflow
+    // =====================================================================
     let started = false;
     for (let attempt = 1; attempt <= 8 && !started; attempt++) {
       console.log(`Attempt ${attempt}: waiting for wizard form...`);
@@ -67,7 +187,6 @@ test.describe('Course Creation Wizard', () => {
           await page.click('button:has-text("Generate Course")', { timeout: 3_000 });
           console.log('  clicked Generate Course — waiting for transition...');
 
-          // Wait for either processing/approval state or an error message
           const postClick = await Promise.race([
             page.locator('.animate-spin').first().waitFor({ state: 'visible', timeout: 90_000 }).then(() => 'processing' as const),
             page.locator('button:has-text("Approve")').first().waitFor({ state: 'visible', timeout: 90_000 }).then(() => 'approval' as const),
@@ -91,8 +210,20 @@ test.describe('Course Creation Wizard', () => {
           await page.waitForTimeout(5_000);
         }
       } else if (detected === 'approval') {
-        console.log('  found active approval step — will proceed');
-        started = true;
+        const isFirstStep = await page.locator('button:has-text("Approve Analysis")').isVisible().catch(() => false);
+        if (isFirstStep) {
+          console.log('  found analysis approval step — will proceed');
+          started = true;
+        } else {
+          console.log('  found stale approval step — clearing...');
+          await clearStaleWorkflow(page);
+          await page.goto('/dashboard');
+          await page.waitForLoadState('domcontentloaded');
+          await page.click('button:has-text("Create Course")');
+          await page.waitForURL('**/course/wizard');
+          await page.waitForLoadState('domcontentloaded');
+          await page.waitForTimeout(2_000);
+        }
       } else if (detected === 'failed') {
         console.log('  stale workflow — refreshing');
         await page.goto('/course/wizard');
@@ -125,12 +256,14 @@ test.describe('Course Creation Wizard', () => {
     for (const step of APPROVAL_STEPS) {
       console.log(`Waiting for step: ${step.name} (button: "${step.button}")...`);
 
-      // Wait up to 3 minutes for the step's approval button or terminal state
+      // Wait for the step's approval button or terminal state
+      const stepTimeout = step.timeout;
+      console.log(`  timeout: ${stepTimeout / 1000}s`);
       const result = await Promise.race([
-        page.locator(`button:has-text("${step.button}")`).waitFor({ state: 'visible', timeout: 180_000 }).then(() => 'approval' as const),
-        page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 180_000 }).then(() => 'completed' as const),
-        page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 180_000 }).then(() => 'failed' as const),
-        page.locator('text=Application error').waitFor({ state: 'visible', timeout: 180_000 }).then(() => 'crashed' as const),
+        page.locator(`button:has-text("${step.button}")`).waitFor({ state: 'visible', timeout: stepTimeout }).then(() => 'approval' as const),
+        page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: stepTimeout }).then(() => 'completed' as const),
+        page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: stepTimeout }).then(() => 'failed' as const),
+        page.locator('text=Application error').waitFor({ state: 'visible', timeout: stepTimeout }).then(() => 'crashed' as const),
       ]);
 
       console.log(`  step ${step.name}: ${result}`);

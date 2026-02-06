@@ -341,11 +341,8 @@ func (s *CourseService) GetCourse(ctx context.Context, kratosID uuid.UUID, id st
 // CreateCourse creates a new course.
 func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, input *StoredCourse) (*StoredCourse, error) {
 	log := s.logger.With("kratosID", kratosID)
-	startTotal := time.Now()
 
-	startStep := time.Now()
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	log.Info("[PERF] GetByKratosID", "elapsed", time.Since(startStep))
 	if err != nil || user == nil {
 		return nil, domainerrors.ErrUserNotFound
 	}
@@ -359,12 +356,6 @@ func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, in
 
 	now := time.Now()
 	courseID := uuid.New()
-
-	// DEBUG: Track courseID through the system
-	log.Info("[DEBUG-COURSEID] CreateCourse generated new courseID",
-		"courseID", courseID.String(),
-		"title", input.Settings.Title,
-		"tenantID", user.TenantID.String())
 
 	// Parse folder ID if provided
 	var folderID *uuid.UUID
@@ -437,32 +428,21 @@ func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, in
 	}
 
 	// Write content to S3 first
-	startStep = time.Now()
 	if err := s.storage.WriteCourseContent(ctx, *user.TenantID, courseID, &s3Content); err != nil {
 		log.Error("failed to write course content to storage", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
-	log.Info("[PERF] WriteCourseContent", "elapsed", time.Since(startStep),
-		"courseID", courseID,
-		"tenantID", user.TenantID,
-		"path", s.storage.CoursePath(*user.TenantID, courseID))
 
 	// Insert metadata into PostgreSQL
-	startStep = time.Now()
 	if err := s.courseRepo.Create(ctx, course); err != nil {
 		// Attempt to clean up S3 content
 		_ = s.storage.DeleteCourseContent(ctx, *user.TenantID, courseID)
 		log.Error("failed to create course in database", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
-	log.Info("[PERF] courseRepo.Create", "elapsed", time.Since(startStep))
 
 	// Invalidate cache
-	startStep = time.Now()
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
-	log.Info("[PERF] cache.InvalidatePattern", "elapsed", time.Since(startStep))
-
-	log.Info("[PERF] CreateCourse total", "elapsed", time.Since(startTotal), "courseID", course.ID)
 
 	return &StoredCourse{
 		ID:      course.ID.String(),
