@@ -22,6 +22,8 @@ with workflow.unsafe.imports_passed_through():
         GenerateLessonOutput,
         GenerateOutlineInput,
         GenerateOutlineOutput,
+        GenerateStructuralElementsInput,
+        GenerateStructuralElementsOutput,
     )
     from src.activities.planning import AnalyzeDocumentInput, AnalyzeDocumentOutput
     from src.activities.wizard import (
@@ -499,39 +501,106 @@ class CourseCreationWorkflow:
         # Build course context for deduplication
         course_context = self._build_course_context(outline.sections)
 
+        # Build concept map context string for cross-lesson awareness
+        concept_map_context = self._build_concept_map_context(outline)
+
+        # Track completed lesson summaries for cross-lesson references
+        completed_summaries: list[str] = []
+
+        # Flatten lessons to determine position markers
+        all_lessons: list[tuple[int, int]] = []
         for s_idx, section in enumerate(outline.sections):
-            for l_idx, lesson in enumerate(section.lessons):
-                lesson_result = await self._run_ai_activity(
-                    "generate_lesson",
-                    GenerateLessonInput(
-                        api_key=api_key,
-                        lesson=lesson,
-                        course_title=improved_title,
-                        course_context=course_context,
-                        section_title=section.title,
-                        section_index=s_idx,
-                        lesson_index=l_idx,
-                        sme_personas=selected_smes,
-                        rag_filters=input.rag_filters or None,
-                    ),
-                    GenerateLessonOutput,
-                    timeout=AI_LESSON_TIMEOUT,
-                )
+            for l_idx in range(len(section.lessons)):
+                all_lessons.append((s_idx, l_idx))
 
-                # Merge lesson content into outline
-                outline.sections[s_idx].lessons[l_idx].content = (
-                    lesson_result.lesson_content
-                )
+        for flat_idx, (s_idx, l_idx) in enumerate(all_lessons):
+            section = outline.sections[s_idx]
+            lesson = section.lessons[l_idx]
 
-                completed_lessons += 1
-                progress = 55 + int((completed_lessons / total_lessons) * 40)
+            # Position markers
+            is_section_first = l_idx == 0
+            is_section_last = l_idx == len(section.lessons) - 1
+            is_course_last = flat_idx == len(all_lessons) - 1
 
-                self._progress = progress
-                self._progress_message = f"Generated lesson {completed_lessons}/{total_lessons}"
-                await self._update_job(
-                    input, "PROCESSING", progress,
-                    f"Generated lesson {completed_lessons}/{total_lessons}",
-                )
+            # Next lesson title
+            next_lesson_title = ""
+            if not is_course_last:
+                next_s_idx, next_l_idx = all_lessons[flat_idx + 1]
+                next_lesson_title = outline.sections[next_s_idx].lessons[next_l_idx].title
+
+            lesson_result = await self._run_ai_activity(
+                "generate_lesson",
+                GenerateLessonInput(
+                    api_key=api_key,
+                    lesson=lesson,
+                    course_title=improved_title,
+                    course_context=course_context,
+                    section_title=section.title,
+                    section_index=s_idx,
+                    lesson_index=l_idx,
+                    sme_personas=selected_smes,
+                    rag_filters=input.rag_filters or None,
+                    previous_lesson_summaries=completed_summaries.copy(),
+                    concept_map_context=concept_map_context,
+                    is_section_first=is_section_first,
+                    is_section_last=is_section_last,
+                    is_course_last=is_course_last,
+                    next_lesson_title=next_lesson_title,
+                ),
+                GenerateLessonOutput,
+                timeout=AI_LESSON_TIMEOUT,
+            )
+
+            # Merge lesson content into outline
+            outline.sections[s_idx].lessons[l_idx].content = (
+                lesson_result.lesson_content
+            )
+
+            # Track summary for cross-lesson context
+            content = lesson_result.lesson_content
+            completed_summaries.append(
+                f"[{lesson.title}]: {content.summary}"
+            )
+
+            completed_lessons += 1
+            progress = 55 + int((completed_lessons / total_lessons) * 35)
+
+            self._progress = progress
+            self._progress_message = f"Generated lesson {completed_lessons}/{total_lessons}"
+            await self._update_job(
+                input, "PROCESSING", progress,
+                f"Generated lesson {completed_lessons}/{total_lessons}",
+            )
+
+        # ---------------------------------------------------------------
+        # STRUCTURAL ELEMENTS PHASE
+        # ---------------------------------------------------------------
+
+        self._progress = 92
+        self._progress_message = "Adding transitions and summaries..."
+        await self._update_job(
+            input, "PROCESSING", 92, "Adding transitions and summaries",
+        )
+
+        structural_result = await self._run_ai_activity(
+            "generate_structural_elements_activity",
+            GenerateStructuralElementsInput(
+                api_key=api_key,
+                outline=outline,
+            ),
+            GenerateStructuralElementsOutput,
+            timeout=AI_LONG_TIMEOUT,
+        )
+
+        # Apply structural elements to outline
+        for section in outline.sections:
+            section.introduction = structural_result.section_introductions.get(
+                section.id, ""
+            )
+            section.summary = structural_result.section_summaries.get(
+                section.id, ""
+            )
+        outline.conclusion = structural_result.conclusion
 
         # ---------------------------------------------------------------
         # FINALIZE
@@ -684,4 +753,28 @@ class CourseCreationWorkflow:
             for j, lesson in enumerate(section.lessons):
                 desc = lesson.description[:100]
                 parts.append(f"  Lesson {j + 1}: {lesson.title} — {desc}")
+        return "\n".join(parts)
+
+    @staticmethod
+    def _build_concept_map_context(outline) -> str:
+        """Build a text summary of the concept map for cross-lesson awareness."""
+        if not outline.concept_map or not outline.concept_map.concepts:
+            return ""
+
+        parts: list[str] = []
+        for node in outline.concept_map.concepts:
+            prereqs = (
+                f" (requires: {', '.join(node.prerequisites)})"
+                if node.prerequisites
+                else ""
+            )
+            reinforced = (
+                f", reinforced in: {', '.join(node.reinforced_in)}"
+                if node.reinforced_in
+                else ""
+            )
+            parts.append(
+                f"- {node.concept}: first in {node.first_taught_in}"
+                f"{reinforced}{prereqs}"
+            )
         return "\n".join(parts)

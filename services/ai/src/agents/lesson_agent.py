@@ -96,6 +96,8 @@ def build_component_plan_prompt(
     personas: list[SMEPersona],
     rag_chunks: list[KnowledgeChunk] | None = None,
     internal_data_only: bool = False,
+    previous_lesson_summaries: list[str] | None = None,
+    concept_map_context: str = "",
 ) -> str:
     """Build prompt for component planning."""
     parts: list[str] = []
@@ -122,6 +124,22 @@ Quality over quantity.
     parts.append("\n## Key Topics")
     for topic in lesson.key_topics:
         parts.append(f"  - {topic}")
+
+    # Cross-lesson context
+    if previous_lesson_summaries:
+        parts.append("\n## PREVIOUSLY COVERED CONCEPTS")
+        for summary in previous_lesson_summaries:
+            parts.append(f"- {summary}")
+        parts.append(
+            "\n## CROSS-REFERENCE GUIDANCE"
+            "\n- Reference earlier lessons where relevant: \"Recall from [lesson] that...\""
+            "\n- Do NOT re-teach concepts already covered above"
+            "\n- Note forward references to upcoming topics where helpful"
+        )
+
+    # Concept map context
+    if concept_map_context:
+        parts.append(f"\n## CONCEPT PROGRESSION\n{concept_map_context}")
 
     # Course context for deduplication
     if course_context:

@@ -2,8 +2,10 @@
 
 Flow:
   SearchKnowledge -> PlanComponents -> ValidatePlan
-                                            |-> GenerateComponents -> End (valid plan)
-                                            |-> RefinePlan -> ValidatePlan (max 2 retries)
+                                            |-> RefinePlan -> PlanComponents (max 2 retries)
+                                            |-> GenerateComponents -> JudgeLesson
+                                                  |-> GenerateSegue -> End (passes)
+                                                  |-> PlanComponents (fails, max 1 retry)
 """
 
 from dataclasses import dataclass, field
@@ -23,6 +25,7 @@ from src.agents.lesson_agent import (
     single_component_agent,
 )
 from src.agents.model import make_model
+from src.judges.lesson_judge import judge_lesson
 from src.models.knowledge import KnowledgeChunk
 from src.models.lesson import LessonComponent, LessonContent
 from src.models.outline import OutlineLesson
@@ -32,6 +35,7 @@ from src.rag.search import search_knowledge
 log = structlog.get_logger()
 
 MAX_PLAN_RETRIES = 2
+MAX_JUDGE_RETRIES = 1
 MIN_COMPONENT_TYPES = 4
 
 
@@ -50,6 +54,7 @@ class LessonState:
     plan_retry_count: int = 0
     generated_components: list[LessonComponent] = field(default_factory=list)
     chunks_used: int = 0
+    judge_retry_count: int = 0
 
 
 @dataclass
@@ -67,6 +72,12 @@ class LessonDeps:
     qdrant: QdrantAdapter
     embedding_client: EmbeddingClient
     rag_filters: dict[str, str] | None
+    previous_lesson_summaries: list[str] = field(default_factory=list)
+    concept_map_context: str = ""
+    is_section_first: bool = False
+    is_section_last: bool = False
+    is_course_last: bool = False
+    next_lesson_title: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +166,8 @@ class PlanComponentsNode(BaseNode[LessonState, LessonDeps]):
             lesson_index=deps.lesson_index,
             personas=deps.personas,
             rag_chunks=state.rag_chunks if state.rag_chunks else None,
+            previous_lesson_summaries=deps.previous_lesson_summaries,
+            concept_map_context=deps.concept_map_context,
         )
 
         result = await component_plan_agent.run(
@@ -272,7 +285,7 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
 
     async def run(
         self, ctx: GraphRunContext[LessonState, LessonDeps]
-    ) -> End[LessonResult]:
+    ) -> "JudgeLessonNode":
         deps = ctx.deps
         state = ctx.state
         plan = state.component_plan
@@ -304,20 +317,115 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
 
         state.generated_components = components
 
-        # Assemble into LessonContent
-        content = LessonContent(
-            lesson_id=deps.lesson.id,
-            title=deps.lesson.title,
-            summary=deps.lesson.description,
-            components=components,
-            estimated_duration_minutes=deps.lesson.estimated_duration_minutes,
-        )
-
         log.info(
             "lesson_content_generated",
             lesson=deps.lesson.title,
             components=len(components),
             chunks_used=state.chunks_used,
+        )
+
+        return JudgeLessonNode()
+
+
+@dataclass
+class JudgeLessonNode(BaseNode[LessonState, LessonDeps]):
+    """Run the quality judge on the generated lesson content."""
+
+    async def run(
+        self, ctx: GraphRunContext[LessonState, LessonDeps]
+    ) -> "GenerateSegueNode | PlanComponentsNode":
+        deps = ctx.deps
+        state = ctx.state
+
+        # Build a temporary LessonContent for the judge
+        content = LessonContent(
+            lesson_id=deps.lesson.id,
+            title=deps.lesson.title,
+            summary=deps.lesson.description,
+            components=state.generated_components,
+            estimated_duration_minutes=deps.lesson.estimated_duration_minutes,
+        )
+
+        score = await judge_lesson(
+            api_key=deps.api_key,
+            lesson_meta=deps.lesson,
+            content=content,
+            previous_summaries=deps.previous_lesson_summaries,
+        )
+
+        log.info(
+            "lesson_judged",
+            lesson=deps.lesson.title,
+            passes=score.passes,
+            teaches_objectives=score.teaches_objectives,
+            connects_to_prior=score.connects_to_prior,
+            engaging=score.engaging,
+            issues=score.issues,
+        )
+
+        if not score.passes and state.judge_retry_count < MAX_JUDGE_RETRIES:
+            state.judge_retry_count += 1
+            # Reset plan retry count for the new attempt
+            state.plan_retry_count = 0
+            log.info(
+                "lesson_judge_retry",
+                lesson=deps.lesson.title,
+                retry=state.judge_retry_count,
+                issues=score.issues,
+            )
+            return PlanComponentsNode()
+
+        if not score.passes:
+            log.warn(
+                "lesson_judge_failed_exhausted",
+                lesson=deps.lesson.title,
+                issues=score.issues,
+            )
+
+        return GenerateSegueNode()
+
+
+@dataclass
+class GenerateSegueNode(BaseNode[LessonState, LessonDeps]):
+    """Generate transition text to the next lesson/section."""
+
+    async def run(
+        self, ctx: GraphRunContext[LessonState, LessonDeps]
+    ) -> End[LessonResult]:
+        deps = ctx.deps
+        state = ctx.state
+
+        segue_text = ""
+
+        # Determine transition type from position markers
+        if deps.is_course_last:
+            transition_type = "course_conclusion"
+        elif deps.is_section_last:
+            transition_type = "section_to_section"
+        else:
+            transition_type = "lesson_to_lesson"
+
+        segue_text = await generate_segue(
+            api_key=deps.api_key,
+            current_title=deps.lesson.title,
+            next_title=deps.next_lesson_title or None,
+            transition_type=transition_type,
+        )
+
+        log.info(
+            "segue_generated",
+            lesson=deps.lesson.title,
+            transition_type=transition_type,
+        )
+
+        # Assemble into LessonContent
+        content = LessonContent(
+            lesson_id=deps.lesson.id,
+            title=deps.lesson.title,
+            summary=deps.lesson.description,
+            components=state.generated_components,
+            estimated_duration_minutes=deps.lesson.estimated_duration_minutes,
+            segue_text=segue_text,
         )
 
         return End(
@@ -339,6 +447,8 @@ lesson_graph = Graph(
         ValidatePlanNode,
         RefinePlanNode,
         GenerateComponentsNode,
+        JudgeLessonNode,
+        GenerateSegueNode,
     ],
 )
 
@@ -354,6 +464,12 @@ async def run_lesson_graph(
     lesson_index: int,
     personas: list[SMEPersona],
     rag_filters: dict[str, str] | None = None,
+    previous_lesson_summaries: list[str] | None = None,
+    concept_map_context: str = "",
+    is_section_first: bool = False,
+    is_section_last: bool = False,
+    is_course_last: bool = False,
+    next_lesson_title: str = "",
 ) -> tuple[LessonContent, int]:
     """Run the full lesson generation graph.
 
@@ -375,6 +491,12 @@ async def run_lesson_graph(
         qdrant=qdrant,
         embedding_client=embedding_client,
         rag_filters=rag_filters,
+        previous_lesson_summaries=previous_lesson_summaries or [],
+        concept_map_context=concept_map_context,
+        is_section_first=is_section_first,
+        is_section_last=is_section_last,
+        is_course_last=is_course_last,
+        next_lesson_title=next_lesson_title,
     )
 
     state = LessonState()

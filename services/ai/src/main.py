@@ -16,6 +16,7 @@ from src.activities.generation import (
     generate_lesson,
     regenerate_component,
     generate_image_description,
+    generate_structural_elements_activity,
 )
 from src.activities.knowledge import (
     ingest_document,
@@ -130,6 +131,7 @@ async def run_worker() -> None:
             generate_audience_personas_activity,
             generate_tone_options_activity,
             get_graph_visualization,
+            generate_structural_elements_activity,
         ],
     )
 

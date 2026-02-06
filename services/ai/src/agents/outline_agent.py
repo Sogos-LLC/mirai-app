@@ -46,7 +46,15 @@ class SectionsOnlyOutput(BaseModel):
 SECTIONS_SYSTEM = """\
 You are an expert instructional designer creating a course outline.
 
-Create sections with lesson titles (2-5 lessons per section). Each section must provide:
+## RIGHT-SIZING PRINCIPLES
+- Only create sections/lessons that add genuine learning value
+- A focused 30-minute course is better than a padded 2-hour course
+- If 3 sections and 6 lessons covers the topic well, that is perfect
+- Each section must introduce meaningfully NEW concepts, not rehash
+- If a topic fits in one lesson, do NOT split it across two
+- Target: 2-5 sections, 2-4 lessons per section (can be fewer)
+
+Create sections with lesson titles. Each section must provide:
 - level: "introduce", "develop", or "master"
 - intent: "teach", "assess", or "reinforce"
 - emphasis: "low", "medium", or "high"
@@ -75,7 +83,15 @@ If the source material is insufficient for a comprehensive course, create a
 SMALLER course that covers only what is available.
 Quality over quantity — a smaller, accurate course is better than a hallucinated one.
 
-Create sections with lesson titles (2-5 lessons per section). Each section must provide:
+## RIGHT-SIZING PRINCIPLES
+- Only create sections/lessons that add genuine learning value
+- A focused 30-minute course is better than a padded 2-hour course
+- If 3 sections and 6 lessons covers the topic well, that is perfect
+- Each section must introduce meaningfully NEW concepts, not rehash
+- If a topic fits in one lesson, do NOT split it across two
+- Target: 2-5 sections, 2-4 lessons per section (can be fewer)
+
+Create sections with lesson titles. Each section must provide:
 - level: "introduce", "develop", or "master"
 - intent: "teach", "assess", or "reinforce"
 - emphasis: "low", "medium", or "high"

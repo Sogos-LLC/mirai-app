@@ -3,8 +3,10 @@
 Flow:
   SearchKnowledge -> GenerateSections -> GenerateLessonDetails
                                               -> ValidateConstraints
-                                                    |-> End (valid)
-                                                    |-> RefineOutline -> ValidateConstraints (max 2 retries)
+                                                    |-> RefineOutline -> GenerateSections (max 2 retries)
+                                                    |-> GenerateConceptMap -> JudgeOutline
+                                                          |-> End (passes)
+                                                          |-> RefineOutline (fails, max 1 judge retry)
 """
 
 import asyncio
@@ -15,6 +17,7 @@ from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 
 from src.adapters.embedding import EmbeddingClient
 from src.adapters.qdrant import QdrantAdapter
+from src.agents.concept_agent import generate_concept_map
 from src.agents.outline_agent import (
     SectionSkeleton,
     SectionsOnlyOutput,
@@ -22,6 +25,7 @@ from src.agents.outline_agent import (
     generate_lesson_details,
     generate_sections,
 )
+from src.judges.outline_judge import OutlineQualityScore, judge_outline
 from src.models.knowledge import KnowledgeChunk
 from src.models.outline import CourseOutline, OutlineLesson
 from src.models.plan import CoursePlan
@@ -31,6 +35,7 @@ from src.rag.search import search_knowledge
 log = structlog.get_logger()
 
 MAX_CONSTRAINT_RETRIES = 2
+MAX_JUDGE_RETRIES = 1
 
 
 # ---------------------------------------------------------------------------
@@ -50,6 +55,8 @@ class OutlineState:
     retry_count: int = 0
     chunks_used: int = 0
     additional_context_append: str = ""
+    judge_retry_count: int = 0
+    judge_feedback: str = ""
 
 
 @dataclass
@@ -213,7 +220,7 @@ class ValidateConstraintsNode(BaseNode[OutlineState, OutlineDeps]):
 
     async def run(
         self, ctx: GraphRunContext[OutlineState, OutlineDeps]
-    ) -> "RefineOutlineNode | End[OutlineResult]":
+    ) -> "RefineOutlineNode | GenerateConceptMapNode":
         deps = ctx.deps
         state = ctx.state
         assert state.outline is not None
@@ -232,15 +239,15 @@ class ValidateConstraintsNode(BaseNode[OutlineState, OutlineDeps]):
                         f"Outcome {i} '{outcome}' is not mapped to any section"
                     )
 
-        # Check: reasonable section/lesson counts
+        # Check: reasonable section/lesson counts (right-sized)
         num_sections = len(state.outline.sections)
-        if num_sections < 2:
+        if num_sections < 1:
             violations.append(
-                f"Only {num_sections} section(s) generated; need at least 2"
+                f"Only {num_sections} section(s) generated; need at least 1"
             )
-        if num_sections > 12:
+        if num_sections > 8:
             violations.append(
-                f"{num_sections} sections is too many; aim for 3-8"
+                f"{num_sections} sections is too many; aim for 2-6"
             )
 
         for section in state.outline.sections:
@@ -248,9 +255,9 @@ class ValidateConstraintsNode(BaseNode[OutlineState, OutlineDeps]):
                 violations.append(
                     f"Section '{section.title}' has no lessons"
                 )
-            if len(section.lessons) > 8:
+            if len(section.lessons) > 5:
                 violations.append(
-                    f"Section '{section.title}' has {len(section.lessons)} lessons; max 8"
+                    f"Section '{section.title}' has {len(section.lessons)} lessons; max 5"
                 )
 
         state.constraint_violations = violations
@@ -270,13 +277,7 @@ class ValidateConstraintsNode(BaseNode[OutlineState, OutlineDeps]):
                 retries_exhausted=True,
             )
 
-        return End(
-            OutlineResult(
-                outline=state.outline,
-                violations=violations,
-                chunks_used=state.chunks_used,
-            )
-        )
+        return GenerateConceptMapNode()
 
 
 @dataclass
@@ -305,6 +306,93 @@ class RefineOutlineNode(BaseNode[OutlineState, OutlineDeps]):
         return GenerateSectionsNode()
 
 
+@dataclass
+class GenerateConceptMapNode(BaseNode[OutlineState, OutlineDeps]):
+    """Generate a concept progression map for the outline."""
+
+    async def run(
+        self, ctx: GraphRunContext[OutlineState, OutlineDeps]
+    ) -> "JudgeOutlineNode":
+        deps = ctx.deps
+        state = ctx.state
+        assert state.outline is not None
+
+        concept_map = await generate_concept_map(
+            api_key=deps.api_key,
+            outline=state.outline,
+        )
+        state.outline.concept_map = concept_map
+        log.info(
+            "concept_map_generated",
+            concepts=len(concept_map.concepts),
+        )
+        return JudgeOutlineNode()
+
+
+@dataclass
+class JudgeOutlineNode(BaseNode[OutlineState, OutlineDeps]):
+    """Run the quality judge on the outline."""
+
+    async def run(
+        self, ctx: GraphRunContext[OutlineState, OutlineDeps]
+    ) -> "RefineOutlineNode | End[OutlineResult]":
+        deps = ctx.deps
+        state = ctx.state
+        assert state.outline is not None
+
+        score = await judge_outline(
+            api_key=deps.api_key,
+            outline=state.outline,
+            desired_outcomes=deps.desired_outcomes,
+        )
+
+        log.info(
+            "outline_judged",
+            passes=score.passes,
+            right_sized=score.right_sized,
+            outcomes_covered=score.outcomes_covered,
+            logical_progression=score.logical_progression,
+            issues=score.issues,
+        )
+
+        if not score.passes and state.judge_retry_count < MAX_JUDGE_RETRIES:
+            state.judge_retry_count += 1
+            # Feed judge issues + suggestions back as refinement context
+            feedback_lines = [
+                "## QUALITY JUDGE FEEDBACK",
+                "The outline was reviewed and did NOT pass quality checks.\n",
+            ]
+            for issue in score.issues:
+                feedback_lines.append(f"- ISSUE: {issue}")
+            for suggestion in score.suggestions:
+                feedback_lines.append(f"- SUGGESTION: {suggestion}")
+            feedback_lines.append(
+                "\nPlease regenerate the outline fixing the above issues."
+            )
+            state.additional_context_append = "\n".join(feedback_lines)
+            # Reset constraint retry count for the new generation attempt
+            state.retry_count = 0
+            log.info("outline_judge_retry", retry=state.judge_retry_count)
+            return RefineOutlineNode()
+
+        if not score.passes:
+            log.warn(
+                "outline_judge_failed_exhausted",
+                issues=score.issues,
+            )
+
+        # Merge judge violations with constraint violations
+        all_violations = state.constraint_violations + score.issues
+
+        return End(
+            OutlineResult(
+                outline=state.outline,
+                violations=all_violations,
+                chunks_used=state.chunks_used,
+            )
+        )
+
+
 # ---------------------------------------------------------------------------
 # Graph definition & entry point
 # ---------------------------------------------------------------------------
@@ -316,6 +404,8 @@ outline_graph = Graph(
         GenerateLessonDetailsNode,
         ValidateConstraintsNode,
         RefineOutlineNode,
+        GenerateConceptMapNode,
+        JudgeOutlineNode,
     ],
 )
 

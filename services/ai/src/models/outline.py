@@ -37,6 +37,27 @@ class OutlineLesson(BaseModel):
     )
 
 
+class ConceptNode(BaseModel):
+    """A concept tracked across the course for progression mapping."""
+
+    concept: str = Field(description="Name of the concept")
+    first_taught_in: str = Field(description="Lesson ID where concept is first introduced")
+    reinforced_in: list[str] = Field(
+        default_factory=list, description="Lesson IDs where concept is reinforced"
+    )
+    prerequisites: list[str] = Field(
+        default_factory=list, description="Concept names that must be learned first"
+    )
+
+
+class ConceptMap(BaseModel):
+    """Cross-lesson concept progression map for the course."""
+
+    concepts: list[ConceptNode] = Field(
+        default_factory=list, description="All concepts tracked across the course"
+    )
+
+
 class OutlineSection(BaseModel):
     """A section (module) within a course outline."""
 
@@ -45,6 +66,8 @@ class OutlineSection(BaseModel):
     description: str = Field(description="Section description and rationale")
     lessons: list[OutlineLesson] = Field(description="Lessons in this section")
     order: int = Field(description="Section order (1-based)")
+    introduction: str = Field(default="", description="Section introduction text")
+    summary: str = Field(default="", description="Section summary text")
 
 
 class CourseOutline(BaseModel):
@@ -60,3 +83,7 @@ class CourseOutline(BaseModel):
     prerequisite_knowledge: list[str] = Field(
         default_factory=list, description="Prerequisites"
     )
+    concept_map: ConceptMap | None = Field(
+        default=None, description="Cross-lesson concept progression map"
+    )
+    conclusion: str = Field(default="", description="Course conclusion text")

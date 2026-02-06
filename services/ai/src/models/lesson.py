@@ -92,3 +92,6 @@ class LessonContent(BaseModel):
     estimated_duration_minutes: int = Field(
         default=15, description="Estimated reading/completion time"
     )
+    segue_text: str = Field(
+        default="", description="Transition text to the next lesson"
+    )

@@ -1,10 +1,11 @@
-"""Temporal activities for AI generation (outline, lesson, component, image)."""
+"""Temporal activities for AI generation (outline, lesson, component, image, structural)."""
 
 from pydantic import BaseModel, Field
 
 import structlog
 from temporalio import activity
 
+from src.agents.structural_agent import generate_structural_elements
 from src.graphs.outline_graph import run_outline_graph
 from src.graphs.lesson_graph import run_lesson_graph
 from src.models.lesson import LessonContent, LessonComponent
@@ -77,6 +78,12 @@ class GenerateLessonInput(BaseModel):
     lesson_index: int
     sme_personas: list[SMEPersona]
     rag_filters: dict[str, str] | None = None
+    previous_lesson_summaries: list[str] = Field(default_factory=list)
+    concept_map_context: str = ""
+    is_section_first: bool = False
+    is_section_last: bool = False
+    is_course_last: bool = False
+    next_lesson_title: str = ""
 
 
 class GenerateLessonOutput(BaseModel):
@@ -101,6 +108,12 @@ async def generate_lesson(input: GenerateLessonInput) -> GenerateLessonOutput:
         lesson_index=input.lesson_index,
         personas=input.sme_personas,
         rag_filters=input.rag_filters,
+        previous_lesson_summaries=input.previous_lesson_summaries,
+        concept_map_context=input.concept_map_context,
+        is_section_first=input.is_section_first,
+        is_section_last=input.is_section_last,
+        is_course_last=input.is_course_last,
+        next_lesson_title=input.next_lesson_title,
     )
 
     activity.heartbeat("lesson generation completed")
@@ -181,4 +194,38 @@ async def generate_image_description(
 
     return GenerateImageDescriptionOutput(
         description=description, alt_text=alt_text
+    )
+
+
+class GenerateStructuralElementsInput(BaseModel):
+    """Input for structural elements generation activity."""
+
+    api_key: str
+    outline: CourseOutline
+
+
+class GenerateStructuralElementsOutput(BaseModel):
+    """Output from structural elements generation activity."""
+
+    section_introductions: dict[str, str]
+    section_summaries: dict[str, str]
+    conclusion: str
+
+
+@activity.defn
+async def generate_structural_elements_activity(
+    input: GenerateStructuralElementsInput,
+) -> GenerateStructuralElementsOutput:
+    """Generate section intros, summaries, and course conclusion."""
+    activity.heartbeat("generating structural elements")
+
+    result = await generate_structural_elements(
+        api_key=input.api_key,
+        outline=input.outline,
+    )
+
+    return GenerateStructuralElementsOutput(
+        section_introductions=result.section_introductions,
+        section_summaries=result.section_summaries,
+        conclusion=result.conclusion,
     )
