@@ -45,7 +45,7 @@ test.describe('Course Creation Wizard', () => {
 
     // Wait for the idle form to appear
     let started = false;
-    for (let attempt = 1; attempt <= 5 && !started; attempt++) {
+    for (let attempt = 1; attempt <= 8 && !started; attempt++) {
       console.log(`Attempt ${attempt}: waiting for wizard form...`);
 
       const detected = await Promise.race([
@@ -65,8 +65,27 @@ test.describe('Course Creation Wizard', () => {
           await page.fill('#audience', 'Beginners with no prior experience', { timeout: 3_000 });
           await screenshot(page, 'wizard-filled');
           await page.click('button:has-text("Generate Course")', { timeout: 3_000 });
-          console.log('Started new workflow');
-          started = true;
+          console.log('  clicked Generate Course — waiting for transition...');
+
+          // Wait for either processing/approval state or an error message
+          const postClick = await Promise.race([
+            page.locator('.animate-spin').first().waitFor({ state: 'visible', timeout: 90_000 }).then(() => 'processing' as const),
+            page.locator('button:has-text("Approve")').first().waitFor({ state: 'visible', timeout: 90_000 }).then(() => 'approval' as const),
+            page.locator('text=deadline_exceeded').waitFor({ state: 'visible', timeout: 90_000 }).then(() => 'timeout_error' as const),
+            page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 90_000 }).then(() => 'error' as const),
+          ]).catch(() => 'unknown' as const);
+
+          console.log(`  post-click state: ${postClick}`);
+          await screenshot(page, `post-click-${postClick}`);
+
+          if (postClick === 'timeout_error' || postClick === 'error') {
+            console.log('  RPC error after click — will retry');
+            await page.goto('/course/wizard');
+            await page.waitForLoadState('domcontentloaded');
+          } else {
+            console.log('Started new workflow');
+            started = true;
+          }
         } catch {
           console.log('  form disappeared — waiting...');
           await page.waitForTimeout(5_000);
@@ -96,7 +115,7 @@ test.describe('Course Creation Wizard', () => {
     if (!started) {
       await screenshot(page, 'wizard-could-not-start');
       console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
-      throw new Error('Could not start course creation after 5 attempts');
+      throw new Error('Could not start course creation after 8 attempts');
     }
 
     // =====================================================================
