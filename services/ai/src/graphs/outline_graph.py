@@ -4,7 +4,7 @@ Flow:
   SearchKnowledge -> GenerateSections -> GenerateLessonDetails
                                               -> ValidateConstraints
                                                     |-> RefineOutline -> GenerateSections (max 2 retries)
-                                                    |-> GenerateConceptMap -> JudgeOutline
+                                                    |-> ConceptMapAndJudge (parallel)
                                                           |-> End (passes)
                                                           |-> RefineOutline (fails, max 1 judge retry)
 """
@@ -220,7 +220,7 @@ class ValidateConstraintsNode(BaseNode[OutlineState, OutlineDeps]):
 
     async def run(
         self, ctx: GraphRunContext[OutlineState, OutlineDeps]
-    ) -> "RefineOutlineNode | GenerateConceptMapNode":
+    ) -> "RefineOutlineNode | ConceptMapAndJudgeNode":
         deps = ctx.deps
         state = ctx.state
         assert state.outline is not None
@@ -277,7 +277,7 @@ class ValidateConstraintsNode(BaseNode[OutlineState, OutlineDeps]):
                 retries_exhausted=True,
             )
 
-        return GenerateConceptMapNode()
+        return ConceptMapAndJudgeNode()
 
 
 @dataclass
@@ -307,31 +307,8 @@ class RefineOutlineNode(BaseNode[OutlineState, OutlineDeps]):
 
 
 @dataclass
-class GenerateConceptMapNode(BaseNode[OutlineState, OutlineDeps]):
-    """Generate a concept progression map for the outline."""
-
-    async def run(
-        self, ctx: GraphRunContext[OutlineState, OutlineDeps]
-    ) -> "JudgeOutlineNode":
-        deps = ctx.deps
-        state = ctx.state
-        assert state.outline is not None
-
-        concept_map = await generate_concept_map(
-            api_key=deps.api_key,
-            outline=state.outline,
-        )
-        state.outline.concept_map = concept_map
-        log.info(
-            "concept_map_generated",
-            concepts=len(concept_map.concepts),
-        )
-        return JudgeOutlineNode()
-
-
-@dataclass
-class JudgeOutlineNode(BaseNode[OutlineState, OutlineDeps]):
-    """Run the quality judge on the outline."""
+class ConceptMapAndJudgeNode(BaseNode[OutlineState, OutlineDeps]):
+    """Generate concept map and judge outline in parallel."""
 
     async def run(
         self, ctx: GraphRunContext[OutlineState, OutlineDeps]
@@ -340,10 +317,23 @@ class JudgeOutlineNode(BaseNode[OutlineState, OutlineDeps]):
         state = ctx.state
         assert state.outline is not None
 
-        score = await judge_outline(
+        # Run concept map generation and quality judge concurrently
+        concept_map_task = generate_concept_map(
+            api_key=deps.api_key,
+            outline=state.outline,
+        )
+        judge_task = judge_outline(
             api_key=deps.api_key,
             outline=state.outline,
             desired_outcomes=deps.desired_outcomes,
+        )
+
+        concept_map, score = await asyncio.gather(concept_map_task, judge_task)
+
+        state.outline.concept_map = concept_map
+        log.info(
+            "concept_map_generated",
+            concepts=len(concept_map.concepts),
         )
 
         log.info(
@@ -404,8 +394,7 @@ outline_graph = Graph(
         GenerateLessonDetailsNode,
         ValidateConstraintsNode,
         RefineOutlineNode,
-        GenerateConceptMapNode,
-        JudgeOutlineNode,
+        ConceptMapAndJudgeNode,
     ],
 )
 
