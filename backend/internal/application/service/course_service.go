@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -150,6 +152,24 @@ type ListCoursesResult struct {
 	HasMore    bool
 }
 
+// listCoursesCacheKey builds a deterministic cache key for ListCourses.
+// All keys start with "courses:" so InvalidatePattern("courses:*") clears them.
+func listCoursesCacheKey(filter ListCoursesFilter, limit, offset int) string {
+	var parts []string
+	parts = append(parts, "courses:list")
+	if filter.Status != nil {
+		parts = append(parts, "s="+string(*filter.Status))
+	}
+	if filter.Folder != nil && *filter.Folder != "" {
+		parts = append(parts, "f="+*filter.Folder)
+	}
+	if len(filter.Tags) > 0 {
+		parts = append(parts, "t="+strings.Join(filter.Tags, ","))
+	}
+	parts = append(parts, fmt.Sprintf("l=%d:o=%d", limit, offset))
+	return strings.Join(parts, ":")
+}
+
 // ListCourses returns courses matching the filter with pagination support.
 func (s *CourseService) ListCourses(ctx context.Context, kratosID uuid.UUID, filter ListCoursesFilter) (ListCoursesResult, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
@@ -168,6 +188,13 @@ func (s *CourseService) ListCourses(ctx context.Context, kratosID uuid.UUID, fil
 	offset := filter.Offset
 	if offset < 0 {
 		offset = 0
+	}
+
+	// Try cache first
+	cacheKey := listCoursesCacheKey(filter, limit, offset)
+	var cached ListCoursesResult
+	if entry, err := s.cache.Get(ctx, cacheKey, &cached); err == nil && entry != nil {
+		return cached, nil
 	}
 
 	opts := entity.CourseListOptions{
@@ -228,11 +255,16 @@ func (s *CourseService) ListCourses(ctx context.Context, kratosID uuid.UUID, fil
 		})
 	}
 
-	return ListCoursesResult{
+	result := ListCoursesResult{
 		Courses:    entries,
 		TotalCount: totalCount,
 		HasMore:    offset+len(entries) < totalCount,
-	}, nil
+	}
+
+	// Cache the result — mutations invalidate "courses:*" so this stays fresh
+	_, _ = s.cache.Set(ctx, cacheKey, result, "", 0)
+
+	return result, nil
 }
 
 // GetCourse retrieves a course by ID.
