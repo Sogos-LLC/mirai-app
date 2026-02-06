@@ -8,7 +8,6 @@ build
 tsconfig.tsbuildinfo
 
 # Playwright
-e2e/.auth/
-playwright/
-playwright-report/
-test-results/
+tests/.auth/
+tests/results/
+tests/screenshots/

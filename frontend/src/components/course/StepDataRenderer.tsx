@@ -80,11 +80,16 @@ interface CoursePlanStepData {
   };
 }
 
+interface LearningObjective {
+  description: string;
+  bloom_level?: string;
+}
+
 interface OutlineLesson {
   id: string;
   title: string;
   description: string;
-  learning_objectives: string[];
+  learning_objectives: (LearningObjective | string)[];
 }
 
 interface OutlineSection {
@@ -592,12 +597,15 @@ function OutlineStep({ data }: { data: OutlineStepData }) {
                     )}
                     {lesson.learning_objectives?.length > 0 && (
                       <ul className="mt-1 space-y-0.5">
-                        {lesson.learning_objectives.map((obj, k) => (
-                          <li key={k} className="flex items-start gap-1.5 text-[11px] text-muted">
-                            <span className="mt-1 h-1 w-1 rounded-full bg-current shrink-0" />
-                            <span>{obj}</span>
-                          </li>
-                        ))}
+                        {lesson.learning_objectives.map((obj, k) => {
+                          const text = typeof obj === 'string' ? obj : obj.description;
+                          return (
+                            <li key={k} className="flex items-start gap-1.5 text-[11px] text-muted">
+                              <span className="mt-1 h-1 w-1 rounded-full bg-current shrink-0" />
+                              <span>{text}</span>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </div>
