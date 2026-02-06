@@ -130,6 +130,21 @@ class CourseStructure(BaseModel):
     )
 
 
+class StructureCoverageScore(BaseModel):
+    """LLM judge result: whether every learning outcome is covered by at least one section."""
+
+    all_covered: bool = Field(
+        description="True only if every single learning outcome is semantically covered by at least one section's mapped_outcomes"
+    )
+    uncovered_outcomes: list[str] = Field(
+        default_factory=list,
+        description="List of outcome 'verb object' pairs that are NOT covered by any section",
+    )
+    reasoning: str = Field(
+        description="Brief explanation of coverage analysis",
+    )
+
+
 class SectionOutcome(BaseModel):
     """Hidden: granular outcome for a section, derived from course-level outcomes."""
 

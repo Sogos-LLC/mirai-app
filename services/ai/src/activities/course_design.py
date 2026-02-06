@@ -18,6 +18,8 @@ from src.agents.course_design_agents import (
     build_outcomes_prompt,
     structure_agent,
     build_structure_prompt,
+    structure_coverage_judge,
+    build_structure_coverage_prompt,
     section_outcomes_agent,
     build_section_outcomes_prompt,
     lesson_agent,
@@ -261,7 +263,11 @@ async def generate_course_structure(input: GenerateStructureInput) -> GenerateSt
         try:
             result = await structure_agent.run(prompt, model=model)
             activity.heartbeat()
-            _validate_structure(result.output, input.outcomes)
+            # Deterministic check: every section must have at least one mapped outcome
+            _validate_structure_basic(result.output)
+            # LLM judge: semantic coverage check (no exact string matching)
+            await _validate_structure_coverage(result.output, input.outcomes, model)
+            activity.heartbeat()
             return GenerateStructureOutput(structure=result.output)
         except Exception as e:
             last_error = str(e)
@@ -273,18 +279,31 @@ async def generate_course_structure(input: GenerateStructureInput) -> GenerateSt
     raise RuntimeError("Unreachable")
 
 
-def _validate_structure(structure: CourseStructure, outcomes: CourseOutcomes) -> None:
-    """Validate that all outcomes are covered by at least one section."""
-    outcome_keys = {f"{o.verb.lower()} {o.object.lower()}" for o in outcomes.outcomes}
-    covered = set()
+def _validate_structure_basic(structure: CourseStructure) -> None:
+    """Deterministic checks that don't need an LLM."""
     for section in structure.sections:
-        for mapped in section.mapped_outcomes:
-            covered.add(mapped.lower())
+        if not section.mapped_outcomes:
+            raise ValueError(
+                f"Section '{section.title}' has no mapped outcomes. "
+                "Every section must address at least one learning outcome."
+            )
 
-    uncovered = outcome_keys - covered
-    if uncovered:
+
+async def _validate_structure_coverage(
+    structure: CourseStructure,
+    outcomes: CourseOutcomes,
+    model: object,
+) -> None:
+    """Use an LLM judge to verify all outcomes are semantically covered."""
+    prompt = build_structure_coverage_prompt(outcomes, structure)
+    result = await structure_coverage_judge.run(prompt, model=model)
+    score = result.output
+
+    if not score.all_covered:
+        uncovered = ", ".join(score.uncovered_outcomes) if score.uncovered_outcomes else "unknown"
         raise ValueError(
-            f"Outcomes not covered by any section: {', '.join(uncovered)}. "
+            f"Outcomes not covered by any section: {uncovered}. "
+            f"Reason: {score.reasoning}. "
             "Every outcome must be mapped to at least one section."
         )
 

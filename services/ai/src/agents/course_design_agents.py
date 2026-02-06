@@ -15,6 +15,7 @@ from src.models.course_design import (
     ExpandedLesson,
     CourseQA,
     SectionOutcomes,
+    StructureCoverageScore,
 )
 
 # =============================================================================
@@ -203,6 +204,63 @@ Requirements:
 - 2-10 sections total
 - Each section should have 1-4 mapped outcomes
 - Avoid single-outcome sections where possible"""
+
+
+# =============================================================================
+# HIDDEN: Structure Coverage Judge
+# =============================================================================
+
+STRUCTURE_COVERAGE_SYSTEM = """\
+You are an instructional design quality reviewer. Your ONLY job is to check whether
+a set of course sections collectively covers ALL required learning outcomes.
+
+You compare SEMANTICALLY, not by exact string match:
+- "perform routine maintenance tasks" covers "perform routine mysql server maintenance tasks"
+- "identify common errors" covers "identify common mysql error messages"
+- "configure database settings" covers "configure mysql server settings"
+
+Set all_covered=true ONLY if every single outcome is clearly addressed by at least
+one section's mapped outcomes. If even one outcome has no semantic match, set all_covered=false
+and list it in uncovered_outcomes.
+
+Use temperature 0. Be precise and consistent.
+"""
+
+structure_coverage_judge = Agent(
+    output_type=NativeOutput(StructureCoverageScore),
+    system_prompt=STRUCTURE_COVERAGE_SYSTEM,
+    name="structure-coverage-judge",
+)
+
+
+def build_structure_coverage_prompt(
+    outcomes: CourseOutcomes,
+    structure: CourseStructure,
+) -> str:
+    outcomes_str = "\n".join(
+        f"- {o.verb} {o.object}" for o in outcomes.outcomes
+    )
+    sections_str = ""
+    for s in structure.sections:
+        mapped = ", ".join(f'"{m}"' for m in s.mapped_outcomes)
+        sections_str += f"\n### {s.title}\nMapped outcomes: [{mapped}]\n"
+
+    return f"""\
+## Required Learning Outcomes (ALL must be covered)
+{outcomes_str}
+
+## Course Sections
+{sections_str}
+
+## Instructions
+For each required outcome, determine if it is SEMANTICALLY covered by at least one
+section's mapped_outcomes. Two strings match if they refer to the same learning action,
+even if worded differently.
+
+Return:
+- all_covered: true only if EVERY outcome has a semantic match
+- uncovered_outcomes: list any outcome "verb object" pairs with no match
+- reasoning: brief explanation of your analysis"""
 
 
 # =============================================================================
