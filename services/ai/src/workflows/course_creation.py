@@ -471,6 +471,9 @@ class CourseCreationWorkflow:
             lesson_objective=lesson_result.lesson.objective.description,
             is_first_lesson=True,
             is_last_lesson=True,  # Only lesson in the sample
+            lesson_number=1,
+            total_lessons_in_section=1,
+            next_lesson_title=None,
             block_sequence=[b.type for b in lesson_result.lesson.sample_blocks],
             interaction_rules=[
                 "Follow the block sequence from the sample lesson",
@@ -603,10 +606,9 @@ class CourseCreationWorkflow:
             reinforce = tracker.reinforcement_candidates(s_idx)
             recent = tracker.recently_covered()
 
-            # Build component contexts for each lesson in this section
-            lesson_contexts: list[GenerateComponentsInput] = []
+            # Pre-compute lesson titles so we can reference the next lesson
+            lesson_metas: list[tuple[str, str]] = []  # (title, objective)
             for i in range(num_lessons):
-                # Determine lesson metadata
                 objective = (
                     section_sos[i].description
                     if i < len(section_sos)
@@ -617,12 +619,18 @@ class CourseCreationWorkflow:
                     if num_lessons > 1
                     else section.title
                 )
-
-                # For sample lesson slot, use the approved sample title
                 is_sample = section.title == representative_section and i == 0
                 if is_sample:
                     lesson_title = sample_lesson.title
                     objective = sample_lesson.objective.description
+                lesson_metas.append((lesson_title, objective))
+
+            # Build component contexts for each lesson in this section
+            lesson_contexts: list[GenerateComponentsInput] = []
+            for i, (lesson_title, objective) in enumerate(lesson_metas):
+                next_lesson_title = (
+                    lesson_metas[i + 1][0] if i < num_lessons - 1 else None
+                )
 
                 ctx = ComponentContext(
                     topic=input.topic,
@@ -638,6 +646,9 @@ class CourseCreationWorkflow:
                     lesson_objective=objective,
                     is_first_lesson=(i == 0),
                     is_last_lesson=(i == num_lessons - 1),
+                    lesson_number=i + 1,
+                    total_lessons_in_section=num_lessons,
+                    next_lesson_title=next_lesson_title,
                     block_sequence=template.block_sequence,
                     interaction_rules=template.interaction_rules,
                     outcomes_to_introduce=pending,

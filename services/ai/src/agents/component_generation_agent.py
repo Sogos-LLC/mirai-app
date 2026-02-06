@@ -42,6 +42,9 @@ class ComponentContext:
     lesson_objective: str
     is_first_lesson: bool
     is_last_lesson: bool
+    lesson_number: int  # 1-based position within section
+    total_lessons_in_section: int
+    next_lesson_title: str | None  # next lesson in same section (None if last)
 
     # Template
     block_sequence: list[str]
@@ -96,8 +99,10 @@ structured components that render directly in a learning platform.
 ## Positional Awareness
 - If this is the FIRST lesson of the FIRST section: include a welcoming introduction
 - If this is the FIRST lesson of a section: introduce the section theme
-- If this is the LAST lesson of a section (and not last overall): include a segue to the next section
+- If there is a NEXT LESSON in the same section: end with a brief segue to that lesson
+- If this is the LAST lesson of a section (and not last overall): end with a segue to the next section
 - If this is the LAST lesson of the LAST section: include a course wrap-up/summary
+- NEVER segue to the next section unless this is the LAST lesson of the current section
 
 ## Outcome Tracking
 - You MUST introduce outcomes marked as "to_introduce" — these are new concepts for this lesson
@@ -121,7 +126,9 @@ component_generation_agent = Agent(
 def build_component_prompt(ctx: ComponentContext) -> str:
     """Build the user prompt for component generation from context."""
     # Position description
-    position_parts = []
+    position_parts = [
+        f"Lesson {ctx.lesson_number} of {ctx.total_lessons_in_section} in this section."
+    ]
     if ctx.is_first_section and ctx.is_first_lesson:
         position_parts.append("This is the FIRST lesson of the ENTIRE COURSE. Welcome the learner.")
     elif ctx.is_first_lesson:
@@ -134,9 +141,14 @@ def build_component_prompt(ctx: ComponentContext) -> str:
     elif ctx.is_last_lesson and ctx.next_section_title:
         position_parts.append(
             f"This is the LAST lesson of this section. "
-            f"Include a segue to the next section: '{ctx.next_section_title}'."
+            f"End with a segue to the next section: '{ctx.next_section_title}'."
         )
-    position_str = "\n".join(position_parts) if position_parts else "This is a middle lesson."
+    elif ctx.next_lesson_title:
+        position_parts.append(
+            f"End with a brief segue to the next lesson: '{ctx.next_lesson_title}'. "
+            "Do NOT mention the next section — stay within the current section."
+        )
+    position_str = "\n".join(position_parts)
 
     # Outcomes to introduce
     introduce_str = "\n".join(

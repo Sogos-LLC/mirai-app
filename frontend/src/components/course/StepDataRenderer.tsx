@@ -243,7 +243,7 @@ function StructureStep({ data }: { data: StructureStepData }) {
       </div>
       <div className="space-y-2">
         {sections.map((section, i) => (
-          <CollapsibleSection key={i} title={`${i + 1}. ${section.title}`} defaultOpen={i < 3}>
+          <CollapsibleSection key={i} title={`${i + 1}. ${section.title}`} defaultOpen={false}>
             {section.description && (
               <p className="text-xs text-secondary mb-2">{section.description}</p>
             )}
