@@ -17,7 +17,8 @@ Infrastructure (DB, MinIO) is done via Go activities on go-tasks queue.
 
 import asyncio
 import json
-from datetime import timedelta
+import uuid
+from datetime import datetime, timedelta, timezone
 
 import structlog
 from temporalio import workflow
@@ -196,16 +197,13 @@ class CourseCreationWorkflow:
         )
 
         # =============================================================
-        # FINALIZE: Write everything to storage
+        # FINALIZE: Transform artifacts into S3CourseContent format
         # =============================================================
 
-        course_content = {
-            "analysis": analysis.model_dump(),
-            "outcomes": outcomes.model_dump(),
-            "structure": structure.model_dump(),
-            "sample_lesson": sample_lesson.model_dump(),
-            "expanded_lessons": [l.model_dump() for l in expanded_lessons],
-        }
+        course_content = self._build_s3_content(
+            input, analysis, outcomes, structure,
+            section_outcomes, sample_lesson, expanded_lessons,
+        )
         await self._write_course_content(input.tenant_id, input.course_id, course_content)
 
         self._status = "completed"
@@ -619,6 +617,150 @@ class CourseCreationWorkflow:
 
         # If rejected, user is just noting issues — we still proceed
         # (the QA is informational, not blocking)
+
+    # -------------------------------------------------------------------
+    # S3 Content Builder
+    # -------------------------------------------------------------------
+
+    def _build_s3_content(
+        self,
+        input: CourseCreationInput,
+        analysis: CourseAnalysis,
+        outcomes: CourseOutcomes,
+        structure: CourseStructure,
+        section_outcomes: SectionOutcomes,
+        sample_lesson: Lesson,
+        expanded_lessons: list[ExpandedLesson],
+    ) -> dict:
+        """Transform validated artifacts into S3CourseContent format for the editor."""
+        now = datetime.now(timezone.utc).isoformat()
+
+        # Build sections with IDs and lesson slots
+        s3_sections: list[dict] = []
+        all_lessons: list[dict] = []
+
+        for s_idx, section in enumerate(structure.sections):
+            section_id = str(uuid.uuid4())
+
+            # Collect lessons belonging to this section
+            section_lessons_meta: list[dict] = []
+
+            # Check if sample lesson belongs to this section
+            if sample_lesson.section_title == section.title:
+                lesson_id = str(uuid.uuid4())
+                outline_lesson_id = str(uuid.uuid4())
+                section_lessons_meta.append({
+                    "id": outline_lesson_id,
+                    "title": sample_lesson.title,
+                    "description": sample_lesson.objective.target_behavior,
+                    "position": len(section_lessons_meta) + 1,
+                })
+                all_lessons.append(self._lesson_to_s3(
+                    lesson_id, section_id, outline_lesson_id,
+                    sample_lesson.title, sample_lesson.sample_blocks, now,
+                ))
+
+            # Add expanded lessons for this section
+            for exp in expanded_lessons:
+                if exp.section_title == section.title:
+                    lesson_id = str(uuid.uuid4())
+                    outline_lesson_id = str(uuid.uuid4())
+                    section_lessons_meta.append({
+                        "id": outline_lesson_id,
+                        "title": exp.title,
+                        "description": exp.objective.target_behavior,
+                        "position": len(section_lessons_meta) + 1,
+                    })
+                    all_lessons.append(self._lesson_to_s3(
+                        lesson_id, section_id, outline_lesson_id,
+                        exp.title, exp.content_blocks, now,
+                    ))
+
+            s3_sections.append({
+                "id": section_id,
+                "title": section.title,
+                "description": section.description,
+                "position": s_idx + 1,
+                "lessons": section_lessons_meta,
+            })
+
+        # Build outcome text for settings
+        outcome_text = "; ".join(
+            f"{o.verb} {o.object}" for o in outcomes.outcomes
+        )
+
+        return {
+            "settings": {
+                "title": input.topic,
+                "desiredOutcome": outcome_text,
+                "dataSource": "open-web",
+            },
+            "personas": [],
+            "learningObjectives": [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": f"{o.verb} {o.object} ({o.condition})",
+                }
+                for o in outcomes.outcomes
+            ],
+            "assessmentSettings": {
+                "enableEmbeddedKnowledgeChecks": False,
+                "enableFinalExam": False,
+            },
+            "content": {
+                "sections": s3_sections,
+                "courseBlocks": [],
+            },
+            "generatedLessons": all_lessons,
+        }
+
+    @staticmethod
+    def _lesson_to_s3(
+        lesson_id: str,
+        section_id: str,
+        outline_lesson_id: str,
+        title: str,
+        blocks: list,
+        now: str,
+    ) -> dict:
+        """Convert lesson blocks into S3 GeneratedLesson format."""
+        components = []
+        for i, block in enumerate(blocks):
+            block_type = block.type if hasattr(block, "type") else block.get("type", "text")
+            content = block.content if hasattr(block, "content") else block.get("content", "")
+            heading = block.heading if hasattr(block, "heading") else block.get("heading", "")
+
+            # Build contentJson based on block type
+            if block_type == "heading":
+                content_json = {"text": heading or content, "level": 2}
+            elif block_type == "image":
+                content_json = {"prompt": content, "alt": heading}
+            elif block_type == "quiz":
+                content_json = {"question": content, "type": "multiple_choice"}
+            elif block_type == "list":
+                content_json = {"items": content.split("\n"), "ordered": False}
+            else:
+                # text, callout, activity, code, etc.
+                content_json = {"text": content}
+
+            components.append({
+                "id": str(uuid.uuid4()),
+                "type": block_type,
+                "order": i + 1,
+                "contentJson": content_json,
+                "learningObjectiveIds": [],
+                "createdAt": now,
+                "updatedAt": now,
+            })
+
+        return {
+            "id": lesson_id,
+            "sectionId": section_id,
+            "outlineLessonId": outline_lesson_id,
+            "title": title,
+            "components": components,
+            "generatedAt": now,
+        }
 
     # -------------------------------------------------------------------
     # Helpers
