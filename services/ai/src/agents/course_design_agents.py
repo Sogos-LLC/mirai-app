@@ -1,0 +1,488 @@
+"""Agents for the 5-step instructional design wizard.
+
+Each agent produces a validated Pydantic model.
+Validation failures trigger regeneration, not user prompts.
+"""
+
+from pydantic_ai import Agent, NativeOutput
+
+from src.models.course_design import (
+    CourseAnalysis,
+    CourseOutcomes,
+    CourseStructure,
+    Lesson,
+    LessonTemplate,
+    ExpandedLesson,
+    CourseQA,
+    SectionOutcomes,
+)
+
+# =============================================================================
+# STEP 1: Intent Analysis Agent
+# =============================================================================
+
+ANALYSIS_SYSTEM = """\
+You are a senior instructional designer who analyzes course requirements.
+Given a topic, audience, and use context, you produce a structured course analysis
+that will guide all subsequent design decisions.
+
+Your analysis must be:
+- Specific to the stated audience (not generic)
+- Honest about constraints and scope boundaries
+- Grounded in instructional design principles (ADDIE, Bloom's)
+"""
+
+analysis_agent = Agent(
+    output_type=NativeOutput(CourseAnalysis),
+    system_prompt=ANALYSIS_SYSTEM,
+    name="course-analysis",
+)
+
+
+def build_analysis_prompt(
+    topic: str,
+    audience: str,
+    use_context: str,
+    rag_context: str = "",
+) -> str:
+    rag = f"\n## Available Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    return f"""\
+## Course Topic
+{topic}
+
+## Target Audience
+{audience}
+
+## Use Context
+{use_context or "Not specified — infer from the topic and audience."}
+{rag}
+## Instructions
+Analyze this course request and produce:
+
+1. **Purpose Statement**: A clear, specific statement of why this course exists and what
+   knowledge/skill gap it fills for this audience. Be concrete, not generic.
+
+2. **Learner Assumptions** (2-6): What do learners already know coming in? Be specific
+   about prerequisite skills and knowledge. These set the baseline.
+
+3. **Constraints** (1-5): What will this course explicitly NOT cover? Define the scope
+   boundaries. This prevents scope creep and sets expectations.
+
+Base your analysis on the audience description and any available knowledge sources."""
+
+
+# =============================================================================
+# STEP 2: Outcomes Agent
+# =============================================================================
+
+OUTCOMES_SYSTEM = """\
+You are an expert in Bloom's taxonomy and measurable learning outcomes.
+You convert course analyses into concrete, assessable outcomes.
+
+Every outcome must:
+- Start with a measurable action verb (NOT 'understand', 'know', 'learn')
+- Specify what the learner acts on
+- Include a condition or context
+- Be verifiably measurable
+
+Use verbs from Bloom's taxonomy:
+- Remember: list, recall, identify, name
+- Understand: explain, describe, summarize, classify
+- Apply: implement, execute, use, demonstrate
+- Analyze: compare, contrast, differentiate, examine
+- Evaluate: assess, critique, judge, justify
+- Create: design, construct, develop, formulate
+"""
+
+outcomes_agent = Agent(
+    output_type=NativeOutput(CourseOutcomes),
+    system_prompt=OUTCOMES_SYSTEM,
+    name="course-outcomes",
+)
+
+
+def build_outcomes_prompt(
+    purpose_statement: str,
+    learner_assumptions: list[str],
+    constraints: list[str],
+    topic: str,
+    audience: str,
+    rag_context: str = "",
+) -> str:
+    assumptions_str = "\n".join(f"- {a}" for a in learner_assumptions)
+    constraints_str = "\n".join(f"- {c}" for c in constraints)
+    rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    return f"""\
+## Approved Course Analysis
+**Topic**: {topic}
+**Audience**: {audience}
+**Purpose**: {purpose_statement}
+
+**Learner Assumptions**:
+{assumptions_str}
+
+**Constraints (out of scope)**:
+{constraints_str}
+{rag}
+## Instructions
+Based on this approved analysis, generate:
+
+1. **Behavior Change**: What observable behavior will change after completing this course?
+   Be specific and concrete. This is the "north star" for all content.
+
+2. **Course Goal**: A single sentence capturing the primary goal. Start with
+   "Learners will be able to..."
+
+3. **Learning Outcomes** (3-7): Each outcome must have:
+   - **verb**: A measurable Bloom's taxonomy verb (NOT understand/know/learn)
+   - **object**: What the learner acts on
+   - **condition**: Under what circumstances
+   - **measurability_check**: How this can be assessed
+
+Outcomes should progress from lower to higher Bloom's levels across the course.
+Ensure full coverage of the purpose statement without redundancy."""
+
+
+# =============================================================================
+# STEP 3: Structure Agent
+# =============================================================================
+
+STRUCTURE_SYSTEM = """\
+You are a curriculum architect who organizes learning outcomes into a logical course structure.
+You create sections that group related outcomes and build upon each other progressively.
+
+Principles:
+- Each section should have a clear learning arc
+- Sections build from foundational to advanced
+- Every outcome must be covered by at least one section
+- Avoid redundant sections
+- 2-10 sections is the sweet spot
+"""
+
+structure_agent = Agent(
+    output_type=NativeOutput(CourseStructure),
+    system_prompt=STRUCTURE_SYSTEM,
+    name="course-structure",
+)
+
+
+def build_structure_prompt(
+    outcomes: CourseOutcomes,
+    topic: str,
+    audience: str,
+    rag_context: str = "",
+) -> str:
+    outcomes_str = "\n".join(
+        f"- {o.verb} {o.object} ({o.condition})" for o in outcomes.outcomes
+    )
+    rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    return f"""\
+## Approved Course Outcomes
+**Goal**: {outcomes.goal.goal_statement}
+**Behavior Change**: {outcomes.behavior_change.description}
+
+**Learning Outcomes**:
+{outcomes_str}
+{rag}
+## Context
+**Topic**: {topic}
+**Audience**: {audience}
+
+## Instructions
+Group these outcomes into logical course sections.
+
+For each section:
+- **title**: A clear, descriptive section title
+- **description**: Brief explanation of what this section covers
+- **mapped_outcomes**: List the outcome verb+object pairs this section addresses
+  (use format "verb object", e.g., "analyze financial statements")
+
+Requirements:
+- Every outcome must appear in at least one section
+- Sections should progress logically (foundational → advanced)
+- 2-10 sections total
+- Each section should have 1-4 mapped outcomes
+- Avoid single-outcome sections where possible"""
+
+
+# =============================================================================
+# HIDDEN: Section Outcomes Agent
+# =============================================================================
+
+SECTION_OUTCOMES_SYSTEM = """\
+You are an instructional designer who creates granular section-level outcomes
+from course-level outcomes. These are internal artifacts that guide lesson generation.
+"""
+
+section_outcomes_agent = Agent(
+    output_type=NativeOutput(SectionOutcomes),
+    system_prompt=SECTION_OUTCOMES_SYSTEM,
+    name="section-outcomes",
+)
+
+
+def build_section_outcomes_prompt(
+    structure: CourseStructure,
+    outcomes: CourseOutcomes,
+) -> str:
+    sections_str = ""
+    for s in structure.sections:
+        mapped = ", ".join(s.mapped_outcomes)
+        sections_str += f"\n### {s.title}\nMapped outcomes: {mapped}\n"
+
+    outcomes_str = "\n".join(
+        f"- {o.verb} {o.object} ({o.condition})" for o in outcomes.outcomes
+    )
+    return f"""\
+## Course Structure
+{sections_str}
+
+## Course-Level Outcomes
+{outcomes_str}
+
+## Instructions
+For each section, generate 2-4 granular section-level outcomes.
+Each section outcome should:
+- Be more specific than the course-level outcome it derives from
+- Be achievable within a single section
+- Map back to a specific course-level outcome
+
+Return a mapping of section_title → list of SectionOutcome objects.
+Each SectionOutcome has:
+- description: What learners achieve in this section
+- parent_course_outcome: The course-level outcome this derives from (use "verb object" format)"""
+
+
+# =============================================================================
+# STEP 4: Sample Lesson Agent
+# =============================================================================
+
+LESSON_SYSTEM = """\
+You are an expert content creator who designs engaging, pedagogically sound lessons.
+You create complete lessons with diverse content blocks that follow instructional design
+best practices.
+
+Lesson structure principles:
+- Open with a hook or context-setting introduction
+- Present core content in digestible chunks
+- Include interactions (quizzes, exercises, reflections)
+- Close with a summary and segue
+- Vary content types (text, quiz, activity, callout, list)
+"""
+
+lesson_agent = Agent(
+    output_type=NativeOutput(Lesson),
+    system_prompt=LESSON_SYSTEM,
+    name="sample-lesson",
+)
+
+
+def build_lesson_prompt(
+    section_title: str,
+    section_outcomes: list[SectionOutcomes] | None,
+    course_goal: str,
+    topic: str,
+    audience: str,
+    rag_context: str = "",
+) -> str:
+    outcomes_str = ""
+    if section_outcomes:
+        for so in section_outcomes:
+            for title, sos in so.section_outcomes.items():
+                if title == section_title:
+                    outcomes_str = "\n".join(f"- {s.description}" for s in sos)
+                    break
+
+    rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    return f"""\
+## Course Context
+**Topic**: {topic}
+**Audience**: {audience}
+**Course Goal**: {course_goal}
+
+## Section: {section_title}
+**Section Outcomes**:
+{outcomes_str or "Generate appropriate lesson objectives based on the section title."}
+{rag}
+## Instructions
+Generate a COMPLETE sample lesson for this section. This lesson will establish
+the pattern for all remaining lessons in the course.
+
+The lesson must include:
+1. **title**: A specific, engaging lesson title
+2. **section_title**: "{section_title}"
+3. **objective**: A lesson-level learning objective mapped to a section outcome
+4. **strategy**: The instructional strategy (modality, interaction types, practice type)
+5. **outline**: Content chunks and their objective mapping
+6. **sample_blocks**: 5-12 actual content blocks including:
+   - A "heading" block for the lesson title
+   - "text" blocks for core content (detailed, educational paragraphs)
+   - At least one "quiz" block with a question and answer
+   - At least one "activity" or "callout" block
+   - A "text" block for the summary/conclusion
+
+Make the content REAL and educational — not placeholder text.
+Write as if this is a published course. Match the tone to the audience."""
+
+
+# =============================================================================
+# HIDDEN: Lesson Template Extractor
+# =============================================================================
+
+TEMPLATE_SYSTEM = """\
+You are an instructional design analyst who extracts reusable patterns from lessons.
+Given an approved sample lesson, you identify the template that can be applied to generate
+consistent lessons across the entire course.
+"""
+
+template_agent = Agent(
+    output_type=NativeOutput(LessonTemplate),
+    system_prompt=TEMPLATE_SYSTEM,
+    name="lesson-template",
+)
+
+
+def build_template_prompt(lesson: Lesson) -> str:
+    blocks_str = "\n".join(
+        f"- Block {i+1}: type={b.type}, heading='{b.heading}'"
+        for i, b in enumerate(lesson.sample_blocks)
+    )
+    return f"""\
+## Approved Sample Lesson
+**Title**: {lesson.title}
+**Strategy**: {lesson.strategy.modality}, interactions: {', '.join(lesson.strategy.interaction_types)}
+
+**Block Sequence**:
+{blocks_str}
+
+## Instructions
+Extract a reusable lesson template from this approved sample:
+
+1. **block_sequence**: The ordered list of block types (e.g., ["heading", "text", "quiz", "activity", "text"])
+2. **interaction_rules**: Rules about interactions (e.g., "include at least one quiz per lesson",
+   "end with a summary", "open with a hook")
+3. **variation_parameters**: What can change between lessons while keeping the same structure
+   (e.g., quiz_count: "1-2", practice_type: "varies by section")"""
+
+
+# =============================================================================
+# HIDDEN: Expansion Agent
+# =============================================================================
+
+EXPANSION_SYSTEM = """\
+You are an expert course content creator. You generate lessons that follow an approved
+template pattern while creating unique, educational content for each topic.
+
+You MUST follow the block sequence and interaction rules from the template exactly.
+Content should be real, detailed, and pedagogically sound — not placeholder text.
+"""
+
+expansion_agent = Agent(
+    output_type=NativeOutput(ExpandedLesson),
+    system_prompt=EXPANSION_SYSTEM,
+    name="lesson-expansion",
+)
+
+
+def build_expansion_prompt(
+    section_title: str,
+    lesson_title: str,
+    lesson_objective: str,
+    template: LessonTemplate,
+    course_goal: str,
+    topic: str,
+    audience: str,
+    rag_context: str = "",
+) -> str:
+    blocks_str = " → ".join(template.block_sequence)
+    rules_str = "\n".join(f"- {r}" for r in template.interaction_rules)
+    rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    return f"""\
+## Course Context
+**Topic**: {topic}
+**Audience**: {audience}
+**Course Goal**: {course_goal}
+
+## Lesson to Generate
+**Section**: {section_title}
+**Lesson Title**: {lesson_title}
+**Lesson Objective**: {lesson_objective}
+
+## Approved Template
+**Block Sequence**: {blocks_str}
+**Interaction Rules**:
+{rules_str}
+{rag}
+## Instructions
+Generate a complete lesson following the template EXACTLY.
+
+- Follow the block sequence: {blocks_str}
+- Follow all interaction rules
+- Write REAL educational content — detailed paragraphs, real examples, practical exercises
+- Match the audience level and context
+- Include assessments that test the lesson objective
+- Add appropriate accessibility tags (e.g., "visual", "text-heavy", "interactive")"""
+
+
+# =============================================================================
+# STEP 5: QA Agent
+# =============================================================================
+
+QA_SYSTEM = """\
+You are a quality assurance specialist for educational content.
+You evaluate courses against instructional design standards and flag issues.
+
+You check for:
+- Outcome coverage: every learning outcome must be addressed by at least one lesson
+- Redundancy: flag content that's unnecessarily duplicated
+- Cognitive load: flag lessons that try to cover too much
+- Accessibility: flag content that may not be accessible
+"""
+
+qa_agent = Agent(
+    output_type=NativeOutput(CourseQA),
+    system_prompt=QA_SYSTEM,
+    name="course-qa",
+)
+
+
+def build_qa_prompt(
+    outcomes: CourseOutcomes,
+    structure: CourseStructure,
+    lesson_titles: list[str],
+    total_blocks: int,
+) -> str:
+    outcomes_str = "\n".join(
+        f"- {o.verb} {o.object}" for o in outcomes.outcomes
+    )
+    structure_str = ""
+    for s in structure.sections:
+        structure_str += f"\n### {s.title}\n"
+        structure_str += f"Mapped outcomes: {', '.join(s.mapped_outcomes)}\n"
+
+    return f"""\
+## Course Outcomes
+{outcomes_str}
+
+## Course Structure
+{structure_str}
+
+## Generated Lessons ({len(lesson_titles)} total, {total_blocks} content blocks)
+{chr(10).join(f"- {t}" for t in lesson_titles)}
+
+## Instructions
+Evaluate this course and produce a QA report:
+
+1. **outcome_coverage**: For each outcome (use "verb object" as key), is it covered
+   by at least one section? Set true/false.
+
+2. **redundancy_flags**: List any sections or lessons that significantly overlap.
+   Empty list if no issues.
+
+3. **cognitive_load_flags**: List any lessons that seem to cover too many topics
+   (> 5 major concepts). Empty list if no issues.
+
+4. **accessibility_flags**: List any accessibility concerns.
+   Empty list if no issues.
+
+Be constructive but honest. Only flag real issues, not hypothetical ones."""

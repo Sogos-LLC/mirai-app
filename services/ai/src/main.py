@@ -11,28 +11,22 @@ from temporalio.client import Client
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 
-from src.activities.generation import (
-    analyze_course_gaps_activity,
-    generate_outline,
-    generate_lesson,
-    regenerate_component,
-    generate_image_description,
-    generate_structural_elements_activity,
+from src.activities.course_design import (
+    generate_course_analysis,
+    generate_course_outcomes,
+    generate_course_structure,
+    generate_section_outcomes,
+    generate_sample_lesson,
+    extract_lesson_template,
+    expand_lesson,
+    run_course_qa,
 )
 from src.activities.knowledge import (
     ingest_document,
     search_knowledge,
     delete_knowledge,
 )
-from src.activities.planning import analyze_document, generate_course_plan
 from src.activities.visualization import get_graph_visualization
-from src.activities.wizard import (
-    generate_title_activity,
-    generate_outcomes_activity,
-    generate_sme_personas_activity,
-    generate_audience_personas_activity,
-    generate_tone_options_activity,
-)
 from src.workflows.course_creation import CourseCreationWorkflow
 from src.config import settings
 
@@ -117,23 +111,21 @@ async def run_worker() -> None:
         task_queue=settings.temporal_task_queue,
         workflows=[CourseCreationWorkflow],
         activities=[
-            analyze_course_gaps_activity,
-            generate_outline,
-            generate_lesson,
-            regenerate_component,
-            generate_image_description,
+            # Course design activities (5-step wizard)
+            generate_course_analysis,
+            generate_course_outcomes,
+            generate_course_structure,
+            generate_section_outcomes,
+            generate_sample_lesson,
+            extract_lesson_template,
+            expand_lesson,
+            run_course_qa,
+            # Knowledge activities
             ingest_document,
             search_knowledge,
             delete_knowledge,
-            analyze_document,
-            generate_course_plan,
-            generate_title_activity,
-            generate_outcomes_activity,
-            generate_sme_personas_activity,
-            generate_audience_personas_activity,
-            generate_tone_options_activity,
+            # Visualization
             get_graph_visualization,
-            generate_structural_elements_activity,
         ],
     )
 

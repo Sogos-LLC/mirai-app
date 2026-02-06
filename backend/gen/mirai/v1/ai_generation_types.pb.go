@@ -362,43 +362,35 @@ func (SectionEmphasis) EnumDescriptor() ([]byte, []int) {
 }
 
 // WorkflowStepType identifies which step the workflow is waiting for approval on.
+// 5-step instructional design wizard with validated Pydantic artifacts at each gate.
 type WorkflowStepType int32
 
 const (
 	WorkflowStepType_WORKFLOW_STEP_TYPE_UNSPECIFIED       WorkflowStepType = 0
-	WorkflowStepType_WORKFLOW_STEP_TYPE_TITLE             WorkflowStepType = 1
-	WorkflowStepType_WORKFLOW_STEP_TYPE_OUTCOMES          WorkflowStepType = 2
-	WorkflowStepType_WORKFLOW_STEP_TYPE_SME_PERSONAS      WorkflowStepType = 3
-	WorkflowStepType_WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS WorkflowStepType = 4
-	WorkflowStepType_WORKFLOW_STEP_TYPE_TONE_OPTIONS      WorkflowStepType = 5
-	WorkflowStepType_WORKFLOW_STEP_TYPE_COURSE_PLAN       WorkflowStepType = 6
-	WorkflowStepType_WORKFLOW_STEP_TYPE_OUTLINE           WorkflowStepType = 7
-	WorkflowStepType_WORKFLOW_STEP_TYPE_LESSONS           WorkflowStepType = 8
+	WorkflowStepType_WORKFLOW_STEP_TYPE_INTENT_ANALYSIS   WorkflowStepType = 1 // Step 1: Define intent → CourseAnalysis
+	WorkflowStepType_WORKFLOW_STEP_TYPE_DEFINE_SUCCESS    WorkflowStepType = 2 // Step 2: Define success → CourseOutcomes
+	WorkflowStepType_WORKFLOW_STEP_TYPE_APPROVE_STRUCTURE WorkflowStepType = 3 // Step 3: Approve structure → CourseStructure
+	WorkflowStepType_WORKFLOW_STEP_TYPE_SAMPLE_LESSON     WorkflowStepType = 4 // Step 4: Approve sample lesson → Lesson pattern
+	WorkflowStepType_WORKFLOW_STEP_TYPE_FINAL_REVIEW      WorkflowStepType = 5 // Step 5: Final QA review → ExportPackage
 )
 
 // Enum value maps for WorkflowStepType.
 var (
 	WorkflowStepType_name = map[int32]string{
 		0: "WORKFLOW_STEP_TYPE_UNSPECIFIED",
-		1: "WORKFLOW_STEP_TYPE_TITLE",
-		2: "WORKFLOW_STEP_TYPE_OUTCOMES",
-		3: "WORKFLOW_STEP_TYPE_SME_PERSONAS",
-		4: "WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS",
-		5: "WORKFLOW_STEP_TYPE_TONE_OPTIONS",
-		6: "WORKFLOW_STEP_TYPE_COURSE_PLAN",
-		7: "WORKFLOW_STEP_TYPE_OUTLINE",
-		8: "WORKFLOW_STEP_TYPE_LESSONS",
+		1: "WORKFLOW_STEP_TYPE_INTENT_ANALYSIS",
+		2: "WORKFLOW_STEP_TYPE_DEFINE_SUCCESS",
+		3: "WORKFLOW_STEP_TYPE_APPROVE_STRUCTURE",
+		4: "WORKFLOW_STEP_TYPE_SAMPLE_LESSON",
+		5: "WORKFLOW_STEP_TYPE_FINAL_REVIEW",
 	}
 	WorkflowStepType_value = map[string]int32{
 		"WORKFLOW_STEP_TYPE_UNSPECIFIED":       0,
-		"WORKFLOW_STEP_TYPE_TITLE":             1,
-		"WORKFLOW_STEP_TYPE_OUTCOMES":          2,
-		"WORKFLOW_STEP_TYPE_SME_PERSONAS":      3,
-		"WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS": 4,
-		"WORKFLOW_STEP_TYPE_TONE_OPTIONS":      5,
-		"WORKFLOW_STEP_TYPE_COURSE_PLAN":       6,
-		"WORKFLOW_STEP_TYPE_OUTLINE":           7,
-		"WORKFLOW_STEP_TYPE_LESSONS":           8,
+		"WORKFLOW_STEP_TYPE_INTENT_ANALYSIS":   1,
+		"WORKFLOW_STEP_TYPE_DEFINE_SUCCESS":    2,
+		"WORKFLOW_STEP_TYPE_APPROVE_STRUCTURE": 3,
+		"WORKFLOW_STEP_TYPE_SAMPLE_LESSON":     4,
+		"WORKFLOW_STEP_TYPE_FINAL_REVIEW":      5,
 	}
 )
 
@@ -2276,17 +2268,14 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x1cSECTION_EMPHASIS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14SECTION_EMPHASIS_LOW\x10\x01\x12\x1b\n" +
 	"\x17SECTION_EMPHASIS_MEDIUM\x10\x02\x12\x19\n" +
-	"\x15SECTION_EMPHASIS_HIGH\x10\x03*\xcd\x02\n" +
+	"\x15SECTION_EMPHASIS_HIGH\x10\x03*\xfa\x01\n" +
 	"\x10WorkflowStepType\x12\"\n" +
-	"\x1eWORKFLOW_STEP_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
-	"\x18WORKFLOW_STEP_TYPE_TITLE\x10\x01\x12\x1f\n" +
-	"\x1bWORKFLOW_STEP_TYPE_OUTCOMES\x10\x02\x12#\n" +
-	"\x1fWORKFLOW_STEP_TYPE_SME_PERSONAS\x10\x03\x12(\n" +
-	"$WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS\x10\x04\x12#\n" +
-	"\x1fWORKFLOW_STEP_TYPE_TONE_OPTIONS\x10\x05\x12\"\n" +
-	"\x1eWORKFLOW_STEP_TYPE_COURSE_PLAN\x10\x06\x12\x1e\n" +
-	"\x1aWORKFLOW_STEP_TYPE_OUTLINE\x10\a\x12\x1e\n" +
-	"\x1aWORKFLOW_STEP_TYPE_LESSONS\x10\bB\x9c\x01\n" +
+	"\x1eWORKFLOW_STEP_TYPE_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"WORKFLOW_STEP_TYPE_INTENT_ANALYSIS\x10\x01\x12%\n" +
+	"!WORKFLOW_STEP_TYPE_DEFINE_SUCCESS\x10\x02\x12(\n" +
+	"$WORKFLOW_STEP_TYPE_APPROVE_STRUCTURE\x10\x03\x12$\n" +
+	" WORKFLOW_STEP_TYPE_SAMPLE_LESSON\x10\x04\x12#\n" +
+	"\x1fWORKFLOW_STEP_TYPE_FINAL_REVIEW\x10\x05B\x9c\x01\n" +
 	"\fcom.mirai.v1B\x16AiGenerationTypesProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (

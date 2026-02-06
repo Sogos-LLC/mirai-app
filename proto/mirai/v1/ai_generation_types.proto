@@ -276,14 +276,12 @@ message PlannedLesson {
 // =============================================================================
 
 // WorkflowStepType identifies which step the workflow is waiting for approval on.
+// 5-step instructional design wizard with validated Pydantic artifacts at each gate.
 enum WorkflowStepType {
   WORKFLOW_STEP_TYPE_UNSPECIFIED = 0;
-  WORKFLOW_STEP_TYPE_TITLE = 1;
-  WORKFLOW_STEP_TYPE_OUTCOMES = 2;
-  WORKFLOW_STEP_TYPE_SME_PERSONAS = 3;
-  WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS = 4;
-  WORKFLOW_STEP_TYPE_TONE_OPTIONS = 5;
-  WORKFLOW_STEP_TYPE_COURSE_PLAN = 6;
-  WORKFLOW_STEP_TYPE_OUTLINE = 7;
-  WORKFLOW_STEP_TYPE_LESSONS = 8;
+  WORKFLOW_STEP_TYPE_INTENT_ANALYSIS = 1;    // Step 1: Define intent → CourseAnalysis
+  WORKFLOW_STEP_TYPE_DEFINE_SUCCESS = 2;      // Step 2: Define success → CourseOutcomes
+  WORKFLOW_STEP_TYPE_APPROVE_STRUCTURE = 3;   // Step 3: Approve structure → CourseStructure
+  WORKFLOW_STEP_TYPE_SAMPLE_LESSON = 4;       // Step 4: Approve sample lesson → Lesson pattern
+  WORKFLOW_STEP_TYPE_FINAL_REVIEW = 5;        // Step 5: Final QA review → ExportPackage
 }

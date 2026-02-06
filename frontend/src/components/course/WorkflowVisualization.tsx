@@ -21,22 +21,16 @@ const MermaidDiagram = dynamic(() => import('@/components/ui/MermaidDiagram'), {
  */
 function stepToMermaidNodeId(step: WorkflowStepType): string | undefined {
   switch (step) {
-    case WorkflowStepType.TITLE:
+    case WorkflowStepType.INTENT_ANALYSIS:
       return 'B';
-    case WorkflowStepType.OUTCOMES:
+    case WorkflowStepType.DEFINE_SUCCESS:
       return 'D';
-    case WorkflowStepType.SME_PERSONAS:
-      return 'F';
-    case WorkflowStepType.AUDIENCE_PERSONAS:
-      return 'H';
-    case WorkflowStepType.TONE_OPTIONS:
-      return 'J';
-    case WorkflowStepType.COURSE_PLAN:
+    case WorkflowStepType.APPROVE_STRUCTURE:
+      return 'G';
+    case WorkflowStepType.SAMPLE_LESSON:
+      return 'I';
+    case WorkflowStepType.FINAL_REVIEW:
       return 'M';
-    case WorkflowStepType.OUTLINE:
-      return 'O';
-    case WorkflowStepType.LESSONS:
-      return 'P';
     default:
       return undefined;
   }

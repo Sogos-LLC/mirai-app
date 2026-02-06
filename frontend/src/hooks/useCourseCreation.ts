@@ -46,18 +46,18 @@ export function useStartCourseCreation() {
   return {
     mutate: async (params: {
       courseId: string;
-      courseName: string;
-      desiredOutcomes?: string;
-      additionalContext?: string;
+      topic: string;
+      audience: string;
+      useContext?: string;
       internalDataOnly?: boolean;
       selectedTeamDocIds?: string[];
       selectedGlobalDocIds?: string[];
     }) => {
       const request = create(StartCourseCreationRequestSchema, {
         courseId: params.courseId,
-        courseName: params.courseName,
-        desiredOutcomes: params.desiredOutcomes,
-        additionalContext: params.additionalContext,
+        topic: params.topic,
+        audience: params.audience,
+        useContext: params.useContext,
         internalDataOnly: params.internalDataOnly ?? false,
         selectedTeamDocIds: params.selectedTeamDocIds ?? [],
         selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],

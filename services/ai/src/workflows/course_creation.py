@@ -1,12 +1,15 @@
-"""Unified course creation workflow — wizard through lessons in one Temporal workflow.
+"""Unified course creation workflow — 5-step instructional design with validated artifacts.
 
-Hierarchical decomposition:
-  1. Wizard Phase (parallel where possible): title+outcomes → SME → audience → tone
-  2. (Optional) Planning Phase: document analysis → course plan
-  3. Outline Phase: generate outline → human approval
-  4. Lesson Phase (parallel batches): lessons generated concurrently in batches of 3
-  5. Structural Elements Phase: section intros, summaries, conclusion
-  6. Finalize: write course content to MinIO
+Control flow:
+  Intent → Analysis → Approval
+  Goal → Outcomes → Approval
+  Outcomes → Structure → Approval (hidden: section outcomes)
+  Structure → Sample Lesson → Approval (hidden: template extraction)
+  Lesson Template → Full Course → QA → Approval → Export
+
+Each arrow is a Pydantic validated boundary.
+Hidden steps skip the approval gate.
+Validation failures trigger regeneration, not user prompts.
 
 AI work is done in Python activities on ai-tasks queue.
 Infrastructure (DB, MinIO) is done via Go activities on go-tasks queue.
@@ -22,34 +25,38 @@ from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
-    from src.activities.generation import (
-        GenerateLessonInput,
-        GenerateLessonOutput,
-        GenerateOutlineInput,
-        GenerateOutlineOutput,
-        GenerateStructuralElementsInput,
-        GenerateStructuralElementsOutput,
-    )
-    from src.activities.planning import AnalyzeDocumentInput, AnalyzeDocumentOutput
-    from src.activities.wizard import (
-        GenerateAudiencePersonasInput,
-        GenerateAudiencePersonasOutput,
+    from src.activities.course_design import (
+        ExpandLessonInput,
+        ExpandLessonOutput,
+        ExtractTemplateInput,
+        ExtractTemplateOutput,
+        GenerateAnalysisInput,
+        GenerateAnalysisOutput,
         GenerateOutcomesInput,
         GenerateOutcomesOutput,
-        GenerateSMEPersonasInput,
-        GenerateSMEPersonasOutput,
-        GenerateTitleInput,
-        GenerateTitleOutput,
-        GenerateToneOptionsInput,
-        GenerateToneOptionsOutput,
+        GenerateSampleLessonInput,
+        GenerateSampleLessonOutput,
+        GenerateSectionOutcomesInput,
+        GenerateSectionOutcomesOutput,
+        GenerateStructureInput,
+        GenerateStructureOutput,
+        RunQAInput,
+        RunQAOutput,
     )
-    from src.models.outline import CourseOutline, OutlineSection
-    from src.models.wizard import SMEPersona, AudiencePersona, ToneOption
+    from src.models.course_design import (
+        CourseAnalysis,
+        CourseOutcomes,
+        CourseStructure,
+        ExpandedLesson,
+        Lesson,
+        LessonTemplate,
+        SectionOutcomes,
+    )
     from src.workflows.types import (
         CourseCreationInput,
         CourseCreationOutput,
+        LockedArtifacts,
         StepApproval,
-        WizardResult,
     )
 
 log = structlog.get_logger()
@@ -60,9 +67,9 @@ AI_TASKS = "ai-tasks"
 
 # Timeout configs
 GO_TIMEOUT = timedelta(seconds=30)
-AI_SHORT_TIMEOUT = timedelta(minutes=2)
+AI_SHORT_TIMEOUT = timedelta(minutes=3)
 AI_LONG_TIMEOUT = timedelta(minutes=5)
-AI_LESSON_TIMEOUT = timedelta(minutes=15)
+AI_LESSON_TIMEOUT = timedelta(minutes=10)
 AI_HEARTBEAT = timedelta(minutes=3)
 
 # Retry policies
@@ -75,7 +82,11 @@ LESSON_BATCH_SIZE = 3
 
 @workflow.defn(sandboxed=False)
 class CourseCreationWorkflow:
-    """Unified course creation workflow with update-based human-in-the-loop."""
+    """5-step instructional design workflow with update-based human-in-the-loop.
+
+    Each step produces a validated Pydantic artifact.
+    Artifacts are immutable once approved.
+    """
 
     def __init__(self) -> None:
         self._approval: StepApproval | None = None
@@ -84,9 +95,10 @@ class CourseCreationWorkflow:
         self._step_data: str = ""
         self._progress: int = 0
         self._progress_message: str = ""
+        self._artifacts = LockedArtifacts()
 
     # ------------------------------------------------------------------
-    # Query handler — lightweight, read-only snapshot of workflow state
+    # Query handler
     # ------------------------------------------------------------------
 
     @workflow.query
@@ -100,7 +112,7 @@ class CourseCreationWorkflow:
         }
 
     # ------------------------------------------------------------------
-    # Update handlers — synchronous round-trip for approvals/rejections
+    # Update handlers
     # ------------------------------------------------------------------
 
     @workflow.update
@@ -122,107 +134,79 @@ class CourseCreationWorkflow:
         if self._status != "awaiting_approval":
             raise ApplicationError(f"Not in approval state: {self._status}")
 
+    # ------------------------------------------------------------------
+    # Main run
+    # ------------------------------------------------------------------
+
     @workflow.run
     async def run(self, input: CourseCreationInput) -> CourseCreationOutput:
-        """Execute the full course creation pipeline."""
-        log.info(
-            "course_creation_started",
-            job_id=input.job_id,
-            course_name=input.course_name,
-        )
+        """Execute the full 5-step course creation pipeline."""
+        log.info("course_creation_started", job_id=input.job_id, topic=input.topic)
 
         self._status = "processing"
         self._progress = 0
         self._progress_message = "Starting course creation"
         await self._update_job(input, "PROCESSING", 0, "Starting course creation")
 
-        # 1. Decrypt API key (Go activity)
+        # Decrypt API key (Go activity)
         api_key = await self._decrypt_api_key(input.tenant_id)
 
-        # ---------------------------------------------------------------
-        # WIZARD PHASE — parallel where possible
-        # ---------------------------------------------------------------
+        # =============================================================
+        # STEP 1: Define Intent → CourseAnalysis
+        # =============================================================
 
-        wizard_result = await self._run_wizard_phase(api_key, input)
+        analysis = await self._step_intent_analysis(api_key, input)
 
-        # Save wizard data to course content
-        await self._write_course_content(
-            input.tenant_id, input.course_id, {"wizard": wizard_result.model_dump()},
+        # =============================================================
+        # STEP 2: Define Success → CourseOutcomes
+        # =============================================================
+
+        outcomes = await self._step_define_success(api_key, input, analysis)
+
+        # =============================================================
+        # STEP 3: Approve Structure → CourseStructure
+        # =============================================================
+
+        structure, section_outcomes = await self._step_approve_structure(
+            api_key, input, outcomes,
         )
 
-        # ---------------------------------------------------------------
-        # PLANNING PHASE (conditional: if knowledge sources selected)
-        # ---------------------------------------------------------------
+        # =============================================================
+        # STEP 4: Approve Sample Lesson → Lesson pattern locked
+        # =============================================================
 
-        course_plan_context = await self._run_planning_phase(
-            api_key, input, wizard_result.improved_title, wizard_result.desired_outcomes,
+        sample_lesson, template = await self._step_sample_lesson(
+            api_key, input, outcomes, structure, section_outcomes,
         )
 
-        # ---------------------------------------------------------------
-        # OUTLINE PHASE
-        # ---------------------------------------------------------------
+        # =============================================================
+        # HIDDEN: Expansion Pipeline (between Steps 4 and 5)
+        # =============================================================
 
-        outline_result = await self._run_outline_phase(
-            api_key, input, wizard_result, course_plan_context,
+        expanded_lessons = await self._expand_all_lessons(
+            api_key, input, outcomes, structure, section_outcomes, template,
         )
 
-        # Write outline to course content
-        course_content = {
-            "wizard": wizard_result.model_dump(),
-            "outline": outline_result.outline.model_dump(),
-        }
-        await self._write_course_content(
-            input.tenant_id, input.course_id, course_content,
+        # =============================================================
+        # STEP 5: Final Review → QA + Export
+        # =============================================================
+
+        await self._step_final_review(
+            api_key, input, outcomes, structure, sample_lesson, expanded_lessons,
         )
 
-        # ---------------------------------------------------------------
-        # LESSON PHASE — parallel batches
-        # ---------------------------------------------------------------
-
-        outline = outline_result.outline
-        total_lessons = sum(len(s.lessons) for s in outline.sections)
-
-        await self._run_lesson_phase(
-            api_key, input, wizard_result, outline, total_lessons,
-        )
-
-        # ---------------------------------------------------------------
-        # STRUCTURAL ELEMENTS PHASE
-        # ---------------------------------------------------------------
-
-        self._progress = 92
-        self._progress_message = "Adding transitions and summaries..."
-        await self._update_job(
-            input, "PROCESSING", 92, "Adding transitions and summaries",
-        )
-
-        structural_result = await self._run_ai_activity(
-            "generate_structural_elements_activity",
-            GenerateStructuralElementsInput(api_key=api_key, outline=outline),
-            GenerateStructuralElementsOutput,
-            timeout=AI_LONG_TIMEOUT,
-        )
-
-        for section in outline.sections:
-            section.introduction = structural_result.section_introductions.get(
-                section.id, ""
-            )
-            section.summary = structural_result.section_summaries.get(
-                section.id, ""
-            )
-        outline.conclusion = structural_result.conclusion
-
-        # ---------------------------------------------------------------
-        # FINALIZE
-        # ---------------------------------------------------------------
+        # =============================================================
+        # FINALIZE: Write everything to storage
+        # =============================================================
 
         course_content = {
-            "wizard": wizard_result.model_dump(),
-            "outline": outline.model_dump(),
+            "analysis": analysis.model_dump(),
+            "outcomes": outcomes.model_dump(),
+            "structure": structure.model_dump(),
+            "sample_lesson": sample_lesson.model_dump(),
+            "expanded_lessons": [l.model_dump() for l in expanded_lessons],
         }
-        await self._write_course_content(
-            input.tenant_id, input.course_id, course_content,
-        )
+        await self._write_course_content(input.tenant_id, input.course_id, course_content)
 
         self._status = "completed"
         self._progress = 100
@@ -231,357 +215,418 @@ class CourseCreationWorkflow:
 
         await workflow.wait_condition(workflow.all_handlers_finished)
 
+        total_lessons = 1 + len(expanded_lessons)  # sample + expanded
         return CourseCreationOutput(
             course_id=input.course_id,
             total_lessons=total_lessons,
-            completed_lessons=total_lessons,
+            total_sections=len(structure.sections),
         )
 
     # -------------------------------------------------------------------
-    # Phase Methods — hierarchical decomposition
+    # Step 1: Intent Analysis
     # -------------------------------------------------------------------
 
-    async def _run_wizard_phase(
+    async def _step_intent_analysis(
         self, api_key: str, input: CourseCreationInput,
-    ) -> WizardResult:
-        """Wizard phase: generate title, outcomes, personas, tone.
+    ) -> CourseAnalysis:
+        self._set_progress(5, "Analyzing course intent...")
+        await self._update_job(input, "PROCESSING", 5, "Analyzing course intent")
 
-        Parallelizes independent steps:
-          Batch 1: title + outcomes (no cross-dependency)
-          Batch 2: SME personas (needs title)
-          Batch 3: audience personas (needs SME)
-          Batch 4: tone options (needs audience)
-        """
-        self._progress = 5
-        self._progress_message = "Generating title and outcomes..."
-
-        # Batch 1: title + outcomes in parallel
-        title_task = self._run_ai_activity(
-            "generate_title_activity",
-            GenerateTitleInput(
+        analysis_result: GenerateAnalysisOutput = await self._run_ai_activity(
+            "generate_course_analysis",
+            GenerateAnalysisInput(
                 api_key=api_key,
-                course_name=input.course_name,
-                rag_filters=input.rag_filters or None,
+                topic=input.topic,
+                audience=input.audience,
+                use_context=input.use_context,
             ),
-            GenerateTitleOutput,
-            timeout=AI_SHORT_TIMEOUT,
+            GenerateAnalysisOutput,
         )
-        outcomes_task = self._run_ai_activity(
-            "generate_outcomes_activity",
+
+        # Present to user for approval
+        approval = await self._publish_and_wait(
+            input, "intent_analysis",
+            json.dumps(analysis_result.analysis.model_dump()),
+            10,
+        )
+
+        if approval and not approval.approved and approval.feedback:
+            # Regenerate with feedback
+            analysis_result = await self._run_ai_activity(
+                "generate_course_analysis",
+                GenerateAnalysisInput(
+                    api_key=api_key,
+                    topic=input.topic,
+                    audience=input.audience,
+                    use_context=input.use_context + f"\n\nFEEDBACK: {approval.feedback}",
+                ),
+                GenerateAnalysisOutput,
+            )
+            # Re-present for approval
+            approval = await self._publish_and_wait(
+                input, "intent_analysis",
+                json.dumps(analysis_result.analysis.model_dump()),
+                10,
+            )
+
+        # Apply user modifications if any
+        analysis = analysis_result.analysis
+        if approval and approval.modifications:
+            data = analysis.model_dump()
+            data.update(approval.modifications)
+            analysis = CourseAnalysis(**data)
+
+        self._artifacts.analysis = analysis
+        return analysis
+
+    # -------------------------------------------------------------------
+    # Step 2: Define Success
+    # -------------------------------------------------------------------
+
+    async def _step_define_success(
+        self, api_key: str, input: CourseCreationInput, analysis: CourseAnalysis,
+    ) -> CourseOutcomes:
+        self._set_progress(20, "Generating learning outcomes...")
+        await self._update_job(input, "PROCESSING", 20, "Generating learning outcomes")
+
+        outcomes_result: GenerateOutcomesOutput = await self._run_ai_activity(
+            "generate_course_outcomes",
             GenerateOutcomesInput(
                 api_key=api_key,
-                course_name=input.course_name,
-                rag_filters=input.rag_filters or None,
+                topic=input.topic,
+                audience=input.audience,
+                purpose_statement=analysis.purpose_statement,
+                learner_assumptions=analysis.learner_assumptions,
+                constraints=analysis.constraints,
             ),
             GenerateOutcomesOutput,
-            timeout=AI_SHORT_TIMEOUT,
-        )
-        title_result, outcomes_result = await asyncio.gather(
-            title_task, outcomes_task,
         )
 
-        improved_title = title_result.improved_title
-        description = title_result.description
-        desired_outcomes = outcomes_result.outcomes
-
-        # Batch 2: SME personas (needs title + description)
-        self._progress = 20
-        self._progress_message = "Generating expert personas..."
-        sme_result = await self._run_ai_activity(
-            "generate_sme_personas_activity",
-            GenerateSMEPersonasInput(
-                api_key=api_key,
-                title=improved_title,
-                description=description,
-                rag_filters=input.rag_filters or None,
-            ),
-            GenerateSMEPersonasOutput,
-            timeout=AI_SHORT_TIMEOUT,
+        # Present to user for approval
+        approval = await self._publish_and_wait(
+            input, "define_success",
+            json.dumps(outcomes_result.outcomes.model_dump()),
+            25,
         )
 
-        # Batch 3: audience personas (needs SME)
-        self._progress = 30
-        self._progress_message = "Generating audience personas..."
-        audience_result = await self._run_ai_activity(
-            "generate_audience_personas_activity",
-            GenerateAudiencePersonasInput(
-                api_key=api_key,
-                title=improved_title,
-                description=description,
-                sme_personas=sme_result.personas,
-                rag_filters=input.rag_filters or None,
-            ),
-            GenerateAudiencePersonasOutput,
-            timeout=AI_SHORT_TIMEOUT,
-        )
-
-        # Batch 4: tone options (needs audience)
-        self._progress = 38
-        self._progress_message = "Selecting tone & style..."
-        tone_result = await self._run_ai_activity(
-            "generate_tone_options_activity",
-            GenerateToneOptionsInput(
-                api_key=api_key,
-                title=improved_title,
-                description=description,
-                audience_personas=audience_result.personas,
-                rag_filters=input.rag_filters or None,
-            ),
-            GenerateToneOptionsOutput,
-            timeout=AI_SHORT_TIMEOUT,
-        )
-
-        return WizardResult(
-            improved_title=improved_title,
-            description=description,
-            desired_outcomes=desired_outcomes,
-            sme_personas=sme_result.personas,
-            audience_personas=audience_result.personas,
-            tone=tone_result.options[0],
-            additional_context=input.additional_context or "",
-            internal_data_only=input.internal_data_only,
-        )
-
-    async def _run_planning_phase(
-        self,
-        api_key: str,
-        input: CourseCreationInput,
-        improved_title: str,
-        desired_outcomes: str,
-    ) -> object | None:
-        """Planning phase: analyze knowledge documents and build course plan."""
-        has_knowledge = bool(
-            input.selected_team_doc_ids or input.selected_global_doc_ids
-        )
-        if not has_knowledge:
-            return None
-
-        self._progress = 42
-        self._progress_message = "Analyzing documents..."
-        await self._update_job(input, "PROCESSING", 42, "Analyzing documents")
-
-        all_source_ids = (
-            input.selected_team_doc_ids + input.selected_global_doc_ids
-        )
-        analyses = []
-        for source_id in all_source_ids:
-            doc_content = await self._read_file_content(
-                f"knowledge/{input.tenant_id}/{source_id}"
-            )
-            if not doc_content:
-                continue
-
-            analysis = await self._run_ai_activity(
-                "analyze_document",
-                AnalyzeDocumentInput(
+        if approval and not approval.approved and approval.feedback:
+            outcomes_result = await self._run_ai_activity(
+                "generate_course_outcomes",
+                GenerateOutcomesInput(
                     api_key=api_key,
-                    source_id=source_id,
-                    source_name=source_id,
-                    document_text=doc_content,
-                    course_title=improved_title,
-                    desired_outcome=desired_outcomes,
+                    topic=input.topic,
+                    audience=f"{input.audience}\n\nFEEDBACK: {approval.feedback}",
+                    purpose_statement=analysis.purpose_statement,
+                    learner_assumptions=analysis.learner_assumptions,
+                    constraints=analysis.constraints,
                 ),
-                AnalyzeDocumentOutput,
-                timeout=timedelta(minutes=3),
+                GenerateOutcomesOutput,
             )
-            analyses.append(analysis.analysis)
+            approval = await self._publish_and_wait(
+                input, "define_success",
+                json.dumps(outcomes_result.outcomes.model_dump()),
+                25,
+            )
 
-        if not analyses:
-            return None
+        self._artifacts.outcomes = outcomes_result.outcomes
+        return outcomes_result.outcomes
 
-        from src.activities.planning import (
-            GenerateCoursePlanInput,
-            GenerateCoursePlanOutput,
-        )
+    # -------------------------------------------------------------------
+    # Step 3: Approve Structure
+    # -------------------------------------------------------------------
 
-        plan_result = await self._run_ai_activity(
-            "generate_course_plan",
-            GenerateCoursePlanInput(
+    async def _step_approve_structure(
+        self,
+        api_key: str,
+        input: CourseCreationInput,
+        outcomes: CourseOutcomes,
+    ) -> tuple[CourseStructure, SectionOutcomes]:
+        self._set_progress(35, "Designing course structure...")
+        await self._update_job(input, "PROCESSING", 35, "Designing course structure")
+
+        structure_result: GenerateStructureOutput = await self._run_ai_activity(
+            "generate_course_structure",
+            GenerateStructureInput(
                 api_key=api_key,
-                course_title=improved_title,
-                desired_outcome=desired_outcomes,
-                document_analyses=analyses,
-                internal_data_only=input.internal_data_only,
-                additional_context=input.additional_context or "",
+                topic=input.topic,
+                audience=input.audience,
+                outcomes=outcomes,
             ),
-            GenerateCoursePlanOutput,
-            timeout=AI_LONG_TIMEOUT,
+            GenerateStructureOutput,
         )
 
-        return plan_result.plan
-
-    async def _run_outline_phase(
-        self,
-        api_key: str,
-        input: CourseCreationInput,
-        wizard_result: WizardResult,
-        course_plan_context: object | None,
-    ) -> GenerateOutlineOutput:
-        """Outline phase: generate outline and wait for human approval."""
-        self._progress = 45
-        self._progress_message = "Generating outline..."
-        await self._update_job(input, "PROCESSING", 45, "Generating outline")
-
-        outcome_lines = [
-            line.strip().lstrip("•").strip()
-            for line in wizard_result.desired_outcomes.split("\n")
-            if line.strip()
-        ]
-        outcome_lines = [o for o in outcome_lines if o]
-
-        additional_context = wizard_result.additional_context
-
-        outline_input = GenerateOutlineInput(
-            api_key=api_key,
-            course_title=wizard_result.improved_title,
-            desired_outcome=wizard_result.desired_outcomes,
-            desired_outcomes=outcome_lines,
-            sme_personas=wizard_result.sme_personas,
-            audience_personas=wizard_result.audience_personas,
-            additional_context=additional_context,
-            internal_data_only=input.internal_data_only,
-            course_plan_context=course_plan_context,
-            rag_filters=input.rag_filters or None,
-        )
-
-        outline_result = await self._run_ai_activity(
-            "generate_outline", outline_input, GenerateOutlineOutput,
-            timeout=AI_LONG_TIMEOUT,
-        )
-
-        outline_approval = await self._publish_and_wait(
-            input, "outline",
-            json.dumps({
-                "outline": outline_result.outline.model_dump(),
-                "constraint_violations": outline_result.constraint_violations,
-            }), 50,
-        )
-
-        if outline_approval and not outline_approval.approved and outline_approval.feedback:
-            # Regenerate with feedback
-            outline_input_with_feedback = GenerateOutlineInput(
+        # Hidden: generate section outcomes before presenting
+        self._set_progress(40, "Mapping section outcomes...")
+        section_outcomes_result: GenerateSectionOutcomesOutput = await self._run_ai_activity(
+            "generate_section_outcomes",
+            GenerateSectionOutcomesInput(
                 api_key=api_key,
-                course_title=wizard_result.improved_title,
-                desired_outcome=wizard_result.desired_outcomes,
-                desired_outcomes=outcome_lines,
-                sme_personas=wizard_result.sme_personas,
-                audience_personas=wizard_result.audience_personas,
-                additional_context=(
-                    additional_context + "\n\n"
-                    + f"FEEDBACK FROM REVIEWER:\n{outline_approval.feedback}"
+                structure=structure_result.structure,
+                outcomes=outcomes,
+            ),
+            GenerateSectionOutcomesOutput,
+        )
+
+        # User only sees the structure (section titles + mapped outcomes)
+        approval = await self._publish_and_wait(
+            input, "approve_structure",
+            json.dumps(structure_result.structure.model_dump()),
+            45,
+        )
+
+        if approval and not approval.approved and approval.feedback:
+            structure_result = await self._run_ai_activity(
+                "generate_course_structure",
+                GenerateStructureInput(
+                    api_key=api_key,
+                    topic=input.topic,
+                    audience=f"{input.audience}\n\nFEEDBACK: {approval.feedback}",
+                    outcomes=outcomes,
                 ),
-                internal_data_only=input.internal_data_only,
-                course_plan_context=course_plan_context,
-                rag_filters=input.rag_filters or None,
+                GenerateStructureOutput,
             )
-            outline_result = await self._run_ai_activity(
-                "generate_outline", outline_input_with_feedback,
-                GenerateOutlineOutput, timeout=AI_LONG_TIMEOUT,
+            # Regenerate section outcomes for new structure
+            section_outcomes_result = await self._run_ai_activity(
+                "generate_section_outcomes",
+                GenerateSectionOutcomesInput(
+                    api_key=api_key,
+                    structure=structure_result.structure,
+                    outcomes=outcomes,
+                ),
+                GenerateSectionOutcomesOutput,
             )
-            await self._publish_and_wait(
-                input, "outline",
-                json.dumps({
-                    "outline": outline_result.outline.model_dump(),
-                    "constraint_violations": outline_result.constraint_violations,
-                }), 50,
+            approval = await self._publish_and_wait(
+                input, "approve_structure",
+                json.dumps(structure_result.structure.model_dump()),
+                45,
             )
 
-        return outline_result
+        self._artifacts.structure = structure_result.structure
+        self._artifacts.section_outcomes = section_outcomes_result.section_outcomes
+        return structure_result.structure, section_outcomes_result.section_outcomes
 
-    async def _run_lesson_phase(
+    # -------------------------------------------------------------------
+    # Step 4: Sample Lesson
+    # -------------------------------------------------------------------
+
+    async def _step_sample_lesson(
         self,
         api_key: str,
         input: CourseCreationInput,
-        wizard_result: WizardResult,
-        outline: CourseOutline,
-        total_lessons: int,
-    ) -> None:
-        """Lesson phase: generate all lessons in parallel batches."""
-        self._progress = 55
-        self._progress_message = "Generating lessons..."
-        await self._update_job(input, "PROCESSING", 55, "Generating lessons")
+        outcomes: CourseOutcomes,
+        structure: CourseStructure,
+        section_outcomes: SectionOutcomes,
+    ) -> tuple[Lesson, LessonTemplate]:
+        self._set_progress(50, "Generating sample lesson...")
+        await self._update_job(input, "PROCESSING", 50, "Generating sample lesson")
 
-        course_context = self._build_course_context(outline.sections)
-        concept_map_context = self._build_concept_map_context(outline)
+        # Select the first section as representative
+        representative_section = structure.sections[0]
 
-        # Flatten all lessons with their metadata
-        lesson_inputs: list[tuple[int, int, GenerateLessonInput]] = []
-        flat_lessons: list[tuple[int, int]] = []
-        for s_idx, section in enumerate(outline.sections):
-            for l_idx in range(len(section.lessons)):
-                flat_lessons.append((s_idx, l_idx))
-
-        for flat_idx, (s_idx, l_idx) in enumerate(flat_lessons):
-            section = outline.sections[s_idx]
-            lesson = section.lessons[l_idx]
-
-            is_section_first = l_idx == 0
-            is_section_last = l_idx == len(section.lessons) - 1
-            is_course_last = flat_idx == len(flat_lessons) - 1
-
-            next_lesson_title = ""
-            if not is_course_last:
-                next_s_idx, next_l_idx = flat_lessons[flat_idx + 1]
-                next_lesson_title = outline.sections[next_s_idx].lessons[next_l_idx].title
-
-            lesson_input = GenerateLessonInput(
+        lesson_result: GenerateSampleLessonOutput = await self._run_ai_activity(
+            "generate_sample_lesson",
+            GenerateSampleLessonInput(
                 api_key=api_key,
-                lesson=lesson,
-                course_title=wizard_result.improved_title,
-                course_context=course_context,
-                section_title=section.title,
-                section_index=s_idx,
-                lesson_index=l_idx,
-                sme_personas=wizard_result.sme_personas,
-                rag_filters=input.rag_filters or None,
-                previous_lesson_summaries=[],
-                concept_map_context=concept_map_context,
-                is_section_first=is_section_first,
-                is_section_last=is_section_last,
-                is_course_last=is_course_last,
-                next_lesson_title=next_lesson_title,
-                web_context="",
-            )
-            lesson_inputs.append((s_idx, l_idx, lesson_input))
+                topic=input.topic,
+                audience=input.audience,
+                course_goal=outcomes.goal.goal_statement,
+                section_title=representative_section.title,
+                section_outcomes=section_outcomes,
+            ),
+            GenerateSampleLessonOutput,
+            timeout=AI_LESSON_TIMEOUT,
+        )
 
-        # Generate lessons in parallel batches
-        completed = 0
-        for batch_start in range(0, len(lesson_inputs), LESSON_BATCH_SIZE):
+        # Present to user for approval (user can edit tone/depth)
+        approval = await self._publish_and_wait(
+            input, "sample_lesson",
+            json.dumps(lesson_result.lesson.model_dump()),
+            55,
+        )
+
+        if approval and not approval.approved and approval.feedback:
+            lesson_result = await self._run_ai_activity(
+                "generate_sample_lesson",
+                GenerateSampleLessonInput(
+                    api_key=api_key,
+                    topic=input.topic,
+                    audience=f"{input.audience}\n\nFEEDBACK ON LESSON: {approval.feedback}",
+                    course_goal=outcomes.goal.goal_statement,
+                    section_title=representative_section.title,
+                    section_outcomes=section_outcomes,
+                ),
+                GenerateSampleLessonOutput,
+                timeout=AI_LESSON_TIMEOUT,
+            )
+            approval = await self._publish_and_wait(
+                input, "sample_lesson",
+                json.dumps(lesson_result.lesson.model_dump()),
+                55,
+            )
+
+        lesson = lesson_result.lesson
+        self._artifacts.sample_lesson = lesson
+
+        # Hidden: extract template from approved lesson
+        self._set_progress(58, "Extracting lesson pattern...")
+        template_result: ExtractTemplateOutput = await self._run_ai_activity(
+            "extract_lesson_template",
+            ExtractTemplateInput(api_key=api_key, lesson=lesson),
+            ExtractTemplateOutput,
+        )
+
+        self._artifacts.template = template_result.template
+        return lesson, template_result.template
+
+    # -------------------------------------------------------------------
+    # Hidden: Expansion Pipeline
+    # -------------------------------------------------------------------
+
+    async def _expand_all_lessons(
+        self,
+        api_key: str,
+        input: CourseCreationInput,
+        outcomes: CourseOutcomes,
+        structure: CourseStructure,
+        section_outcomes: SectionOutcomes,
+        template: LessonTemplate,
+    ) -> list[ExpandedLesson]:
+        """Expand remaining lessons using the approved template. Runs between Steps 4 and 5."""
+        self._set_progress(60, "Generating remaining lessons...")
+        await self._update_job(input, "PROCESSING", 60, "Generating remaining lessons")
+
+        # Build list of lessons to generate (skip sample lesson's section first lesson)
+        lesson_inputs: list[ExpandLessonInput] = []
+        representative_section = structure.sections[0].title
+
+        for section in structure.sections:
+            # Get section outcomes for this section
+            section_sos = section_outcomes.section_outcomes.get(section.title, [])
+            # Generate 1-3 lessons per section based on outcome count
+            num_lessons = max(1, min(3, len(section_sos)))
+
+            for i in range(num_lessons):
+                # Skip the sample lesson slot (first lesson of first section)
+                if section.title == representative_section and i == 0:
+                    continue
+
+                objective = (
+                    section_sos[i].description
+                    if i < len(section_sos)
+                    else f"Apply {section.title} concepts"
+                )
+                lesson_title = (
+                    f"{section.title}: Part {i + 1}"
+                    if num_lessons > 1
+                    else section.title
+                )
+
+                lesson_inputs.append(ExpandLessonInput(
+                    api_key=api_key,
+                    topic=input.topic,
+                    audience=input.audience,
+                    course_goal=outcomes.goal.goal_statement,
+                    section_title=section.title,
+                    lesson_title=lesson_title,
+                    lesson_objective=objective,
+                    template=template,
+                ))
+
+        if not lesson_inputs:
+            return []
+
+        # Generate in parallel batches
+        all_lessons: list[ExpandedLesson] = []
+        total = len(lesson_inputs)
+
+        for batch_start in range(0, total, LESSON_BATCH_SIZE):
             batch = lesson_inputs[batch_start:batch_start + LESSON_BATCH_SIZE]
-            batch_label = f"batch {batch_start // LESSON_BATCH_SIZE + 1}"
 
-            log.info(
-                "lesson_batch_started",
-                batch=batch_label,
-                lessons=[outline.sections[s].lessons[l].title for s, l, _ in batch],
-            )
-
-            # Start all activities in this batch concurrently
             tasks = [
                 self._run_ai_activity(
-                    "generate_lesson", li, GenerateLessonOutput,
+                    "expand_lesson", li, ExpandLessonOutput,
                     timeout=AI_LESSON_TIMEOUT,
                 )
-                for _, _, li in batch
+                for li in batch
             ]
             results = await asyncio.gather(*tasks)
 
-            # Merge results back into outline
-            for (s_idx, l_idx, _), result in zip(batch, results):
-                outline.sections[s_idx].lessons[l_idx].content = result.lesson_content
+            for r in results:
+                all_lessons.append(r.lesson)
 
-            completed += len(batch)
-            progress = 55 + int((completed / total_lessons) * 35)
-            self._progress = progress
-            self._progress_message = f"Generated {completed}/{total_lessons} lessons"
+            completed = len(all_lessons)
+            progress = 60 + int((completed / total) * 25)
+            self._set_progress(progress, f"Generated {completed}/{total} lessons")
             await self._update_job(
                 input, "PROCESSING", progress,
-                f"Generated {completed}/{total_lessons} lessons",
+                f"Generated {completed}/{total} lessons",
             )
+
+        self._artifacts.expanded_lessons = all_lessons
+        return all_lessons
+
+    # -------------------------------------------------------------------
+    # Step 5: Final Review
+    # -------------------------------------------------------------------
+
+    async def _step_final_review(
+        self,
+        api_key: str,
+        input: CourseCreationInput,
+        outcomes: CourseOutcomes,
+        structure: CourseStructure,
+        sample_lesson: Lesson,
+        expanded_lessons: list[ExpandedLesson],
+    ) -> None:
+        self._set_progress(88, "Running quality checks...")
+        await self._update_job(input, "PROCESSING", 88, "Running quality checks")
+
+        all_lesson_titles = [sample_lesson.title] + [l.title for l in expanded_lessons]
+        total_blocks = (
+            len(sample_lesson.sample_blocks)
+            + sum(len(l.content_blocks) for l in expanded_lessons)
+        )
+
+        qa_result: RunQAOutput = await self._run_ai_activity(
+            "run_course_qa",
+            RunQAInput(
+                api_key=api_key,
+                outcomes=outcomes,
+                structure=structure,
+                lesson_titles=all_lesson_titles,
+                total_blocks=total_blocks,
+            ),
+            RunQAOutput,
+        )
+
+        self._artifacts.qa = qa_result.qa
+
+        # Present QA results + summary for final approval
+        qa_summary = {
+            "qa": qa_result.qa.model_dump(),
+            "total_sections": len(structure.sections),
+            "total_lessons": len(all_lesson_titles),
+            "total_blocks": total_blocks,
+            "all_outcomes_covered": qa_result.qa.all_outcomes_covered,
+            "has_issues": qa_result.qa.has_issues,
+        }
+
+        approval = await self._publish_and_wait(
+            input, "final_review",
+            json.dumps(qa_summary),
+            92,
+        )
+
+        # If rejected, user is just noting issues — we still proceed
+        # (the QA is informational, not blocking)
 
     # -------------------------------------------------------------------
     # Helpers
     # -------------------------------------------------------------------
+
+    def _set_progress(self, percent: int, message: str) -> None:
+        self._progress = percent
+        self._progress_message = message
 
     async def _publish_and_wait(
         self,
@@ -657,19 +702,6 @@ class CourseCreationWorkflow:
             retry_policy=RetryPolicy(**GO_RETRY),
         )
 
-    async def _read_file_content(self, file_path: str) -> str | None:
-        try:
-            result = await workflow.execute_activity(
-                "ReadFileContent",
-                {"file_path": file_path},
-                task_queue=GO_TASKS,
-                start_to_close_timeout=GO_TIMEOUT,
-                retry_policy=RetryPolicy(**GO_RETRY),
-            )
-            return result.get("content", "")
-        except Exception:
-            return None
-
     async def _run_ai_activity(
         self,
         activity_name: str,
@@ -686,36 +718,3 @@ class CourseCreationWorkflow:
             retry_policy=RetryPolicy(**AI_RETRY),
             result_type=output_type,
         )
-
-    @staticmethod
-    def _build_course_context(sections: list[OutlineSection]) -> str:
-        parts: list[str] = []
-        for i, section in enumerate(sections):
-            parts.append(f"Section {i + 1}: {section.title}")
-            for j, lesson in enumerate(section.lessons):
-                desc = lesson.description[:100]
-                parts.append(f"  Lesson {j + 1}: {lesson.title} — {desc}")
-        return "\n".join(parts)
-
-    @staticmethod
-    def _build_concept_map_context(outline) -> str:
-        if not outline.concept_map or not outline.concept_map.concepts:
-            return ""
-
-        parts: list[str] = []
-        for node in outline.concept_map.concepts:
-            prereqs = (
-                f" (requires: {', '.join(node.prerequisites)})"
-                if node.prerequisites
-                else ""
-            )
-            reinforced = (
-                f", reinforced in: {', '.join(node.reinforced_in)}"
-                if node.reinforced_in
-                else ""
-            )
-            parts.append(
-                f"- {node.concept}: first in {node.first_taught_in}"
-                f"{reinforced}{prereqs}"
-            )
-        return "\n".join(parts)

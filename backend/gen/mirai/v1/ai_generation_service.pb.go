@@ -1478,9 +1478,9 @@ func (x *ApproveCoursePlanResponse) GetPlan() *CoursePlan {
 type StartCourseCreationRequest struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	CourseId             string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
-	CourseName           string                 `protobuf:"bytes,2,opt,name=course_name,json=courseName,proto3" json:"course_name,omitempty"`
-	DesiredOutcomes      *string                `protobuf:"bytes,3,opt,name=desired_outcomes,json=desiredOutcomes,proto3,oneof" json:"desired_outcomes,omitempty"`
-	AdditionalContext    *string                `protobuf:"bytes,4,opt,name=additional_context,json=additionalContext,proto3,oneof" json:"additional_context,omitempty"`
+	Topic                string                 `protobuf:"bytes,2,opt,name=topic,proto3" json:"topic,omitempty"`
+	Audience             string                 `protobuf:"bytes,3,opt,name=audience,proto3" json:"audience,omitempty"`
+	UseContext           *string                `protobuf:"bytes,4,opt,name=use_context,json=useContext,proto3,oneof" json:"use_context,omitempty"`
 	InternalDataOnly     bool                   `protobuf:"varint,5,opt,name=internal_data_only,json=internalDataOnly,proto3" json:"internal_data_only,omitempty"`
 	SelectedTeamDocIds   []string               `protobuf:"bytes,6,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`
 	SelectedGlobalDocIds []string               `protobuf:"bytes,7,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`
@@ -1525,23 +1525,23 @@ func (x *StartCourseCreationRequest) GetCourseId() string {
 	return ""
 }
 
-func (x *StartCourseCreationRequest) GetCourseName() string {
+func (x *StartCourseCreationRequest) GetTopic() string {
 	if x != nil {
-		return x.CourseName
+		return x.Topic
 	}
 	return ""
 }
 
-func (x *StartCourseCreationRequest) GetDesiredOutcomes() string {
-	if x != nil && x.DesiredOutcomes != nil {
-		return *x.DesiredOutcomes
+func (x *StartCourseCreationRequest) GetAudience() string {
+	if x != nil {
+		return x.Audience
 	}
 	return ""
 }
 
-func (x *StartCourseCreationRequest) GetAdditionalContext() string {
-	if x != nil && x.AdditionalContext != nil {
-		return *x.AdditionalContext
+func (x *StartCourseCreationRequest) GetUseContext() string {
+	if x != nil && x.UseContext != nil {
+		return *x.UseContext
 	}
 	return ""
 }
@@ -2123,18 +2123,17 @@ const file_mirai_v1_ai_generation_service_proto_rawDesc = "" +
 	"\x18ApproveCoursePlanRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"E\n" +
 	"\x19ApproveCoursePlanResponse\x12(\n" +
-	"\x04plan\x18\x01 \x01(\v2\x14.mirai.v1.CoursePlanR\x04plan\"\x82\x03\n" +
+	"\x04plan\x18\x01 \x01(\v2\x14.mirai.v1.CoursePlanR\x04plan\"\xb9\x02\n" +
 	"\x1aStartCourseCreationRequest\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x1f\n" +
-	"\vcourse_name\x18\x02 \x01(\tR\n" +
-	"courseName\x12.\n" +
-	"\x10desired_outcomes\x18\x03 \x01(\tH\x00R\x0fdesiredOutcomes\x88\x01\x01\x122\n" +
-	"\x12additional_context\x18\x04 \x01(\tH\x01R\x11additionalContext\x88\x01\x01\x12,\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x14\n" +
+	"\x05topic\x18\x02 \x01(\tR\x05topic\x12\x1a\n" +
+	"\baudience\x18\x03 \x01(\tR\baudience\x12$\n" +
+	"\vuse_context\x18\x04 \x01(\tH\x00R\n" +
+	"useContext\x88\x01\x01\x12,\n" +
 	"\x12internal_data_only\x18\x05 \x01(\bR\x10internalDataOnly\x121\n" +
 	"\x15selected_team_doc_ids\x18\x06 \x03(\tR\x12selectedTeamDocIds\x125\n" +
-	"\x17selected_global_doc_ids\x18\a \x03(\tR\x14selectedGlobalDocIdsB\x13\n" +
-	"\x11_desired_outcomesB\x15\n" +
-	"\x13_additional_context\"H\n" +
+	"\x17selected_global_doc_ids\x18\a \x03(\tR\x14selectedGlobalDocIdsB\x0e\n" +
+	"\f_use_context\"H\n" +
 	"\x1bStartCourseCreationResponse\x12)\n" +
 	"\x03job\x18\x01 \x01(\v2\x17.mirai.v1.GenerationJobR\x03job\"\xa7\x02\n" +
 	"\x1aApproveWorkflowStepRequest\x12\x15\n" +

@@ -24,9 +24,9 @@ type CourseCreationInput struct {
 	TenantID             string            `json:"tenant_id"`
 	CourseID             string            `json:"course_id"`
 	UserID               string            `json:"user_id"`
-	CourseName           string            `json:"course_name"`
-	DesiredOutcomes      string            `json:"desired_outcomes"`
-	AdditionalContext    string            `json:"additional_context"`
+	Topic                string            `json:"topic"`
+	Audience             string            `json:"audience"`
+	UseContext           string            `json:"use_context"`
 	InternalDataOnly     bool              `json:"internal_data_only"`
 	SelectedTeamDocIDs   []string          `json:"selected_team_doc_ids"`
 	SelectedGlobalDocIDs []string          `json:"selected_global_doc_ids"`

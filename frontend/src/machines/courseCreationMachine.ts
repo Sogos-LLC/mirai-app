@@ -8,17 +8,10 @@ import {
 // Types
 // ============================================================
 
-/**
- * Parsed step data from the workflow's step_data_json.
- * The shape varies per step type.
- */
 export interface StepData {
   [key: string]: unknown;
 }
 
-/**
- * Workflow state returned by the GetWorkflowState RPC (Temporal query).
- */
 export interface WorkflowStateData {
   status: string;
   currentStep: string;
@@ -27,39 +20,23 @@ export interface WorkflowStateData {
   progressMessage: string;
 }
 
-/**
- * Context for the course creation workflow machine.
- * Tracks the active workflow job and the current approval step.
- */
 export interface CourseCreationContext {
-  // Job tracking
   jobId: string | null;
   courseId: string | null;
-
-  // Current workflow state
   pendingStep: WorkflowStepType | null;
   stepData: StepData | null;
   progressPercent: number;
   progressMessage: string;
-
-  // Error
   error: string | null;
 }
 
 export type CourseCreationEvent =
-  // Workflow started successfully
   | { type: 'WORKFLOW_STARTED'; jobId: string; courseId: string }
-  // Resume an active workflow (from dashboard or page remount)
   | { type: 'RESUME'; jobId: string; courseId: string; status: GenerationJobStatus }
-  // Temporal query state update (replaces SSE events)
   | { type: 'STATE_UPDATE'; state: WorkflowStateData }
-  // User approves the current step
   | { type: 'APPROVE'; selectedIds?: string[]; modifications?: Record<string, string> }
-  // User rejects the current step with feedback
   | { type: 'REJECT'; feedback: string }
-  // Dismiss error
   | { type: 'DISMISS_ERROR' }
-  // Reset to idle (retry after failure)
   | { type: 'RESET' };
 
 // ============================================================
@@ -107,9 +84,6 @@ export const courseCreationMachine = createMachine({
     events: CourseCreationEvent;
   },
   states: {
-    // --------------------------------------------------------
-    // Idle: waiting for workflow to start
-    // --------------------------------------------------------
     idle: {
       on: {
         WORKFLOW_STARTED: {
@@ -135,9 +109,6 @@ export const courseCreationMachine = createMachine({
       },
     },
 
-    // --------------------------------------------------------
-    // Processing: workflow is running, AI is generating content
-    // --------------------------------------------------------
     processing: {
       on: {
         STATE_UPDATE: [
@@ -176,9 +147,6 @@ export const courseCreationMachine = createMachine({
       },
     },
 
-    // --------------------------------------------------------
-    // Awaiting Approval: workflow is paused, showing step data
-    // --------------------------------------------------------
     awaitingApproval: {
       on: {
         APPROVE: {
@@ -207,9 +175,6 @@ export const courseCreationMachine = createMachine({
       },
     },
 
-    // --------------------------------------------------------
-    // Sending Approval: calling the approve RPC
-    // --------------------------------------------------------
     sendingApproval: {
       invoke: {
         id: 'approveStep',
@@ -240,9 +205,6 @@ export const courseCreationMachine = createMachine({
       },
     },
 
-    // --------------------------------------------------------
-    // Sending Rejection: calling the reject RPC
-    // --------------------------------------------------------
     sendingRejection: {
       invoke: {
         id: 'rejectStep',
@@ -273,16 +235,10 @@ export const courseCreationMachine = createMachine({
       },
     },
 
-    // --------------------------------------------------------
-    // Completed: workflow finished successfully
-    // --------------------------------------------------------
     completed: {
       type: 'final' as const,
     },
 
-    // --------------------------------------------------------
-    // Failed: workflow errored out — can retry
-    // --------------------------------------------------------
     failed: {
       on: {
         RESET: {
@@ -303,128 +259,59 @@ export const courseCreationMachine = createMachine({
 // Helper functions
 // ============================================================
 
-/**
- * Convert a step string from Temporal query to WorkflowStepType enum.
- */
 function stepStringToEnum(step: string): WorkflowStepType {
   switch (step) {
-    case 'title':
-      return WorkflowStepType.TITLE;
-    case 'outcomes':
-      return WorkflowStepType.OUTCOMES;
-    case 'sme_personas':
-      return WorkflowStepType.SME_PERSONAS;
-    case 'audience_personas':
-      return WorkflowStepType.AUDIENCE_PERSONAS;
-    case 'tone_options':
-      return WorkflowStepType.TONE_OPTIONS;
-    case 'course_plan':
-      return WorkflowStepType.COURSE_PLAN;
-    case 'outline':
-      return WorkflowStepType.OUTLINE;
-    case 'lessons':
-      return WorkflowStepType.LESSONS;
+    case 'intent_analysis':
+      return WorkflowStepType.INTENT_ANALYSIS;
+    case 'define_success':
+      return WorkflowStepType.DEFINE_SUCCESS;
+    case 'approve_structure':
+      return WorkflowStepType.APPROVE_STRUCTURE;
+    case 'sample_lesson':
+      return WorkflowStepType.SAMPLE_LESSON;
+    case 'final_review':
+      return WorkflowStepType.FINAL_REVIEW;
     default:
       return WorkflowStepType.UNSPECIFIED;
   }
 }
 
-/**
- * Get a human-readable label for a workflow step.
- */
 export function getWorkflowStepLabel(step: WorkflowStepType): string {
   switch (step) {
-    case WorkflowStepType.TITLE:
-      return 'Title & Description';
-    case WorkflowStepType.OUTCOMES:
+    case WorkflowStepType.INTENT_ANALYSIS:
+      return 'Course Analysis';
+    case WorkflowStepType.DEFINE_SUCCESS:
       return 'Learning Outcomes';
-    case WorkflowStepType.SME_PERSONAS:
-      return 'SME Personas';
-    case WorkflowStepType.AUDIENCE_PERSONAS:
-      return 'Target Audience';
-    case WorkflowStepType.TONE_OPTIONS:
-      return 'Tone & Style';
-    case WorkflowStepType.COURSE_PLAN:
-      return 'Course Plan';
-    case WorkflowStepType.OUTLINE:
-      return 'Course Outline';
-    case WorkflowStepType.LESSONS:
-      return 'Lesson Content';
+    case WorkflowStepType.APPROVE_STRUCTURE:
+      return 'Course Structure';
+    case WorkflowStepType.SAMPLE_LESSON:
+      return 'Sample Lesson';
+    case WorkflowStepType.FINAL_REVIEW:
+      return 'Final Review';
     default:
       return 'Unknown Step';
   }
 }
 
-/**
- * Get the step number (1-based) for progress display.
- */
 export function getWorkflowStepNumber(step: WorkflowStepType): number {
   switch (step) {
-    case WorkflowStepType.TITLE:
+    case WorkflowStepType.INTENT_ANALYSIS:
       return 1;
-    case WorkflowStepType.OUTCOMES:
+    case WorkflowStepType.DEFINE_SUCCESS:
       return 2;
-    case WorkflowStepType.SME_PERSONAS:
+    case WorkflowStepType.APPROVE_STRUCTURE:
       return 3;
-    case WorkflowStepType.AUDIENCE_PERSONAS:
+    case WorkflowStepType.SAMPLE_LESSON:
       return 4;
-    case WorkflowStepType.TONE_OPTIONS:
+    case WorkflowStepType.FINAL_REVIEW:
       return 5;
-    case WorkflowStepType.COURSE_PLAN:
-      return 6;
-    case WorkflowStepType.OUTLINE:
-      return 7;
-    case WorkflowStepType.LESSONS:
-      return 8;
     default:
       return 0;
   }
 }
 
-/**
- * Total number of possible workflow steps.
- */
-export const TOTAL_WORKFLOW_STEPS = 8;
+export const TOTAL_WORKFLOW_STEPS = 5;
 
-/**
- * Number of user-facing wizard phases (collapsed from 8 backend steps).
- */
-export const TOTAL_WIZARD_PHASES = 5;
-
-/**
- * Map a backend WorkflowStepType (or null/idle) to a user-facing phase (1-5).
- *
- * Phase mapping:
- *   1 – Course Setup     (idle → TITLE)
- *   2 – Learning Outcomes (OUTCOMES)
- *   3 – Expert Personas   (SME_PERSONAS, AUDIENCE_PERSONAS)
- *   4 – Tone & Style      (TONE_OPTIONS)
- *   5 – Course Content    (COURSE_PLAN, OUTLINE, LESSONS)
- */
-export function getWizardPhase(step: WorkflowStepType | null, isIdle: boolean): number {
-  if (isIdle || !step) return 1;
-  switch (step) {
-    case WorkflowStepType.TITLE:
-      return 1;
-    case WorkflowStepType.OUTCOMES:
-      return 2;
-    case WorkflowStepType.SME_PERSONAS:
-    case WorkflowStepType.AUDIENCE_PERSONAS:
-      return 3;
-    case WorkflowStepType.TONE_OPTIONS:
-      return 4;
-    case WorkflowStepType.COURSE_PLAN:
-    case WorkflowStepType.OUTLINE:
-    case WorkflowStepType.LESSONS:
-      return 5;
-    default:
-      return 1;
-  }
-}
-
-/**
- * Parse the step_data_json from a Temporal query into a typed StepData object.
- */
 export function parseStepData(stepDataJson: string | undefined): StepData | null {
   if (!stepDataJson) return null;
   try {

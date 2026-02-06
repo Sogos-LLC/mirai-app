@@ -1124,22 +1124,16 @@ func s3CoursePlanToProto(plan *service.S3CoursePlan) *v1.CoursePlan {
 // protoToWorkflowStepString converts a proto WorkflowStepType enum to the string used by the service layer.
 func protoToWorkflowStepString(step v1.WorkflowStepType) string {
 	switch step {
-	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_TITLE:
-		return "title"
-	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_OUTCOMES:
-		return "outcomes"
-	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_SME_PERSONAS:
-		return "sme_personas"
-	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_AUDIENCE_PERSONAS:
-		return "audience_personas"
-	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_TONE_OPTIONS:
-		return "tone_options"
-	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_COURSE_PLAN:
-		return "course_plan"
-	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_OUTLINE:
-		return "outline"
-	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_LESSONS:
-		return "lessons"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_INTENT_ANALYSIS:
+		return "intent_analysis"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_DEFINE_SUCCESS:
+		return "define_success"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_APPROVE_STRUCTURE:
+		return "approve_structure"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_SAMPLE_LESSON:
+		return "sample_lesson"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_FINAL_REVIEW:
+		return "final_review"
 	default:
 		return ""
 	}
@@ -1167,21 +1161,16 @@ func (s *AIGenerationServiceServer) StartCourseCreation(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	var desiredOutcomes string
-	if req.Msg.DesiredOutcomes != nil {
-		desiredOutcomes = *req.Msg.DesiredOutcomes
-	}
-
-	var additionalContext string
-	if req.Msg.AdditionalContext != nil {
-		additionalContext = *req.Msg.AdditionalContext
+	var useContext string
+	if req.Msg.UseContext != nil {
+		useContext = *req.Msg.UseContext
 	}
 
 	serviceReq := service.StartCourseCreationRequest{
 		CourseID:             courseID,
-		CourseName:           req.Msg.GetCourseName(),
-		DesiredOutcomes:      desiredOutcomes,
-		AdditionalContext:    additionalContext,
+		Topic:               req.Msg.GetTopic(),
+		Audience:             req.Msg.GetAudience(),
+		UseContext:           useContext,
 		InternalDataOnly:     req.Msg.GetInternalDataOnly(),
 		SelectedTeamDocIDs:   req.Msg.GetSelectedTeamDocIds(),
 		SelectedGlobalDocIDs: req.Msg.GetSelectedGlobalDocIds(),
@@ -1324,31 +1313,25 @@ func (s *AIGenerationServiceServer) GetGraphVisualization(
 	}
 
 	mermaidCode := `graph TD
-    A[GenerateTitle] --> B{AwaitTitleApproval}
-    B -->|Approved| C[GenerateOutcomes]
+    A[Analyze Intent] --> B{Step 1: Review Analysis}
+    B -->|Approved| C[Generate Outcomes]
     B -->|Rejected| A
-    C --> D{AwaitOutcomesApproval}
-    D -->|Approved| E[GenerateSMEPersonas]
+    C --> D{Step 2: Review Outcomes}
+    D -->|Approved| E[Design Structure]
     D -->|Rejected| C
-    E --> F{AwaitSMEApproval}
-    F -->|Approved| G[GenerateAudiencePersonas]
-    F -->|Rejected| E
-    G --> H{AwaitAudienceApproval}
-    H -->|Approved| I[GenerateToneOptions]
-    H -->|Rejected| G
-    I --> J{AwaitToneApproval}
-    J -->|Approved| K{HasKnowledgeSources?}
-    J -->|Rejected| I
-    K -->|Yes| L[AnalyzeDocuments]
-    K -->|No| N[GenerateOutline]
-    L --> M{AwaitPlanApproval}
-    M -->|Approved| N
-    M -->|Rejected| L
-    N --> O{AwaitOutlineApproval}
-    O -->|Approved| P[GenerateLessons]
-    O -->|Rejected| N
-    P --> Q[FinalizeContent]
-    Q --> R((End))`
+    E --> F[Generate Section Outcomes]
+    F --> G{Step 3: Review Structure}
+    G -->|Approved| H[Generate Sample Lesson]
+    G -->|Rejected| E
+    H --> I{Step 4: Review Lesson}
+    I -->|Approved| J[Extract Template]
+    I -->|Rejected| H
+    J --> K[Expand Remaining Lessons]
+    K --> L[Run QA Validators]
+    L --> M{Step 5: Final Review}
+    M -->|Approved| N[Export Course]
+    M -->|Rejected| N
+    N --> O((Complete))`
 
 	return connect.NewResponse(&v1.GetGraphVisualizationResponse{
 		MermaidCode: mermaidCode,

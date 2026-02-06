@@ -21,6 +21,9 @@ import Button from '@/components/ui/Button';
 
 import {
   courseCreationMachine,
+  getWorkflowStepLabel,
+  getWorkflowStepNumber,
+  TOTAL_WORKFLOW_STEPS,
 } from '@/machines/courseCreationMachine';
 import {
   useStartCourseCreation,
@@ -38,9 +41,10 @@ import {
 export default function CourseWizardPage() {
   const router = useRouter();
 
-  // Form state
-  const [courseName, setCourseName] = useState('');
-  const [desiredOutcomes, setDesiredOutcomes] = useState('');
+  // Form state — 3 fields matching the new 5-step design
+  const [topic, setTopic] = useState('');
+  const [audience, setAudience] = useState('');
+  const [useContext, setUseContext] = useState('');
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
 
@@ -105,7 +109,7 @@ export default function CourseWizardPage() {
   const isFailed = state.matches('failed');
   const isActive = !isIdle && !isCompleted && !isFailed;
 
-  // Poll Temporal workflow state (replaces SSE stream)
+  // Poll Temporal workflow state
   const { state: workflowState } = useWorkflowState(state.context.jobId, isActive);
 
   // Bridge polling state to XState machine
@@ -118,19 +122,15 @@ export default function CourseWizardPage() {
   const isAwaitingApproval = state.matches('awaitingApproval');
   const isSendingSignal = state.matches('sendingApproval') || state.matches('sendingRejection');
 
-  // Only outline step requires manual approval
-  const isOutlineReview =
-    isAwaitingApproval && state.context.pendingStep === WorkflowStepType.OUTLINE;
-  const showStepReview =
-    isOutlineReview || (isSendingSignal && state.context.pendingStep === WorkflowStepType.OUTLINE);
-
-  // Everything else shows as processing (including non-outline approval states which shouldn't happen now)
-  const showProcessing = isProcessing || (isAwaitingApproval && !isOutlineReview) || (isSendingSignal && !showStepReview);
+  // ALL 5 steps show approval UI
+  const showStepReview = isAwaitingApproval || isSendingSignal;
+  const showProcessing = isProcessing;
 
   // Start the workflow: create a course record, then start the Temporal workflow
   const handleStart = useCallback(async () => {
-    const name = courseName.trim();
-    if (!name) return;
+    const topicVal = topic.trim();
+    const audienceVal = audience.trim();
+    if (!topicVal || !audienceVal) return;
 
     setIsStarting(true);
     setStartError(null);
@@ -138,7 +138,7 @@ export default function CourseWizardPage() {
     try {
       // 1. Create a course record in the DB
       const courseResult = await createCourse.mutate({
-        settings: { title: name },
+        settings: { title: topicVal },
       });
       const courseId = courseResult.course?.id;
       if (!courseId) throw new Error('Failed to create course');
@@ -146,8 +146,9 @@ export default function CourseWizardPage() {
       // 2. Start the unified AI workflow
       const result = await startCreation.mutate({
         courseId,
-        courseName: name,
-        desiredOutcomes: desiredOutcomes.trim() || undefined,
+        topic: topicVal,
+        audience: audienceVal,
+        useContext: useContext.trim() || undefined,
         selectedGlobalDocIds: selectedKnowledgeIds.length > 0 ? selectedKnowledgeIds : undefined,
       });
 
@@ -163,16 +164,16 @@ export default function CourseWizardPage() {
     } finally {
       setIsStarting(false);
     }
-  }, [courseName, desiredOutcomes, selectedKnowledgeIds, createCourse, startCreation, send]);
+  }, [topic, audience, useContext, selectedKnowledgeIds, createCourse, startCreation, send]);
 
-  // Approve outline
+  // Approve current step
   const handleApprove = useCallback(() => {
     setShowRejectForm(false);
     setFeedback('');
     send({ type: 'APPROVE' });
   }, [send]);
 
-  // Reject outline with feedback
+  // Reject current step with feedback
   const handleReject = useCallback(() => {
     if (!feedback.trim()) return;
     setShowRejectForm(false);
@@ -180,10 +181,34 @@ export default function CourseWizardPage() {
     setFeedback('');
   }, [feedback, send]);
 
+  // Step-specific labels for approval UI
+  const pendingStep = state.context.pendingStep;
+  const stepLabel = pendingStep ? getWorkflowStepLabel(pendingStep) : '';
+  const stepNumber = pendingStep ? getWorkflowStepNumber(pendingStep) : 0;
+
+  // Approve button label varies by step
+  const getApproveLabel = () => {
+    if (!pendingStep) return 'Approve';
+    switch (pendingStep) {
+      case WorkflowStepType.INTENT_ANALYSIS:
+        return 'Approve Analysis';
+      case WorkflowStepType.DEFINE_SUCCESS:
+        return 'Approve Outcomes';
+      case WorkflowStepType.APPROVE_STRUCTURE:
+        return 'Approve Structure';
+      case WorkflowStepType.SAMPLE_LESSON:
+        return 'Approve Lesson';
+      case WorkflowStepType.FINAL_REVIEW:
+        return 'Approve & Export';
+      default:
+        return 'Approve';
+    }
+  };
+
   return (
     <PageShell
       title="Create New Course"
-      description="AI will generate a complete course from your topic"
+      description="AI-powered instructional design wizard"
       backButton={{ label: 'Back to Dashboard', onClick: () => router.push('/dashboard') }}
       maxWidth="5xl"
     >
@@ -202,37 +227,50 @@ export default function CourseWizardPage() {
                     What would you like to teach?
                   </h2>
                   <p className="text-sm text-secondary max-w-lg">
-                    Enter a course name and AI will handle the rest &mdash; generating titles,
-                    outcomes, personas, and an outline for your review.
+                    Describe your course topic and target audience. AI will design a complete
+                    instructional program through a 5-step validation process.
                   </p>
                 </div>
 
-                {/* Course Name */}
-                <div className="mb-6">
+                {/* Topic */}
+                <div className="mb-5">
+                  <label htmlFor="topic" className="block text-sm font-semibold text-primary mb-1.5">
+                    Course Topic
+                  </label>
                   <input
-                    id="courseName"
+                    id="topic"
                     type="text"
-                    value={courseName}
-                    onChange={(e) => setCourseName(e.target.value)}
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
                     placeholder="e.g., Introduction to Machine Learning, Leadership Skills for Managers"
                     className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && courseName.trim()) handleStart();
-                    }}
                   />
-                  <p className="mt-2 text-xs text-muted text-center">
-                    Don&apos;t worry about getting it perfect &mdash; AI will refine it.
-                  </p>
                 </div>
 
-                {/* Desired Outcomes */}
+                {/* Audience */}
+                <div className="mb-5">
+                  <label htmlFor="audience" className="block text-sm font-semibold text-primary mb-1.5">
+                    Target Audience
+                  </label>
+                  <input
+                    id="audience"
+                    type="text"
+                    value={audience}
+                    onChange={(e) => setAudience(e.target.value)}
+                    placeholder="e.g., Junior developers with 1-2 years experience, New managers transitioning from IC roles"
+                    className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Use Context (optional) */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label
-                      htmlFor="outcomes"
+                      htmlFor="useContext"
                       className="text-sm font-semibold text-primary"
                     >
-                      Desired Course Outcomes
+                      Additional Context
+                      <span className="text-muted font-normal ml-1">(optional)</span>
                     </label>
                     <button
                       type="button"
@@ -249,20 +287,13 @@ export default function CourseWizardPage() {
                     </button>
                   </div>
                   <textarea
-                    id="outcomes"
-                    value={desiredOutcomes}
-                    onChange={(e) => setDesiredOutcomes(e.target.value)}
-                    placeholder={
-                      '\u2022 Learners will be able to identify key concepts...\n\u2022 Learners will understand how to apply...\n\u2022 Learners will demonstrate proficiency in...'
-                    }
-                    rows={4}
+                    id="useContext"
+                    value={useContext}
+                    onChange={(e) => setUseContext(e.target.value)}
+                    placeholder="Describe how the course will be used: delivery format (self-paced, instructor-led), time constraints, prerequisites, or any specific requirements..."
+                    rows={3}
                     className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
-                  <p className="mt-2 text-xs text-muted text-center">
-                    {desiredOutcomes.trim()
-                      ? 'These outcomes serve as the north star guiding all content generation.'
-                      : 'Optional — AI will generate outcomes automatically.'}
-                  </p>
                 </div>
 
                 {startError && (
@@ -286,7 +317,7 @@ export default function CourseWizardPage() {
               <Button
                 variant="primary"
                 onClick={handleStart}
-                disabled={!courseName.trim() || isStarting}
+                disabled={!topic.trim() || !audience.trim() || isStarting}
                 className="gap-2"
               >
                 {isStarting ? (
@@ -322,29 +353,37 @@ export default function CourseWizardPage() {
                 {state.context.progressMessage || 'Working on your course...'}
               </p>
               <p className="text-xs text-muted">
-                {state.context.progressPercent < 45
-                  ? 'Generating course foundation — this takes about 2 minutes'
-                  : state.context.progressPercent < 55
-                    ? 'Building course outline...'
-                    : `Generating lessons — ${state.context.progressPercent}% complete`}
+                {state.context.progressPercent}% complete
               </p>
             </div>
           </CardContent>
         )}
 
-        {/* ============ OUTLINE REVIEW ============ */}
+        {/* ============ STEP REVIEW (all 5 steps) ============ */}
         {showStepReview && (
           <>
             <CardHeader>
-              <CardTitle as="h3">
-                Review Course Outline
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle as="h3">
+                  Step {stepNumber}: {stepLabel}
+                </CardTitle>
+                <span className="text-xs text-muted">
+                  {stepNumber} of {TOTAL_WORKFLOW_STEPS}
+                </span>
+              </div>
+              {/* Step progress bar */}
+              <div className="w-full h-1 bg-page rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                  style={{ width: `${(stepNumber / TOTAL_WORKFLOW_STEPS) * 100}%` }}
+                />
+              </div>
             </CardHeader>
 
-            {state.context.stepData && (
+            {state.context.stepData && state.context.pendingStep && (
               <CardContent className="max-h-[60vh] overflow-y-auto">
                 <StepDataRenderer
-                  step={WorkflowStepType.OUTLINE}
+                  step={state.context.pendingStep}
                   data={state.context.stepData}
                 />
               </CardContent>
@@ -375,7 +414,7 @@ export default function CourseWizardPage() {
                     ) : (
                       <Check className="w-4 h-4" />
                     )}
-                    Approve & Generate Lessons
+                    {getApproveLabel()}
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </div>
@@ -384,7 +423,7 @@ export default function CourseWizardPage() {
                   <textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
-                    placeholder="What should be different about the outline?"
+                    placeholder={`What should be different about the ${stepLabel.toLowerCase()}?`}
                     rows={2}
                     className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                     autoFocus
@@ -411,7 +450,7 @@ export default function CourseWizardPage() {
                       ) : (
                         <RotateCcw className="w-4 h-4" />
                       )}
-                      Regenerate Outline
+                      Regenerate {stepLabel}
                     </Button>
                   </div>
                 </div>

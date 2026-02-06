@@ -34,9 +34,9 @@ func (s *AIGenerationService) failJob(ctx context.Context, job *entity.Generatio
 // StartCourseCreationRequest contains the inputs for starting unified course creation.
 type StartCourseCreationRequest struct {
 	CourseID             uuid.UUID
-	CourseName           string
-	DesiredOutcomes      string
-	AdditionalContext    string
+	Topic                string
+	Audience             string
+	UseContext           string
 	InternalDataOnly     bool
 	SelectedTeamDocIDs   []string
 	SelectedGlobalDocIDs []string
@@ -105,9 +105,9 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 			TenantID:             user.TenantID.String(),
 			CourseID:             req.CourseID.String(),
 			UserID:               user.ID.String(),
-			CourseName:           req.CourseName,
-			DesiredOutcomes:      req.DesiredOutcomes,
-			AdditionalContext:    req.AdditionalContext,
+			Topic:                req.Topic,
+			Audience:             req.Audience,
+			UseContext:           req.UseContext,
 			InternalDataOnly:     req.InternalDataOnly,
 			SelectedTeamDocIDs:   teamDocIDs,
 			SelectedGlobalDocIDs: globalDocIDs,

@@ -183,9 +183,9 @@ export type ApproveCoursePlanRequest = z.infer<typeof ApproveCoursePlanRequestSc
  */
 export const StartCourseCreationRequestSchema = z.object({
   courseId: z.string(),
-  courseName: z.string(),
-  desiredOutcomes: z.string().optional(),
-  additionalContext: z.string().optional(),
+  topic: z.string(),
+  audience: z.string(),
+  useContext: z.string().optional(),
   internalDataOnly: z.boolean(),
   selectedTeamDocIds: z.array(z.string()),
   selectedGlobalDocIds: z.array(z.string()),

@@ -184,9 +184,9 @@ message ApproveCoursePlanResponse {
 
 message StartCourseCreationRequest {
   string course_id = 1;
-  string course_name = 2;
-  optional string desired_outcomes = 3;
-  optional string additional_context = 4;
+  string topic = 2;
+  string audience = 3;
+  optional string use_context = 4;
   bool internal_data_only = 5;
   repeated string selected_team_doc_ids = 6;
   repeated string selected_global_doc_ids = 7;

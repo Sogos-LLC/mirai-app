@@ -6,7 +6,16 @@ from dataclasses import dataclass, field
 
 from pydantic import BaseModel
 
-from src.models.wizard import SMEPersona, AudiencePersona, ToneOption
+from src.models.course_design import (
+    CourseAnalysis,
+    CourseOutcomes,
+    CourseStructure,
+    SectionOutcomes,
+    Lesson,
+    LessonTemplate,
+    ExpandedLesson,
+    CourseQA,
+)
 
 
 @dataclass
@@ -18,14 +27,13 @@ class CourseCreationInput:
     course_id: str
     user_id: str
 
-    # Wizard seed data
-    course_name: str
-    desired_outcomes: str = ""
-    additional_context: str = ""
+    # Step 1 seed data (CourseIntent)
+    topic: str
+    audience: str = ""
+    use_context: str = ""
     internal_data_only: bool = False
 
-    # Knowledge source IDs (for RAG + planning)
-    # Optional to tolerate Go nil slices (serialized as JSON null)
+    # Knowledge source IDs (for RAG)
     selected_team_doc_ids: list[str] | None = field(default_factory=list)
     selected_global_doc_ids: list[str] | None = field(default_factory=list)
 
@@ -48,7 +56,7 @@ class CourseCreationOutput:
 
     course_id: str
     total_lessons: int = 0
-    completed_lessons: int = 0
+    total_sections: int = 0
 
 
 @dataclass
@@ -71,14 +79,14 @@ class StepApproval:
             self.modifications = {}
 
 
-class WizardResult(BaseModel):
-    """Typed accumulator for wizard phase outputs."""
+class LockedArtifacts(BaseModel):
+    """Accumulated approved artifacts. Immutable once set."""
 
-    improved_title: str
-    description: str
-    desired_outcomes: str
-    sme_personas: list[SMEPersona]
-    audience_personas: list[AudiencePersona]
-    tone: ToneOption
-    additional_context: str
-    internal_data_only: bool
+    analysis: CourseAnalysis | None = None
+    outcomes: CourseOutcomes | None = None
+    structure: CourseStructure | None = None
+    section_outcomes: SectionOutcomes | None = None
+    sample_lesson: Lesson | None = None
+    template: LessonTemplate | None = None
+    expanded_lessons: list[ExpandedLesson] = []
+    qa: CourseQA | None = None
