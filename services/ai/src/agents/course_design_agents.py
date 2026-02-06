@@ -40,16 +40,39 @@ analysis_agent = Agent(
 )
 
 
-def make_analysis_agent(enable_web_search: bool = False) -> Agent:
-    """Create an analysis agent, optionally with web search."""
-    if not enable_web_search:
-        return analysis_agent
-    return Agent(
-        output_type=NativeOutput(CourseAnalysis),
-        system_prompt=ANALYSIS_SYSTEM,
-        name="course-analysis-web",
-        builtin_tools=[WebSearchTool()],
-    )
+RESEARCH_SYSTEM = """\
+You are a research assistant preparing background material for an instructional designer.
+Given a course topic and audience, search the web for relevant, current information that
+would help design a better course. Focus on:
+- Key concepts, terminology, and current best practices in the domain
+- Common misconceptions or challenges beginners face
+- Real-world applications and industry context
+- Any recent developments or trends relevant to the topic
+
+Return a concise research summary (3-5 paragraphs) with the most useful findings.
+Do NOT design the course — just gather background information.
+"""
+
+web_research_agent = Agent(
+    output_type=str,
+    system_prompt=RESEARCH_SYSTEM,
+    name="course-web-research",
+    builtin_tools=[WebSearchTool()],
+)
+
+
+def build_research_prompt(topic: str, audience: str) -> str:
+    return f"""\
+Research the following topic to prepare background material for course design.
+
+## Course Topic
+{topic}
+
+## Target Audience
+{audience}
+
+Search the web for current, relevant information about this topic that would help
+an instructional designer create an effective course for this audience."""
 
 
 def build_analysis_prompt(

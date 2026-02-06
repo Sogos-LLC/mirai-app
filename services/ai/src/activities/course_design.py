@@ -13,7 +13,8 @@ from temporalio import activity
 from src.agents.model import make_model
 from src.agents.course_design_agents import (
     analysis_agent,
-    make_analysis_agent,
+    web_research_agent,
+    build_research_prompt,
     build_analysis_prompt,
     outcomes_agent,
     build_outcomes_prompt,
@@ -181,15 +182,33 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
     activity.heartbeat()
 
     model = make_model(input.api_key)
+
+    # Optional: run web research first to gather background context
+    web_context = ""
+    if input.enable_web_research:
+        log.info("running_web_research", topic=input.topic)
+        research_prompt = build_research_prompt(input.topic, input.audience)
+        research_result = await web_research_agent.run(research_prompt, model=model)
+        web_context = research_result.output
+        log.info("web_research_complete", length=len(web_context))
+        activity.heartbeat()
+
+    # Combine RAG context with web research context
+    combined_context = input.rag_context
+    if web_context:
+        if combined_context:
+            combined_context += f"\n\n## Web Research Findings\n{web_context}"
+        else:
+            combined_context = web_context
+
     prompt = build_analysis_prompt(
         topic=input.topic,
         audience=input.audience,
         use_context=input.use_context,
-        rag_context=input.rag_context,
+        rag_context=combined_context,
     )
 
-    agent = make_analysis_agent(input.enable_web_research) if input.enable_web_research else analysis_agent
-    result = await agent.run(prompt, model=model)
+    result = await analysis_agent.run(prompt, model=model)
     activity.heartbeat()
 
     return GenerateAnalysisOutput(analysis=result.output)
