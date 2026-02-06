@@ -815,16 +815,16 @@ class CourseCreationWorkflow:
                 })
 
                 # Components are already proto-compliant — direct serialization
+                # S3 content.json uses string type names (Go LessonComponent.Type is string)
                 components = []
                 for i, comp in enumerate(lc.components):
                     # Get content fields (everything except 'type')
                     content_data = comp.model_dump(exclude={"type"})
                     comp_type_str = comp.type if isinstance(comp.type, str) else "text"
-                    comp_type_int = COMPONENT_TYPE_MAP.get(comp_type_str, 1)
 
                     components.append({
                         "id": str(uuid.uuid4()),
-                        "type": comp_type_int,
+                        "type": comp_type_str,
                         "order": i + 1,
                         "contentJson": content_data,
                         "learningObjectiveIds": [],
