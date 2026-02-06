@@ -2,6 +2,7 @@ package content
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -146,6 +147,46 @@ type LessonComponent struct {
 	CreatedAt            time.Time            `json:"createdAt"`
 	UpdatedAt            time.Time            `json:"updatedAt"`
 	Provenance           *ComponentProvenance `json:"provenance,omitempty"`
+}
+
+// componentTypeIntToString maps proto enum int values to string names.
+// Handles legacy S3 data where type was stored as int instead of string.
+var componentTypeIntToString = map[int]string{
+	1: "text", 2: "heading", 3: "image", 4: "quiz", 5: "code",
+	6: "callout", 7: "statement", 8: "quote", 9: "list", 13: "divider",
+}
+
+// UnmarshalJSON handles both string and int type fields for backwards compatibility.
+func (c *LessonComponent) UnmarshalJSON(data []byte) error {
+	// Alias to avoid recursion
+	type Alias LessonComponent
+	raw := struct {
+		Alias
+		Type json.RawMessage `json:"type"`
+	}{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*c = LessonComponent(raw.Alias)
+
+	// Try string first
+	var strType string
+	if err := json.Unmarshal(raw.Type, &strType); err == nil {
+		c.Type = strType
+		return nil
+	}
+
+	// Fall back to int (legacy format)
+	var intType int
+	if err := json.Unmarshal(raw.Type, &intType); err == nil {
+		if name, ok := componentTypeIntToString[intType]; ok {
+			c.Type = name
+			return nil
+		}
+		return fmt.Errorf("unknown component type int: %d", intType)
+	}
+
+	return fmt.Errorf("component type must be string or int, got: %s", string(raw.Type))
 }
 
 // ProvenanceChunk represents a knowledge chunk that contributed to generated content.
