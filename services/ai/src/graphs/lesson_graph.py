@@ -8,6 +8,7 @@ Flow:
                                                   |-> PlanComponents (fails, max 1 retry)
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import structlog
@@ -79,6 +80,7 @@ class LessonDeps:
     is_course_last: bool = False
     next_lesson_title: str = ""
     web_context: str = ""
+    heartbeat: Callable[[str], None] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +322,10 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
             component.order = i
             components.append(component)
 
+            # Heartbeat after each component to prevent activity timeout
+            if deps.heartbeat:
+                deps.heartbeat(f"generated component {i + 1}/{len(plan)}")
+
         state.generated_components = components
 
         log.info(
@@ -357,6 +363,9 @@ class JudgeLessonNode(BaseNode[LessonState, LessonDeps]):
             content=content,
             previous_summaries=deps.previous_lesson_summaries,
         )
+
+        if deps.heartbeat:
+            deps.heartbeat(f"judged lesson: {'pass' if score.passes else 'fail'}")
 
         log.info(
             "lesson_judged",
@@ -476,6 +485,7 @@ async def run_lesson_graph(
     is_course_last: bool = False,
     next_lesson_title: str = "",
     web_context: str = "",
+    heartbeat: Callable[[str], None] | None = None,
 ) -> tuple[LessonContent, int]:
     """Run the full lesson generation graph.
 
@@ -504,6 +514,7 @@ async def run_lesson_graph(
         is_course_last=is_course_last,
         next_lesson_title=next_lesson_title,
         web_context=web_context,
+        heartbeat=heartbeat,
     )
 
     state = LessonState()

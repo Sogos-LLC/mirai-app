@@ -150,6 +150,7 @@ async def generate_lesson(input: GenerateLessonInput) -> GenerateLessonOutput:
         is_course_last=input.is_course_last,
         next_lesson_title=input.next_lesson_title,
         web_context=input.web_context,
+        heartbeat=activity.heartbeat,
     )
 
     activity.heartbeat("lesson generation completed")
