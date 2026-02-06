@@ -1,4 +1,5 @@
 import { useQuery } from '@connectrpc/connect-query';
+import { keepPreviousData } from '@tanstack/react-query';
 import {
   listCourses,
   getCourse,
@@ -25,19 +26,27 @@ export function useListCourses(options?: {
   limit?: number;
   offset?: number;
 }) {
-  const query = useQuery(listCourses, {
-    status: options?.status,
-    folder: options?.folder,
-    tags: options?.tags ?? [],
-    limit: options?.limit ?? 20,
-    offset: options?.offset ?? 0,
-  });
+  const query = useQuery(
+    listCourses,
+    {
+      status: options?.status,
+      folder: options?.folder,
+      tags: options?.tags ?? [],
+      limit: options?.limit ?? 20,
+      offset: options?.offset ?? 0,
+    },
+    {
+      // Show previous data while new filter results load (no spinner on tab switch)
+      placeholderData: keepPreviousData,
+    }
+  );
 
   return {
     data: query.data?.courses ?? [],
     totalCount: query.data?.totalCount ?? 0,
     hasMore: query.data?.hasMore ?? false,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     error: query.error,
     refetch: query.refetch,
   };

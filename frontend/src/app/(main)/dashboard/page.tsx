@@ -85,7 +85,7 @@ export default function Dashboard() {
       ? CourseStatus.PUBLISHED
       : undefined;
 
-  const { data: courses, isLoading } = useListCourses({
+  const { data: courses, isLoading, isFetching } = useListCourses({
     status: statusFilter,
   });
   const deleteCourseMutation = useDeleteCourse();
@@ -187,7 +187,12 @@ export default function Dashboard() {
       <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-200 dark:border-dark-border p-6">
         {/* Header with responsive layout */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Your Courses</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Your Courses</h3>
+            {isFetching && !isLoading && (
+              <div className="w-4 h-4 border-2 border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400 rounded-full animate-spin" />
+            )}
+          </div>
           {/* Tab buttons - horizontal scroll on mobile */}
           <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
             <button

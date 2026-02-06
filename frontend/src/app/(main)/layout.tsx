@@ -2,9 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { callUnaryMethod, createConnectQueryKey } from '@connectrpc/connect-query';
 import { useAuth } from '@/contexts';
 import { useUIStore } from '@/store/zustand';
 import { setSessionTokenCookie } from '@/lib/auth.config';
+import { transport } from '@/lib/connect';
+import { listCourses } from '@/gen/mirai/v1/course-CourseService_connectquery';
 import Sidebar, { menuItems, bottomItems } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomTabNav from '@/components/layout/BottomTabNav';
@@ -52,8 +56,9 @@ export default function Layout({
     }
   }, [checkSession, tokenProcessed, searchParams]);
 
-  // Prefetch routes only AFTER auth is initialized
-  // Note: Data prefetching is now handled by React Query automatic caching
+  const queryClient = useQueryClient();
+
+  // Prefetch routes and dashboard data AFTER auth is initialized
   useEffect(() => {
     if (!isAuthInitialized) return;
 
@@ -72,7 +77,14 @@ export default function Layout({
       });
     }
     allPaths.forEach((path) => router.prefetch(path));
-  }, [router, isAuthInitialized]);
+
+    // Prefetch course list so the dashboard is instant
+    const input = { tags: [], limit: 20, offset: 0 };
+    queryClient.prefetchQuery({
+      queryKey: createConnectQueryKey({ schema: listCourses, input, cardinality: "finite" }),
+      queryFn: () => callUnaryMethod(transport, listCourses, input),
+    });
+  }, [router, queryClient, isAuthInitialized]);
 
   // Desktop: sidebar margin based on collapsed/expanded state
   // Mobile: no margin (sidebar is a drawer overlay)

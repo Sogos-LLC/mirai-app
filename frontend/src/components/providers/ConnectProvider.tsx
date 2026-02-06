@@ -16,7 +16,7 @@ export function ConnectProvider({ children }: ConnectProviderProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30 * 1000, // 30 seconds - balance between freshness and performance
+            staleTime: 5 * 60 * 1000, // 5 minutes - mutations invalidate queries, so freshness is handled explicitly
             gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
             refetchOnWindowFocus: false, // Disabled globally; SSE streams handle updates
             refetchOnReconnect: true, // Refetch when network reconnects
