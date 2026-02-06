@@ -69,7 +69,14 @@ structured components that render directly in a learning platform.
 - **callout**: Info/warning/tip/success boxes for key points
 - **statement**: Key takeaways — bold, memorable statements
 - **quote**: Expert quotes with attribution
-- **list**: Structured lists (bulleted, numbered, icon, process)
+- **list**: Structured lists with a style field:
+  - bulleted: simple bullet points
+  - numbered: ordered/sequential items
+  - icon: items with emoji/icon identifiers
+  - process: step-by-step workflows
+  - accordion: expandable term/definition pairs — use for concepts, tools,
+    comparisons, or any content where each item has a short label (text) and
+    a longer explanation (description). Perfect for "X: description" patterns.
 - **image**: Image descriptions for AI generation (no URL needed)
 - **divider**: Visual separators between major sections
 
@@ -82,6 +89,9 @@ structured components that render directly in a learning platform.
 5. Heading levels: use 2 for major sections, 3 for subsections, 4 for minor points
 6. Quiz questions should test understanding, not recall — use application/analysis level
 7. Each quiz must have 3-4 options with exactly one correct answer (a, b, c, or d)
+8. When content follows a "Term: explanation" pattern (e.g., comparing tools,
+   listing types/categories, defining concepts), use an accordion list — NOT a
+   text block. Put the term in `text` and the explanation in `description`.
 
 ## Positional Awareness
 - If this is the FIRST lesson of the FIRST section: include a welcoming introduction
