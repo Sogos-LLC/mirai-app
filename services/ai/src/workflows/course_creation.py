@@ -652,7 +652,7 @@ class CourseCreationWorkflow:
                 section_lessons_meta.append({
                     "id": outline_lesson_id,
                     "title": sample_lesson.title,
-                    "description": sample_lesson.objective.target_behavior,
+                    "description": sample_lesson.objective.description,
                     "position": len(section_lessons_meta) + 1,
                 })
                 all_lessons.append(self._lesson_to_s3(
@@ -668,7 +668,7 @@ class CourseCreationWorkflow:
                     section_lessons_meta.append({
                         "id": outline_lesson_id,
                         "title": exp.title,
-                        "description": exp.objective.target_behavior,
+                        "description": exp.objective.description,
                         "position": len(section_lessons_meta) + 1,
                     })
                     all_lessons.append(self._lesson_to_s3(
