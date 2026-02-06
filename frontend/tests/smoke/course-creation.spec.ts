@@ -17,8 +17,8 @@ test.describe('Course Creation Wizard', () => {
   });
 
   test('02 - full course creation end-to-end', async ({ page }) => {
-    // Budget: ~20s per approval step (7 steps) + up to 3min for lesson generation
-    test.setTimeout(600_000);
+    // Budget: ~2min wizard auto-gen + up to 3min outline gen + up to 10min lessons
+    test.setTimeout(900_000);
 
     // Capture console messages for debugging
     const consoleLogs: string[] = [];
@@ -42,7 +42,7 @@ test.describe('Course Creation Wizard', () => {
 
       const detected = await Promise.race([
         page.locator('#courseName').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'form' as const),
-        page.locator('button:has-text("Approve & Continue")').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'review' as const),
+        page.locator('text=Review Course Outline').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'outline' as const),
         page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'completed' as const),
         page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'failed' as const),
         page.locator('.animate-spin').first().waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'processing' as const),
@@ -55,35 +55,30 @@ test.describe('Course Creation Wizard', () => {
         try {
           await page.fill('#courseName', title, { timeout: 3_000 });
           await screenshot(page, 'wizard-filled');
-          await page.click('button:has-text("Generate Title")', { timeout: 3_000 });
+          await page.click('button:has-text("Generate Course")', { timeout: 3_000 });
           console.log('Started new workflow');
           started = true;
         } catch {
-          // Form disappeared (stale job RESUME) — wait for it to resolve
           console.log('  form disappeared — stale job fired RESUME, waiting...');
           await page.waitForTimeout(5_000);
         }
-      } else if (detected === 'review') {
-        console.log('  found active review — will proceed to approval loop');
+      } else if (detected === 'outline') {
+        console.log('  found active outline review — will proceed to approval');
         started = true;
       } else if (detected === 'failed') {
-        // Stale workflow marked as failed by backend — refresh page
         console.log('  stale workflow cleaned up — refreshing');
         await page.goto('/course/wizard');
         await page.waitForLoadState('domcontentloaded');
       } else if (detected === 'completed') {
-        // Previous course completed — navigate away and back
         console.log('  previous course completed — navigating back');
         await page.goto('/dashboard');
         await page.click('button:has-text("Create Course")');
         await page.waitForURL('**/course/wizard');
         await page.waitForLoadState('domcontentloaded');
       } else if (detected === 'processing') {
-        // Wait for stale processing to resolve (backend marks it failed)
         console.log('  stale processing — waiting for backend to clean up...');
         await page.waitForTimeout(8_000);
       } else {
-        // Empty card — wait briefly and retry
         console.log('  card empty — waiting...');
         await page.waitForTimeout(3_000);
       }
@@ -96,86 +91,85 @@ test.describe('Course Creation Wizard', () => {
     }
 
     // =====================================================================
-    // APPROVAL LOOP — step through each approval until course is complete
-    //
-    // SLAs per step type:
-    //   Title/Outcomes/Personas/Audience/Tone: 20s
-    //   Outline (with concept map + quality judge): 60s
-    //   Lesson generation → completion: 180s
-    //
-    // We use :not([disabled]) so the locator only matches ENABLED buttons.
-    // During sendingApproval the button is disabled → locator won't match,
-    // preventing the next loop iteration from re-clicking the same step.
+    // PHASE 1: Wait for auto-generation to complete (title, outcomes,
+    // personas, tone, outline) — the only approval step is outline review
     // =====================================================================
-    let stepCount = 0;
-    const maxSteps = 12;
-    // Track last approved step header to determine next timeout
-    let lastStepHeader = '';
+    console.log('Waiting for outline review (auto-generating wizard steps)...');
 
-    // Locator that only matches an enabled "Approve & Continue" button
-    const enabledApproveBtn = page.locator('button:has-text("Approve & Continue"):not([disabled])');
+    // Wait up to 5 minutes for auto-generation + outline to reach approval
+    const phase1Result = await Promise.race([
+      page.locator('text=Review Course Outline').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'outline' as const),
+      page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'completed' as const),
+      page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'failed' as const),
+      page.locator('text=Application error').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'crashed' as const),
+    ]);
 
-    while (stepCount < maxSteps) {
-      // Timeout depends on what we're waiting for after the last approval:
-      // - First step (stepCount=0): 90s to cover CreateCourse + StartWorkflow + title gen
-      // - After tone approval: outline gen+concept map+judge (up to 45s)
-      // - After outline approval: gap analysis + sequential lesson gen (up to 420s)
-      // - Everything else: 20s (AI gen + Temporal/polling overhead)
-      let waitTimeout = 20_000;
-      if (stepCount === 0) waitTimeout = 90_000;
-      else if (lastStepHeader.includes('Outline')) waitTimeout = 420_000;
-      else if (lastStepHeader.includes('Tone')) waitTimeout = 45_000;
+    console.log(`Phase 1 result: ${phase1Result}`);
+    await screenshot(page, `phase1-${phase1Result}`);
 
-      const result = await Promise.race([
-        enabledApproveBtn.waitFor({ state: 'visible', timeout: waitTimeout }).then(() => 'approval' as const),
-        page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: waitTimeout }).then(() => 'completed' as const),
-        page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: waitTimeout }).then(() => 'failed' as const),
-        page.locator('text=Application error').waitFor({ state: 'visible', timeout: waitTimeout }).then(() => 'crashed' as const),
-      ]);
+    if (phase1Result === 'failed') {
+      console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
+      const errorEl = page.locator('.text-secondary').first();
+      const errorText = await errorEl.textContent().catch(() => 'unknown');
+      throw new Error(`Workflow failed during auto-generation: ${errorText}`);
+    }
 
-      if (result === 'completed') {
-        await screenshot(page, 'final-completed');
-        console.log(`Course created after ${stepCount} approval steps`);
-        break;
-      }
+    if (phase1Result === 'crashed') {
+      console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
+      throw new Error('Application crashed during auto-generation');
+    }
 
-      if (result === 'failed') {
-        await screenshot(page, 'final-failed');
-        console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
-        const errorText = await page.locator('text=Something went wrong').textContent().catch(() => 'unknown');
-        throw new Error(`Workflow failed: ${errorText}`);
-      }
+    // =====================================================================
+    // PHASE 2: Approve the outline (the only manual step)
+    // =====================================================================
+    if (phase1Result === 'outline') {
+      console.log('Outline review visible — approving...');
 
-      if (result === 'crashed') {
-        await screenshot(page, 'final-crashed');
-        console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
-        throw new Error('Application crashed with client-side exception');
-      }
+      // Verify outline sections are rendered
+      const sectionCount = await page.locator('[class*="rounded-lg border bg-page"]').count();
+      console.log(`Outline has ${sectionCount} sections`);
+      await screenshot(page, 'outline-review');
 
-      // Approval step
-      stepCount++;
-      const stepHeader = await page.locator('h3:has-text("Review:")').textContent().catch(() => 'unknown');
-      lastStepHeader = stepHeader ?? '';
-      console.log(`Step ${stepCount}: ${stepHeader} (waited up to ${waitTimeout / 1000}s)`);
-      await screenshot(page, `step-${stepCount}-review`);
+      // Click "Approve & Generate Lessons"
+      const approveBtn = page.locator('button:has-text("Approve & Generate Lessons")');
+      await expect(approveBtn).toBeVisible({ timeout: 5_000 });
+      await approveBtn.click();
 
-      // For persona steps, click "Select All" if visible
-      const selectAll = page.locator('button:has-text("Select All")');
-      if (await selectAll.isVisible({ timeout: 500 }).catch(() => false)) {
-        await selectAll.click();
-        await screenshot(page, `step-${stepCount}-selected-all`);
-      }
+      // Wait for the button to disappear (transitioning to processing state)
+      await approveBtn.waitFor({ state: 'hidden', timeout: 10_000 });
+      console.log('Outline approved — waiting for lessons to generate...');
+      await screenshot(page, 'lessons-generating');
+    }
 
-      // Click approve, then wait for the enabled button to disappear
-      // (either disabled during sendingApproval, or fully hidden during processing)
-      await enabledApproveBtn.click();
-      await enabledApproveBtn.waitFor({ state: 'hidden', timeout: 10_000 });
+    // =====================================================================
+    // PHASE 3: Wait for lesson generation + structural elements + completion
+    // Budget: up to 10 minutes
+    // =====================================================================
+    const phase3Result = await Promise.race([
+      page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 600_000 }).then(() => 'completed' as const),
+      page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 600_000 }).then(() => 'failed' as const),
+    ]);
+
+    console.log(`Phase 3 result: ${phase3Result}`);
+    await screenshot(page, `phase3-${phase3Result}`);
+
+    if (phase3Result === 'failed') {
+      console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
+      const errorEl = page.locator('.text-secondary').first();
+      const errorText = await errorEl.textContent().catch(() => 'unknown');
+      throw new Error(`Workflow failed during lesson generation: ${errorText}`);
     }
 
     // Verify completion
     await expect(page.locator('text=Course Created!')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('button:has-text("Open in Editor")')).toBeVisible();
     await screenshot(page, 'course-completed');
+
+    // Click Open in Editor to verify the course is accessible
+    await page.click('button:has-text("Open in Editor")');
+    await page.waitForURL('**/course/*/editor', { timeout: 15_000 });
+    await screenshot(page, 'course-editor');
+    console.log('Course editor loaded successfully!');
 
     // Dump last console logs for reference
     console.log('CONSOLE LOGS (last 30):\n' + consoleLogs.slice(-30).join('\n'));

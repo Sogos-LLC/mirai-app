@@ -137,11 +137,11 @@ class CourseCreationWorkflow:
         api_key = await self._decrypt_api_key(input.tenant_id)
 
         # ---------------------------------------------------------------
-        # WIZARD PHASE
+        # WIZARD PHASE — all steps auto-generated, no approval gates
         # ---------------------------------------------------------------
 
         # Step 1: Generate title
-        self._progress = 3
+        self._progress = 5
         self._progress_message = "Generating title..."
         title_result = await self._run_ai_activity(
             "generate_title_activity",
@@ -153,45 +153,12 @@ class CourseCreationWorkflow:
             GenerateTitleOutput,
             timeout=AI_SHORT_TIMEOUT,
         )
-        title_approval = await self._publish_and_wait(
-            input, "title", json.dumps({
-                "improved_title": title_result.improved_title,
-                "description": title_result.description,
-            }), 5,
-        )
         improved_title = title_result.improved_title
         description = title_result.description
-        if title_approval.approved and title_approval.modifications:
-            improved_title = title_approval.modifications.get("improved_title", improved_title)
-            description = title_approval.modifications.get("description", description)
-        elif not title_approval.approved:
-            # Regenerate on rejection
-            title_result = await self._run_ai_activity(
-                "generate_title_activity",
-                GenerateTitleInput(
-                    api_key=api_key,
-                    course_name=input.course_name,
-                    feedback=title_approval.feedback,
-                    rag_filters=input.rag_filters or None,
-                ),
-                GenerateTitleOutput,
-                timeout=AI_SHORT_TIMEOUT,
-            )
-            improved_title = title_result.improved_title
-            description = title_result.description
-            second_title_approval = await self._publish_and_wait(
-                input, "title", json.dumps({
-                    "improved_title": improved_title,
-                    "description": description,
-                }), 5,
-            )
-            if second_title_approval.approved and second_title_approval.modifications:
-                improved_title = second_title_approval.modifications.get("improved_title", improved_title)
-                description = second_title_approval.modifications.get("description", description)
 
         # Step 2: Generate outcomes
-        self._progress = 8
-        self._progress_message = "Generating outcomes..."
+        self._progress = 15
+        self._progress_message = "Generating learning outcomes..."
         outcomes_result = await self._run_ai_activity(
             "generate_outcomes_activity",
             GenerateOutcomesInput(
@@ -202,36 +169,11 @@ class CourseCreationWorkflow:
             GenerateOutcomesOutput,
             timeout=AI_SHORT_TIMEOUT,
         )
-        outcomes_approval = await self._publish_and_wait(
-            input, "outcomes", json.dumps({
-                "outcomes": outcomes_result.outcomes,
-            }), 10,
-        )
         desired_outcomes = outcomes_result.outcomes
-        if outcomes_approval.approved and outcomes_approval.modifications:
-            desired_outcomes = outcomes_approval.modifications.get("outcomes", desired_outcomes)
-        elif not outcomes_approval.approved:
-            outcomes_result = await self._run_ai_activity(
-                "generate_outcomes_activity",
-                GenerateOutcomesInput(
-                    api_key=api_key,
-                    course_name=improved_title,
-                    feedback=outcomes_approval.feedback,
-                    rag_filters=input.rag_filters or None,
-                ),
-                GenerateOutcomesOutput,
-                timeout=AI_SHORT_TIMEOUT,
-            )
-            desired_outcomes = outcomes_result.outcomes
-            second_outcomes_approval = await self._publish_and_wait(
-                input, "outcomes", json.dumps({"outcomes": desired_outcomes}), 10,
-            )
-            if second_outcomes_approval.approved and second_outcomes_approval.modifications:
-                desired_outcomes = second_outcomes_approval.modifications.get("outcomes", desired_outcomes)
 
-        # Step 3: Generate SME personas
-        self._progress = 13
-        self._progress_message = "Generating SME personas..."
+        # Step 3: Generate SME personas (select all)
+        self._progress = 25
+        self._progress_message = "Generating expert personas..."
         sme_result = await self._run_ai_activity(
             "generate_sme_personas_activity",
             GenerateSMEPersonasInput(
@@ -243,20 +185,10 @@ class CourseCreationWorkflow:
             GenerateSMEPersonasOutput,
             timeout=AI_SHORT_TIMEOUT,
         )
-        sme_approval = await self._publish_and_wait(
-            input, "sme_personas",
-            json.dumps({"personas": [p.model_dump() for p in sme_result.personas]}),
-            15,
-        )
-        selected_sme_ids = sme_approval.selected_ids or [
-            p.id for p in sme_result.personas
-        ]
-        selected_smes = [
-            p for p in sme_result.personas if p.id in selected_sme_ids
-        ]
+        selected_smes = sme_result.personas
 
-        # Step 4: Generate audience personas
-        self._progress = 18
+        # Step 4: Generate audience personas (select all)
+        self._progress = 35
         self._progress_message = "Generating audience personas..."
         audience_result = await self._run_ai_activity(
             "generate_audience_personas_activity",
@@ -270,21 +202,11 @@ class CourseCreationWorkflow:
             GenerateAudiencePersonasOutput,
             timeout=AI_SHORT_TIMEOUT,
         )
-        audience_approval = await self._publish_and_wait(
-            input, "audience_personas",
-            json.dumps({"personas": [p.model_dump() for p in audience_result.personas]}),
-            20,
-        )
-        selected_audience_ids = audience_approval.selected_ids or [
-            p.id for p in audience_result.personas
-        ]
-        selected_audiences = [
-            p for p in audience_result.personas if p.id in selected_audience_ids
-        ]
+        selected_audiences = audience_result.personas
 
-        # Step 5: Generate tone options
-        self._progress = 23
-        self._progress_message = "Generating tone options..."
+        # Step 5: Generate tone options (pick first)
+        self._progress = 40
+        self._progress_message = "Selecting tone & style..."
         tone_result = await self._run_ai_activity(
             "generate_tone_options_activity",
             GenerateToneOptionsInput(
@@ -297,27 +219,9 @@ class CourseCreationWorkflow:
             GenerateToneOptionsOutput,
             timeout=AI_SHORT_TIMEOUT,
         )
-        tone_approval = await self._publish_and_wait(
-            input, "tone_options",
-            json.dumps({"options": [o.model_dump() for o in tone_result.options]}),
-            25,
-        )
-        selected_tone_id = (
-            tone_approval.selected_ids[0]
-            if tone_approval.selected_ids
-            else tone_result.options[0].id
-        )
-        selected_tone = next(
-            (o for o in tone_result.options if o.id == selected_tone_id),
-            tone_result.options[0],
-        )
+        selected_tone = tone_result.options[0]
 
-        # Merge any additional context from tone approval
         additional_context = input.additional_context or ""
-        if tone_approval.modifications:
-            extra_context = tone_approval.modifications.get("additional_context", "")
-            if extra_context:
-                additional_context = (additional_context + "\n" + extra_context).strip()
 
         # Build wizard result for later phases
         wizard_result = WizardResult(
@@ -346,9 +250,9 @@ class CourseCreationWorkflow:
         )
 
         if has_knowledge:
-            self._progress = 30
-            self._progress_message = "Analyzing documents"
-            await self._update_job(input, "PROCESSING", 30, "Analyzing documents")
+            self._progress = 42
+            self._progress_message = "Analyzing documents..."
+            await self._update_job(input, "PROCESSING", 42, "Analyzing documents")
 
             # Analyze each document
             all_source_ids = (
@@ -379,7 +283,7 @@ class CourseCreationWorkflow:
                 analyses.append(analysis.analysis)
 
             if analyses:
-                # Generate course plan
+                # Generate course plan (no approval gate)
                 from src.activities.planning import (
                     GenerateCoursePlanInput,
                     GenerateCoursePlanOutput,
@@ -400,18 +304,14 @@ class CourseCreationWorkflow:
                 )
 
                 course_plan_context = plan_result.plan
-                await self._publish_and_wait(
-                    input, "course_plan",
-                    json.dumps({"plan": course_plan_context.model_dump()}), 35,
-                )
 
         # ---------------------------------------------------------------
         # OUTLINE PHASE
         # ---------------------------------------------------------------
 
-        self._progress = 40
-        self._progress_message = "Generating outline"
-        await self._update_job(input, "PROCESSING", 40, "Generating outline")
+        self._progress = 45
+        self._progress_message = "Generating outline..."
+        await self._update_job(input, "PROCESSING", 45, "Generating outline")
 
         # Parse desired outcomes into a list
         outcome_lines = [
@@ -447,7 +347,7 @@ class CourseCreationWorkflow:
             }), 50,
         )
 
-        if not outline_approval.approved and outline_approval.feedback:
+        if outline_approval and not outline_approval.approved and outline_approval.feedback:
             # Regenerate with feedback
             outline_result = await self._run_ai_activity(
                 "generate_outline",
@@ -490,8 +390,8 @@ class CourseCreationWorkflow:
         # GAP ANALYSIS PHASE (one-time, before lesson generation)
         # ---------------------------------------------------------------
 
-        self._progress = 52
-        self._progress_message = "Analyzing knowledge gaps"
+        self._progress = 55
+        self._progress_message = "Analyzing knowledge gaps..."
 
         # Build outline summary for gap analysis
         outline_summary_parts: list[str] = []
@@ -519,9 +419,9 @@ class CourseCreationWorkflow:
         # LESSON PHASE
         # ---------------------------------------------------------------
 
-        self._progress = 55
-        self._progress_message = "Generating lessons"
-        await self._update_job(input, "PROCESSING", 55, "Generating lessons")
+        self._progress = 58
+        self._progress_message = "Generating lessons..."
+        await self._update_job(input, "PROCESSING", 58, "Generating lessons")
 
         outline = outline_result.outline
 
@@ -595,7 +495,7 @@ class CourseCreationWorkflow:
             )
 
             completed_lessons += 1
-            progress = 55 + int((completed_lessons / total_lessons) * 35)
+            progress = 58 + int((completed_lessons / total_lessons) * 32)
 
             self._progress = progress
             self._progress_message = f"Generated lesson {completed_lessons}/{total_lessons}"

@@ -14,7 +14,6 @@ import {
   Paperclip,
 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
-import { WizardStepper } from '@/components/course/WizardStepper';
 import { KnowledgeSelectionModal } from '@/components/course/KnowledgeSelectionModal';
 import { PageShell } from '@/components/layout/PageShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -22,9 +21,6 @@ import Button from '@/components/ui/Button';
 
 import {
   courseCreationMachine,
-  getWorkflowStepLabel,
-  getWizardPhase,
-  TOTAL_WIZARD_PHASES,
 } from '@/machines/courseCreationMachine';
 import {
   useStartCourseCreation,
@@ -38,11 +34,6 @@ import {
   GenerationJobStatus,
   WorkflowStepType,
 } from '@/gen/mirai/v1/ai_generation_types_pb';
-
-/** Steps that support regeneration via reject. Selection-only steps (personas, tone, plan) don't. */
-function stepSupportsRegeneration(step: WorkflowStepType): boolean {
-  return [WorkflowStepType.TITLE, WorkflowStepType.OUTCOMES, WorkflowStepType.OUTLINE].includes(step);
-}
 
 export default function CourseWizardPage() {
   const router = useRouter();
@@ -62,12 +53,6 @@ export default function CourseWizardPage() {
   // Rejection feedback
   const [feedback, setFeedback] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
-
-  // Selection state for persona/tone steps
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // Modifications state for editable steps (title, outcomes, additional context)
-  const [modifications, setModifications] = useState<Record<string, string>>({});
 
   // Knowledge selection
   const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<string[]>([]);
@@ -129,32 +114,18 @@ export default function CourseWizardPage() {
     send({ type: 'STATE_UPDATE', state: workflowState });
   }, [workflowState, send]);
 
-  // Track display phase for stepper — only advances forward, resets on idle
-  const [displayPhase, setDisplayPhase] = useState(1);
-  useEffect(() => {
-    if (isCompleted) {
-      setDisplayPhase(TOTAL_WIZARD_PHASES + 1);
-    } else if (state.context.pendingStep) {
-      const nextPhase = getWizardPhase(state.context.pendingStep, false);
-      // Only advance forward during processing (never go backwards)
-      setDisplayPhase((prev) => (isIdle ? nextPhase : Math.max(prev, nextPhase)));
-    } else if (isIdle) {
-      setDisplayPhase(1);
-    }
-    // During processing with no pendingStep, keep the current displayPhase
-  }, [state.context.pendingStep, isIdle, isCompleted]);
+  const isProcessing = state.matches('processing');
+  const isAwaitingApproval = state.matches('awaitingApproval');
+  const isSendingSignal = state.matches('sendingApproval') || state.matches('sendingRejection');
 
-  // Reset selection/modification state when step changes
-  const prevStepRef = React.useRef(state.context.pendingStep);
-  useEffect(() => {
-    if (state.context.pendingStep !== prevStepRef.current) {
-      setSelectedIds([]);
-      setModifications({});
-      setShowRejectForm(false);
-      setFeedback('');
-      prevStepRef.current = state.context.pendingStep;
-    }
-  }, [state.context.pendingStep]);
+  // Only outline step requires manual approval
+  const isOutlineReview =
+    isAwaitingApproval && state.context.pendingStep === WorkflowStepType.OUTLINE;
+  const showStepReview =
+    isOutlineReview || (isSendingSignal && state.context.pendingStep === WorkflowStepType.OUTLINE);
+
+  // Everything else shows as processing (including non-outline approval states which shouldn't happen now)
+  const showProcessing = isProcessing || (isAwaitingApproval && !isOutlineReview) || (isSendingSignal && !showStepReview);
 
   // Start the workflow: create a course record, then start the Temporal workflow
   const handleStart = useCallback(async () => {
@@ -194,20 +165,14 @@ export default function CourseWizardPage() {
     }
   }, [courseName, desiredOutcomes, selectedKnowledgeIds, createCourse, startCreation, send]);
 
-  // Approve current step
+  // Approve outline
   const handleApprove = useCallback(() => {
     setShowRejectForm(false);
     setFeedback('');
-    send({
-      type: 'APPROVE',
-      selectedIds: selectedIds.length > 0 ? selectedIds : undefined,
-      modifications: Object.keys(modifications).length > 0 ? modifications : undefined,
-    });
-    setSelectedIds([]);
-    setModifications({});
-  }, [send, selectedIds, modifications]);
+    send({ type: 'APPROVE' });
+  }, [send]);
 
-  // Reject current step
+  // Reject outline with feedback
   const handleReject = useCallback(() => {
     if (!feedback.trim()) return;
     setShowRejectForm(false);
@@ -215,21 +180,13 @@ export default function CourseWizardPage() {
     setFeedback('');
   }, [feedback, send]);
 
-  const isProcessing = state.matches('processing');
-  const isAwaitingApproval = state.matches('awaitingApproval');
-  const isSendingSignal = state.matches('sendingApproval') || state.matches('sendingRejection');
-  // Keep step review visible while sending signal (buttons become disabled)
-  const showStepReview = (isAwaitingApproval || isSendingSignal) && !!state.context.pendingStep;
-
   return (
     <PageShell
       title="Create New Course"
-      description="Let AI guide you through creating an engaging course in 5 simple steps"
+      description="AI will generate a complete course from your topic"
       backButton={{ label: 'Back to Dashboard', onClick: () => router.push('/dashboard') }}
       maxWidth="5xl"
     >
-      <WizardStepper currentPhase={displayPhase} />
-
       <Card>
         {/* ===================== IDLE STATE ===================== */}
         {isIdle && (
@@ -245,8 +202,8 @@ export default function CourseWizardPage() {
                     What would you like to teach?
                   </h2>
                   <p className="text-sm text-secondary max-w-lg">
-                    Enter a course name or topic. Our AI will help you refine it
-                    and generate engaging content.
+                    Enter a course name and AI will handle the rest &mdash; generating titles,
+                    outcomes, personas, and an outline for your review.
                   </p>
                 </div>
 
@@ -264,8 +221,7 @@ export default function CourseWizardPage() {
                     }}
                   />
                   <p className="mt-2 text-xs text-muted text-center">
-                    Don&apos;t worry about getting it perfect &mdash; you can
-                    refine it in the next step.
+                    Don&apos;t worry about getting it perfect &mdash; AI will refine it.
                   </p>
                 </div>
 
@@ -305,7 +261,7 @@ export default function CourseWizardPage() {
                   <p className="mt-2 text-xs text-muted text-center">
                     {desiredOutcomes.trim()
                       ? 'These outcomes serve as the north star guiding all content generation.'
-                      : 'Optional — AI will refine your outcomes in the next step.'}
+                      : 'Optional — AI will generate outcomes automatically.'}
                   </p>
                 </div>
 
@@ -340,7 +296,7 @@ export default function CourseWizardPage() {
                   </>
                 ) : (
                   <>
-                    Generate Title
+                    Generate Course
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -350,7 +306,7 @@ export default function CourseWizardPage() {
         )}
 
         {/* ===================== PROCESSING STATE ===================== */}
-        {isProcessing && (
+        {showProcessing && (
           <CardContent>
             {/* Thin progress bar */}
             <div className="w-full h-1 bg-page rounded-full mb-8 overflow-hidden">
@@ -362,29 +318,34 @@ export default function CourseWizardPage() {
 
             <div className="flex flex-col items-center text-center py-12">
               <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-              <p className="text-sm text-secondary">
-                {state.context.progressMessage || 'Working on the next step...'}
+              <p className="text-sm font-medium text-primary mb-1">
+                {state.context.progressMessage || 'Working on your course...'}
+              </p>
+              <p className="text-xs text-muted">
+                {state.context.progressPercent < 45
+                  ? 'Generating course foundation — this takes about 2 minutes'
+                  : state.context.progressPercent < 55
+                    ? 'Building course outline...'
+                    : `Generating lessons — ${state.context.progressPercent}% complete`}
               </p>
             </div>
           </CardContent>
         )}
 
-        {/* ============ AWAITING APPROVAL / SENDING SIGNAL ============ */}
+        {/* ============ OUTLINE REVIEW ============ */}
         {showStepReview && (
           <>
             <CardHeader>
               <CardTitle as="h3">
-                Review: {getWorkflowStepLabel(state.context.pendingStep!)}
+                Review Course Outline
               </CardTitle>
             </CardHeader>
 
             {state.context.stepData && (
               <CardContent className="max-h-[60vh] overflow-y-auto">
                 <StepDataRenderer
-                  step={state.context.pendingStep!}
+                  step={WorkflowStepType.OUTLINE}
                   data={state.context.stepData}
-                  onSelectionChange={setSelectedIds}
-                  onModificationsChange={setModifications}
                 />
               </CardContent>
             )}
@@ -393,24 +354,16 @@ export default function CourseWizardPage() {
             <div className="px-4 py-4 sm:px-6 border-t">
               {!showRejectForm ? (
                 <div className="flex items-center justify-between">
-                  {state.context.pendingStep && stepSupportsRegeneration(state.context.pendingStep) ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowRejectForm(true)}
-                      disabled={isSendingSignal}
-                      className="gap-2"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Regenerate
-                    </Button>
-                  ) : (
-                    <p className="text-xs text-muted">
-                      {state.context.pendingStep === WorkflowStepType.TONE_OPTIONS
-                        ? 'Pick the tone that best fits your course, then continue.'
-                        : 'Select the items you want, then continue.'}
-                    </p>
-                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowRejectForm(true)}
+                    disabled={isSendingSignal}
+                    className="gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Regenerate
+                  </Button>
                   <Button
                     variant="primary"
                     onClick={handleApprove}
@@ -422,7 +375,7 @@ export default function CourseWizardPage() {
                     ) : (
                       <Check className="w-4 h-4" />
                     )}
-                    Approve & Continue
+                    Approve & Generate Lessons
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </div>
@@ -431,7 +384,7 @@ export default function CourseWizardPage() {
                   <textarea
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
-                    placeholder="What should be different?"
+                    placeholder="What should be different about the outline?"
                     rows={2}
                     className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                     autoFocus
@@ -458,7 +411,7 @@ export default function CourseWizardPage() {
                       ) : (
                         <RotateCcw className="w-4 h-4" />
                       )}
-                      Regenerate
+                      Regenerate Outline
                     </Button>
                   </div>
                 </div>
