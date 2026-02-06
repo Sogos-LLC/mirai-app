@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Target,
   ListTree,
@@ -11,6 +11,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
+import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
 
 // ============================================================
 // Step Data Shape Interfaces
@@ -51,6 +53,13 @@ interface LessonBlock {
   heading?: string;
 }
 
+interface PreviewComponent {
+  id: string;
+  type: number;
+  order: number;
+  contentJson: string;
+}
+
 interface LessonStepData {
   title: string;
   section_title: string;
@@ -67,7 +76,8 @@ interface LessonStepData {
     chunks: string[];
     objective_mapping: Record<string, string>;
   };
-  sample_blocks: LessonBlock[];
+  sample_blocks?: LessonBlock[];
+  components?: PreviewComponent[];
 }
 
 interface QAStepData {
@@ -262,6 +272,22 @@ function StructureStep({ data }: { data: StructureStepData }) {
 // ============================================================
 
 function LessonStep({ data }: { data: LessonStepData }) {
+  // Convert preview components to proto-shaped objects for ComponentRenderer
+  const protoComponents = useMemo(() => {
+    if (!data.components?.length) return null;
+    return data.components
+      .sort((a, b) => a.order - b.order)
+      .map((comp) => ({
+        id: comp.id,
+        type: comp.type as LessonComponentType,
+        order: comp.order,
+        contentJson: typeof comp.contentJson === 'string'
+          ? comp.contentJson
+          : JSON.stringify(comp.contentJson),
+        $typeName: 'mirai.v1.LessonComponent' as const,
+      }));
+  }, [data.components]);
+
   return (
     <div className="space-y-5">
       {/* Lesson header */}
@@ -297,37 +323,54 @@ function LessonStep({ data }: { data: LessonStepData }) {
         </div>
       </div>
 
-      {/* Content blocks */}
-      <div>
-        <div className="text-xs text-muted font-medium mb-2">
-          Content Blocks ({(data.sample_blocks ?? []).length})
+      {/* Rendered components (new — actual component preview) */}
+      {protoComponents && protoComponents.length > 0 ? (
+        <div>
+          <div className="text-xs text-muted font-medium mb-2">
+            Lesson Preview ({protoComponents.length} components)
+          </div>
+          <div className="rounded-lg border bg-surface p-4 space-y-4">
+            {protoComponents.map((comp) => (
+              <ComponentRenderer
+                key={comp.id}
+                component={comp as never}
+              />
+            ))}
+          </div>
         </div>
-        <div className="space-y-2">
-          {(data.sample_blocks ?? []).map((block, i) => (
-            <div key={i} className="rounded-lg border bg-page p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
-                  block.type === 'heading' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
-                  block.type === 'quiz' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                  block.type === 'activity' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
-                  block.type === 'callout' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
-                  'bg-surface border text-muted'
-                }`}>
-                  {block.type}
-                </span>
-                {block.heading && (
-                  <span className="text-xs font-medium text-primary">{block.heading}</span>
-                )}
+      ) : (data.sample_blocks ?? []).length > 0 ? (
+        /* Fallback: old-style block preview */
+        <div>
+          <div className="text-xs text-muted font-medium mb-2">
+            Content Blocks ({(data.sample_blocks ?? []).length})
+          </div>
+          <div className="space-y-2">
+            {(data.sample_blocks ?? []).map((block, i) => (
+              <div key={i} className="rounded-lg border bg-page p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
+                    block.type === 'heading' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                    block.type === 'quiz' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                    block.type === 'activity' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                    block.type === 'callout' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                    'bg-surface border text-muted'
+                  }`}>
+                    {block.type}
+                  </span>
+                  {block.heading && (
+                    <span className="text-xs font-medium text-primary">{block.heading}</span>
+                  )}
+                </div>
+                <p className="text-xs text-secondary whitespace-pre-wrap leading-relaxed">
+                  {block.content.length > 300
+                    ? block.content.substring(0, 300) + '...'
+                    : block.content}
+                </p>
               </div>
-              <p className="text-xs text-secondary whitespace-pre-wrap leading-relaxed">
-                {block.content.length > 300
-                  ? block.content.substring(0, 300) + '...'
-                  : block.content}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <p className="text-xs text-muted">
         This lesson sets the pattern for all remaining lessons.

@@ -11,6 +11,10 @@ from temporalio.client import Client
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 
+from src.activities.component_generation import (
+    generate_lesson_components,
+    review_section_components,
+)
 from src.activities.course_design import (
     generate_course_analysis,
     generate_course_outcomes,
@@ -120,6 +124,9 @@ async def run_worker() -> None:
             extract_lesson_template,
             expand_lesson,
             run_course_qa,
+            # Component generation activities
+            generate_lesson_components,
+            review_section_components,
             # Knowledge activities
             ingest_document,
             search_knowledge,

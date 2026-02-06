@@ -26,9 +26,13 @@ from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
+    from src.activities.component_generation import (
+        GenerateComponentsInput,
+        GenerateComponentsOutput,
+        ReviewSectionInput,
+        ReviewSectionOutput,
+    )
     from src.activities.course_design import (
-        ExpandLessonInput,
-        ExpandLessonOutput,
         ExtractTemplateInput,
         ExtractTemplateOutput,
         GenerateAnalysisInput,
@@ -44,15 +48,20 @@ with workflow.unsafe.imports_passed_through():
         RunQAInput,
         RunQAOutput,
     )
+    from src.agents.component_generation_agent import ComponentContext
+    from src.models.component_content import (
+        COMPONENT_TYPE_MAP,
+        LessonComponents,
+    )
     from src.models.course_design import (
         CourseAnalysis,
         CourseOutcomes,
         CourseStructure,
-        ExpandedLesson,
         Lesson,
         LessonTemplate,
         SectionOutcomes,
     )
+    from src.models.outcome_tracker import OutcomeTracker
     from src.workflows.types import (
         CourseCreationInput,
         CourseCreationOutput,
@@ -181,28 +190,34 @@ class CourseCreationWorkflow:
         )
 
         # =============================================================
-        # HIDDEN: Expansion Pipeline (between Steps 4 and 5)
+        # HIDDEN: Component Generation Pipeline (between Steps 4 and 5)
         # =============================================================
 
-        expanded_lessons = await self._expand_all_lessons(
-            api_key, input, outcomes, structure, section_outcomes, template,
+        all_lesson_components = await self._generate_all_components(
+            api_key, input, outcomes, structure, section_outcomes,
+            sample_lesson, template,
         )
 
         # =============================================================
         # STEP 5: Final Review → QA + Export
         # =============================================================
 
-        await self._step_final_review(
-            api_key, input, outcomes, structure, sample_lesson, expanded_lessons,
+        total_components = sum(
+            len(lc.components) for lcs in all_lesson_components.values()
+            for lc in lcs.values()
+        )
+        await self._step_final_review_v2(
+            api_key, input, outcomes, structure,
+            all_lesson_components, total_components,
         )
 
         # =============================================================
         # FINALIZE: Transform artifacts into S3CourseContent format
         # =============================================================
 
-        course_content = self._build_s3_content(
+        course_content = self._build_s3_content_v2(
             input, analysis, outcomes, structure,
-            section_outcomes, sample_lesson, expanded_lessons,
+            section_outcomes, all_lesson_components,
         )
         await self._write_course_content(input.tenant_id, input.course_id, course_content)
 
@@ -213,7 +228,7 @@ class CourseCreationWorkflow:
 
         await workflow.wait_condition(workflow.all_handlers_finished)
 
-        total_lessons = 1 + len(expanded_lessons)  # sample + expanded
+        total_lessons = sum(len(lcs) for lcs in all_lesson_components.values())
         return CourseCreationOutput(
             course_id=input.course_id,
             total_lessons=total_lessons,
@@ -435,10 +450,55 @@ class CourseCreationWorkflow:
             timeout=AI_LESSON_TIMEOUT,
         )
 
+        # Format the sample lesson through the component agent
+        self._set_progress(52, "Formatting sample lesson components...")
+        sample_ctx = ComponentContext(
+            topic=input.topic,
+            audience=input.audience,
+            course_goal=outcomes.goal.goal_statement,
+            section_title=representative_section.title,
+            section_description=representative_section.description,
+            section_outcomes=[
+                so.description
+                for so in section_outcomes.section_outcomes.get(representative_section.title, [])
+            ],
+            is_first_section=True,
+            is_last_section=len(structure.sections) == 1,
+            next_section_title=(
+                structure.sections[1].title if len(structure.sections) > 1 else None
+            ),
+            lesson_title=lesson_result.lesson.title,
+            lesson_objective=lesson_result.lesson.objective.description,
+            is_first_lesson=True,
+            is_last_lesson=True,  # Only lesson in the sample
+            block_sequence=[b.type for b in lesson_result.lesson.sample_blocks],
+            interaction_rules=[
+                "Follow the block sequence from the sample lesson",
+                "Include at least one quiz",
+                "Open with a hook or context-setting introduction",
+            ],
+            outcomes_to_introduce=[],
+            outcomes_to_reinforce=[],
+            recently_covered=[],
+        )
+
+        sample_components_result: GenerateComponentsOutput = await self._run_ai_activity(
+            "generate_lesson_components",
+            GenerateComponentsInput(api_key=api_key, context=sample_ctx),
+            GenerateComponentsOutput,
+            timeout=AI_LESSON_TIMEOUT,
+        )
+
+        # Build step data with both lesson metadata and rendered components
+        sample_step_data = lesson_result.lesson.model_dump()
+        sample_step_data["components"] = self._components_to_preview(
+            sample_components_result.components,
+        )
+
         # Present to user for approval (user can edit tone/depth)
         approval = await self._publish_and_wait(
             input, "sample_lesson",
-            json.dumps(lesson_result.lesson.model_dump()),
+            json.dumps(sample_step_data),
             55,
         )
 
@@ -456,9 +516,24 @@ class CourseCreationWorkflow:
                 GenerateSampleLessonOutput,
                 timeout=AI_LESSON_TIMEOUT,
             )
+            # Re-format components
+            sample_ctx.lesson_title = lesson_result.lesson.title
+            sample_ctx.lesson_objective = lesson_result.lesson.objective.description
+            sample_ctx.block_sequence = [b.type for b in lesson_result.lesson.sample_blocks]
+
+            sample_components_result = await self._run_ai_activity(
+                "generate_lesson_components",
+                GenerateComponentsInput(api_key=api_key, context=sample_ctx),
+                GenerateComponentsOutput,
+                timeout=AI_LESSON_TIMEOUT,
+            )
+            sample_step_data = lesson_result.lesson.model_dump()
+            sample_step_data["components"] = self._components_to_preview(
+                sample_components_result.components,
+            )
             approval = await self._publish_and_wait(
                 input, "sample_lesson",
-                json.dumps(lesson_result.lesson.model_dump()),
+                json.dumps(sample_step_data),
                 55,
             )
 
@@ -477,37 +552,61 @@ class CourseCreationWorkflow:
         return lesson, template_result.template
 
     # -------------------------------------------------------------------
-    # Hidden: Expansion Pipeline
+    # Hidden: Component Generation Pipeline
     # -------------------------------------------------------------------
 
-    async def _expand_all_lessons(
+    async def _generate_all_components(
         self,
         api_key: str,
         input: CourseCreationInput,
         outcomes: CourseOutcomes,
         structure: CourseStructure,
         section_outcomes: SectionOutcomes,
+        sample_lesson: Lesson,
         template: LessonTemplate,
-    ) -> list[ExpandedLesson]:
-        """Expand remaining lessons using the approved template. Runs between Steps 4 and 5."""
-        self._set_progress(60, "Generating remaining lessons...")
-        await self._update_job(input, "PROCESSING", 60, "Generating remaining lessons")
+    ) -> dict[str, dict[str, LessonComponents]]:
+        """Generate proto-compliant components for all lessons.
 
-        # Build list of lessons to generate (skip sample lesson's section first lesson)
-        lesson_inputs: list[ExpandLessonInput] = []
+        Processes sections sequentially (for outcome tracking) but
+        lessons within a section in parallel.
+
+        Returns: {section_title: {lesson_title: LessonComponents}}
+        """
+        self._set_progress(60, "Generating lesson components...")
+        await self._update_job(input, "PROCESSING", 60, "Generating lesson components")
+
+        tracker = OutcomeTracker.from_course(outcomes, structure)
+        all_components: dict[str, dict[str, LessonComponents]] = {}
         representative_section = structure.sections[0].title
 
+        # Count total lessons for progress tracking
+        total_lessons = 0
         for section in structure.sections:
-            # Get section outcomes for this section
             section_sos = section_outcomes.section_outcomes.get(section.title, [])
-            # Generate 1-3 lessons per section based on outcome count
+            total_lessons += max(1, min(3, len(section_sos)))
+        completed_lessons = 0
+
+        for s_idx, section in enumerate(structure.sections):
+            section_sos = section_outcomes.section_outcomes.get(section.title, [])
             num_lessons = max(1, min(3, len(section_sos)))
 
-            for i in range(num_lessons):
-                # Skip the sample lesson slot (first lesson of first section)
-                if section.title == representative_section and i == 0:
-                    continue
+            is_first_section = s_idx == 0
+            is_last_section = s_idx == len(structure.sections) - 1
+            next_section_title = (
+                structure.sections[s_idx + 1].title
+                if s_idx < len(structure.sections) - 1
+                else None
+            )
 
+            # Snapshot tracker state for this section
+            pending = tracker.pending_for_section(s_idx, section.mapped_outcomes)
+            reinforce = tracker.reinforcement_candidates(s_idx)
+            recent = tracker.recently_covered()
+
+            # Build component contexts for each lesson in this section
+            lesson_contexts: list[GenerateComponentsInput] = []
+            for i in range(num_lessons):
+                # Determine lesson metadata
                 objective = (
                     section_sos[i].description
                     if i < len(section_sos)
@@ -519,71 +618,125 @@ class CourseCreationWorkflow:
                     else section.title
                 )
 
-                lesson_inputs.append(ExpandLessonInput(
-                    api_key=api_key,
+                # For sample lesson slot, use the approved sample title
+                is_sample = section.title == representative_section and i == 0
+                if is_sample:
+                    lesson_title = sample_lesson.title
+                    objective = sample_lesson.objective.description
+
+                ctx = ComponentContext(
                     topic=input.topic,
                     audience=input.audience,
                     course_goal=outcomes.goal.goal_statement,
                     section_title=section.title,
+                    section_description=section.description,
+                    section_outcomes=[so.description for so in section_sos],
+                    is_first_section=is_first_section,
+                    is_last_section=is_last_section,
+                    next_section_title=next_section_title,
                     lesson_title=lesson_title,
                     lesson_objective=objective,
-                    template=template,
-                ))
-
-        if not lesson_inputs:
-            return []
-
-        # Generate in parallel batches
-        all_lessons: list[ExpandedLesson] = []
-        total = len(lesson_inputs)
-
-        for batch_start in range(0, total, LESSON_BATCH_SIZE):
-            batch = lesson_inputs[batch_start:batch_start + LESSON_BATCH_SIZE]
-
-            tasks = [
-                self._run_ai_activity(
-                    "expand_lesson", li, ExpandLessonOutput,
-                    timeout=AI_LESSON_TIMEOUT,
+                    is_first_lesson=(i == 0),
+                    is_last_lesson=(i == num_lessons - 1),
+                    block_sequence=template.block_sequence,
+                    interaction_rules=template.interaction_rules,
+                    outcomes_to_introduce=pending,
+                    outcomes_to_reinforce=reinforce,
+                    recently_covered=recent,
                 )
-                for li in batch
-            ]
-            results = await asyncio.gather(*tasks)
+                lesson_contexts.append(
+                    GenerateComponentsInput(api_key=api_key, context=ctx)
+                )
 
-            for r in results:
-                all_lessons.append(r.lesson)
+            # Generate lessons in parallel batches within section
+            section_results: dict[str, LessonComponents] = {}
+            for batch_start in range(0, len(lesson_contexts), LESSON_BATCH_SIZE):
+                batch = lesson_contexts[batch_start:batch_start + LESSON_BATCH_SIZE]
 
-            completed = len(all_lessons)
-            progress = 60 + int((completed / total) * 25)
-            self._set_progress(progress, f"Generated {completed}/{total} lessons")
-            await self._update_job(
-                input, "PROCESSING", progress,
-                f"Generated {completed}/{total} lessons",
+                tasks = [
+                    self._run_ai_activity(
+                        "generate_lesson_components", ci, GenerateComponentsOutput,
+                        timeout=AI_LESSON_TIMEOUT,
+                    )
+                    for ci in batch
+                ]
+                results: list[GenerateComponentsOutput] = await asyncio.gather(*tasks)
+
+                for r in results:
+                    section_results[r.lesson_title] = r.components
+
+                completed_lessons += len(batch)
+                progress = 60 + int((completed_lessons / total_lessons) * 22)
+                self._set_progress(progress, f"Generated {completed_lessons}/{total_lessons} lessons")
+                await self._update_job(
+                    input, "PROCESSING", progress,
+                    f"Generated {completed_lessons}/{total_lessons} lessons",
+                )
+
+            # Update tracker after all lessons in section
+            for title, lc in section_results.items():
+                tracker.mark_covered(lc.outcomes_covered, s_idx, title)
+
+            # Run section QA judge
+            section_outcome_strs = [so.description for so in section_sos]
+            qa_result: ReviewSectionOutput = await self._run_ai_activity(
+                "review_section_components",
+                ReviewSectionInput(
+                    api_key=api_key,
+                    section_title=section.title,
+                    section_description=section.description,
+                    section_outcomes=section_outcome_strs,
+                    lesson_components=section_results,
+                    course_goal=outcomes.goal.goal_statement,
+                ),
+                ReviewSectionOutput,
             )
 
-        self._artifacts.expanded_lessons = all_lessons
-        return all_lessons
+            # Apply removals from QA
+            if qa_result.qa.component_ids_to_remove:
+                for comp_id in qa_result.qa.component_ids_to_remove:
+                    # comp_id format: "lesson_title:index"
+                    parts = comp_id.rsplit(":", 1)
+                    if len(parts) == 2:
+                        lt, idx_str = parts
+                        try:
+                            idx = int(idx_str)
+                            if lt in section_results and 0 <= idx < len(section_results[lt].components):
+                                section_results[lt].components.pop(idx)
+                        except (ValueError, IndexError):
+                            pass
+
+            all_components[section.title] = section_results
+
+        log.info(
+            "component_generation_complete",
+            outcome_summary=tracker.summary(),
+            total_sections=len(all_components),
+        )
+
+        return all_components
 
     # -------------------------------------------------------------------
     # Step 5: Final Review
     # -------------------------------------------------------------------
 
-    async def _step_final_review(
+    async def _step_final_review_v2(
         self,
         api_key: str,
         input: CourseCreationInput,
         outcomes: CourseOutcomes,
         structure: CourseStructure,
-        sample_lesson: Lesson,
-        expanded_lessons: list[ExpandedLesson],
+        all_lesson_components: dict[str, dict[str, LessonComponents]],
+        total_components: int,
     ) -> None:
         self._set_progress(88, "Running quality checks...")
         await self._update_job(input, "PROCESSING", 88, "Running quality checks")
 
-        all_lesson_titles = [sample_lesson.title] + [l.title for l in expanded_lessons]
-        total_blocks = (
-            len(sample_lesson.sample_blocks)
-            + sum(len(l.content_blocks) for l in expanded_lessons)
-        )
+        all_lesson_titles = [
+            title
+            for section_lessons in all_lesson_components.values()
+            for title in section_lessons
+        ]
 
         qa_result: RunQAOutput = await self._run_ai_activity(
             "run_course_qa",
@@ -592,7 +745,7 @@ class CourseCreationWorkflow:
                 outcomes=outcomes,
                 structure=structure,
                 lesson_titles=all_lesson_titles,
-                total_blocks=total_blocks,
+                total_blocks=total_components,
             ),
             RunQAOutput,
         )
@@ -604,7 +757,7 @@ class CourseCreationWorkflow:
             "qa": qa_result.qa.model_dump(),
             "total_sections": len(structure.sections),
             "total_lessons": len(all_lesson_titles),
-            "total_blocks": total_blocks,
+            "total_blocks": total_components,
             "all_outcomes_covered": qa_result.qa.all_outcomes_covered,
             "has_issues": qa_result.qa.has_issues,
         }
@@ -622,59 +775,71 @@ class CourseCreationWorkflow:
     # S3 Content Builder
     # -------------------------------------------------------------------
 
-    def _build_s3_content(
+    def _build_s3_content_v2(
         self,
         input: CourseCreationInput,
         analysis: CourseAnalysis,
         outcomes: CourseOutcomes,
         structure: CourseStructure,
         section_outcomes: SectionOutcomes,
-        sample_lesson: Lesson,
-        expanded_lessons: list[ExpandedLesson],
+        all_lesson_components: dict[str, dict[str, LessonComponents]],
     ) -> dict:
-        """Transform validated artifacts into S3CourseContent format for the editor."""
+        """Transform validated artifacts into S3CourseContent format for the editor.
+
+        Components are already proto-compliant — serialization is just model_dump().
+        """
         now = datetime.now(timezone.utc).isoformat()
 
-        # Build sections with IDs and lesson slots
         s3_sections: list[dict] = []
         all_lessons: list[dict] = []
 
         for s_idx, section in enumerate(structure.sections):
             section_id = str(uuid.uuid4())
-
-            # Collect lessons belonging to this section
             section_lessons_meta: list[dict] = []
 
-            # Check if sample lesson belongs to this section
-            if sample_lesson.section_title == section.title:
+            section_lesson_components = all_lesson_components.get(section.title, {})
+
+            for lesson_title, lc in section_lesson_components.items():
                 lesson_id = str(uuid.uuid4())
                 outline_lesson_id = str(uuid.uuid4())
+
+                # Find description from section outcomes
+                section_sos = section_outcomes.section_outcomes.get(section.title, [])
+                description = section_sos[0].description if section_sos else lesson_title
+
                 section_lessons_meta.append({
                     "id": outline_lesson_id,
-                    "title": sample_lesson.title,
-                    "description": sample_lesson.objective.description,
+                    "title": lesson_title,
+                    "description": description,
                     "position": len(section_lessons_meta) + 1,
                 })
-                all_lessons.append(self._lesson_to_s3(
-                    lesson_id, section_id, outline_lesson_id,
-                    sample_lesson.title, sample_lesson.sample_blocks, now,
-                ))
 
-            # Add expanded lessons for this section
-            for exp in expanded_lessons:
-                if exp.section_title == section.title:
-                    lesson_id = str(uuid.uuid4())
-                    outline_lesson_id = str(uuid.uuid4())
-                    section_lessons_meta.append({
-                        "id": outline_lesson_id,
-                        "title": exp.title,
-                        "description": exp.objective.description,
-                        "position": len(section_lessons_meta) + 1,
+                # Components are already proto-compliant — direct serialization
+                components = []
+                for i, comp in enumerate(lc.components):
+                    # Get content fields (everything except 'type')
+                    content_data = comp.model_dump(exclude={"type"})
+                    comp_type_str = comp.type if isinstance(comp.type, str) else "text"
+                    comp_type_int = COMPONENT_TYPE_MAP.get(comp_type_str, 1)
+
+                    components.append({
+                        "id": str(uuid.uuid4()),
+                        "type": comp_type_int,
+                        "order": i + 1,
+                        "contentJson": content_data,
+                        "learningObjectiveIds": [],
+                        "createdAt": now,
+                        "updatedAt": now,
                     })
-                    all_lessons.append(self._lesson_to_s3(
-                        lesson_id, section_id, outline_lesson_id,
-                        exp.title, exp.content_blocks, now,
-                    ))
+
+                all_lessons.append({
+                    "id": lesson_id,
+                    "sectionId": section_id,
+                    "outlineLessonId": outline_lesson_id,
+                    "title": lesson_title,
+                    "components": components,
+                    "generatedAt": now,
+                })
 
             s3_sections.append({
                 "id": section_id,
@@ -715,52 +880,25 @@ class CourseCreationWorkflow:
         }
 
     @staticmethod
-    def _lesson_to_s3(
-        lesson_id: str,
-        section_id: str,
-        outline_lesson_id: str,
-        title: str,
-        blocks: list,
-        now: str,
-    ) -> dict:
-        """Convert lesson blocks into S3 GeneratedLesson format."""
-        components = []
-        for i, block in enumerate(blocks):
-            block_type = block.type if hasattr(block, "type") else block.get("type", "text")
-            content = block.content if hasattr(block, "content") else block.get("content", "")
-            heading = block.heading if hasattr(block, "heading") else block.get("heading", "")
+    def _components_to_preview(lc: LessonComponents) -> list[dict]:
+        """Convert LessonComponents to preview format for the wizard step data.
 
-            # Build contentJson based on block type
-            if block_type == "heading":
-                content_json = {"text": heading or content, "level": 2}
-            elif block_type == "image":
-                content_json = {"prompt": content, "alt": heading}
-            elif block_type == "quiz":
-                content_json = {"question": content, "type": "multiple_choice"}
-            elif block_type == "list":
-                content_json = {"items": content.split("\n"), "ordered": False}
-            else:
-                # text, callout, activity, code, etc.
-                content_json = {"text": content}
+        Returns a list of dicts with id, type (int), order, and contentJson
+        matching the proto LessonComponent structure for frontend rendering.
+        """
+        preview = []
+        for i, comp in enumerate(lc.components):
+            content_data = comp.model_dump(exclude={"type"})
+            comp_type_str = comp.type if isinstance(comp.type, str) else "text"
+            comp_type_int = COMPONENT_TYPE_MAP.get(comp_type_str, 1)
 
-            components.append({
+            preview.append({
                 "id": str(uuid.uuid4()),
-                "type": block_type,
+                "type": comp_type_int,
                 "order": i + 1,
-                "contentJson": content_json,
-                "learningObjectiveIds": [],
-                "createdAt": now,
-                "updatedAt": now,
+                "contentJson": json.dumps(content_data),
             })
-
-        return {
-            "id": lesson_id,
-            "sectionId": section_id,
-            "outlineLessonId": outline_lesson_id,
-            "title": title,
-            "components": components,
-            "generatedAt": now,
-        }
+        return preview
 
     # -------------------------------------------------------------------
     # Helpers
