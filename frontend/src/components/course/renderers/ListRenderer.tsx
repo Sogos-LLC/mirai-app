@@ -43,9 +43,7 @@ export function ListRenderer({ content: rawContent, isEditing = false }: ListRen
         return (
           <ol className="list-decimal list-outside ml-6 space-y-2">
             {content.items.map((item, idx) => (
-              <li key={idx} className="text-primary pl-2">
-                {item.text}
-              </li>
+              <li key={idx} className="text-primary pl-2" dangerouslySetInnerHTML={{ __html: item.text }} />
             ))}
           </ol>
         );
@@ -56,7 +54,7 @@ export function ListRenderer({ content: rawContent, isEditing = false }: ListRen
             {content.items.map((item, idx) => (
               <li key={idx} className="flex items-start gap-3">
                 <span className="text-xl flex-shrink-0">{item.icon || '•'}</span>
-                <span className="text-primary">{item.text}</span>
+                <span className="text-primary" dangerouslySetInnerHTML={{ __html: item.text }} />
               </li>
             ))}
           </ul>
@@ -71,9 +69,9 @@ export function ListRenderer({ content: rawContent, isEditing = false }: ListRen
                   {idx + 1}
                 </div>
                 <div className="flex-1 pt-1">
-                  <p className="font-medium text-primary">{item.text}</p>
+                  <p className="font-medium text-primary" dangerouslySetInnerHTML={{ __html: item.text }} />
                   {item.description && (
-                    <p className="mt-1 text-sm text-secondary">{item.description}</p>
+                    <p className="mt-1 text-sm text-secondary" dangerouslySetInnerHTML={{ __html: item.description }} />
                   )}
                 </div>
               </li>
@@ -101,9 +99,10 @@ export function ListRenderer({ content: rawContent, isEditing = false }: ListRen
                     onClick={() => toggleItem(idx)}
                     className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors"
                   >
-                    <span className={`font-medium ${isExpanded ? 'text-purple-700 dark:text-purple-300' : 'text-primary'}`}>
-                      {item.text}
-                    </span>
+                    <span
+                      className={`font-medium ${isExpanded ? 'text-purple-700 dark:text-purple-300' : 'text-primary'}`}
+                      dangerouslySetInnerHTML={{ __html: item.text }}
+                    />
                     <ChevronDown
                       className={`
                         w-5 h-5 transition-transform duration-200 ease-out flex-shrink-0 ml-2
@@ -119,9 +118,10 @@ export function ListRenderer({ content: rawContent, isEditing = false }: ListRen
                   >
                     <div className="overflow-hidden">
                       {item.description && (
-                        <div className="px-4 pb-4 text-secondary text-sm leading-relaxed">
-                          {item.description}
-                        </div>
+                        <div
+                          className="px-4 pb-4 text-secondary text-sm leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: item.description }}
+                        />
                       )}
                     </div>
                   </div>
@@ -136,9 +136,7 @@ export function ListRenderer({ content: rawContent, isEditing = false }: ListRen
         return (
           <ul className="list-disc list-outside ml-6 space-y-2">
             {content.items.map((item, idx) => (
-              <li key={idx} className="text-primary pl-2">
-                {item.text}
-              </li>
+              <li key={idx} className="text-primary pl-2" dangerouslySetInnerHTML={{ __html: item.text }} />
             ))}
           </ul>
         );

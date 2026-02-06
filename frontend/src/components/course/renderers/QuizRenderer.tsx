@@ -137,7 +137,7 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
 
       {/* Question */}
       <div className="p-4">
-        <p className="text-gray-900 font-medium mb-4">{content.quizQuestion}</p>
+        <p className="text-gray-900 font-medium mb-4" dangerouslySetInnerHTML={{ __html: content.quizQuestion }} />
 
         {/* Options */}
         <div className="space-y-2">
@@ -174,7 +174,7 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
                   disabled={showFeedback}
                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                 />
-                <span className="ml-3 text-gray-700">{option.text}</span>
+                <span className="ml-3 text-gray-700" dangerouslySetInnerHTML={{ __html: option.text }} />
                 {showFeedback && isCorrectOption && (
                   <svg className="ml-auto h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -196,7 +196,7 @@ export function QuizRenderer({ content, isEditing = false, onEdit, onAnswer }: Q
             <p className={`font-medium ${isCorrect ? 'text-green-800' : 'text-amber-800'}`}>
               {isCorrect ? 'Correct!' : 'Not quite right.'}
             </p>
-            <p className="mt-2 text-sm text-gray-700">{content.quizExplanation}</p>
+            <p className="mt-2 text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: content.quizExplanation }} />
           </div>
         )}
 

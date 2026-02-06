@@ -138,7 +138,7 @@ export function CalloutRenderer({ content, isEditing = false, onEdit }: CalloutR
           {content.title && (
             <h4 className={`font-semibold mb-1 ${config.textColor}`}>{content.title}</h4>
           )}
-          <p className={`text-sm ${config.textColor}`}>{content.content}</p>
+          <div className={`text-sm ${config.textColor}`} dangerouslySetInnerHTML={{ __html: content.content }} />
         </div>
       </div>
     </div>
