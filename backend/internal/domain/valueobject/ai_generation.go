@@ -147,6 +147,7 @@ const (
 	LessonComponentTypeMultimedia LessonComponentType = "multimedia"
 	LessonComponentTypeChart      LessonComponentType = "chart"
 	LessonComponentTypeDivider    LessonComponentType = "divider"
+	LessonComponentTypeTaskList   LessonComponentType = "task_list"
 )
 
 func (t LessonComponentType) String() string {
@@ -161,7 +162,7 @@ func (t LessonComponentType) IsValid() bool {
 		LessonComponentTypeStatement, LessonComponentTypeQuote,
 		LessonComponentTypeList, LessonComponentTypeGallery,
 		LessonComponentTypeMultimedia, LessonComponentTypeChart,
-		LessonComponentTypeDivider:
+		LessonComponentTypeDivider, LessonComponentTypeTaskList:
 		return true
 	}
 	return false

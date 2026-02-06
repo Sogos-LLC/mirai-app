@@ -1204,6 +1204,120 @@ func (x *DividerContent) GetStyle() string {
 	return ""
 }
 
+// TaskListItem - Single item in an interactive task list.
+type TaskListItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                      // Unique identifier per item (a, b, c...)
+	ContentHtml   string                 `protobuf:"bytes,2,opt,name=content_html,json=contentHtml,proto3" json:"content_html,omitempty"` // Rich HTML content (<code>, <strong>, <em>, <p>, <ol>, <li>)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaskListItem) Reset() {
+	*x = TaskListItem{}
+	mi := &file_mirai_v1_component_content_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaskListItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaskListItem) ProtoMessage() {}
+
+func (x *TaskListItem) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_component_content_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaskListItem.ProtoReflect.Descriptor instead.
+func (*TaskListItem) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_component_content_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *TaskListItem) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TaskListItem) GetContentHtml() string {
+	if x != nil {
+		return x.ContentHtml
+	}
+	return ""
+}
+
+// TaskListContent - Interactive checklist for hands-on practice exercises.
+type TaskListContent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`       // Heading text (e.g., "Practice Time")
+	Emoji         *string                `protobuf:"bytes,2,opt,name=emoji,proto3,oneof" json:"emoji,omitempty"` // Optional emoji prefix (e.g., "✏️")
+	Items         []*TaskListItem        `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`       // Checklist items (1+)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaskListContent) Reset() {
+	*x = TaskListContent{}
+	mi := &file_mirai_v1_component_content_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaskListContent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaskListContent) ProtoMessage() {}
+
+func (x *TaskListContent) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_component_content_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaskListContent.ProtoReflect.Descriptor instead.
+func (*TaskListContent) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_component_content_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *TaskListContent) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *TaskListContent) GetEmoji() string {
+	if x != nil && x.Emoji != nil {
+		return *x.Emoji
+	}
+	return ""
+}
+
+func (x *TaskListContent) GetItems() []*TaskListItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 var File_mirai_v1_component_content_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_component_content_proto_rawDesc = "" +
@@ -1310,7 +1424,15 @@ const file_mirai_v1_component_content_proto_rawDesc = "" +
 	"\f_description\"5\n" +
 	"\x0eDividerContent\x12\x19\n" +
 	"\x05style\x18\x01 \x01(\tH\x00R\x05style\x88\x01\x01B\b\n" +
-	"\x06_styleB\x9b\x01\n" +
+	"\x06_style\"A\n" +
+	"\fTaskListItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fcontent_html\x18\x02 \x01(\tR\vcontentHtml\"z\n" +
+	"\x0fTaskListContent\x12\x14\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12\x19\n" +
+	"\x05emoji\x18\x02 \x01(\tH\x00R\x05emoji\x88\x01\x01\x12,\n" +
+	"\x05items\x18\x03 \x03(\v2\x16.mirai.v1.TaskListItemR\x05itemsB\b\n" +
+	"\x06_emojiB\x9b\x01\n" +
 	"\fcom.mirai.v1B\x15ComponentContentProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -1325,7 +1447,7 @@ func file_mirai_v1_component_content_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_component_content_proto_rawDescData
 }
 
-var file_mirai_v1_component_content_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_mirai_v1_component_content_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_mirai_v1_component_content_proto_goTypes = []any{
 	(*TextContent)(nil),       // 0: mirai.v1.TextContent
 	(*HeadingContent)(nil),    // 1: mirai.v1.HeadingContent
@@ -1346,6 +1468,8 @@ var file_mirai_v1_component_content_proto_goTypes = []any{
 	(*ChartSeries)(nil),       // 16: mirai.v1.ChartSeries
 	(*ChartContent)(nil),      // 17: mirai.v1.ChartContent
 	(*DividerContent)(nil),    // 18: mirai.v1.DividerContent
+	(*TaskListItem)(nil),      // 19: mirai.v1.TaskListItem
+	(*TaskListContent)(nil),   // 20: mirai.v1.TaskListContent
 }
 var file_mirai_v1_component_content_proto_depIdxs = []int32{
 	3,  // 0: mirai.v1.QuizContent.quiz_options:type_name -> mirai.v1.QuizOption
@@ -1354,11 +1478,12 @@ var file_mirai_v1_component_content_proto_depIdxs = []int32{
 	12, // 3: mirai.v1.GalleryContent.items:type_name -> mirai.v1.GalleryItem
 	15, // 4: mirai.v1.ChartSeries.data:type_name -> mirai.v1.ChartDataPoint
 	16, // 5: mirai.v1.ChartContent.series:type_name -> mirai.v1.ChartSeries
-	6,  // [6:6] is the sub-list for method output_type
-	6,  // [6:6] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	19, // 6: mirai.v1.TaskListContent.items:type_name -> mirai.v1.TaskListItem
+	7,  // [7:7] is the sub-list for method output_type
+	7,  // [7:7] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_component_content_proto_init() }
@@ -1377,13 +1502,14 @@ func file_mirai_v1_component_content_proto_init() {
 	file_mirai_v1_component_content_proto_msgTypes[15].OneofWrappers = []any{}
 	file_mirai_v1_component_content_proto_msgTypes[17].OneofWrappers = []any{}
 	file_mirai_v1_component_content_proto_msgTypes[18].OneofWrappers = []any{}
+	file_mirai_v1_component_content_proto_msgTypes[20].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_component_content_proto_rawDesc), len(file_mirai_v1_component_content_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

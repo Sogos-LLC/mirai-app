@@ -14,7 +14,7 @@ package mirai.v1;
 //   - TS:  frontend/src/gen/mirai/v1/component_enums_pb.ts
 // =============================================================================
 
-// LessonComponentType enumerates all 13 component types for course content.
+// LessonComponentType enumerates all component types for course content.
 enum LessonComponentType {
   LESSON_COMPONENT_TYPE_UNSPECIFIED = 0;
   LESSON_COMPONENT_TYPE_TEXT = 1;
@@ -30,6 +30,7 @@ enum LessonComponentType {
   LESSON_COMPONENT_TYPE_MULTIMEDIA = 11;
   LESSON_COMPONENT_TYPE_CHART = 12;
   LESSON_COMPONENT_TYPE_DIVIDER = 13;
+  LESSON_COMPONENT_TYPE_TASK_LIST = 14;
 }
 
 // ListStyle defines display styles for list components.

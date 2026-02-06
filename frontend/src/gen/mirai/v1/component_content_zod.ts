@@ -160,6 +160,17 @@ export const DividerContentSchema = z.object({
 export type DividerContent = z.infer<typeof DividerContentSchema>;
 
 /**
+ * Zod schema for TaskListItem
+ * @generated from message mirai.v1.TaskListItem
+ */
+export const TaskListItemSchema = z.object({
+  id: z.string(),
+  contentHtml: z.string(),
+});
+
+export type TaskListItem = z.infer<typeof TaskListItemSchema>;
+
+/**
  * Zod schema for QuizContent
  * @generated from message mirai.v1.QuizContent
  */
@@ -208,6 +219,18 @@ export const ChartSeriesSchema = z.object({
 });
 
 export type ChartSeries = z.infer<typeof ChartSeriesSchema>;
+
+/**
+ * Zod schema for TaskListContent
+ * @generated from message mirai.v1.TaskListContent
+ */
+export const TaskListContentSchema = z.object({
+  title: z.string(),
+  emoji: z.string().optional(),
+  items: z.array(TaskListItemSchema),
+});
+
+export type TaskListContent = z.infer<typeof TaskListContentSchema>;
 
 /**
  * Zod schema for GalleryContent

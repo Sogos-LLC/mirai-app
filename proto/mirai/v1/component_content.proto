@@ -152,3 +152,16 @@ message ChartContent {
 message DividerContent {
   optional string style = 1; // line, dots, space (default: line)
 }
+
+// TaskListItem - Single item in an interactive task list.
+message TaskListItem {
+  string id = 1;           // Unique identifier per item (a, b, c...)
+  string content_html = 2; // Rich HTML content (<code>, <strong>, <em>, <p>, <ol>, <li>)
+}
+
+// TaskListContent - Interactive checklist for hands-on practice exercises.
+message TaskListContent {
+  string title = 1;                   // Heading text (e.g., "Practice Time")
+  optional string emoji = 2;          // Optional emoji prefix (e.g., "✏️")
+  repeated TaskListItem items = 3;    // Checklist items (1+)
+}

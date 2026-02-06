@@ -25,6 +25,7 @@ import { GalleryRenderer } from './GalleryRenderer';
 import { MultimediaRenderer } from './MultimediaRenderer';
 import { ChartRenderer } from './ChartRenderer';
 import { DividerRenderer } from './DividerRenderer';
+import { TaskListRenderer } from './TaskListRenderer';
 
 // Component type enum values from proto
 const COMPONENT_TYPES = {
@@ -42,6 +43,7 @@ const COMPONENT_TYPES = {
   MULTIMEDIA: LessonComponentType.MULTIMEDIA,
   CHART: LessonComponentType.CHART,
   DIVIDER: LessonComponentType.DIVIDER,
+  TASK_LIST: LessonComponentType.TASK_LIST,
 } as const;
 
 // Quiz option interface for normalization
@@ -314,6 +316,21 @@ export function ComponentRenderer({
       );
     }
 
+    case COMPONENT_TYPES.TASK_LIST: {
+      if (!content) {
+        return <div className="p-4 bg-red-50 text-red-700 rounded">Invalid task list content</div>;
+      }
+      return (
+        <Wrapper>
+          <TaskListRenderer
+            content={content}
+            isEditing={isEditing}
+            onEdit={(c) => handleUpdate(c)}
+          />
+        </Wrapper>
+      );
+    }
+
     default:
       return (
         <div className="p-4 bg-gray-100 text-gray-500 rounded">
@@ -342,6 +359,7 @@ export function getComponentTypeName(type: number): string {
     [COMPONENT_TYPES.MULTIMEDIA]: 'Multimedia',
     [COMPONENT_TYPES.CHART]: 'Chart',
     [COMPONENT_TYPES.DIVIDER]: 'Divider',
+    [COMPONENT_TYPES.TASK_LIST]: 'Task List',
   };
   return names[type] || 'Unknown';
 }
@@ -365,6 +383,7 @@ export function getComponentTypeIcon(type: number): string {
     [COMPONENT_TYPES.MULTIMEDIA]: 'M',
     [COMPONENT_TYPES.CHART]: 'C',
     [COMPONENT_TYPES.DIVIDER]: '-',
+    [COMPONENT_TYPES.TASK_LIST]: '☑',
   };
   return icons[type] || '?';
 }

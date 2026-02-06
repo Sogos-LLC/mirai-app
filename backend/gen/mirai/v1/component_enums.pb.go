@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// LessonComponentType enumerates all 13 component types for course content.
+// LessonComponentType enumerates all component types for course content.
 type LessonComponentType int32
 
 const (
@@ -39,6 +39,7 @@ const (
 	LessonComponentType_LESSON_COMPONENT_TYPE_MULTIMEDIA  LessonComponentType = 11
 	LessonComponentType_LESSON_COMPONENT_TYPE_CHART       LessonComponentType = 12
 	LessonComponentType_LESSON_COMPONENT_TYPE_DIVIDER     LessonComponentType = 13
+	LessonComponentType_LESSON_COMPONENT_TYPE_TASK_LIST   LessonComponentType = 14
 )
 
 // Enum value maps for LessonComponentType.
@@ -58,6 +59,7 @@ var (
 		11: "LESSON_COMPONENT_TYPE_MULTIMEDIA",
 		12: "LESSON_COMPONENT_TYPE_CHART",
 		13: "LESSON_COMPONENT_TYPE_DIVIDER",
+		14: "LESSON_COMPONENT_TYPE_TASK_LIST",
 	}
 	LessonComponentType_value = map[string]int32{
 		"LESSON_COMPONENT_TYPE_UNSPECIFIED": 0,
@@ -74,6 +76,7 @@ var (
 		"LESSON_COMPONENT_TYPE_MULTIMEDIA":  11,
 		"LESSON_COMPONENT_TYPE_CHART":       12,
 		"LESSON_COMPONENT_TYPE_DIVIDER":     13,
+		"LESSON_COMPONENT_TYPE_TASK_LIST":   14,
 	}
 )
 
@@ -503,7 +506,7 @@ var File_mirai_v1_component_enums_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_component_enums_proto_rawDesc = "" +
 	"\n" +
-	"\x1emirai/v1/component_enums.proto\x12\bmirai.v1*\xf6\x03\n" +
+	"\x1emirai/v1/component_enums.proto\x12\bmirai.v1*\x9b\x04\n" +
 	"\x13LessonComponentType\x12%\n" +
 	"!LESSON_COMPONENT_TYPE_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aLESSON_COMPONENT_TYPE_TEXT\x10\x01\x12!\n" +
@@ -519,7 +522,8 @@ const file_mirai_v1_component_enums_proto_rawDesc = "" +
 	"\x12$\n" +
 	" LESSON_COMPONENT_TYPE_MULTIMEDIA\x10\v\x12\x1f\n" +
 	"\x1bLESSON_COMPONENT_TYPE_CHART\x10\f\x12!\n" +
-	"\x1dLESSON_COMPONENT_TYPE_DIVIDER\x10\r*\xa0\x01\n" +
+	"\x1dLESSON_COMPONENT_TYPE_DIVIDER\x10\r\x12#\n" +
+	"\x1fLESSON_COMPONENT_TYPE_TASK_LIST\x10\x0e*\xa0\x01\n" +
 	"\tListStyle\x12\x1a\n" +
 	"\x16LIST_STYLE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13LIST_STYLE_BULLETED\x10\x01\x12\x17\n" +

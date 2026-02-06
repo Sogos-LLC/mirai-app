@@ -125,6 +125,22 @@ class DividerComponent(BaseModel):
     style: str = Field(default="line", description="Divider style: line, dots, space")
 
 
+class TaskListItem(BaseModel):
+    """A single item in an interactive task list."""
+
+    id: str = Field(description="Unique identifier per item (a, b, c...)")
+    contentHtml: str = Field(description="Rich HTML content (<code>, <strong>, <em>, <p>, <ol>, <li>)")
+
+
+class TaskListComponent(BaseModel):
+    """Interactive checklist for hands-on practice exercises."""
+
+    type: Literal["task_list"] = "task_list"
+    title: str = Field(description="Heading text (e.g., 'Practice Time')")
+    emoji: str | None = Field(default=None, description="Optional emoji prefix (e.g., '✏️')")
+    items: list[TaskListItem] = Field(min_length=1, description="Checklist items")
+
+
 # =============================================================================
 # Discriminated Union
 # =============================================================================
@@ -141,6 +157,7 @@ ProtoComponent = Annotated[
         ListComponent,
         ImageComponent,
         DividerComponent,
+        TaskListComponent,
     ],
     Field(discriminator="type"),
 ]
@@ -157,6 +174,7 @@ COMPONENT_TYPE_MAP: dict[str, int] = {
     "quote": 8,
     "list": 9,
     "divider": 13,
+    "task_list": 14,
 }
 
 

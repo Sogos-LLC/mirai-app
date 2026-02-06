@@ -17,7 +17,7 @@ from src.models.wizard import SMEPersona
 class PlannedComponent(BaseModel):
     """A planned component with type and purpose."""
 
-    type: str = Field(description="Component type: TEXT, HEADING, QUIZ, CODE, IMAGE, CALLOUT, LIST, STATEMENT, DIVIDER")
+    type: str = Field(description="Component type: TEXT, HEADING, QUIZ, CODE, IMAGE, CALLOUT, LIST, STATEMENT, DIVIDER, TASK_LIST")
     purpose: str = Field(description="What this component achieves and which learning objective it addresses")
 
 
@@ -44,6 +44,7 @@ Map content to components by purpose:
 - Detailed explanations -> LIST with accordion style (expandable)
 - Brief context -> TEXT (2-3 sentences only)
 - Visual concepts -> IMAGE with preceding context
+- Hands-on practice -> TASK_LIST (interactive checklist)
 
 ## STRICT CONTENT LIMITS
 | Component | Limit | Description |

@@ -82,6 +82,8 @@ structured components that render directly in a learning platform.
     a longer explanation (description). Perfect for "X: description" patterns.
 - **image**: Image descriptions for AI generation (no URL needed)
 - **divider**: Visual separators between major sections
+- **task_list**: Interactive checklist for hands-on practice exercises. Has a title,
+  optional emoji, and items with rich HTML content. Use for "try it yourself" prompts.
 
 ## Content Guidelines
 1. Write REAL, educational content — not placeholders or summaries
@@ -109,6 +111,7 @@ has any of these structures, use the matching component instead:
 | Important warning, tip, or note | callout | info/warning/tip |
 | A notable quote with attribution | quote | — |
 | Code example or command | code | — |
+| Hands-on exercise, practice prompt, "try it yourself" | task_list | — |
 
 A **text** block containing bold labels followed by descriptions is WRONG — convert it
 to the appropriate list type. Text components should read like paragraphs, not lists.

@@ -17,6 +17,7 @@ import {
   Minus,
   Sparkles,
   ArrowLeft,
+  ListChecks,
   LucideIcon,
 } from 'lucide-react';
 import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
@@ -35,6 +36,7 @@ import { GalleryEditor } from './GalleryEditor';
 import { MultimediaEditor } from './MultimediaEditor';
 import { ChartEditor } from './ChartEditor';
 import { DividerEditor } from './DividerEditor';
+import { TaskListEditor } from './TaskListEditor';
 
 interface ComponentTypeInfo {
   type: number;
@@ -57,6 +59,7 @@ const COMPONENT_TYPES: ComponentTypeInfo[] = [
   { type: LessonComponentType.MULTIMEDIA, name: 'Multimedia', icon: PlayCircle, description: 'Video or audio embed' },
   { type: LessonComponentType.CHART, name: 'Chart', icon: BarChart3, description: 'Data visualization' },
   { type: LessonComponentType.DIVIDER, name: 'Divider', icon: Minus, description: 'Visual section separator' },
+  { type: LessonComponentType.TASK_LIST, name: 'Task List', icon: ListChecks, description: 'Interactive practice checklist' },
 ];
 
 const COMPONENT_TYPE_LABELS: Record<number, string> = {
@@ -74,6 +77,7 @@ const COMPONENT_TYPE_LABELS: Record<number, string> = {
   [LessonComponentType.MULTIMEDIA]: 'Multimedia',
   [LessonComponentType.CHART]: 'Chart',
   [LessonComponentType.DIVIDER]: 'Divider',
+  [LessonComponentType.TASK_LIST]: 'Task List',
 };
 
 function getDefaultContentForType(type: number): string {
@@ -112,6 +116,8 @@ function getDefaultContentForType(type: number): string {
       return JSON.stringify({ type: 'bar', title: '', series: [], description: '' });
     case LessonComponentType.DIVIDER:
       return JSON.stringify({});
+    case LessonComponentType.TASK_LIST:
+      return JSON.stringify({ title: 'Practice Time', emoji: '✏️', items: [{ id: 'a', contentHtml: '' }] });
     default:
       return JSON.stringify({});
   }
@@ -235,6 +241,8 @@ export function AddComponentModal({
         return <ChartEditor {...props} />;
       case LessonComponentType.DIVIDER:
         return <DividerEditor {...props} />;
+      case LessonComponentType.TASK_LIST:
+        return <TaskListEditor {...props} />;
       default:
         return <div className="text-secondary">Unknown component type</div>;
     }
