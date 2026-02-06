@@ -233,6 +233,18 @@ func (s *AIGenerationService) GetWorkflowState(ctx context.Context, kratosID uui
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
+	// If Temporal workflow is gone but DB says job is still active,
+	// the workflow has expired. Mark it as failed.
+	if job.Status == valueobject.GenerationJobStatusProcessing ||
+		job.Status == valueobject.GenerationJobStatusAwaitingApproval {
+		errMsg := "Workflow expired — the AI generation process is no longer running. Please start a new course."
+		_ = s.failJob(ctx, job, errMsg)
+		return &WorkflowState{
+			Status:          "failed",
+			ProgressMessage: errMsg,
+		}, nil
+	}
+
 	state := &WorkflowState{
 		ProgressPercent: job.ProgressPercent,
 	}
@@ -245,8 +257,6 @@ func (s *AIGenerationService) GetWorkflowState(ctx context.Context, kratosID uui
 		state.Status = "completed"
 	case valueobject.GenerationJobStatusFailed:
 		state.Status = "failed"
-	case valueobject.GenerationJobStatusAwaitingApproval:
-		state.Status = "awaiting_approval"
 	default:
 		state.Status = "processing"
 	}
