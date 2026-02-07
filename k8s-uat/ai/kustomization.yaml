@@ -14,8 +14,4 @@ labels:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/ai-service
   newName: ghcr.io/sogos-llc/mirai-app/ai-service
-<<<<<<< Updated upstream
-  newTag: uat-16246c6
-=======
   newTag: uat-22256d8
->>>>>>> Stashed changes
