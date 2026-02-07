@@ -22,11 +22,11 @@ EXPECTED_AGENTS = {
     "course-web-research",
     "course-outcomes",
     "course-structure",
-    "course-structure-coverage-judge",
-    "course-section-outcomes",
-    "course-lesson",
-    "course-template",
-    "course-expansion",
+    "structure-coverage-judge",
+    "section-outcomes",
+    "sample-lesson",
+    "lesson-template",
+    "lesson-expansion",
     "course-qa",
     # Outline agents (3)
     "outline-sections-gen",
@@ -34,8 +34,8 @@ EXPECTED_AGENTS = {
     "outline-lesson-detail",
     # Lesson agents (5)
     "lesson-component-plan",
-    "lesson-gap-analysis",
-    "lesson-targeted-research",
+    "course-gap-analysis",
+    "course-targeted-research",
     "lesson-component-gen",
     "lesson-segue",
     # Reviewers (3)

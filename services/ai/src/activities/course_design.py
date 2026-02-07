@@ -309,7 +309,7 @@ async def _validate_structure_coverage(
 ) -> None:
     """Use an LLM judge to verify all outcomes are semantically covered."""
     prompt = build_structure_coverage_prompt(outcomes, structure)
-    result = await AgentRegistry.get("course-structure-coverage-judge").run(prompt, model=model)
+    result = await AgentRegistry.get("structure-coverage-judge").run(prompt, model=model)
     score = result.output
 
     if not score.all_covered:
@@ -333,7 +333,7 @@ async def generate_section_outcomes(input: GenerateSectionOutcomesInput) -> Gene
         outcomes=input.outcomes,
     )
 
-    result = await AgentRegistry.get("course-section-outcomes").run(prompt, model=model)
+    result = await AgentRegistry.get("section-outcomes").run(prompt, model=model)
     activity.heartbeat()
 
     return GenerateSectionOutcomesOutput(section_outcomes=result.output)
@@ -355,7 +355,7 @@ async def generate_sample_lesson(input: GenerateSampleLessonInput) -> GenerateSa
         rag_context=input.rag_context,
     )
 
-    result = await AgentRegistry.get("course-lesson").run(prompt, model=model)
+    result = await AgentRegistry.get("sample-lesson").run(prompt, model=model)
     activity.heartbeat()
 
     return GenerateSampleLessonOutput(lesson=result.output)
@@ -370,7 +370,7 @@ async def extract_lesson_template(input: ExtractTemplateInput) -> ExtractTemplat
     model = make_model(input.api_key)
     prompt = build_template_prompt(lesson=input.lesson)
 
-    result = await AgentRegistry.get("course-template").run(prompt, model=model)
+    result = await AgentRegistry.get("lesson-template").run(prompt, model=model)
     activity.heartbeat()
 
     return ExtractTemplateOutput(template=result.output)
@@ -394,7 +394,7 @@ async def expand_lesson(input: ExpandLessonInput) -> ExpandLessonOutput:
         rag_context=input.rag_context,
     )
 
-    result = await AgentRegistry.get("course-expansion").run(prompt, model=model)
+    result = await AgentRegistry.get("lesson-expansion").run(prompt, model=model)
     activity.heartbeat()
 
     return ExpandLessonOutput(lesson=result.output)
