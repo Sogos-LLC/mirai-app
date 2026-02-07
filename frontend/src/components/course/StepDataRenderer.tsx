@@ -449,7 +449,7 @@ function FinalReviewStep({ data }: { data: QAStepData }) {
             <IssueList title="Redundancy" items={qa.redundancy_flags} color="amber" />
           )}
           {qa.cognitive_load_flags?.length > 0 && (
-            <IssueList title="Cognitive Load" items={qa.cognitive_load_flags} color="orange" />
+            <IssueList title="Cognitive Load" items={qa.cognitive_load_flags} color="purple" />
           )}
           {qa.accessibility_flags?.length > 0 && (
             <IssueList title="Accessibility" items={qa.accessibility_flags} color="blue" />
@@ -472,7 +472,7 @@ function FinalReviewStep({ data }: { data: QAStepData }) {
 function IssueList({ title, items, color }: { title: string; items: string[]; color: string }) {
   const colorMap: Record<string, string> = {
     amber: 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400',
-    orange: 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400',
+    purple: 'border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400',
     blue: 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400',
   };
 
