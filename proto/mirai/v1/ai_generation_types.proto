@@ -176,6 +176,20 @@ message ComponentAlignment {
   repeated string learning_objective_ids = 2;
 }
 
+// SourceType identifies the origin of generated content.
+enum SourceType {
+  SOURCE_TYPE_UNSPECIFIED = 0;
+  SOURCE_TYPE_INTERNAL_KNOWLEDGE = 1;  // RAG from vector store
+  SOURCE_TYPE_WEB_SEARCH = 2;          // Google grounding / web
+  SOURCE_TYPE_MODEL = 3;               // Pure AI generation
+}
+
+// AnnotatedParagraph holds a single HTML paragraph with source attribution indices.
+message AnnotatedParagraph {
+  string html = 1;                    // One <p>...</p> block
+  repeated int32 source_indices = 2;  // References into parent's source_chunks
+}
+
 // ComponentProvenance tracks which knowledge sources contributed to a component.
 message ComponentProvenance {
   repeated ProvenanceChunk source_chunks = 1;
@@ -185,6 +199,10 @@ message ComponentProvenance {
   int32 course_tokens = 5;
   int32 total_tokens = 6;
   google.protobuf.Timestamp generated_at = 7;
+  SourceType dominant_source_type = 8;
+  repeated AnnotatedParagraph paragraphs = 9;  // Only for text components
+  string model_name = 10;                       // e.g., "gemini-2.5-flash"
+  string generation_context = 11;               // Learning objective / context summary
 }
 
 // ProvenanceChunk represents a knowledge chunk that contributed to generated content.
@@ -194,7 +212,12 @@ message ProvenanceChunk {
   string source_name = 3;
   string excerpt = 4;
   float similarity_score = 5;
-  string scope = 6;  // "course", "team", "global"
+  string scope = 6;           // "course", "team", "global"
+  SourceType source_type = 7;
+  string url = 8;             // For web sources
+  string page_title = 9;      // For web sources
+  string team_id = 10;        // For internal knowledge
+  string team_name = 11;      // For internal knowledge
 }
 
 // LessonProvenance aggregates provenance across all components in a lesson.

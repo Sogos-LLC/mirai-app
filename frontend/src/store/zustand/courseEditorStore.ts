@@ -25,6 +25,9 @@ interface CourseEditorUIState {
   // Modal editing state
   editingComponent: EditingComponent | null;
 
+  // Source mode state
+  sourceMode: boolean;
+
   // Save state tracking
   isDirty: boolean;
   isSaving: boolean;
@@ -39,6 +42,9 @@ interface CourseEditorUIActions {
   openEditModal: (courseId: string, generatedLessonId: string, component: LessonComponent) => void;
   closeEditModal: () => void;
   saveEditModal: (contentJson: string) => Promise<void>;
+
+  // Source mode actions
+  toggleSourceMode: () => void;
 
   // Save state actions
   markDirty: () => void;
@@ -61,6 +67,7 @@ type CourseEditorUIStore = CourseEditorUIState & CourseEditorUIActions;
 const initialState: CourseEditorUIState = {
   activeBlockId: null,
   editingComponent: null,
+  sourceMode: false,
   isDirty: false,
   isSaving: false,
   lastSavedAt: null,
@@ -132,6 +139,9 @@ export const useCourseEditorStore = create<CourseEditorUIStore>()(
         }
       },
 
+      // Source mode actions
+      toggleSourceMode: () => set((s) => ({ sourceMode: !s.sourceMode })),
+
       // Save state actions
       markDirty: () => set({ isDirty: true }),
       markClean: () => set({ isDirty: false, lastSavedAt: Date.now() }),
@@ -150,5 +160,6 @@ export const useCourseEditorStore = create<CourseEditorUIStore>()(
 
 export const useActiveBlockId = () => useCourseEditorStore((s) => s.activeBlockId);
 export const useEditingComponent = () => useCourseEditorStore((s) => s.editingComponent);
+export const useSourceMode = () => useCourseEditorStore((s) => s.sourceMode);
 export const useIsDirty = () => useCourseEditorStore((s) => s.isDirty);
 export const useIsSaving = () => useCourseEditorStore((s) => s.isSaving);

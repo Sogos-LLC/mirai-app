@@ -879,12 +879,15 @@ func s3ComponentProvenanceToEntity(prov *ComponentProvenance) *entity.ComponentP
 		return nil
 	}
 	entProv := &entity.ComponentProvenance{
-		Queries:      prov.Queries,
-		TeamTokens:   prov.TeamTokens,
-		GlobalTokens: prov.GlobalTokens,
-		CourseTokens: prov.CourseTokens,
-		TotalTokens:  prov.TotalTokens,
-		GeneratedAt:  prov.GeneratedAt,
+		Queries:            prov.Queries,
+		TeamTokens:         prov.TeamTokens,
+		GlobalTokens:       prov.GlobalTokens,
+		CourseTokens:       prov.CourseTokens,
+		TotalTokens:        prov.TotalTokens,
+		GeneratedAt:        prov.GeneratedAt,
+		DominantSourceType: prov.DominantSourceType,
+		ModelName:          prov.ModelName,
+		GenerationContext:  prov.GenerationContext,
 	}
 	for _, chunk := range prov.SourceChunks {
 		entProv.SourceChunks = append(entProv.SourceChunks, entity.ProvenanceChunk{
@@ -894,6 +897,17 @@ func s3ComponentProvenanceToEntity(prov *ComponentProvenance) *entity.ComponentP
 			Excerpt:         chunk.Excerpt,
 			SimilarityScore: chunk.SimilarityScore,
 			Scope:           chunk.Scope,
+			SourceType:      chunk.SourceType,
+			URL:             chunk.URL,
+			PageTitle:       chunk.PageTitle,
+			TeamID:          chunk.TeamID,
+			TeamName:        chunk.TeamName,
+		})
+	}
+	for _, para := range prov.Paragraphs {
+		entProv.Paragraphs = append(entProv.Paragraphs, entity.AnnotatedParagraph{
+			HTML:          para.HTML,
+			SourceIndices: para.SourceIndices,
 		})
 	}
 	return entProv

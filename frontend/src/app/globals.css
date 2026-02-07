@@ -85,6 +85,20 @@
   --gradient-surface: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
   --gradient-glow: none;
   --gradient-card: none;
+
+  /* Source mode colors */
+  --source-internal-border: #8b5cf6;
+  --source-internal-bg: rgba(139, 92, 246, 0.08);
+  --source-internal-badge: #ede9fe;
+  --source-internal-badge-text: #6d28d9;
+  --source-web-border: #10b981;
+  --source-web-bg: rgba(16, 185, 129, 0.08);
+  --source-web-badge: #d1fae5;
+  --source-web-badge-text: #047857;
+  --source-model-border: #9ca3af;
+  --source-model-bg: rgba(156, 163, 175, 0.08);
+  --source-model-badge: #f3f4f6;
+  --source-model-badge-text: #4b5563;
 }
 
 .dark {
@@ -127,6 +141,20 @@
   --gradient-surface: linear-gradient(180deg, #151320 0%, #12101c 100%);
   --gradient-glow: radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
   --gradient-card: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+
+  /* Source mode colors */
+  --source-internal-border: #a78bfa;
+  --source-internal-bg: rgba(167, 139, 250, 0.1);
+  --source-internal-badge: rgba(139, 92, 246, 0.25);
+  --source-internal-badge-text: #c4b5fd;
+  --source-web-border: #34d399;
+  --source-web-bg: rgba(52, 211, 153, 0.1);
+  --source-web-badge: rgba(16, 185, 129, 0.25);
+  --source-web-badge-text: #6ee7b7;
+  --source-model-border: #6b7280;
+  --source-model-bg: rgba(107, 114, 128, 0.1);
+  --source-model-badge: rgba(107, 114, 128, 0.25);
+  --source-model-badge-text: #9ca3af;
 }
 
 /* ===================================

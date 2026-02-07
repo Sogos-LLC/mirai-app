@@ -216,13 +216,23 @@ type LessonProvenance struct {
 
 // ComponentProvenance tracks which knowledge sources contributed to a component.
 type ComponentProvenance struct {
-	SourceChunks []ProvenanceChunk
-	Queries      []string
-	TeamTokens   int32
-	GlobalTokens int32
-	CourseTokens int32
-	TotalTokens  int32
-	GeneratedAt  time.Time
+	SourceChunks       []ProvenanceChunk
+	Queries            []string
+	TeamTokens         int32
+	GlobalTokens       int32
+	CourseTokens       int32
+	TotalTokens        int32
+	GeneratedAt        time.Time
+	DominantSourceType string // "internal", "web", "model"
+	Paragraphs         []AnnotatedParagraph
+	ModelName          string
+	GenerationContext  string
+}
+
+// AnnotatedParagraph holds a single HTML paragraph with source attribution indices.
+type AnnotatedParagraph struct {
+	HTML          string
+	SourceIndices []int32
 }
 
 // ProvenanceChunk represents a knowledge chunk that contributed to generated content.
@@ -233,6 +243,11 @@ type ProvenanceChunk struct {
 	Excerpt         string
 	SimilarityScore float32
 	Scope           string // "course", "team", "global"
+	SourceType      string // "internal", "web", "model"
+	URL             string // For web sources
+	PageTitle       string // For web sources
+	TeamID          string // For internal knowledge
+	TeamName        string // For internal knowledge
 }
 
 // LessonComponent represents a content component in a lesson.

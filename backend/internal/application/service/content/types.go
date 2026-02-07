@@ -197,17 +197,32 @@ type ProvenanceChunk struct {
 	Excerpt         string  `json:"excerpt"`         // First 200 chars of content
 	SimilarityScore float32 `json:"similarityScore"` // Relevance score from vector search
 	Scope           string  `json:"scope"`           // "course", "team", or "global"
+	SourceType      string  `json:"sourceType,omitempty"`  // "internal", "web", "model"
+	URL             string  `json:"url,omitempty"`         // For web sources
+	PageTitle       string  `json:"pageTitle,omitempty"`   // For web sources
+	TeamID          string  `json:"teamId,omitempty"`      // For internal knowledge
+	TeamName        string  `json:"teamName,omitempty"`    // For internal knowledge
+}
+
+// AnnotatedParagraph holds a single HTML paragraph with source attribution indices.
+type AnnotatedParagraph struct {
+	HTML          string  `json:"html"`                    // One <p>...</p> block
+	SourceIndices []int32 `json:"sourceIndices,omitempty"` // References into parent's source_chunks
 }
 
 // ComponentProvenance tracks which knowledge sources contributed to a component.
 type ComponentProvenance struct {
-	SourceChunks []ProvenanceChunk `json:"sourceChunks"`
-	Queries      []string          `json:"queries,omitempty"` // Search queries used
-	TeamTokens   int32             `json:"teamTokens"`        // Tokens from team sources
-	GlobalTokens int32             `json:"globalTokens"`      // Tokens from global sources
-	CourseTokens int32             `json:"courseTokens"`       // Tokens from course sources
-	TotalTokens  int32             `json:"totalTokens"`       // Total tokens used
-	GeneratedAt  time.Time         `json:"generatedAt"`
+	SourceChunks      []ProvenanceChunk    `json:"sourceChunks"`
+	Queries           []string             `json:"queries,omitempty"`           // Search queries used
+	TeamTokens        int32                `json:"teamTokens"`                  // Tokens from team sources
+	GlobalTokens      int32                `json:"globalTokens"`                // Tokens from global sources
+	CourseTokens      int32                `json:"courseTokens"`                // Tokens from course sources
+	TotalTokens       int32                `json:"totalTokens"`                 // Total tokens used
+	GeneratedAt       time.Time            `json:"generatedAt"`
+	DominantSourceType string              `json:"dominantSourceType,omitempty"` // "internal", "web", "model"
+	Paragraphs        []AnnotatedParagraph `json:"paragraphs,omitempty"`        // Only for text components
+	ModelName         string               `json:"modelName,omitempty"`         // e.g., "gemini-2.5-flash"
+	GenerationContext string               `json:"generationContext,omitempty"` // Learning objective / context summary
 }
 
 // LessonProvenance aggregates provenance across all components in a lesson.

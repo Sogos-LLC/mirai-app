@@ -17,11 +17,37 @@ from pydantic import BaseModel, Field
 # =============================================================================
 
 
+class TextParagraph(BaseModel):
+    """A single paragraph with source attribution."""
+
+    html: str = Field(description="One HTML paragraph (<p>...</p>)")
+    source_refs: list[int] = Field(
+        default_factory=list,
+        description="[Source N] indices that informed this paragraph. Empty = model knowledge.",
+    )
+
+
 class TextComponent(BaseModel):
-    """Rich HTML-formatted text block."""
+    """Rich HTML-formatted text block with per-paragraph source attribution."""
 
     type: Literal["text"] = "text"
-    textHtml: str = Field(description="HTML-formatted text content")
+    paragraphs: list[TextParagraph] = Field(
+        min_length=1,
+        description="Paragraphs with per-paragraph source attribution",
+    )
+
+    @property
+    def textHtml(self) -> str:
+        """Reconstruct flat HTML for backward-compatible serialization."""
+        return "".join(p.html for p in self.paragraphs)
+
+    @property
+    def source_refs(self) -> list[int]:
+        """Aggregate all source refs across paragraphs."""
+        refs: set[int] = set()
+        for p in self.paragraphs:
+            refs.update(p.source_refs)
+        return sorted(refs)
 
 
 class HeadingComponent(BaseModel):
@@ -30,6 +56,7 @@ class HeadingComponent(BaseModel):
     type: Literal["heading"] = "heading"
     headingLevel: int = Field(ge=1, le=6, description="Heading level 1-6")
     headingText: str = Field(description="Heading text")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class QuizOption(BaseModel):
@@ -49,6 +76,7 @@ class QuizComponent(BaseModel):
     )
     quizCorrectAnswerId: str = Field(description="ID of the correct option")
     quizExplanation: str = Field(description="Explanation of the correct answer")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class CodeComponent(BaseModel):
@@ -57,6 +85,7 @@ class CodeComponent(BaseModel):
     type: Literal["code"] = "code"
     code: str = Field(description="The code content")
     language: str = Field(description="Programming language (e.g., python, javascript)")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class CalloutComponent(BaseModel):
@@ -66,6 +95,7 @@ class CalloutComponent(BaseModel):
     style: str = Field(description="Callout style: info, warning, success, error, tip")
     title: str | None = Field(default=None, description="Optional callout title")
     content: str = Field(description="Callout content text")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class StatementComponent(BaseModel):
@@ -76,6 +106,7 @@ class StatementComponent(BaseModel):
     statementSubtext: str | None = Field(
         default=None, description="Optional supporting subtext"
     )
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class QuoteComponent(BaseModel):
@@ -86,6 +117,7 @@ class QuoteComponent(BaseModel):
     author: str = Field(description="Quote author name")
     title: str | None = Field(default=None, description="Author's title or role")
     source: str | None = Field(default=None, description="Source reference")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class ListItem(BaseModel):
@@ -107,6 +139,7 @@ class ListComponent(BaseModel):
     )
     items: list[ListItem] = Field(min_length=1, description="List items")
     title: str | None = Field(default=None, description="Optional list title")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class ImageComponent(BaseModel):
@@ -116,6 +149,7 @@ class ImageComponent(BaseModel):
     imageDescription: str = Field(description="Detailed image description for generation")
     imageAltText: str = Field(description="Accessibility alt text")
     imageCaption: str | None = Field(default=None, description="Optional caption")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class DividerComponent(BaseModel):
@@ -123,6 +157,7 @@ class DividerComponent(BaseModel):
 
     type: Literal["divider"] = "divider"
     style: str = Field(default="line", description="Divider style: line, dots, space")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class TaskListItem(BaseModel):
@@ -139,6 +174,7 @@ class TaskListComponent(BaseModel):
     title: str = Field(description="Heading text (e.g., 'Practice Time')")
     emoji: str | None = Field(default=None, description="Optional emoji prefix (e.g., '✏️')")
     items: list[TaskListItem] = Field(min_length=1, description="Checklist items")
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 class MultimediaComponent(BaseModel):
@@ -159,6 +195,7 @@ class MultimediaComponent(BaseModel):
     isPlaceholder: bool | None = Field(
         default=None, description="True if awaiting actual media"
     )
+    source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 
 # =============================================================================

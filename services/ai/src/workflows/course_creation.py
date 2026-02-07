@@ -49,6 +49,13 @@ with workflow.unsafe.imports_passed_through():
         RunQAOutput,
     )
     from src.agents.component_generation_agent import ComponentContext
+    from src.models.attribution import (
+        SourceReference,
+        WebSource,
+        format_source_context,
+        resolve_component_provenance,
+        resolve_lesson_provenance,
+    )
     from src.models.component_content import (
         COMPONENT_TYPE_MAP,
         LessonComponents,
@@ -63,6 +70,7 @@ with workflow.unsafe.imports_passed_through():
         LessonTemplate,
         SectionOutcomes,
     )
+    from src.models.knowledge import KnowledgeChunk
     from src.models.outcome_tracker import OutcomeTracker
     from src.workflows.types import (
         CourseCreationInput,
@@ -108,6 +116,8 @@ class CourseCreationWorkflow:
         self._progress: int = 0
         self._progress_message: str = ""
         self._artifacts = LockedArtifacts()
+        self._web_sources: list[WebSource] = []
+        self._section_source_refs: dict[str, list[SourceReference]] = {}  # section_title -> refs
 
     # ------------------------------------------------------------------
     # Query handler
@@ -292,6 +302,13 @@ class CourseCreationWorkflow:
             data = analysis.model_dump()
             data.update(approval.modifications)
             analysis = CourseAnalysis(**data)
+
+        # Capture web sources for provenance tracking
+        if analysis_result.web_sources:
+            self._web_sources = [
+                WebSource(title=ws.title, url=ws.url, snippet=ws.snippet)
+                for ws in analysis_result.web_sources
+            ]
 
         self._artifacts.analysis = analysis
         return analysis
@@ -599,6 +616,9 @@ class CourseCreationWorkflow:
             total_lessons += max(1, min(3, len(section_sos)))
         completed_lessons = 0
 
+        # Collect web sources from workflow state (captured in Step 1)
+        web_sources = self._web_sources
+
         for s_idx, section in enumerate(structure.sections):
             section_sos = section_outcomes.section_outcomes.get(section.title, [])
             num_lessons = max(1, min(3, len(section_sos)))
@@ -635,6 +655,31 @@ class CourseCreationWorkflow:
                     objective = sample_lesson.objective.description
                 lesson_metas.append((lesson_title, objective))
 
+            # RAG search for section context (if knowledge sources are selected)
+            rag_chunks: list[KnowledgeChunk] = []
+            if input.rag_filters:
+                try:
+                    from src.activities.knowledge import SearchKnowledgeInput, SearchKnowledgeOutput
+                    search_query = f"{section.title} {section.description}"
+                    search_result: SearchKnowledgeOutput = await self._run_ai_activity(
+                        "search_knowledge",
+                        SearchKnowledgeInput(
+                            query=search_query,
+                            api_key=api_key,
+                            filters=input.rag_filters,
+                            top_k=10,
+                        ),
+                        SearchKnowledgeOutput,
+                    )
+                    rag_chunks = search_result.chunks
+                except Exception:
+                    log.warning("rag_search_failed", section=section.title, exc_info=True)
+
+            # Format source context for all lessons in this section
+            rag_context_text, source_references = format_source_context(
+                rag_chunks, web_sources,
+            )
+
             # Build component contexts for each lesson in this section
             lesson_contexts: list[GenerateComponentsInput] = []
             for i, (lesson_title, objective) in enumerate(lesson_metas):
@@ -665,6 +710,8 @@ class CourseCreationWorkflow:
                     outcomes_to_reinforce=reinforce,
                     recently_covered=recent,
                     resource_hints=resource_hints,
+                    rag_context=rag_context_text,
+                    source_references=source_references,
                 )
                 lesson_contexts.append(
                     GenerateComponentsInput(api_key=api_key, context=ctx)
@@ -738,6 +785,7 @@ class CourseCreationWorkflow:
                             pass
 
             all_components[section.title] = section_results
+            self._section_source_refs[section.title] = source_references
 
         log.info(
             "component_generation_complete",
@@ -847,15 +895,33 @@ class CourseCreationWorkflow:
 
                 # Components are already proto-compliant — direct serialization
                 # S3 content.json uses string type names (Go LessonComponent.Type is string)
+                section_refs = self._section_source_refs.get(section.title, [])
+                generation_context = (
+                    f"Generated for '{description}' targeting {input.audience}"
+                )
                 components = []
+                component_provenances = []
                 for i, comp in enumerate(lc.components):
-                    # Get content fields (everything except 'type')
-                    content_data = comp.model_dump(exclude={"type"})
+                    # Get content fields (everything except 'type' and 'source_refs')
+                    exclude_fields = {"type", "source_refs"}
                     comp_type_str = comp.type if isinstance(comp.type, str) else "text"
+
+                    # For text components, serialize paragraphs as textHtml for backward compat
+                    if comp_type_str == "text" and hasattr(comp, "paragraphs"):
+                        content_data = {"textHtml": comp.textHtml}
+                        exclude_fields.add("paragraphs")
+                    else:
+                        content_data = comp.model_dump(exclude=exclude_fields)
 
                     # Multimedia: rename mediaType → type for proto/frontend compatibility
                     if comp_type_str == "multimedia" and "mediaType" in content_data:
                         content_data["type"] = content_data.pop("mediaType")
+
+                    # Resolve provenance from source_refs
+                    provenance = resolve_component_provenance(
+                        comp, section_refs, "gemini-2.5-flash", generation_context,
+                    )
+                    component_provenances.append(provenance)
 
                     components.append({
                         "id": str(uuid.uuid4()),
@@ -865,7 +931,11 @@ class CourseCreationWorkflow:
                         "learningObjectiveIds": [],
                         "createdAt": now,
                         "updatedAt": now,
+                        "provenance": provenance,
                     })
+
+                # Compute aggregate lesson provenance
+                aggregate_provenance = resolve_lesson_provenance(component_provenances)
 
                 all_lessons.append({
                     "id": lesson_id,
@@ -874,6 +944,7 @@ class CourseCreationWorkflow:
                     "title": lesson_title,
                     "components": components,
                     "generatedAt": now,
+                    "aggregateProvenance": aggregate_provenance,
                 })
 
             s3_sections.append({
@@ -923,9 +994,15 @@ class CourseCreationWorkflow:
         """
         preview = []
         for i, comp in enumerate(lc.components):
-            content_data = comp.model_dump(exclude={"type"})
+            exclude_fields = {"type", "source_refs"}
             comp_type_str = comp.type if isinstance(comp.type, str) else "text"
             comp_type_int = COMPONENT_TYPE_MAP.get(comp_type_str, 1)
+
+            # For text components, flatten paragraphs back to textHtml for preview
+            if comp_type_str == "text" and hasattr(comp, "paragraphs"):
+                content_data = {"textHtml": comp.textHtml}
+            else:
+                content_data = comp.model_dump(exclude=exclude_fields)
 
             # Multimedia: rename mediaType → type for proto/frontend compatibility
             if comp_type_str == "multimedia" and "mediaType" in content_data:

@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import { z } from "zod";
-import { GenerationJobStatus, GenerationJobType, OutlineApprovalStatus, SectionEmphasis, SectionIntent, SectionLevel, WorkflowStepType } from "./ai_generation_types_pb";
+import { GenerationJobStatus, GenerationJobType, OutlineApprovalStatus, SectionEmphasis, SectionIntent, SectionLevel, SourceType, WorkflowStepType } from "./ai_generation_types_pb";
 import { KnowledgeCitationSchema } from "./course_wizard_zod";
 import { LessonComponentType } from "./component_enums_pb";
 
@@ -48,6 +48,13 @@ export type SectionIntentType = z.infer<typeof SectionIntentSchema>;
  */
 export const SectionEmphasisSchema = z.nativeEnum(SectionEmphasis);
 export type SectionEmphasisType = z.infer<typeof SectionEmphasisSchema>;
+
+/**
+ * Zod schema for SourceType enum
+ * @generated from enum mirai.v1.SourceType
+ */
+export const SourceTypeSchema = z.nativeEnum(SourceType);
+export type SourceTypeType = z.infer<typeof SourceTypeSchema>;
 
 /**
  * Zod schema for WorkflowStepType enum
@@ -115,6 +122,17 @@ export const ComponentAlignmentSchema = z.object({
 export type ComponentAlignment = z.infer<typeof ComponentAlignmentSchema>;
 
 /**
+ * Zod schema for AnnotatedParagraph
+ * @generated from message mirai.v1.AnnotatedParagraph
+ */
+export const AnnotatedParagraphSchema = z.object({
+  html: z.string(),
+  sourceIndices: z.array(z.number().int()),
+});
+
+export type AnnotatedParagraph = z.infer<typeof AnnotatedParagraphSchema>;
+
+/**
  * Zod schema for ProvenanceChunk
  * @generated from message mirai.v1.ProvenanceChunk
  */
@@ -125,6 +143,11 @@ export const ProvenanceChunkSchema = z.object({
   excerpt: z.string(),
   similarityScore: z.number(),
   scope: z.string(),
+  sourceType: z.nativeEnum(SourceType),
+  url: z.string(),
+  pageTitle: z.string(),
+  teamId: z.string(),
+  teamName: z.string(),
 });
 
 export type ProvenanceChunk = z.infer<typeof ProvenanceChunkSchema>;
@@ -227,6 +250,10 @@ export const ComponentProvenanceSchema = z.object({
   courseTokens: z.number().int(),
   totalTokens: z.number().int(),
   generatedAt: z.string().datetime().optional(),
+  dominantSourceType: z.nativeEnum(SourceType),
+  paragraphs: z.array(AnnotatedParagraphSchema),
+  modelName: z.string(),
+  generationContext: z.string(),
 });
 
 export type ComponentProvenance = z.infer<typeof ComponentProvenanceSchema>;

@@ -35,6 +35,7 @@ type S3SectionHint = content.SectionHint
 type S3PlannedSection = content.PlannedSection
 type S3PlannedLesson = content.PlannedLesson
 type ProvenanceChunk = content.ProvenanceChunk
+type AnnotatedParagraph = content.AnnotatedParagraph
 type ComponentProvenance = content.ComponentProvenance
 type LessonProvenance = content.LessonProvenance
 type OutlineProvenance = content.OutlineProvenance

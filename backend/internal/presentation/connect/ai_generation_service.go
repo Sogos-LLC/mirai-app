@@ -845,12 +845,15 @@ func componentProvenanceToProto(prov *entity.ComponentProvenance) *v1.ComponentP
 		return nil
 	}
 	proto := &v1.ComponentProvenance{
-		Queries:      prov.Queries,
-		TeamTokens:   prov.TeamTokens,
-		GlobalTokens: prov.GlobalTokens,
-		CourseTokens: prov.CourseTokens,
-		TotalTokens:  prov.TotalTokens,
-		GeneratedAt:  timestamppb.New(prov.GeneratedAt),
+		Queries:            prov.Queries,
+		TeamTokens:         prov.TeamTokens,
+		GlobalTokens:       prov.GlobalTokens,
+		CourseTokens:       prov.CourseTokens,
+		TotalTokens:        prov.TotalTokens,
+		GeneratedAt:        timestamppb.New(prov.GeneratedAt),
+		DominantSourceType: sourceTypeStringToProto(prov.DominantSourceType),
+		ModelName:          prov.ModelName,
+		GenerationContext:  prov.GenerationContext,
 	}
 	for _, chunk := range prov.SourceChunks {
 		proto.SourceChunks = append(proto.SourceChunks, &v1.ProvenanceChunk{
@@ -860,9 +863,33 @@ func componentProvenanceToProto(prov *entity.ComponentProvenance) *v1.ComponentP
 			Excerpt:         chunk.Excerpt,
 			SimilarityScore: chunk.SimilarityScore,
 			Scope:           chunk.Scope,
+			SourceType:      sourceTypeStringToProto(chunk.SourceType),
+			Url:             chunk.URL,
+			PageTitle:       chunk.PageTitle,
+			TeamId:          chunk.TeamID,
+			TeamName:        chunk.TeamName,
+		})
+	}
+	for _, para := range prov.Paragraphs {
+		proto.Paragraphs = append(proto.Paragraphs, &v1.AnnotatedParagraph{
+			Html:          para.HTML,
+			SourceIndices: para.SourceIndices,
 		})
 	}
 	return proto
+}
+
+func sourceTypeStringToProto(s string) v1.SourceType {
+	switch s {
+	case "internal":
+		return v1.SourceType_SOURCE_TYPE_INTERNAL_KNOWLEDGE
+	case "web":
+		return v1.SourceType_SOURCE_TYPE_WEB_SEARCH
+	case "model":
+		return v1.SourceType_SOURCE_TYPE_MODEL
+	default:
+		return v1.SourceType_SOURCE_TYPE_UNSPECIFIED
+	}
 }
 
 func lessonProvenanceToProto(prov *entity.LessonProvenance) *v1.LessonProvenance {

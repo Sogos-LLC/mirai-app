@@ -7,9 +7,10 @@ tracking context, and template rules to produce contextually appropriate content
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
+from src.models.attribution import SourceReference
 from src.models.component_content import LessonComponents
 from src.models.outcome_tracker import OutcomeCoverage
 from src.models.resource_hint import ResourceHint
@@ -57,6 +58,10 @@ class ComponentContext:
 
     # External resources (parsed from user context)
     resource_hints: list[ResourceHint] = None  # type: ignore[assignment]
+
+    # RAG context for source attribution
+    rag_context: str = ""
+    source_references: list[SourceReference] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.resource_hints is None:
@@ -142,6 +147,15 @@ to the appropriate list type. Text components should read like paragraphs, not l
 - You MAY reinforce outcomes marked as "to_reinforce" — revisit from a new angle
 - AVOID repeating outcomes listed as "recently_covered" unless adding a new perspective
 - Report which outcome keys you covered in outcomes_covered
+
+## Source Attribution
+When a Knowledge Sources section is provided:
+- Reference sources by their [Source N] numbers in `source_refs` fields
+- For **text** components: each paragraph gets its own `source_refs` list
+- For all **other** components: use the component-level `source_refs` field
+- Empty `source_refs` = content from your own model knowledge (no source needed)
+- A single component/paragraph may reference multiple sources
+- Only reference sources you actually used — don't cite sources for unrelated content
 """
 
 AgentRegistry.register(AgentSpec(
@@ -262,6 +276,8 @@ IMPORTANT:
 **Interaction rules**:
 {rules_str}
 {resources_str}
+{ctx.rag_context}
+
 ## Instructions
 Generate 5-15 structured components for this lesson. Follow the template guidelines
 but adapt as needed for the content. Write REAL, detailed educational content.

@@ -7,6 +7,7 @@ import {
   Loader2,
   BookOpen,
   Menu,
+  FileSearch,
 } from 'lucide-react';
 import {
   DndContext,
@@ -42,6 +43,9 @@ import { CourseEditorHeader } from '@/components/editor/CourseEditorHeader';
 import { OutlineSidebar } from '@/components/editor/OutlineSidebar';
 import { MobileOutlineSheet } from '@/components/editor/MobileOutlineSheet';
 import { ProvenanceBadge, ProvenancePanel } from '@/components/editor/ProvenancePanel';
+import { SourceModeOverlay } from '@/components/editor/SourceModeOverlay';
+import { SourceSummaryBar } from '@/components/editor/SourceSummaryBar';
+import { useCourseEditorStore as useEditorStore } from '@/store/zustand/courseEditorStore';
 import { useExportWorkflow } from '@/hooks/useExportWorkflow';
 import { useAutoSave } from '@/hooks/useAutoSave';
 
@@ -68,8 +72,10 @@ export default function CourseEditorPage() {
   // Provenance panel state
   const [showProvenance, setShowProvenance] = useState(false);
 
-  // Zustand store for modal editing
+  // Zustand store for modal editing and source mode
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
+  const sourceMode = useEditorStore((s) => s.sourceMode);
+  const toggleSourceMode = useEditorStore((s) => s.toggleSourceMode);
 
   // Fetch outline and lessons
   const { data: outline, wizardData, isLoading: outlineLoading } = useGetCourseOutline(courseId);
@@ -465,13 +471,28 @@ export default function CourseEditorPage() {
               <CardHeader className="py-4 border-b">
                 <div className="flex items-center justify-between gap-4">
                   <CardTitle as="h2">{currentLesson.title}</CardTitle>
-                  {currentLesson.generated?.aggregateProvenance && (
-                    <ProvenanceBadge
-                      provenance={currentLesson.generated.aggregateProvenance}
-                      isOpen={showProvenance}
-                      onToggle={handleToggleProvenance}
-                    />
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* Source Mode Toggle */}
+                    <button
+                      onClick={toggleSourceMode}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        sourceMode
+                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+                          : 'bg-hover text-muted hover:text-secondary'
+                      }`}
+                      title="Toggle source attribution view"
+                    >
+                      <FileSearch className="w-3.5 h-3.5" />
+                      Sources
+                    </button>
+                    {currentLesson.generated?.aggregateProvenance && (
+                      <ProvenanceBadge
+                        provenance={currentLesson.generated.aggregateProvenance}
+                        isOpen={showProvenance}
+                        onToggle={handleToggleProvenance}
+                      />
+                    )}
+                  </div>
                 </div>
                 {/* Provenance detail panel */}
                 {currentLesson.generated?.aggregateProvenance && (
@@ -484,6 +505,14 @@ export default function CourseEditorPage() {
                 )}
               </CardHeader>
               <CardContent className="py-6">
+                {/* Source summary bar - only visible in source mode */}
+                {sourceMode && currentLesson.generated?.aggregateProvenance && (
+                  <SourceSummaryBar
+                    provenance={currentLesson.generated.aggregateProvenance}
+                    components={currentLesson.generated.components ?? []}
+                  />
+                )}
+
                 {localComponents.length > 0 ? (
                   <DndContext
                     sensors={sensors}
@@ -500,8 +529,14 @@ export default function CourseEditorPage() {
                         {/* Add at top */}
                         <AddBetween onAdd={() => setAddComponentAfterIndex(-1)} />
 
-                        {localComponents.map((component, index) => (
-                          <React.Fragment key={component.id}>
+                        {localComponents.map((component, index) => {
+                          // Get provenance from the original generated component
+                          const originalComponent = currentLesson?.generated?.components?.find(
+                            (c) => c.id === component.id
+                          );
+                          const provenance = originalComponent?.provenance;
+
+                          const sortable = (
                             <SortableComponent
                               component={component}
                               index={index}
@@ -513,10 +548,22 @@ export default function CourseEditorPage() {
                               onMoveUp={handleMoveUp}
                               onMoveDown={handleMoveDown}
                             />
-                            {/* Add between components */}
-                            <AddBetween onAdd={() => setAddComponentAfterIndex(index)} />
-                          </React.Fragment>
-                        ))}
+                          );
+
+                          return (
+                            <React.Fragment key={component.id}>
+                              {sourceMode ? (
+                                <SourceModeOverlay provenance={provenance}>
+                                  {sortable}
+                                </SourceModeOverlay>
+                              ) : (
+                                sortable
+                              )}
+                              {/* Add between components */}
+                              <AddBetween onAdd={() => setAddComponentAfterIndex(index)} />
+                            </React.Fragment>
+                          );
+                        })}
                       </div>
                     </SortableContext>
 
