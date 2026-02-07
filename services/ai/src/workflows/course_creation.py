@@ -59,7 +59,9 @@ with workflow.unsafe.imports_passed_through():
     )
     from src.models.component_content import (
         COMPONENT_TYPE_MAP,
+        CalloutComponent,
         LessonComponents,
+        TextComponent,
     )
     from src.models.resource_hint import ResourceHint
     from src.services.resource_parser import URLResourceParser
@@ -99,6 +101,50 @@ AI_RETRY = {"maximum_attempts": 2}
 
 # Lesson parallelism
 LESSON_BATCH_SIZE = 3
+
+
+def _inject_missing_reference_links(
+    lesson: "LessonComponents",
+    ref_hints: list["ResourceHint"],
+) -> None:
+    """Inject reference URLs as callout if the model didn't include them in HTML.
+
+    Scans all text and callout components for each reference URL. If a URL
+    is missing from every component, appends a callout with the link.
+    Only mutates ``lesson.components`` if links are missing.
+    """
+    # Collect all HTML from text and callout components
+    all_html = ""
+    for c in lesson.components:
+        if isinstance(c, TextComponent):
+            all_html += c.textHtml
+        elif isinstance(c, CalloutComponent):
+            all_html += c.content
+
+    missing = [h for h in ref_hints if h.url not in all_html]
+    if not missing:
+        return
+
+    # Build a single callout with all missing reference links
+    link_lines = []
+    for h in missing:
+        # Derive a readable label from the URL path
+        from urllib.parse import urlparse
+        parsed = urlparse(h.url)
+        label = parsed.netloc.replace("www.", "")
+        path_parts = [p for p in parsed.path.strip("/").split("/") if p]
+        if path_parts:
+            slug = path_parts[-1].replace("_", " ").replace("-", " ").title()
+            label = f"{slug} ({label})"
+        link_lines.append(f'<a href="{h.url}">{label}</a>')
+
+    callout = CalloutComponent(
+        style="info",
+        title="Additional Resources",
+        content="Explore these resources for more information: " + ", ".join(link_lines) + ".",
+    )
+    lesson.components.append(callout)
+    log.info("injected_missing_reference_links", count=len(missing), urls=[h.url for h in missing])
 
 
 @workflow.defn(sandboxed=False)
@@ -522,6 +568,12 @@ class CourseCreationWorkflow:
             timeout=AI_LESSON_TIMEOUT,
         )
 
+        # Inject missing reference links into sample lesson
+        if resource_hints:
+            ref_urls = [h for h in resource_hints if h.media_type == "reference"]
+            if ref_urls:
+                _inject_missing_reference_links(sample_components_result.components, ref_urls)
+
         # Build step data with both lesson metadata and rendered components
         sample_step_data = lesson_result.lesson.model_dump()
         sample_step_data["components"] = self._components_to_preview(
@@ -760,6 +812,13 @@ class CourseCreationWorkflow:
                         c for c in lc.components
                         if not (hasattr(c, "mediaType") and c.url not in allowed_urls)
                     ]
+
+            # Inject missing reference links into first lesson of this section
+            if resource_hints:
+                ref_urls = [h for h in resource_hints if h.media_type == "reference"]
+                if ref_urls and section_results:
+                    first_lesson_components = next(iter(section_results.values()))
+                    _inject_missing_reference_links(first_lesson_components, ref_urls)
 
             # Update tracker after all lessons in section
             for title, lc in section_results.items():

@@ -77,7 +77,7 @@ You are an expert instructional content creator. You generate lesson content as
 structured components that render directly in a learning platform.
 
 ## Component Types Available
-- **text**: Rich HTML content (use <p>, <strong>, <em>, <ul>, <ol>, <li> tags)
+- **text**: Rich HTML content (use <p>, <strong>, <em>, <ul>, <ol>, <li>, <a href="URL"> tags)
 - **heading**: Section headers (levels 2-4, never level 1)
 - **quiz**: Multiple-choice questions with 3-4 options, correct answer, and explanation
 - **code**: Code snippets with language specification
@@ -105,7 +105,8 @@ structured components that render directly in a learning platform.
 ## Content Guidelines
 1. Write REAL, educational content — not placeholders or summaries
 2. Use HTML in text components: <p> for paragraphs, <strong> for emphasis,
-   <ul>/<ol>/<li> for inline lists, <code> for inline code
+   <ul>/<ol>/<li> for inline lists, <code> for inline code,
+   <a href="URL"> for hyperlinks to external resources
 3. Every lesson MUST have at least one quiz component
 4. Vary component types — don't use 5 text blocks in a row
 5. Heading levels: use 2 for major sections, 3 for subsections, 4 for minor points
@@ -237,11 +238,13 @@ def build_component_prompt(ctx: ComponentContext) -> str:
 These resources were provided by the course creator. Incorporate where relevant:
 {chr(10).join(resource_lines)}
 
-IMPORTANT:
+IMPORTANT — follow these rules for EVERY resource listed above:
 - For **video/audio/interactive** resources: create a **multimedia** component with the exact URL.
-- For **reference** resources: cite them as <a href="URL">descriptive text</a> links in **text** or
-  **callout** components. Weave them naturally into the content (e.g., "For a deeper dive, see
-  <a href=\"...\">this guide</a>").
+- For **reference** resources: you MUST include each reference URL as a clickable
+  <a href="URL">descriptive text</a> hyperlink in at least one **text** or **callout** component.
+  Weave them naturally into the content (e.g., '<p>For a deeper dive, see
+  <a href="https://en.wikipedia.org/wiki/Example">the Wikipedia article</a>.</p>').
+  Do NOT merely summarize the reference — the actual clickable link MUST appear in the HTML.
 - NEVER invent URLs — only use URLs explicitly listed above.
 """
 

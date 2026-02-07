@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 class TextParagraph(BaseModel):
     """A single paragraph with source attribution."""
 
-    html: str = Field(description="One HTML paragraph (<p>...</p>)")
+    html: str = Field(description="One HTML paragraph (<p>...</p>). May include <a href='URL'> hyperlinks, <strong>, <em>, <code>.")
     source_refs: list[int] = Field(
         default_factory=list,
         description="[Source N] indices that informed this paragraph. Empty = model knowledge.",
