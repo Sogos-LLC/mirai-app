@@ -1,226 +1,360 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { screenshot, resetScreenshotCounter } from '../helpers';
 
+const TOPIC = 'Basic Composting at Home';
+const AUDIENCE = 'Beginners with no prior experience';
+
 /**
- * Source Mode & Provenance Tests
- *
- * Verifies that the source attribution UI works correctly in the course editor.
- * Prerequisites: At least one course must exist (created with web research ON
- * to see web source badges).
+ * Delete all courses from the dashboard.
  */
+async function deleteAllCourses(page: Page): Promise<void> {
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+  try {
+    await page.waitForResponse(
+      (resp) => resp.url().includes('ListCourses') && resp.status() === 200,
+      { timeout: 15_000 },
+    );
+  } catch { /* may already have loaded */ }
+  await page.waitForTimeout(2_000);
+
+  for (let round = 0; round < 50; round++) {
+    const deleteBtn = page.locator('button[title="Delete course"]').first();
+    if (!(await deleteBtn.isVisible().catch(() => false))) break;
+    page.once('dialog', (dialog) => dialog.accept());
+    console.log(`  deleting course ${round + 1}...`);
+    await deleteBtn.click();
+    await page.waitForTimeout(1_500);
+  }
+  console.log(`  cleanup done — ${await page.locator('button[title="Delete course"]').count()} remaining`);
+}
+
+/**
+ * Wait for the wizard card to reach one of the given states using data-wizard-state.
+ * Returns the matched state string.
+ */
+async function waitForWizardState(
+  page: Page,
+  states: string[],
+  timeout: number,
+): Promise<string> {
+  const card = page.locator('[data-wizard-state]');
+  const selector = states.map(s => `[data-wizard-state="${s}"]`).join(', ');
+
+  await page.locator(selector).first().waitFor({ state: 'visible', timeout });
+  return await card.getAttribute('data-wizard-state') ?? 'unknown';
+}
+
+/**
+ * Clear any stale wizard workflow by approving through remaining steps.
+ */
+async function clearStaleWorkflow(page: Page): Promise<void> {
+  console.log('Clearing stale workflow...');
+  for (let i = 0; i < 8; i++) {
+    const state = await waitForWizardState(
+      page,
+      ['idle', 'awaiting-approval', 'completed', 'failed', 'processing'],
+      10_000,
+    ).catch(() => 'unknown');
+
+    console.log(`  stale cleanup: ${state}`);
+    if (state === 'idle' || state === 'completed' || state === 'failed' || state === 'unknown') return;
+
+    if (state === 'awaiting-approval') {
+      const approveBtn = page.locator('button:has-text("Approve")').first();
+      if (await approveBtn.isVisible().catch(() => false)) {
+        const text = await approveBtn.textContent();
+        console.log(`  approving: "${text}"`);
+        await approveBtn.click();
+        // Wait for transition out of awaiting-approval
+        await waitForWizardState(page, ['processing', 'completed', 'failed', 'awaiting-approval'], 300_000).catch(() => {});
+        await page.waitForTimeout(2_000);
+      }
+    } else if (state === 'processing') {
+      console.log('  waiting for processing to finish...');
+      await waitForWizardState(page, ['awaiting-approval', 'completed', 'failed'], 300_000).catch(() => {});
+    }
+  }
+}
+
 test.describe('Source Mode & Provenance', () => {
   test.beforeAll(() => {
     resetScreenshotCounter();
   });
 
-  test('source mode shows attribution badges, summary bar, and provenance panel', async ({ page }) => {
-    test.setTimeout(120_000);
+  test('create course with web research, then verify source mode UI', async ({ page }) => {
+    test.setTimeout(900_000);
 
-    // Capture console for debugging
     const consoleLogs: string[] = [];
     page.on('console', (msg) => consoleLogs.push(`[${msg.type()}] ${msg.text()}`));
     page.on('pageerror', (err) => consoleLogs.push(`[PAGE_ERROR] ${err.message}`));
 
-    // =====================================================================
-    // Phase 1: Navigate to the most recent course's editor
-    // =====================================================================
-    console.log('Navigating to dashboard...');
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+    // =================================================================
+    // Phase 0: Clean slate
+    // =================================================================
+    console.log('Phase 0: Cleaning dashboard...');
+    await deleteAllCourses(page);
+    await screenshot(page, 'dashboard-clean');
 
-    // Wait for courses to load — "Loading courses..." disappears when data arrives
-    await page.locator('text=Loading courses').waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {
-      console.log('Loading indicator did not disappear in time');
-    });
-    await page.waitForTimeout(2_000);
-    await screenshot(page, 'source-dashboard');
-
-    // Find and click the first course's Edit button to open it in the editor
-    const editButton = page.locator('button[title="Edit course"]').first();
-    const courseExists = await editButton.isVisible({ timeout: 10_000 }).catch(() => false);
-    console.log(`Edit course button visible: ${courseExists}`);
-    await screenshot(page, 'source-dashboard-courses');
-    if (!courseExists) {
-      console.log('No courses found — skipping test');
-      console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
-      test.skip(true, 'No courses exist on dashboard');
-      return;
+    // Clear any stale wizard workflow
+    await page.goto('/course/wizard', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3_000);
+    const wizardCard = page.locator('[data-wizard-state]');
+    const initialState = await wizardCard.getAttribute('data-wizard-state').catch(() => null);
+    if (initialState && initialState !== 'idle') {
+      await clearStaleWorkflow(page);
     }
 
-    console.log('Found course, clicking Edit...');
-    await editButton.click();
-    await page.waitForURL('**/course/*/editor', { timeout: 15_000 });
+    // =================================================================
+    // Phase 1: Create course with Web Research ON
+    // =================================================================
+    console.log('Phase 1: Creating course with web research...');
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1_000);
+    await page.click('button:has-text("Create Course")');
+    await page.waitForURL('**/course/wizard', { timeout: 10_000 });
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(3_000);
-    await screenshot(page, 'source-editor-loaded');
 
-    // =====================================================================
-    // Phase 2: Verify lesson is loaded with components
-    // =====================================================================
-    console.log('Waiting for lesson content to load...');
-
-    // Wait for at least one lesson component (sortable items) to appear
-    // The editor renders components inside the lesson card
-    const componentLocator = page.locator('[data-component-id], .sortable-component, [class*="component"]').first();
-    await componentLocator.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => {
-      console.log('No component selector found — looking for text content');
+    // Wait for idle state (form ready)
+    await waitForWizardState(page, ['idle'], 15_000).catch(async () => {
+      // If not idle, clear stale and retry
+      await clearStaleWorkflow(page);
+      await page.goto('/course/wizard', { waitUntil: 'domcontentloaded' });
+      await waitForWizardState(page, ['idle'], 15_000);
     });
 
-    // Also check for the Sources button which only appears when a lesson is loaded
-    const sourcesButton = page.locator('button:has-text("Sources")');
-    await sourcesButton.waitFor({ state: 'visible', timeout: 15_000 });
-    console.log('Sources button visible');
+    // Fill form
+    await page.fill('#topic', TOPIC);
+    await page.fill('#audience', AUDIENCE);
 
-    // Check if grounded badge exists
-    const groundedBadge = page.locator('button:has-text("grounded")');
+    // Enable Web Research toggle
+    if (!(await page.locator('#webResearch').isChecked())) {
+      await page.locator('label[for="webResearch"]').click();
+      console.log('  enabled web research toggle');
+    }
+    await screenshot(page, 'wizard-form-filled');
+
+    // Submit
+    await page.click('button:has-text("Generate Course")');
+    console.log('  clicked Generate Course');
+
+    // Wait for processing to start
+    const postClick = await waitForWizardState(
+      page, ['processing', 'awaiting-approval', 'failed'], 90_000,
+    );
+    console.log(`  post-click: ${postClick}`);
+    await screenshot(page, `wizard-${postClick}`);
+    if (postClick === 'failed') throw new Error('Workflow failed to start');
+
+    // =================================================================
+    // Phase 2: Approve all 5 steps using data-wizard-state signals
+    // =================================================================
+    console.log('Phase 2: Approving steps...');
+
+    const STEPS = [
+      { label: 'Approve Analysis', timeout: 300_000 },
+      { label: 'Approve Outcomes', timeout: 180_000 },
+      { label: 'Approve Structure', timeout: 180_000 },
+      { label: 'Approve Lesson', timeout: 300_000 },
+      { label: 'Approve & Export', timeout: 420_000 },
+    ];
+
+    for (const step of STEPS) {
+      // Wait for awaiting-approval or terminal state
+      const state = await waitForWizardState(
+        page, ['awaiting-approval', 'completed', 'failed'], step.timeout,
+      );
+      console.log(`  ${step.label}: state=${state}`);
+
+      const wizardStep = await page.locator('[data-wizard-state]').getAttribute('data-wizard-step') ?? '';
+      const progress = await page.locator('[data-wizard-state]').getAttribute('data-wizard-progress') ?? '0';
+      console.log(`  step=${wizardStep}, progress=${progress}%`);
+
+      await screenshot(page, `step-${step.label.toLowerCase().replace(/\s+/g, '-')}`);
+
+      if (state === 'completed') { console.log('  completed early'); break; }
+      if (state === 'failed') throw new Error(`Workflow failed at: ${step.label}`);
+
+      // Click approve
+      const btn = page.locator(`button:has-text("${step.label}")`);
+      await btn.waitFor({ state: 'visible', timeout: 5_000 });
+      await btn.click();
+      console.log(`  approved: ${step.label}`);
+
+      // Wait for transition to processing or next state
+      await waitForWizardState(
+        page, ['processing', 'awaiting-approval', 'completed', 'failed'], 30_000,
+      ).catch(() => {});
+    }
+
+    // Wait for final completion
+    console.log('  waiting for completion...');
+    const final = await waitForWizardState(page, ['completed', 'failed'], 600_000);
+    console.log(`  final: ${final}`);
+    await screenshot(page, `wizard-final-${final}`);
+    if (final !== 'completed') throw new Error(`Course creation ended: ${final}`);
+
+    // =================================================================
+    // Phase 3: Open in editor
+    // =================================================================
+    console.log('Phase 3: Opening editor...');
+    await page.locator('button:has-text("Open in Editor")').click();
+    await page.waitForURL('**/course/*/editor', { timeout: 15_000 });
+    await page.waitForLoadState('domcontentloaded');
+
+    // Wait for lesson to load using data-editor-state signal
+    await expect(page.locator('[data-editor-state="lesson-loaded"]')).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(2_000);
+    await screenshot(page, 'editor-loaded');
+
+    // =================================================================
+    // Phase 4: Verify Sources button and Grounded badge
+    // =================================================================
+    console.log('Phase 4: Checking source mode elements...');
+
+    const sourcesBtn = page.locator('button[title="Toggle source attribution view"]');
+    await sourcesBtn.waitFor({ state: 'visible', timeout: 10_000 });
+    console.log('  Sources button: visible');
+
+    const groundedBadge = page.locator('button:has-text("% grounded")');
     const hasGroundedBadge = await groundedBadge.isVisible().catch(() => false);
-    console.log(`Grounded badge visible: ${hasGroundedBadge}`);
+    console.log(`  Grounded badge: ${hasGroundedBadge}`);
+    if (hasGroundedBadge) {
+      console.log(`  Grounded text: "${await groundedBadge.textContent()}"`);
+    }
 
-    await screenshot(page, 'source-before-toggle');
+    const hasProvenance = await page.locator('[data-has-provenance="true"]').isVisible().catch(() => false);
+    console.log(`  Has provenance data: ${hasProvenance}`);
 
-    // =====================================================================
-    // Phase 3: Toggle Source Mode ON
-    // =====================================================================
-    console.log('Clicking Sources button to enable source mode...');
-    await sourcesButton.click();
+    await screenshot(page, 'editor-before-sources');
+
+    // =================================================================
+    // Phase 5: Toggle Source Mode ON
+    // =================================================================
+    console.log('Phase 5: Enabling source mode...');
+    await sourcesBtn.click();
+    await expect(page.locator('[data-source-mode="on"]')).toBeVisible({ timeout: 5_000 });
     await page.waitForTimeout(1_000);
     await screenshot(page, 'source-mode-on');
 
-    // Verify source mode is active — SourceSummaryBar should appear
-    // SourceSummaryBar has "Source Distribution" text
+    // Verify summary bar
     const summaryBar = page.locator('text=Source Distribution');
     const hasSummaryBar = await summaryBar.isVisible({ timeout: 5_000 }).catch(() => false);
-    console.log(`Source Distribution bar visible: ${hasSummaryBar}`);
+    console.log(`  Summary bar: ${hasSummaryBar}`);
+    expect(hasSummaryBar).toBe(true);
 
-    // Check for grounded percentage in summary bar
+    // Grounded % in summary
     const groundedText = page.locator('text=/\\d+% grounded/').first();
-    const groundedVisible = await groundedText.isVisible().catch(() => false);
-    if (groundedVisible) {
-      const groundedContent = await groundedText.textContent();
-      console.log(`Grounded badge text: ${groundedContent}`);
+    if (await groundedText.isVisible().catch(() => false)) {
+      console.log(`  Grounded: "${await groundedText.textContent()}"`);
     }
 
-    // Check for source type badges (AI Generated, Web Search, Internal Knowledge)
-    const aiBadge = page.locator('button:has-text("AI Generated")');
-    const webBadge = page.locator('button:has-text("Web Search")');
-    const internalBadge = page.locator('button:has-text("Internal Knowledge")');
-
-    const aiCount = await aiBadge.count();
-    const webCount = await webBadge.count();
-    const internalCount = await internalBadge.count();
-    console.log(`Source badges — AI Generated: ${aiCount}, Web Search: ${webCount}, Internal Knowledge: ${internalCount}`);
-
-    // Take a full page screenshot showing all source overlays
-    await screenshot(page, 'source-mode-badges');
-
-    // Verify at least some badges exist (source mode is working)
+    // Source type badges
+    const aiCount = await page.locator('button:has-text("AI Generated")').count();
+    const webCount = await page.locator('button:has-text("Web Search")').count();
+    const internalCount = await page.locator('button:has-text("Internal Knowledge")').count();
+    console.log(`  Badges — AI: ${aiCount}, Web: ${webCount}, Internal: ${internalCount}`);
     expect(aiCount + webCount + internalCount).toBeGreaterThan(0);
 
-    // Check the legend counts in the summary bar
-    const legendAI = page.locator('text=/AI \\(\\d+\\)/');
-    const legendWeb = page.locator('text=/Web \\(\\d+\\)/');
-    const legendInternal = page.locator('text=/Internal \\(\\d+\\)/');
-    const hasLegendAI = await legendAI.isVisible().catch(() => false);
-    const hasLegendWeb = await legendWeb.isVisible().catch(() => false);
-    const hasLegendInternal = await legendInternal.isVisible().catch(() => false);
-    console.log(`Legend — AI: ${hasLegendAI}, Web: ${hasLegendWeb}, Internal: ${hasLegendInternal}`);
+    // Legend
+    const hasLegendAI = await page.locator('text=/AI \\(\\d+\\)/').isVisible().catch(() => false);
+    const hasLegendWeb = await page.locator('text=/Web \\(\\d+\\)/').isVisible().catch(() => false);
+    console.log(`  Legend — AI: ${hasLegendAI}, Web: ${hasLegendWeb}`);
 
-    // =====================================================================
-    // Phase 4: Click grounded badge to open ProvenancePanel
-    // =====================================================================
+    await screenshot(page, 'source-mode-badges');
+
+    // =================================================================
+    // Phase 6: ProvenancePanel via grounded badge
+    // =================================================================
     if (hasGroundedBadge) {
-      console.log('Clicking grounded badge to open ProvenancePanel...');
+      console.log('Phase 6: ProvenancePanel...');
       await groundedBadge.click();
       await page.waitForTimeout(500);
-      await screenshot(page, 'source-provenance-panel');
+      await screenshot(page, 'provenance-panel');
 
-      // ProvenancePanel shows "Knowledge Source Attribution" header
-      const attributionHeader = page.locator('text=Knowledge Source Attribution');
-      const hasAttribution = await attributionHeader.isVisible().catch(() => false);
-      console.log(`Knowledge Source Attribution panel visible: ${hasAttribution}`);
+      const hasAttribution = await page.locator('text=Knowledge Source Attribution').isVisible({ timeout: 3_000 }).catch(() => false);
+      console.log(`  Attribution panel: ${hasAttribution}`);
 
-      // Read the metrics
-      const sourcesMetric = page.locator('span:has-text("Sources")').locator('..').locator('.font-medium');
-      const ungroundedMetric = page.locator('span:has-text("Ungrounded")').locator('..').locator('.font-medium');
+      const hasCitations = await page.locator('text=Source Citations').isVisible().catch(() => false);
+      console.log(`  Source Citations: ${hasCitations}`);
 
-      if (hasAttribution) {
-        const sourcesValue = await sourcesMetric.textContent().catch(() => 'N/A');
-        const ungroundedValue = await ungroundedMetric.textContent().catch(() => 'N/A');
-        console.log(`Provenance metrics — Sources: ${sourcesValue}, Ungrounded: ${ungroundedValue}`);
+      if (hasCitations) {
+        const pctBadges = page.locator('.bg-surface.rounded.border >> text=/\\d+%/');
+        const pctCount = await pctBadges.count();
+        console.log(`  Citation % badges: ${pctCount}`);
+        for (let i = 0; i < Math.min(pctCount, 5); i++) {
+          console.log(`    [${i}]: ${await pctBadges.nth(i).textContent()}`);
+        }
+        const excerpts = page.locator('.line-clamp-2');
+        console.log(`  Excerpt elements: ${await excerpts.count()}`);
       }
 
-      // Check for Source Citations section
-      const citations = page.locator('text=Source Citations');
-      const hasCitations = await citations.isVisible().catch(() => false);
-      console.log(`Source Citations section visible: ${hasCitations}`);
+      await screenshot(page, 'provenance-detail');
+      await groundedBadge.click(); // close
+      await page.waitForTimeout(300);
     }
 
-    // =====================================================================
-    // Phase 5: Click a source badge on a component to see detail popover
-    // =====================================================================
-    // Try clicking a web badge first, then AI badge as fallback
-    let clickedBadge = false;
-
-    if (webCount > 0) {
-      console.log('Clicking Web Search badge on first component...');
-      await webBadge.first().click();
-      clickedBadge = true;
-    } else if (aiCount > 0) {
-      console.log('Clicking AI Generated badge on first component...');
-      await aiBadge.first().click();
-      clickedBadge = true;
-    }
-
-    if (clickedBadge) {
-      await page.waitForTimeout(500);
-      await screenshot(page, 'source-detail-popover');
-
-      // SourceDetailPopover shows "Source Details" header
-      const detailHeader = page.locator('text=Source Details');
-      const hasDetail = await detailHeader.isVisible().catch(() => false);
-      console.log(`Source Details popover visible: ${hasDetail}`);
-
-      // Check for web source links (if web badge was clicked)
-      if (webCount > 0) {
-        const webLinks = page.locator('.truncate').filter({ hasText: /\.\w+/ });
-        const linkCount = await webLinks.count();
-        console.log(`Web source links in popover: ${linkCount}`);
-      }
-
-      // Check for "AI Generated" card (if AI badge was clicked)
-      if (webCount === 0) {
-        const aiCard = page.locator('text=AI Generated').nth(1);
-        const hasAICard = await aiCard.isVisible().catch(() => false);
-        console.log(`AI Generated detail card visible: ${hasAICard}`);
-      }
-
-      await screenshot(page, 'source-detail-content');
-    }
-
-    // =====================================================================
-    // Phase 6: Toggle Source Mode OFF and verify cleanup
-    // =====================================================================
-    console.log('Toggling source mode off...');
-    await sourcesButton.click();
+    // =================================================================
+    // Phase 7: SourceDetailPopover via component badge
+    // =================================================================
+    console.log('Phase 7: SourceDetailPopover...');
+    const badgeToClick = webCount > 0
+      ? page.locator('button:has-text("Web Search")').first()
+      : page.locator('button:has-text("AI Generated")').first();
+    await badgeToClick.click();
     await page.waitForTimeout(500);
+    await screenshot(page, 'source-detail-popover');
 
-    // Summary bar should disappear
-    const summaryGone = await summaryBar.isVisible().catch(() => false);
-    console.log(`Source Distribution still visible after toggle off: ${summaryGone}`);
-    expect(summaryGone).toBe(false);
+    const hasDetail = await page.locator('text=Source Details').isVisible({ timeout: 3_000 }).catch(() => false);
+    console.log(`  Popover visible: ${hasDetail}`);
 
+    if (hasDetail) {
+      const links = page.locator('a[target="_blank"]');
+      const linkCount = await links.count();
+      console.log(`  External links: ${linkCount}`);
+      for (let i = 0; i < Math.min(linkCount, 3); i++) {
+        const href = await links.nth(i).getAttribute('href');
+        console.log(`    [${i}]: ${await links.nth(i).textContent()} → ${href}`);
+      }
+
+      // Confidence badges in popover
+      const pctInPopover = page.locator('.w-80 >> text=/\\d+%/');
+      const pctPopCount = await pctInPopover.count();
+      console.log(`  Confidence badges: ${pctPopCount}`);
+      for (let i = 0; i < Math.min(pctPopCount, 3); i++) {
+        console.log(`    [${i}]: ${await pctInPopover.nth(i).textContent()}`);
+      }
+
+      // Excerpts in popover
+      const popExcerpts = page.locator('.w-80 >> .leading-relaxed');
+      const exCount = await popExcerpts.count();
+      console.log(`  Excerpts: ${exCount}`);
+      for (let i = 0; i < Math.min(exCount, 2); i++) {
+        const t = await popExcerpts.nth(i).textContent();
+        console.log(`    [${i}]: "${t?.slice(0, 80)}..."`);
+      }
+    }
+    await screenshot(page, 'source-detail-content');
+
+    // =================================================================
+    // Phase 8: Toggle OFF
+    // =================================================================
+    console.log('Phase 8: Source mode off...');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    await sourcesBtn.click();
+    await expect(page.locator('[data-source-mode="off"]')).toBeVisible({ timeout: 5_000 });
+    expect(await summaryBar.isVisible().catch(() => false)).toBe(false);
     await screenshot(page, 'source-mode-off');
 
-    // =====================================================================
+    // =================================================================
     // Summary
-    // =====================================================================
-    console.log('\n=== SOURCE MODE TEST SUMMARY ===');
-    console.log(`Source badges: AI=${aiCount}, Web=${webCount}, Internal=${internalCount}`);
+    // =================================================================
+    console.log('\n=== SUMMARY ===');
+    console.log(`Badges: AI=${aiCount}, Web=${webCount}, Internal=${internalCount}`);
     console.log(`Grounded badge: ${hasGroundedBadge}`);
     console.log(`Summary bar: ${hasSummaryBar}`);
-    console.log(`Legend: AI=${hasLegendAI}, Web=${hasLegendWeb}, Internal=${hasLegendInternal}`);
-    console.log('================================\n');
-
-    // Dump console logs
+    console.log(`Legend: AI=${hasLegendAI}, Web=${hasLegendWeb}`);
+    console.log('===============\n');
     console.log('CONSOLE LOGS (last 20):\n' + consoleLogs.slice(-20).join('\n'));
   });
 });

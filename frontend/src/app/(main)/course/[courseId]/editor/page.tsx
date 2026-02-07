@@ -465,7 +465,12 @@ export default function CourseEditorPage() {
         />
 
         {/* Main content - Lesson editor */}
-        <main className="flex-1 min-w-0">
+        <main
+          className="flex-1 min-w-0"
+          data-editor-state={selectedLessonId && currentLesson ? 'lesson-loaded' : 'no-lesson'}
+          data-source-mode={sourceMode ? 'on' : 'off'}
+          data-has-provenance={currentLesson?.generated?.aggregateProvenance ? 'true' : 'false'}
+        >
           {selectedLessonId && currentLesson ? (
             <Card>
               <CardHeader className="py-4 border-b">

@@ -215,7 +215,18 @@ export default function CourseWizardPage() {
       backButton={{ label: 'Back to Dashboard', onClick: () => router.push('/dashboard') }}
       maxWidth="5xl"
     >
-      <Card>
+      <Card
+        data-wizard-state={
+          isIdle ? 'idle'
+            : isCompleted ? 'completed'
+            : isFailed ? 'failed'
+            : isAwaitingApproval ? 'awaiting-approval'
+            : isSendingSignal ? 'sending-signal'
+            : 'processing'
+        }
+        data-wizard-step={pendingStep ? getWorkflowStepLabel(pendingStep).toLowerCase().replace(/\s+/g, '-') : ''}
+        data-wizard-progress={state.context.progressPercent}
+      >
         {/* ===================== IDLE STATE ===================== */}
         {isIdle && (
           <>
