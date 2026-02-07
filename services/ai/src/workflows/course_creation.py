@@ -53,6 +53,8 @@ with workflow.unsafe.imports_passed_through():
         COMPONENT_TYPE_MAP,
         LessonComponents,
     )
+    from src.models.resource_hint import ResourceHint
+    from src.services.resource_parser import URLResourceParser
     from src.models.course_design import (
         CourseAnalysis,
         CourseOutcomes,
@@ -580,6 +582,12 @@ class CourseCreationWorkflow:
         self._set_progress(60, "Generating lesson components...")
         await self._update_job(input, "PROCESSING", 60, "Generating lesson components")
 
+        # Parse multimedia resources from user context
+        resource_hints: list[ResourceHint] = []
+        if input.use_context:
+            parser = URLResourceParser()
+            resource_hints = parser.parse(input.use_context)
+
         tracker = OutcomeTracker.from_course(outcomes, structure)
         all_components: dict[str, dict[str, LessonComponents]] = {}
         representative_section = structure.sections[0].title
@@ -656,6 +664,7 @@ class CourseCreationWorkflow:
                     outcomes_to_introduce=pending,
                     outcomes_to_reinforce=reinforce,
                     recently_covered=recent,
+                    resource_hints=resource_hints,
                 )
                 lesson_contexts.append(
                     GenerateComponentsInput(api_key=api_key, context=ctx)
@@ -685,6 +694,15 @@ class CourseCreationWorkflow:
                     input, "PROCESSING", progress,
                     f"Generated {completed_lessons}/{total_lessons} lessons",
                 )
+
+            # Strip hallucinated multimedia URLs (only allow URLs from resource hints)
+            if resource_hints:
+                allowed_urls = {h.url for h in resource_hints}
+                for lc in section_results.values():
+                    lc.components = [
+                        c for c in lc.components
+                        if not (hasattr(c, "mediaType") and c.url not in allowed_urls)
+                    ]
 
             # Update tracker after all lessons in section
             for title, lc in section_results.items():
@@ -835,6 +853,10 @@ class CourseCreationWorkflow:
                     content_data = comp.model_dump(exclude={"type"})
                     comp_type_str = comp.type if isinstance(comp.type, str) else "text"
 
+                    # Multimedia: rename mediaType → type for proto/frontend compatibility
+                    if comp_type_str == "multimedia" and "mediaType" in content_data:
+                        content_data["type"] = content_data.pop("mediaType")
+
                     components.append({
                         "id": str(uuid.uuid4()),
                         "type": comp_type_str,
@@ -904,6 +926,10 @@ class CourseCreationWorkflow:
             content_data = comp.model_dump(exclude={"type"})
             comp_type_str = comp.type if isinstance(comp.type, str) else "text"
             comp_type_int = COMPONENT_TYPE_MAP.get(comp_type_str, 1)
+
+            # Multimedia: rename mediaType → type for proto/frontend compatibility
+            if comp_type_str == "multimedia" and "mediaType" in content_data:
+                content_data["type"] = content_data.pop("mediaType")
 
             preview.append({
                 "id": str(uuid.uuid4()),

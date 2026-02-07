@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.component_content import LessonComponents
 from src.models.outcome_tracker import OutcomeCoverage
+from src.models.resource_hint import ResourceHint
 
 
 # =============================================================================
@@ -54,6 +55,13 @@ class ComponentContext:
     outcomes_to_reinforce: list[OutcomeCoverage]
     recently_covered: list[str]
 
+    # External resources (parsed from user context)
+    resource_hints: list[ResourceHint] = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.resource_hints is None:
+            self.resource_hints = []
+
 
 # =============================================================================
 # Agent Definition
@@ -79,6 +87,11 @@ structured components that render directly in a learning platform.
   - accordion: expandable term/definition pairs — use for concepts, tools,
     comparisons, or any content where each item has a short label (text) and
     a longer explanation (description). Perfect for "X: description" patterns.
+- **multimedia**: Video, audio, or interactive media embed. ONLY use when a specific
+  media resource URL (video/audio/interactive) is provided in Available Resources.
+  Fields: mediaType (video/audio/interactive), url, title, optional description,
+  optional provider (youtube/vimeo/soundcloud/etc.).
+  NEVER invent URLs — only use URLs explicitly listed in the Available Resources section.
 - **image**: Image descriptions for AI generation (no URL needed)
 - **divider**: Visual separators between major sections
 - **task_list**: Interactive checklist for hands-on practice exercises. Has a title,
@@ -111,6 +124,7 @@ has any of these structures, use the matching component instead:
 | A notable quote with attribution | quote | — |
 | Code example or command | code | — |
 | Hands-on exercise, practice prompt, "try it yourself" | task_list | — |
+| External video, audio, or interactive embed (URL provided) | multimedia | — |
 
 A **text** block containing bold labels followed by descriptions is WRONG — convert it
 to the appropriate list type. Text components should read like paragraphs, not lists.
@@ -193,6 +207,28 @@ def build_component_prompt(ctx: ComponentContext) -> str:
     # Section outcomes
     section_outcomes_str = "\n".join(f"- {s}" for s in ctx.section_outcomes)
 
+    # External resources (only when provided)
+    resources_str = ""
+    if ctx.resource_hints:
+        resource_lines = []
+        for h in ctx.resource_hints:
+            label = f"{h.media_type}"
+            if h.provider:
+                label += f"/{h.provider}"
+            resource_lines.append(f"- [{label}] {h.url}")
+        resources_str = f"""
+## Available External Resources
+These resources were provided by the course creator. Incorporate where relevant:
+{chr(10).join(resource_lines)}
+
+IMPORTANT:
+- For **video/audio/interactive** resources: create a **multimedia** component with the exact URL.
+- For **reference** resources: cite them as <a href="URL">descriptive text</a> links in **text** or
+  **callout** components. Weave them naturally into the content (e.g., "For a deeper dive, see
+  <a href=\"...\">this guide</a>").
+- NEVER invent URLs — only use URLs explicitly listed above.
+"""
+
     return f"""\
 ## Course Context
 **Topic**: {ctx.topic}
@@ -225,7 +261,7 @@ def build_component_prompt(ctx: ComponentContext) -> str:
 **Suggested block sequence**: {sequence_str}
 **Interaction rules**:
 {rules_str}
-
+{resources_str}
 ## Instructions
 Generate 5-15 structured components for this lesson. Follow the template guidelines
 but adapt as needed for the content. Write REAL, detailed educational content.

@@ -141,6 +141,26 @@ class TaskListComponent(BaseModel):
     items: list[TaskListItem] = Field(min_length=1, description="Checklist items")
 
 
+class MultimediaComponent(BaseModel):
+    """Embedded video, audio, or interactive media.
+
+    Uses 'mediaType' to avoid collision with the discriminator 'type' field.
+    Serialization renames mediaType → type for proto/frontend compatibility.
+    """
+
+    type: Literal["multimedia"] = "multimedia"
+    mediaType: str = Field(description="Media subtype: video, audio, or interactive")
+    url: str = Field(description="Media URL")
+    title: str = Field(description="Media title")
+    description: str | None = Field(default=None, description="What the media contains")
+    provider: str | None = Field(
+        default=None, description="Provider: youtube, vimeo, soundcloud, etc."
+    )
+    isPlaceholder: bool | None = Field(
+        default=None, description="True if awaiting actual media"
+    )
+
+
 # =============================================================================
 # Discriminated Union
 # =============================================================================
@@ -158,6 +178,7 @@ ProtoComponent = Annotated[
         ImageComponent,
         DividerComponent,
         TaskListComponent,
+        MultimediaComponent,
     ],
     Field(discriminator="type"),
 ]
@@ -173,6 +194,7 @@ COMPONENT_TYPE_MAP: dict[str, int] = {
     "statement": 7,
     "quote": 8,
     "list": 9,
+    "multimedia": 11,
     "divider": 13,
     "task_list": 14,
 }
