@@ -189,12 +189,8 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
     if input.enable_web_research:
         log.info("running_web_research", topic=input.topic)
         research_prompt = build_research_prompt(input.topic, input.audience)
-        research_result = await AgentRegistry.get("course-web-research").run(research_prompt, model=model)
-        web_context = research_result.output
+        web_context, web_sources = await _run_web_research(input.api_key, research_prompt)
         log.info("web_research_complete", length=len(web_context))
-
-        # Extract grounding metadata (URLs) from the research result
-        web_sources = _extract_web_sources(research_result)
         log.info("web_sources_extracted", count=len(web_sources))
         activity.heartbeat()
 
@@ -222,40 +218,62 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
     )
 
 
-def _extract_web_sources(research_result: object) -> list[WebSourceData]:
-    """Extract web source URLs from pydantic-ai BuiltinToolReturnPart messages.
+async def _run_web_research(
+    api_key: str, prompt: str,
+) -> tuple[str, list[WebSourceData]]:
+    """Run web research using google.genai directly to access grounding metadata.
 
-    When Gemini uses WebSearchTool, pydantic-ai converts the grounding results
-    into BuiltinToolReturnPart objects with tool_name="web-search" and content
-    containing [{uri, title}, ...] dicts.
-    Falls back gracefully to empty list if extraction fails.
+    pydantic-ai strips GroundingMetadata from Gemini responses, so we bypass it
+    for this call and use the google.genai SDK which preserves the full response
+    including grounding_chunks with URIs and titles.
+
+    Returns (research_text, web_sources).
     """
-    from pydantic_ai.messages import BuiltinToolReturnPart
+    from google import genai
+    from google.genai import types
 
     sources: list[WebSourceData] = []
-    seen_urls: set[str] = set()
+    text = ""
 
     try:
-        for msg in research_result.all_messages():
-            if not hasattr(msg, "parts"):
-                continue
-            for part in msg.parts:
-                if isinstance(part, BuiltinToolReturnPart) and part.tool_name == "web-search":
-                    if isinstance(part.content, list):
-                        for chunk in part.content:
-                            if isinstance(chunk, dict):
-                                uri = chunk.get("uri", "")
-                                title = chunk.get("title", "")
-                                if uri and uri not in seen_urls:
-                                    seen_urls.add(uri)
-                                    sources.append(WebSourceData(
-                                        title=title or uri,
-                                        url=uri,
-                                    ))
-    except Exception:
-        log.warning("web_source_extraction_failed", exc_info=True)
+        client = genai.Client(api_key=api_key)
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                system_instruction=(
+                    "You are a research assistant preparing background material "
+                    "for an instructional designer. Search the web for relevant, "
+                    "current information and return a concise research summary "
+                    "(3-5 paragraphs) with the most useful findings."
+                ),
+            ),
+        )
 
-    return sources
+        # Extract text response
+        text = response.text or ""
+
+        # Extract grounding metadata — this is why we use google.genai directly
+        grounding = getattr(response.candidates[0], "grounding_metadata", None)
+        if grounding and grounding.grounding_chunks:
+            seen_urls: set[str] = set()
+            for chunk in grounding.grounding_chunks:
+                web = getattr(chunk, "web", None)
+                if web and web.uri and web.uri not in seen_urls:
+                    seen_urls.add(web.uri)
+                    sources.append(WebSourceData(
+                        title=web.title or web.uri,
+                        url=web.uri,
+                    ))
+            log.info("grounding_chunks_found", count=len(grounding.grounding_chunks), unique_urls=len(sources))
+        else:
+            log.warning("no_grounding_metadata", has_candidates=bool(response.candidates))
+
+    except Exception:
+        log.warning("web_research_failed", exc_info=True)
+
+    return text, sources
 
 
 @activity.defn
