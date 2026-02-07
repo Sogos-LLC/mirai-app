@@ -80,6 +80,7 @@ export function useNotificationStream() {
 
       for await (const event of client.subscribeNotifications(request, {
         signal: abortControllerRef.current.signal,
+        timeoutMs: 0, // Disable transport timeout — stream uses server heartbeats
       })) {
         handleEvent(event.eventType);
       }
@@ -102,7 +103,7 @@ export function useNotificationStream() {
         return;
       }
 
-      console.error('Notification stream error:', err);
+      console.warn('Notification stream error:', err);
       scheduleReconnect();
     }
   }, [handleEvent]);
