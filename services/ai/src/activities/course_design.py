@@ -60,6 +60,7 @@ class WebSourceData:
     title: str
     url: str
     snippet: str = ""
+    confidence: float = 0.85  # default for Gemini-grounded sources
 
 
 @dataclass
@@ -218,6 +219,27 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
     )
 
 
+def _resolve_vertex_url(url: str) -> str:
+    """Resolve vertexaisearch.cloud.google.com proxy URLs to actual domain URLs."""
+    if "vertexaisearch.cloud.google.com" not in url:
+        return url
+    from urllib.parse import urlparse, parse_qs
+    try:
+        parsed = urlparse(url)
+        qs = parse_qs(parsed.query)
+        for param in ("url", "q", "redirect_url", "destination"):
+            if param in qs:
+                return qs[param][0]
+        path = parsed.path
+        if "/grounding-api-redirect/" in path:
+            remainder = path.split("/grounding-api-redirect/", 1)[1]
+            if remainder.startswith("http"):
+                return remainder
+    except Exception:
+        pass
+    return url
+
+
 async def _run_web_research(
     api_key: str, prompt: str,
 ) -> tuple[str, list[WebSourceData]]:
@@ -257,15 +279,57 @@ async def _run_web_research(
         # Extract grounding metadata — this is why we use google.genai directly
         grounding = getattr(response.candidates[0], "grounding_metadata", None)
         if grounding and grounding.grounding_chunks:
+            # Build chunk index → resolved URL map
+            chunk_url_map: dict[int, str] = {}
             seen_urls: set[str] = set()
-            for chunk in grounding.grounding_chunks:
+            for ci, chunk in enumerate(grounding.grounding_chunks):
                 web = getattr(chunk, "web", None)
-                if web and web.uri and web.uri not in seen_urls:
-                    seen_urls.add(web.uri)
-                    sources.append(WebSourceData(
-                        title=web.title or web.uri,
-                        url=web.uri,
-                    ))
+                if web and web.uri:
+                    resolved = _resolve_vertex_url(web.uri)
+                    chunk_url_map[ci] = resolved
+                    if resolved not in seen_urls:
+                        seen_urls.add(resolved)
+                        sources.append(WebSourceData(
+                            title=web.title or resolved,
+                            url=resolved,
+                        ))
+
+            # Extract confidence scores and snippets from grounding_supports
+            supports = getattr(grounding, "grounding_supports", None)
+            if supports:
+                chunk_confidences: dict[int, list[float]] = {}
+                url_snippets: dict[str, list[str]] = {}
+
+                for support in supports:
+                    indices = getattr(support, "grounding_chunk_indices", [])
+                    scores = getattr(support, "confidence_scores", [])
+                    seg = getattr(support, "segment", None)
+                    seg_text = getattr(seg, "text", "").strip() if seg else ""
+
+                    for ci, conf in zip(indices, scores):
+                        chunk_confidences.setdefault(ci, []).append(conf)
+
+                    if seg_text:
+                        for ci in indices:
+                            url = chunk_url_map.get(ci)
+                            if url:
+                                url_snippets.setdefault(url, []).append(seg_text)
+
+                # Apply confidence and snippets to sources
+                for src in sources:
+                    # Confidence: max score across all supports referencing this URL
+                    scores_for_url = [
+                        s for ci, sl in chunk_confidences.items()
+                        for s in sl if chunk_url_map.get(ci) == src.url
+                    ]
+                    if scores_for_url:
+                        src.confidence = max(scores_for_url)
+
+                    # Snippet: first 2 segments, capped at 300 chars
+                    snippets = url_snippets.get(src.url, [])
+                    if snippets:
+                        src.snippet = " ".join(snippets[:2])[:300]
+
             log.info("grounding_chunks_found", count=len(grounding.grounding_chunks), unique_urls=len(sources))
         else:
             log.warning("no_grounding_metadata", has_candidates=bool(response.candidates))

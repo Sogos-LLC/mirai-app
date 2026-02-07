@@ -17,6 +17,7 @@ Infrastructure (DB, MinIO) is done via Go activities on go-tasks queue.
 
 import asyncio
 import json
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -306,7 +307,7 @@ class CourseCreationWorkflow:
         # Capture web sources for provenance tracking
         if analysis_result.web_sources:
             self._web_sources = [
-                WebSource(title=ws.title, url=ws.url, snippet=ws.snippet)
+                WebSource(title=ws.title, url=ws.url, snippet=ws.snippet, confidence=ws.confidence)
                 for ws in analysis_result.web_sources
             ]
 
@@ -917,7 +918,7 @@ class CourseCreationWorkflow:
 
                     # For text components, serialize paragraphs as textHtml for backward compat
                     if comp_type_str == "text" and hasattr(comp, "paragraphs"):
-                        content_data = {"textHtml": comp.textHtml}
+                        content_data = {"textHtml": self._strip_source_markers(comp.textHtml)}
                         exclude_fields.add("paragraphs")
                     else:
                         content_data = comp.model_dump(exclude=exclude_fields)
@@ -925,6 +926,17 @@ class CourseCreationWorkflow:
                     # Multimedia: rename mediaType → type for proto/frontend compatibility
                     if comp_type_str == "multimedia" and "mediaType" in content_data:
                         content_data["type"] = content_data.pop("mediaType")
+
+                    # Strip [Source N] markers from all string content fields
+                    for key in ("html", "text", "title", "description", "explanation"):
+                        if key in content_data and isinstance(content_data[key], str):
+                            content_data[key] = self._strip_source_markers(content_data[key])
+                    if "items" in content_data and isinstance(content_data["items"], list):
+                        for item in content_data["items"]:
+                            if isinstance(item, dict):
+                                for key in ("text", "description"):
+                                    if key in item and isinstance(item[key], str):
+                                        item[key] = self._strip_source_markers(item[key])
 
                     # Resolve provenance from source_refs
                     provenance = resolve_component_provenance(
@@ -1024,6 +1036,16 @@ class CourseCreationWorkflow:
                 "contentJson": json.dumps(content_data),
             })
         return preview
+
+    @staticmethod
+    def _strip_source_markers(text: str) -> str:
+        """Remove [Source N], (Source N), and bare Source N from generated text."""
+        text = re.sub(r'\[(?i:source)\s+\d+\]', '', text)
+        text = re.sub(r'\((?i:source)\s+\d+\)', '', text)
+        text = re.sub(r'(?<!\w)(?i:source)\s+\d+(?!\w)', '', text)
+        text = re.sub(r'\s{2,}', ' ', text)
+        text = re.sub(r'\s+([.,;:!?])', r'\1', text)
+        return text.strip()
 
     # -------------------------------------------------------------------
     # Helpers

@@ -17,7 +17,7 @@ async function globalSetup() {
   console.log('========================================\n');
 
   // Wait for the dashboard to load (user has logged in)
-  await page.waitForURL('**/dashboard', { timeout: 120_000 });
+  await page.waitForURL('**/dashboard', { timeout: 300_000 });
 
   // Save auth state
   await context.storageState({ path: AUTH_FILE });

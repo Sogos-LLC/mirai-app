@@ -25,15 +25,20 @@ test.describe('Source Mode & Provenance', () => {
     // Phase 1: Navigate to the most recent course's editor
     // =====================================================================
     console.log('Navigating to dashboard...');
-    await page.goto('/dashboard');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(3_000);
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+
+    // Wait for courses to load — "Loading courses..." disappears when data arrives
+    await page.locator('text=Loading courses').waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {
+      console.log('Loading indicator did not disappear in time');
+    });
+    await page.waitForTimeout(2_000);
     await screenshot(page, 'source-dashboard');
 
-    // Find and click the first course card link to open it
-    // Courses link to /course/{id}/editor when clicked
-    const courseLink = page.locator('a[href*="/course/"]').first();
-    const courseExists = await courseLink.isVisible().catch(() => false);
+    // Find and click the first course's Edit button to open it in the editor
+    const editButton = page.locator('button[title="Edit course"]').first();
+    const courseExists = await editButton.isVisible({ timeout: 10_000 }).catch(() => false);
+    console.log(`Edit course button visible: ${courseExists}`);
+    await screenshot(page, 'source-dashboard-courses');
     if (!courseExists) {
       console.log('No courses found — skipping test');
       console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
@@ -41,12 +46,9 @@ test.describe('Source Mode & Provenance', () => {
       return;
     }
 
-    const href = await courseLink.getAttribute('href');
-    console.log(`Found course link: ${href}`);
-
-    // Navigate to the editor
-    const editorUrl = href?.includes('/editor') ? href : `${href}/editor`;
-    await page.goto(editorUrl);
+    console.log('Found course, clicking Edit...');
+    await editButton.click();
+    await page.waitForURL('**/course/*/editor', { timeout: 15_000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3_000);
     await screenshot(page, 'source-editor-loaded');

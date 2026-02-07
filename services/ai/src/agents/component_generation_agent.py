@@ -150,12 +150,14 @@ to the appropriate list type. Text components should read like paragraphs, not l
 
 ## Source Attribution
 When a Knowledge Sources section is provided:
-- Reference sources by their [Source N] numbers in `source_refs` fields
-- For **text** components: each paragraph gets its own `source_refs` list
-- For all **other** components: use the component-level `source_refs` field
-- Empty `source_refs` = content from your own model knowledge (no source needed)
-- A single component/paragraph may reference multiple sources
-- Only reference sources you actually used — don't cite sources for unrelated content
+- Put source numbers (integers) in `source_refs` fields — metadata only, NOT visible text
+- For **text** components: each paragraph's `source_refs` list
+- For all **other** components: component-level `source_refs` field
+- Empty `source_refs` = content from model knowledge
+
+### Correct: `"source_refs": [3]` and clean HTML without any source markers
+### WRONG: `"html": "...text [Source 3] more text..."` — NEVER put [Source N] in HTML or visible text
+### WRONG: `"text": "According to Source 3..."` — NEVER mention source numbers in content
 """
 
 AgentRegistry.register(AgentSpec(

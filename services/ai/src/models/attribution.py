@@ -20,6 +20,7 @@ class WebSource(BaseModel):
     title: str
     url: str
     snippet: str = ""
+    confidence: float = 0.85
 
 
 @dataclass
@@ -80,7 +81,7 @@ def format_source_context(
                 source_id="",
                 source_name=ws.title,
                 chunk_index=0,
-                score=0.0,
+                score=ws.confidence,
                 url=ws.url,
                 page_title=ws.title,
                 excerpt=ws.snippet[:200] if ws.snippet else "",

@@ -68,6 +68,18 @@ export function getSourceTypeConfig(sourceType: SourceType | undefined) {
   return SOURCE_TYPE_CONFIG[getSourceTypeKey(sourceType)];
 }
 
+function getDisplayHostname(url: string, sourceName?: string): string {
+  try {
+    const hostname = new URL(url).hostname;
+    if (hostname.includes('vertexaisearch.cloud.google.com')) {
+      return sourceName || 'External Source';
+    }
+    return hostname;
+  } catch {
+    return sourceName || 'External Source';
+  }
+}
+
 // =============================================================================
 // Source Mode Overlay — wraps each component in source mode
 // =============================================================================
@@ -218,7 +230,7 @@ function SourceChunkCard({ chunk }: { chunk: ProvenanceChunk }) {
               className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline mt-0.5"
             >
               <ExternalLink className="w-3 h-3" />
-              <span className="truncate">{new URL(chunk.url).hostname}</span>
+              <span className="truncate">{getDisplayHostname(chunk.url, chunk.sourceName)}</span>
             </a>
           )}
 
