@@ -301,8 +301,8 @@ async def _run_web_research(
                 url_snippets: dict[str, list[str]] = {}
 
                 for support in supports:
-                    indices = getattr(support, "grounding_chunk_indices", [])
-                    scores = getattr(support, "confidence_scores", [])
+                    indices = getattr(support, "grounding_chunk_indices", None) or []
+                    scores = getattr(support, "confidence_scores", None) or []
                     seg = getattr(support, "segment", None)
                     seg_text = getattr(seg, "text", "").strip() if seg else ""
 
