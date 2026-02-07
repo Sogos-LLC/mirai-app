@@ -98,33 +98,35 @@ export function SourceModeOverlay({ provenance, children }: SourceModeOverlayPro
       >
         {/* Source type badge - top right */}
         <div className="flex justify-end mb-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDetail(!showDetail);
-            }}
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors hover:opacity-80"
-            style={{
-              backgroundColor: config.badgeBgVar,
-              color: config.badgeTextVar,
-            }}
-          >
-            <Icon className="w-3 h-3" />
-            {config.label}
-          </button>
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDetail(!showDetail);
+              }}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors hover:opacity-80"
+              style={{
+                backgroundColor: config.badgeBgVar,
+                color: config.badgeTextVar,
+              }}
+            >
+              <Icon className="w-3 h-3" />
+              {config.label}
+            </button>
+
+            {/* Source detail popover — anchored to the pill */}
+            {showDetail && provenance && (
+              <SourceDetailPopover
+                provenance={provenance}
+                onClose={() => setShowDetail(false)}
+              />
+            )}
+          </div>
         </div>
 
         {/* Original component content */}
         {children}
       </div>
-
-      {/* Source detail popover */}
-      {showDetail && provenance && (
-        <SourceDetailPopover
-          provenance={provenance}
-          onClose={() => setShowDetail(false)}
-        />
-      )}
     </div>
   );
 }
