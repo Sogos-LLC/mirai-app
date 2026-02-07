@@ -119,6 +119,7 @@ class GenerateSampleLessonInput:
     section_title: str
     section_outcomes: SectionOutcomes | None = None
     rag_context: str = ""
+    use_context: str = ""
 
 
 @dataclass
@@ -408,6 +409,7 @@ async def generate_sample_lesson(input: GenerateSampleLessonInput) -> GenerateSa
         topic=input.topic,
         audience=input.audience,
         rag_context=input.rag_context,
+        use_context=input.use_context,
     )
 
     result = await AgentRegistry.get("sample-lesson").run(prompt, model=model)

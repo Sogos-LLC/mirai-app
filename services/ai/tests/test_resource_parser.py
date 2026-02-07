@@ -250,6 +250,7 @@ class TestMultimediaComponentSerialization:
             "description": "Course introduction",
             "provider": "youtube",
             "isPlaceholder": None,
+            "source_refs": [],
         }
 
     def test_multimedia_discriminator(self) -> None:
@@ -266,7 +267,7 @@ class TestMultimediaComponentSerialization:
                 },
                 {
                     "type": "text",
-                    "textHtml": "<p>Some text content.</p>",
+                    "paragraphs": [{"html": "<p>Some text content.</p>"}],
                 },
                 {
                     "type": "quiz",

@@ -399,6 +399,7 @@ def build_lesson_prompt(
     topic: str,
     audience: str,
     rag_context: str = "",
+    use_context: str = "",
 ) -> str:
     outcomes_str = ""
     if section_outcomes:
@@ -409,6 +410,7 @@ def build_lesson_prompt(
                     break
 
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    context = f"\n## Additional Context from Creator\n{use_context}\n" if use_context else ""
     return f"""\
 ## Course Context
 **Topic**: {topic}
@@ -418,7 +420,7 @@ def build_lesson_prompt(
 ## Section: {section_title}
 **Section Outcomes**:
 {outcomes_str or "Generate appropriate lesson objectives based on the section title."}
-{rag}
+{rag}{context}
 ## Instructions
 Generate a COMPLETE sample lesson for this section. This lesson will establish
 the pattern for all remaining lessons in the course.

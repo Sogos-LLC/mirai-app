@@ -457,6 +457,12 @@ class CourseCreationWorkflow:
         # Select the first section as representative
         representative_section = structure.sections[0]
 
+        # Parse multimedia resources from user context for sample lesson
+        resource_hints: list[ResourceHint] = []
+        if input.use_context:
+            parser = URLResourceParser()
+            resource_hints = parser.parse(input.use_context)
+
         lesson_result: GenerateSampleLessonOutput = await self._run_ai_activity(
             "generate_sample_lesson",
             GenerateSampleLessonInput(
@@ -466,6 +472,7 @@ class CourseCreationWorkflow:
                 course_goal=outcomes.goal.goal_statement,
                 section_title=representative_section.title,
                 section_outcomes=section_outcomes,
+                use_context=input.use_context,
             ),
             GenerateSampleLessonOutput,
             timeout=AI_LESSON_TIMEOUT,
@@ -504,6 +511,7 @@ class CourseCreationWorkflow:
             outcomes_to_introduce=[],
             outcomes_to_reinforce=[],
             recently_covered=[],
+            resource_hints=resource_hints,
         )
 
         sample_components_result: GenerateComponentsOutput = await self._run_ai_activity(
@@ -536,6 +544,7 @@ class CourseCreationWorkflow:
                     course_goal=outcomes.goal.goal_statement,
                     section_title=representative_section.title,
                     section_outcomes=section_outcomes,
+                    use_context=input.use_context,
                 ),
                 GenerateSampleLessonOutput,
                 timeout=AI_LESSON_TIMEOUT,
