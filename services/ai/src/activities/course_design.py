@@ -223,38 +223,35 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
 
 
 def _extract_web_sources(research_result: object) -> list[WebSourceData]:
-    """Extract web source URLs from Gemini grounding metadata.
+    """Extract web source URLs from pydantic-ai BuiltinToolReturnPart messages.
 
-    Inspects the pydantic-ai result messages for grounding metadata parts
-    that contain web URIs from Google Search grounding.
+    When Gemini uses WebSearchTool, pydantic-ai converts the grounding results
+    into BuiltinToolReturnPart objects with tool_name="web-search" and content
+    containing [{uri, title}, ...] dicts.
     Falls back gracefully to empty list if extraction fails.
     """
+    from pydantic_ai.messages import BuiltinToolReturnPart
+
     sources: list[WebSourceData] = []
     seen_urls: set[str] = set()
 
     try:
         for msg in research_result.all_messages():
-            # Look for model response parts with grounding metadata
             if not hasattr(msg, "parts"):
                 continue
             for part in msg.parts:
-                # pydantic-ai exposes grounding chunks via vendor-specific metadata
-                # Check for GroundingMetadata in the raw response
-                if not hasattr(part, "vendor_details"):
-                    continue
-                vendor = part.vendor_details or {}
-                grounding_metadata = vendor.get("grounding_metadata", {})
-                grounding_chunks = grounding_metadata.get("grounding_chunks", [])
-                for chunk in grounding_chunks:
-                    web = chunk.get("web", {})
-                    uri = web.get("uri", "")
-                    title = web.get("title", "")
-                    if uri and uri not in seen_urls:
-                        seen_urls.add(uri)
-                        sources.append(WebSourceData(
-                            title=title or uri,
-                            url=uri,
-                        ))
+                if isinstance(part, BuiltinToolReturnPart) and part.tool_name == "web-search":
+                    if isinstance(part.content, list):
+                        for chunk in part.content:
+                            if isinstance(chunk, dict):
+                                uri = chunk.get("uri", "")
+                                title = chunk.get("title", "")
+                                if uri and uri not in seen_urls:
+                                    seen_urls.add(uri)
+                                    sources.append(WebSourceData(
+                                        title=title or uri,
+                                        url=uri,
+                                    ))
     except Exception:
         log.warning("web_source_extraction_failed", exc_info=True)
 

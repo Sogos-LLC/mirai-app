@@ -230,7 +230,7 @@ def resolve_lesson_provenance(
         else:
             model_count += 1
         for chunk in prov.get("sourceChunks", []):
-            sid = chunk.get("sourceId", "")
+            sid = chunk.get("sourceId", "") or chunk.get("url", "") or chunk.get("chunkId", "")
             if sid:
                 total_sources.add(sid)
 
