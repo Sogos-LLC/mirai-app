@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic-ai[google]>=1.0.0",
     "pydantic-graph>=0.1.0",
+    "fasta2a>=0.6.0",
     "temporalio>=1.9.0",
     "fastapi>=0.115.0",
     "uvicorn>=0.34.0",
@@ -21,6 +22,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
     "pydantic-evals>=0.1.0",
+    "asgi-lifespan>=2.0.0",
 ]
 
 [build-system]

@@ -73,6 +73,12 @@ if settings.logfire_token:
 
     logfire.instrument_fastapi(app)
 
+# Mount A2A sub-apps for exposed agents (gated behind config)
+if settings.a2a_base_url:
+    from src.a2a import mount_a2a_agents
+
+    mount_a2a_agents(app, base_url=settings.a2a_base_url)
+
 class HealthResponse(BaseModel):
     status: str
     worker_running: bool

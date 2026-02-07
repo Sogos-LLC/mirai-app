@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     logfire_token: str | None = None
     log_level: str = "info"
 
+    # A2A protocol
+    a2a_base_url: str = ""  # e.g. "http://ai-service:8080" — empty = disabled
+
     # Health server
     host: str = "0.0.0.0"
     port: int = 8080
