@@ -1,9 +1,9 @@
 """Lesson quality judge — evaluates lesson content against pedagogical rubric."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.lesson import LessonContent
 from src.models.outline import OutlineLesson
 
@@ -58,11 +58,14 @@ connects_to_prior can be false for the very first lesson.
 Be constructive. A focused 8-component lesson beats a bloated 15-component one.
 """
 
-lesson_judge_agent = Agent(
-    output_type=NativeOutput(LessonQualityScore),
-    system_prompt=LESSON_JUDGE_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="lesson-judge",
-)
+    system_prompt=LESSON_JUDGE_SYSTEM,
+    output_type=LessonQualityScore,
+    category=AgentCategory.JUDGE,
+    description="Evaluates lesson content against pedagogical quality rubric.",
+    tags=["judge", "lesson"],
+))
 
 
 def _build_lesson_judge_prompt(
@@ -110,5 +113,6 @@ async def judge_lesson(
     prompt = _build_lesson_judge_prompt(
         lesson_meta, content, previous_summaries or []
     )
-    result = await lesson_judge_agent.run(prompt, model=make_model(api_key))
+    agent = AgentRegistry.get("lesson-judge")
+    result = await agent.run(prompt, model=make_model(api_key))
     return result.output

@@ -6,9 +6,10 @@ Usage is capped at 1 tool call per outline via UsageLimits.
 """
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput, RunContext, UsageLimits
+from pydantic_ai import Agent, RunContext, UsageLimits
 
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.knowledge import KnowledgeChunk
 from src.models.outline import CourseOutline, OutlineLesson, OutlineSection
 from src.models.plan import CoursePlan
@@ -107,39 +108,47 @@ CONSTRAINT ENFORCEMENT:
 - EVERY outcome MUST appear in at least one section's mapping
 """
 
-sections_gen_agent = Agent(
-    output_type=NativeOutput(SectionsOnlyOutput),
-    system_prompt=SECTIONS_SYSTEM,
-    name="outline-sections-gen",
-    deps_type=str,  # API key for reviewer delegation
-    output_retries=3,
+
+def _attach_review_outline_tool(agent: Agent) -> None:
+    @agent.tool
+    async def review_outline(
+        ctx: RunContext[str], outline_summary: str
+    ) -> str:
+        """Request a review of the outline structure you're generating.
+
+        Call this with a summary of your planned sections and lesson titles to get
+        feedback before finalizing. Incorporate the feedback into your final output.
+
+        Args:
+            outline_summary: Summary of planned sections with lesson titles.
+        """
+        review_fn = AgentRegistry.create_reviewer_tool("outline")
+        return await review_fn(ctx, outline_summary)
+
+
+AgentRegistry.register(
+    AgentSpec(
+        name="outline-sections-gen",
+        system_prompt=SECTIONS_SYSTEM,
+        output_type=SectionsOnlyOutput,
+        category=AgentCategory.OUTLINE,
+        deps_type=str,
+        output_retries=3,
+        description="Generates course outline sections with lesson titles (Phase 1).",
+        tags=["outline", "sections"],
+    ),
+    post_build=[_attach_review_outline_tool],
 )
 
-
-@sections_gen_agent.tool
-async def review_outline(
-    ctx: RunContext[str], outline_summary: str
-) -> str:
-    """Request a review of the outline structure you're generating.
-
-    Call this with a summary of your planned sections and lesson titles to get
-    feedback before finalizing. Incorporate the feedback into your final output.
-
-    Args:
-        outline_summary: Summary of planned sections with lesson titles.
-    """
-    from src.agents.reviewers import ReviewerRegistry
-
-    review_fn = ReviewerRegistry.create_tool("outline")
-    return await review_fn(ctx, outline_summary)
-
-
-internal_data_sections_agent = Agent(
-    output_type=NativeOutput(SectionsOnlyOutput),
-    system_prompt=INTERNAL_DATA_ONLY_SECTIONS_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="outline-sections-internal",
-    deps_type=str,  # API key (no reviewer tool, but needs consistent deps_type)
-)
+    system_prompt=INTERNAL_DATA_ONLY_SECTIONS_SYSTEM,
+    output_type=SectionsOnlyOutput,
+    category=AgentCategory.OUTLINE,
+    deps_type=str,
+    description="Generates course outline sections using only internal data.",
+    tags=["outline", "sections", "internal-data"],
+))
 
 
 def build_sections_prompt(
@@ -235,11 +244,14 @@ For each lesson title provided, create:
 Ensure logical flow within the section. Each lesson should build on the previous one.
 """
 
-lesson_detail_agent = Agent(
-    output_type=NativeOutput(LessonDetailOutput),
-    system_prompt=LESSON_DETAIL_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="outline-lesson-detail",
-)
+    system_prompt=LESSON_DETAIL_SYSTEM,
+    output_type=LessonDetailOutput,
+    category=AgentCategory.OUTLINE,
+    description="Expands lesson titles with metadata: objectives, duration, key topics (Phase 2).",
+    tags=["outline", "lesson-detail"],
+))
 
 
 def build_lesson_detail_prompt(
@@ -316,9 +328,10 @@ async def generate_sections(
         course_plan_context=course_plan_context,
     )
 
-    agent = (
-        internal_data_sections_agent if internal_data_only else sections_gen_agent
+    agent_name = (
+        "outline-sections-internal" if internal_data_only else "outline-sections-gen"
     )
+    agent = AgentRegistry.get(agent_name)
     result = await agent.run(
         prompt,
         model=model,
@@ -350,7 +363,8 @@ async def generate_lesson_details(
         personas=personas,
     )
 
-    result = await lesson_detail_agent.run(prompt, model=make_model(api_key))
+    agent = AgentRegistry.get("outline-lesson-detail")
+    result = await agent.run(prompt, model=make_model(api_key))
     return result.output.lessons
 
 

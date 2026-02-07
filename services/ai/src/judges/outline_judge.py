@@ -1,9 +1,9 @@
 """Outline quality judge — evaluates outline against ADDIE rubric."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.outline import CourseOutline
 
 
@@ -65,11 +65,14 @@ AND there are no critical issues.
 Be constructive but honest. A course with 5 excellent sections beats 10 mediocre ones.
 """
 
-outline_judge_agent = Agent(
-    output_type=NativeOutput(OutlineQualityScore),
-    system_prompt=OUTLINE_JUDGE_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="outline-judge",
-)
+    system_prompt=OUTLINE_JUDGE_SYSTEM,
+    output_type=OutlineQualityScore,
+    category=AgentCategory.JUDGE,
+    description="Evaluates course outlines against ADDIE quality rubric.",
+    tags=["judge", "outline"],
+))
 
 
 def _build_judge_prompt(
@@ -120,5 +123,6 @@ async def judge_outline(
 ) -> OutlineQualityScore:
     """Run the outline quality judge and return the score."""
     prompt = _build_judge_prompt(outline, desired_outcomes)
-    result = await outline_judge_agent.run(prompt, model=make_model(api_key))
+    agent = AgentRegistry.get("outline-judge")
+    result = await agent.run(prompt, model=make_model(api_key))
     return result.output

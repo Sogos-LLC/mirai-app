@@ -4,8 +4,9 @@ Each agent produces a validated Pydantic model.
 Validation failures trigger regeneration, not user prompts.
 """
 
-from pydantic_ai import Agent, NativeOutput, WebSearchTool
+from pydantic_ai import WebSearchTool
 
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.course_design import (
     CourseAnalysis,
     CourseOutcomes,
@@ -33,11 +34,14 @@ Your analysis must be:
 - Grounded in instructional design principles (ADDIE, Bloom's)
 """
 
-analysis_agent = Agent(
-    output_type=NativeOutput(CourseAnalysis),
-    system_prompt=ANALYSIS_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="course-analysis",
-)
+    system_prompt=ANALYSIS_SYSTEM,
+    output_type=CourseAnalysis,
+    category=AgentCategory.COURSE_DESIGN,
+    description="Analyzes course requirements and produces structured design analysis.",
+    tags=["course-design", "analysis"],
+))
 
 
 RESEARCH_SYSTEM = """\
@@ -53,12 +57,15 @@ Return a concise research summary (3-5 paragraphs) with the most useful findings
 Do NOT design the course — just gather background information.
 """
 
-web_research_agent = Agent(
-    output_type=str,
-    system_prompt=RESEARCH_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="course-web-research",
+    system_prompt=RESEARCH_SYSTEM,
+    output_type=str,
+    category=AgentCategory.COURSE_DESIGN,
     builtin_tools=[WebSearchTool()],
-)
+    description="Searches the web for background material on a course topic.",
+    tags=["course-design", "research"],
+))
 
 
 def build_research_prompt(topic: str, audience: str) -> str:
@@ -130,11 +137,14 @@ Use verbs from Bloom's taxonomy:
 - Create: design, construct, develop, formulate
 """
 
-outcomes_agent = Agent(
-    output_type=NativeOutput(CourseOutcomes),
-    system_prompt=OUTCOMES_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="course-outcomes",
-)
+    system_prompt=OUTCOMES_SYSTEM,
+    output_type=CourseOutcomes,
+    category=AgentCategory.COURSE_DESIGN,
+    description="Generates Bloom's taxonomy-aligned learning outcomes from course analysis.",
+    tags=["course-design", "outcomes"],
+))
 
 
 def build_outcomes_prompt(
@@ -195,11 +205,14 @@ Principles:
 - 2-10 sections is the sweet spot
 """
 
-structure_agent = Agent(
-    output_type=NativeOutput(CourseStructure),
-    system_prompt=STRUCTURE_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="course-structure",
-)
+    system_prompt=STRUCTURE_SYSTEM,
+    output_type=CourseStructure,
+    category=AgentCategory.COURSE_DESIGN,
+    description="Organizes learning outcomes into logical course sections.",
+    tags=["course-design", "structure"],
+))
 
 
 def build_structure_prompt(
@@ -261,11 +274,14 @@ and list it in uncovered_outcomes.
 Use temperature 0. Be precise and consistent.
 """
 
-structure_coverage_judge = Agent(
-    output_type=NativeOutput(StructureCoverageScore),
-    system_prompt=STRUCTURE_COVERAGE_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="structure-coverage-judge",
-)
+    system_prompt=STRUCTURE_COVERAGE_SYSTEM,
+    output_type=StructureCoverageScore,
+    category=AgentCategory.JUDGE,
+    description="Validates that all learning outcomes are covered by course sections.",
+    tags=["course-design", "judge", "coverage"],
+))
 
 
 def build_structure_coverage_prompt(
@@ -307,11 +323,14 @@ You are an instructional designer who creates granular section-level outcomes
 from course-level outcomes. These are internal artifacts that guide lesson generation.
 """
 
-section_outcomes_agent = Agent(
-    output_type=NativeOutput(SectionOutcomes),
-    system_prompt=SECTION_OUTCOMES_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="section-outcomes",
-)
+    system_prompt=SECTION_OUTCOMES_SYSTEM,
+    output_type=SectionOutcomes,
+    category=AgentCategory.COURSE_DESIGN,
+    description="Creates granular section-level outcomes from course-level outcomes.",
+    tags=["course-design", "outcomes"],
+))
 
 
 def build_section_outcomes_prompt(
@@ -363,11 +382,14 @@ Lesson structure principles:
 - Vary content types (text, quiz, activity, callout, list)
 """
 
-lesson_agent = Agent(
-    output_type=NativeOutput(Lesson),
-    system_prompt=LESSON_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="sample-lesson",
-)
+    system_prompt=LESSON_SYSTEM,
+    output_type=Lesson,
+    category=AgentCategory.COURSE_DESIGN,
+    description="Generates a complete sample lesson for template extraction.",
+    tags=["course-design", "lesson"],
+))
 
 
 def build_lesson_prompt(
@@ -428,11 +450,14 @@ Given an approved sample lesson, you identify the template that can be applied t
 consistent lessons across the entire course.
 """
 
-template_agent = Agent(
-    output_type=NativeOutput(LessonTemplate),
-    system_prompt=TEMPLATE_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="lesson-template",
-)
+    system_prompt=TEMPLATE_SYSTEM,
+    output_type=LessonTemplate,
+    category=AgentCategory.COURSE_DESIGN,
+    description="Extracts reusable lesson template patterns from a sample lesson.",
+    tags=["course-design", "template"],
+))
 
 
 def build_template_prompt(lesson: Lesson) -> str:
@@ -470,11 +495,14 @@ You MUST follow the block sequence and interaction rules from the template exact
 Content should be real, detailed, and pedagogically sound — not placeholder text.
 """
 
-expansion_agent = Agent(
-    output_type=NativeOutput(ExpandedLesson),
-    system_prompt=EXPANSION_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="lesson-expansion",
-)
+    system_prompt=EXPANSION_SYSTEM,
+    output_type=ExpandedLesson,
+    category=AgentCategory.COURSE_DESIGN,
+    description="Generates lessons following an approved template pattern.",
+    tags=["course-design", "expansion"],
+))
 
 
 def build_expansion_prompt(
@@ -532,11 +560,14 @@ You check for:
 - Accessibility: flag content that may not be accessible
 """
 
-qa_agent = Agent(
-    output_type=NativeOutput(CourseQA),
-    system_prompt=QA_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="course-qa",
-)
+    system_prompt=QA_SYSTEM,
+    output_type=CourseQA,
+    category=AgentCategory.COURSE_DESIGN,
+    description="Quality checks course content for outcome coverage, redundancy, and accessibility.",
+    tags=["course-design", "qa"],
+))
 
 
 def build_qa_prompt(

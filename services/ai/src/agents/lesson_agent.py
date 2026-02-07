@@ -6,9 +6,10 @@ Usage is capped at 1 tool call per component via UsageLimits.
 """
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, ModelRetry, NativeOutput, RunContext, WebSearchTool
+from pydantic_ai import Agent, ModelRetry, RunContext, WebSearchTool
 
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.knowledge import KnowledgeChunk
 from src.models.lesson import LessonComponent, LessonContent
 from src.models.outline import OutlineLesson
@@ -86,58 +87,66 @@ HEADING -> STATEMENT -> TEXT -> LIST (accordion) -> CALLOUT -> IMAGE -> QUIZ
 Plan 8-12 components. Each purpose MUST reference which learning objective it addresses.
 """
 
-component_plan_agent = Agent(
-    output_type=NativeOutput(ComponentPlanOutput),
-    system_prompt=COMPONENT_PLAN_SYSTEM,
-    name="lesson-component-plan",
-    output_retries=2,
+
+def _attach_component_plan_validator(agent: Agent) -> None:
+    @agent.output_validator
+    def validate_component_plan(ctx: RunContext[None], output: ComponentPlanOutput) -> ComponentPlanOutput:
+        """Validate component plan against structural rules."""
+        plan = output.components
+        violations: list[str] = []
+
+        if len(plan) < 4:
+            violations.append(f"Only {len(plan)} components planned; need at least 4")
+        if len(plan) > 16:
+            violations.append(f"{len(plan)} components is too many; aim for 8-12")
+
+        types = {c.type.upper() for c in plan}
+        if len(types) < MIN_COMPONENT_TYPES:
+            violations.append(
+                f"Only {len(types)} unique types ({types}); need at least {MIN_COMPONENT_TYPES}"
+            )
+
+        quiz_indices = [i for i, c in enumerate(plan) if c.type.upper() == "QUIZ"]
+        if len(quiz_indices) > 1:
+            violations.append("Multiple QUIZ components; only one allowed at the end")
+        if quiz_indices and quiz_indices[0] != len(plan) - 1:
+            violations.append("QUIZ must be the last component")
+
+        for i in range(len(plan) - 1):
+            if plan[i].type.upper() == "HEADING" and plan[i + 1].type.upper() == "HEADING":
+                violations.append(f"Consecutive HEADINGs at positions {i} and {i + 1}")
+            if plan[i].type.upper() == "IMAGE" and plan[i + 1].type.upper() == "IMAGE":
+                violations.append(f"Consecutive IMAGEs at positions {i} and {i + 1}")
+
+        if plan and plan[0].type.upper() != "HEADING":
+            violations.append("First component should be HEADING")
+
+        image_count = sum(1 for c in plan if c.type.upper() == "IMAGE")
+        if image_count > 3:
+            violations.append(f"{image_count} IMAGE components; max 3 allowed")
+
+        has_emphasis = any(c.type.upper() in ("STATEMENT", "CALLOUT") for c in plan)
+        if not has_emphasis:
+            violations.append("Need at least one STATEMENT or CALLOUT for emphasis")
+
+        if violations:
+            raise ModelRetry("Fix these issues:\n" + "\n".join(f"- {v}" for v in violations))
+
+        return output
+
+
+AgentRegistry.register(
+    AgentSpec(
+        name="lesson-component-plan",
+        system_prompt=COMPONENT_PLAN_SYSTEM,
+        output_type=ComponentPlanOutput,
+        category=AgentCategory.LESSON,
+        output_retries=2,
+        description="Plans 8-12 lesson components with structural validation.",
+        tags=["lesson", "component-plan"],
+    ),
+    post_build=[_attach_component_plan_validator],
 )
-
-
-@component_plan_agent.output_validator
-def validate_component_plan(ctx: RunContext[None], output: ComponentPlanOutput) -> ComponentPlanOutput:
-    """Validate component plan against structural rules."""
-    plan = output.components
-    violations: list[str] = []
-
-    if len(plan) < 4:
-        violations.append(f"Only {len(plan)} components planned; need at least 4")
-    if len(plan) > 16:
-        violations.append(f"{len(plan)} components is too many; aim for 8-12")
-
-    types = {c.type.upper() for c in plan}
-    if len(types) < MIN_COMPONENT_TYPES:
-        violations.append(
-            f"Only {len(types)} unique types ({types}); need at least {MIN_COMPONENT_TYPES}"
-        )
-
-    quiz_indices = [i for i, c in enumerate(plan) if c.type.upper() == "QUIZ"]
-    if len(quiz_indices) > 1:
-        violations.append("Multiple QUIZ components; only one allowed at the end")
-    if quiz_indices and quiz_indices[0] != len(plan) - 1:
-        violations.append("QUIZ must be the last component")
-
-    for i in range(len(plan) - 1):
-        if plan[i].type.upper() == "HEADING" and plan[i + 1].type.upper() == "HEADING":
-            violations.append(f"Consecutive HEADINGs at positions {i} and {i + 1}")
-        if plan[i].type.upper() == "IMAGE" and plan[i + 1].type.upper() == "IMAGE":
-            violations.append(f"Consecutive IMAGEs at positions {i} and {i + 1}")
-
-    if plan and plan[0].type.upper() != "HEADING":
-        violations.append("First component should be HEADING")
-
-    image_count = sum(1 for c in plan if c.type.upper() == "IMAGE")
-    if image_count > 3:
-        violations.append(f"{image_count} IMAGE components; max 3 allowed")
-
-    has_emphasis = any(c.type.upper() in ("STATEMENT", "CALLOUT") for c in plan)
-    if not has_emphasis:
-        violations.append("Need at least one STATEMENT or CALLOUT for emphasis")
-
-    if violations:
-        raise ModelRetry("Fix these issues:\n" + "\n".join(f"- {v}" for v in violations))
-
-    return output
 
 
 def build_component_plan_prompt(
@@ -295,11 +304,14 @@ class GapAnalysis(BaseModel):
     )
 
 
-gap_analysis_agent = Agent(
-    output_type=NativeOutput(GapAnalysis),
-    system_prompt=GAP_ANALYSIS_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="course-gap-analysis",
-)
+    system_prompt=GAP_ANALYSIS_SYSTEM,
+    output_type=GapAnalysis,
+    category=AgentCategory.LESSON,
+    description="Determines if web research is needed for lesson content.",
+    tags=["lesson", "gap-analysis"],
+))
 
 
 TARGETED_RESEARCH_SYSTEM = """\
@@ -310,12 +322,15 @@ Search the web for each query and return a concise, factual summary.
 Focus only on the specific information requested — do not add tangential content.
 """
 
-targeted_research_agent = Agent(
-    output_type=str,
-    system_prompt=TARGETED_RESEARCH_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="course-targeted-research",
+    system_prompt=TARGETED_RESEARCH_SYSTEM,
+    output_type=str,
+    category=AgentCategory.LESSON,
     builtin_tools=[WebSearchTool()],
-)
+    description="Searches the web for specific knowledge gaps in lesson content.",
+    tags=["lesson", "research"],
+))
 
 
 async def analyze_course_gaps(
@@ -330,7 +345,6 @@ async def analyze_course_gaps(
     Returns web_context string (empty if no gaps found).
     Called once per course, not per lesson.
     """
-    from src.agents.model import make_model
     import structlog
 
     log = structlog.get_logger()
@@ -349,47 +363,54 @@ async def analyze_course_gaps(
         f"Determine if web research is needed for this course."
     )
 
-    gap_result = await gap_analysis_agent.run(gap_prompt, model=model)
+    gap_agent = AgentRegistry.get("course-gap-analysis")
+    gap_result = await gap_agent.run(gap_prompt, model=model)
     queries = gap_result.output.search_queries
 
     if not queries:
         log.info("course_no_gaps", course=course_title)
         return ""
 
+    research_agent = AgentRegistry.get("course-targeted-research")
     research_prompt = (
         f"Search for the following specific information for a course on '{course_title}':\n"
         + "\n".join(f"- {q}" for q in queries[:3])
     )
-    research_result = await targeted_research_agent.run(research_prompt, model=model)
+    research_result = await research_agent.run(research_prompt, model=model)
     log.info("course_gap_research_complete", course=course_title, queries=len(queries))
     return research_result.output
 
 
-component_gen_agent = Agent(
-    output_type=NativeOutput(LessonComponent),
-    system_prompt=SINGLE_COMPONENT_SYSTEM,
-    name="lesson-component-gen",
-    deps_type=str,  # API key for reviewer delegation
-    output_retries=3,
+def _attach_review_component_tool(agent: Agent) -> None:
+    @agent.tool
+    async def review_component(
+        ctx: RunContext[str], content_to_review: str
+    ) -> str:
+        """Request a review of the component you're generating.
+
+        Call this with the component content you plan to output to get feedback
+        before finalizing. Incorporate the feedback into your final output.
+
+        Args:
+            content_to_review: The component content to be reviewed.
+        """
+        review_fn = AgentRegistry.create_reviewer_tool("component")
+        return await review_fn(ctx, content_to_review)
+
+
+AgentRegistry.register(
+    AgentSpec(
+        name="lesson-component-gen",
+        system_prompt=SINGLE_COMPONENT_SYSTEM,
+        output_type=LessonComponent,
+        category=AgentCategory.LESSON,
+        deps_type=str,
+        output_retries=3,
+        description="Generates a single educational component for a lesson.",
+        tags=["lesson", "component-gen"],
+    ),
+    post_build=[_attach_review_component_tool],
 )
-
-
-@component_gen_agent.tool
-async def review_component(
-    ctx: RunContext[str], content_to_review: str
-) -> str:
-    """Request a review of the component you're generating.
-
-    Call this with the component content you plan to output to get feedback
-    before finalizing. Incorporate the feedback into your final output.
-
-    Args:
-        content_to_review: The component content to be reviewed.
-    """
-    from src.agents.reviewers import ReviewerRegistry
-
-    review_fn = ReviewerRegistry.create_tool("component")
-    return await review_fn(ctx, content_to_review)
 
 
 def build_single_component_prompt(
@@ -477,11 +498,14 @@ You are an expert instructional designer writing transition text between
 course sections. Write natural, motivating transitions that connect concepts.
 """
 
-segue_agent = Agent(
-    output_type=NativeOutput(SegueOutput),
-    system_prompt=SEGUE_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="lesson-segue",
-)
+    system_prompt=SEGUE_SYSTEM,
+    output_type=SegueOutput,
+    category=AgentCategory.LESSON,
+    description="Generates transition text between lessons or sections.",
+    tags=["lesson", "segue"],
+))
 
 
 async def generate_segue(
@@ -518,5 +542,6 @@ Next lesson: "{next_title}"
 
 Write 1-2 sentences connecting the concepts to the next topic."""
 
-    result = await segue_agent.run(prompt, model=make_model(api_key))
+    agent = AgentRegistry.get("lesson-segue")
+    result = await agent.run(prompt, model=make_model(api_key))
     return result.output.segue_text

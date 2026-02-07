@@ -11,6 +11,8 @@ from temporalio.client import Client
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 
+import src.agents  # noqa: F401 — trigger all AgentRegistry registrations
+
 from src.activities.component_generation import (
     generate_lesson_components,
     review_section_components,

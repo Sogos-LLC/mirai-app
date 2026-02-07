@@ -1,9 +1,9 @@
 """Document analysis and course planning agents."""
 
 import structlog
-from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.plan import CoursePlan, DocumentAnalysis
 
 log = structlog.get_logger()
@@ -33,11 +33,14 @@ IMPORTANT: Use the document's exact terminology — product names, technical ter
 procedure names, specific concepts. This precision is critical for later retrieval.
 """
 
-_analyze_document_agent = Agent(
-    output_type=NativeOutput(DocumentAnalysis),
-    system_prompt=ANALYZE_DOCUMENT_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="plan-analyze-doc",
-)
+    system_prompt=ANALYZE_DOCUMENT_SYSTEM,
+    output_type=DocumentAnalysis,
+    category=AgentCategory.PLANNING,
+    description="Analyzes source documents for course planning.",
+    tags=["planning", "document-analysis"],
+))
 
 
 async def run_document_analysis(
@@ -65,7 +68,8 @@ async def run_document_analysis(
 
 Analyze this document and produce a structured analysis as described."""
 
-    result = await _analyze_document_agent.run(
+    agent = AgentRegistry.get("plan-analyze-doc")
+    result = await agent.run(
         prompt,
         model=make_model(api_key),
     )
@@ -126,11 +130,14 @@ Do NOT add topics, examples, or content not found in the sources.
 If the material is limited, create a SMALLER course — quality over quantity.
 """
 
-_course_plan_agent = Agent(
-    output_type=NativeOutput(CoursePlan),
-    system_prompt=COURSE_PLAN_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="plan-course-plan",
-)
+    system_prompt=COURSE_PLAN_SYSTEM,
+    output_type=CoursePlan,
+    category=AgentCategory.PLANNING,
+    description="Generates a course plan from analyzed source documents.",
+    tags=["planning", "course-plan"],
+))
 
 
 async def run_course_plan(
@@ -168,7 +175,8 @@ async def run_course_plan(
 
 Create a comprehensive course plan based on the analyzed documents."""
 
-    result = await _course_plan_agent.run(
+    agent = AgentRegistry.get("plan-course-plan")
+    result = await agent.run(
         prompt,
         model=make_model(api_key),
     )

@@ -11,26 +11,17 @@ from dataclasses import dataclass
 from temporalio import activity
 
 from src.agents.model import make_model
+from src.agents.registry import AgentRegistry
 from src.agents.course_design_agents import (
-    analysis_agent,
-    web_research_agent,
     build_research_prompt,
     build_analysis_prompt,
-    outcomes_agent,
     build_outcomes_prompt,
-    structure_agent,
     build_structure_prompt,
-    structure_coverage_judge,
     build_structure_coverage_prompt,
-    section_outcomes_agent,
     build_section_outcomes_prompt,
-    lesson_agent,
     build_lesson_prompt,
-    template_agent,
     build_template_prompt,
-    expansion_agent,
     build_expansion_prompt,
-    qa_agent,
     build_qa_prompt,
 )
 from src.models.course_design import (
@@ -188,7 +179,7 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
     if input.enable_web_research:
         log.info("running_web_research", topic=input.topic)
         research_prompt = build_research_prompt(input.topic, input.audience)
-        research_result = await web_research_agent.run(research_prompt, model=model)
+        research_result = await AgentRegistry.get("course-web-research").run(research_prompt, model=model)
         web_context = research_result.output
         log.info("web_research_complete", length=len(web_context))
         activity.heartbeat()
@@ -208,7 +199,7 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
         rag_context=combined_context,
     )
 
-    result = await analysis_agent.run(prompt, model=model)
+    result = await AgentRegistry.get("course-analysis").run(prompt, model=model)
     activity.heartbeat()
 
     return GenerateAnalysisOutput(analysis=result.output)
@@ -237,7 +228,7 @@ async def generate_course_outcomes(input: GenerateOutcomesInput) -> GenerateOutc
             prompt += f"\n\n## PREVIOUS ATTEMPT FAILED VALIDATION\n{last_error}\nPlease fix the issues and try again."
 
         try:
-            result = await outcomes_agent.run(prompt, model=model)
+            result = await AgentRegistry.get("course-outcomes").run(prompt, model=model)
             activity.heartbeat()
             # Additional validation: check outcome quality
             _validate_outcomes(result.output)
@@ -283,7 +274,7 @@ async def generate_course_structure(input: GenerateStructureInput) -> GenerateSt
             prompt += f"\n\n## PREVIOUS ATTEMPT FAILED VALIDATION\n{last_error}\nPlease fix."
 
         try:
-            result = await structure_agent.run(prompt, model=model)
+            result = await AgentRegistry.get("course-structure").run(prompt, model=model)
             activity.heartbeat()
             # Deterministic check: every section must have at least one mapped outcome
             _validate_structure_basic(result.output)
@@ -318,7 +309,7 @@ async def _validate_structure_coverage(
 ) -> None:
     """Use an LLM judge to verify all outcomes are semantically covered."""
     prompt = build_structure_coverage_prompt(outcomes, structure)
-    result = await structure_coverage_judge.run(prompt, model=model)
+    result = await AgentRegistry.get("course-structure-coverage-judge").run(prompt, model=model)
     score = result.output
 
     if not score.all_covered:
@@ -342,7 +333,7 @@ async def generate_section_outcomes(input: GenerateSectionOutcomesInput) -> Gene
         outcomes=input.outcomes,
     )
 
-    result = await section_outcomes_agent.run(prompt, model=model)
+    result = await AgentRegistry.get("course-section-outcomes").run(prompt, model=model)
     activity.heartbeat()
 
     return GenerateSectionOutcomesOutput(section_outcomes=result.output)
@@ -364,7 +355,7 @@ async def generate_sample_lesson(input: GenerateSampleLessonInput) -> GenerateSa
         rag_context=input.rag_context,
     )
 
-    result = await lesson_agent.run(prompt, model=model)
+    result = await AgentRegistry.get("course-lesson").run(prompt, model=model)
     activity.heartbeat()
 
     return GenerateSampleLessonOutput(lesson=result.output)
@@ -379,7 +370,7 @@ async def extract_lesson_template(input: ExtractTemplateInput) -> ExtractTemplat
     model = make_model(input.api_key)
     prompt = build_template_prompt(lesson=input.lesson)
 
-    result = await template_agent.run(prompt, model=model)
+    result = await AgentRegistry.get("course-template").run(prompt, model=model)
     activity.heartbeat()
 
     return ExtractTemplateOutput(template=result.output)
@@ -403,7 +394,7 @@ async def expand_lesson(input: ExpandLessonInput) -> ExpandLessonOutput:
         rag_context=input.rag_context,
     )
 
-    result = await expansion_agent.run(prompt, model=model)
+    result = await AgentRegistry.get("course-expansion").run(prompt, model=model)
     activity.heartbeat()
 
     return ExpandLessonOutput(lesson=result.output)
@@ -423,7 +414,7 @@ async def run_course_qa(input: RunQAInput) -> RunQAOutput:
         total_blocks=input.total_blocks,
     )
 
-    result = await qa_agent.run(prompt, model=model)
+    result = await AgentRegistry.get("course-qa").run(prompt, model=model)
     activity.heartbeat()
 
     return RunQAOutput(qa=result.output)

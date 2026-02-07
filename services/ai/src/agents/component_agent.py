@@ -1,9 +1,10 @@
 """Component regeneration agent - modifies a single lesson component."""
 
 import structlog
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent
 
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.lesson import LessonComponent
 
 log = structlog.get_logger()
@@ -32,12 +33,15 @@ Component type rules:
 - DIVIDER: Visual separator (minimal content)
 """
 
-_component_regen_agent = Agent(
-    output_type=NativeOutput(LessonComponent),
-    system_prompt=COMPONENT_REGEN_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="component-regen",
+    system_prompt=COMPONENT_REGEN_SYSTEM,
+    output_type=LessonComponent,
+    category=AgentCategory.UTILITY,
     output_retries=3,
-)
+    description="Regenerates a single lesson component with modifications.",
+    tags=["utility", "component-regen"],
+))
 
 
 async def run_component_regeneration(
@@ -73,7 +77,8 @@ Preserve the component ID: {component.id}
 Preserve the component type: {component.type.value}
 Preserve the order: {component.order}"""
 
-    result = await _component_regen_agent.run(
+    agent = AgentRegistry.get("component-regen")
+    result = await agent.run(
         prompt,
         model=make_model(api_key),
     )

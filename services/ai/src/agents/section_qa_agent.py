@@ -8,8 +8,8 @@ Runs once per section (no iterative loop).
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput
 
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.component_content import LessonComponents
 
 
@@ -63,11 +63,14 @@ for a single course section and check for quality issues.
 - Only set approved=false if there are serious structural issues
 """
 
-section_qa_agent = Agent(
-    output_type=NativeOutput(SectionQAResult),
-    system_prompt=SECTION_QA_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="section-qa-judge",
-)
+    system_prompt=SECTION_QA_SYSTEM,
+    output_type=SectionQAResult,
+    category=AgentCategory.JUDGE,
+    description="Reviews section components for deduplication, ordering, and ADDIE alignment.",
+    tags=["judge", "section-qa"],
+))
 
 
 # =============================================================================

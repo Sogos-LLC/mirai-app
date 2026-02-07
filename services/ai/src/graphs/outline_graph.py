@@ -19,13 +19,12 @@ from src.adapters.embedding import EmbeddingClient
 from src.adapters.qdrant import QdrantAdapter
 from src.agents.concept_agent import generate_concept_map
 from src.agents.outline_agent import (
-    SectionSkeleton,
     SectionsOnlyOutput,
     assemble_outline,
     generate_lesson_details,
     generate_sections,
 )
-from src.judges.outline_judge import OutlineQualityScore, judge_outline
+from src.judges.outline_judge import judge_outline
 from src.models.knowledge import KnowledgeChunk
 from src.models.outline import CourseOutline, OutlineLesson
 from src.models.plan import CoursePlan

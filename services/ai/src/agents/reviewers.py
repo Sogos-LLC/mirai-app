@@ -1,19 +1,13 @@
 """Reviewer agents for writer/reviewer delegation.
 
 Each reviewer has a critique-optimized prompt and returns structured feedback.
-Writer agents call reviewers as tools via ReviewerRegistry.create_tool().
+Writer agents call reviewers as tools via AgentRegistry.create_reviewer_tool().
 Usage is capped via UsageLimits(tool_calls_limit=2) on writer agents.
-
-Registry pattern allows clean wiring without circular imports.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
-
-from pydantic_ai import Agent, NativeOutput, RunContext
-
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.reviews import ComponentReview, OutlineReview, QuizReview
 
 # ---------------------------------------------------------------------------
@@ -46,11 +40,15 @@ Evaluate the component against these criteria:
 Be constructive and specific. Max 3 suggestions, each actionable.
 """
 
-component_reviewer = Agent(
-    output_type=NativeOutput(ComponentReview),
-    system_prompt=COMPONENT_REVIEWER_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="reviewer-component",
-)
+    system_prompt=COMPONENT_REVIEWER_SYSTEM,
+    output_type=ComponentReview,
+    category=AgentCategory.REVIEWER,
+    description="Reviews individual lesson components for type appropriateness, content depth, and pedagogical value.",
+    tags=["review", "component"],
+    expose_a2a=True,
+))
 
 
 OUTLINE_REVIEWER_SYSTEM = """\
@@ -74,11 +72,15 @@ Evaluate the outline against these criteria:
 Be constructive and specific. Max 3 suggestions, each actionable.
 """
 
-outline_reviewer = Agent(
-    output_type=NativeOutput(OutlineReview),
-    system_prompt=OUTLINE_REVIEWER_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="reviewer-outline",
-)
+    system_prompt=OUTLINE_REVIEWER_SYSTEM,
+    output_type=OutlineReview,
+    category=AgentCategory.REVIEWER,
+    description="Reviews course outlines for logical flow, prerequisite ordering, and right-sizing.",
+    tags=["review", "outline"],
+    expose_a2a=True,
+))
 
 
 QUIZ_REVIEWER_SYSTEM = """\
@@ -102,80 +104,12 @@ Evaluate the quiz against these criteria:
 Be constructive and specific. Max 3 suggestions, each actionable.
 """
 
-quiz_reviewer = Agent(
-    output_type=NativeOutput(QuizReview),
-    system_prompt=QUIZ_REVIEWER_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="reviewer-quiz",
-)
-
-
-# ---------------------------------------------------------------------------
-# Registry
-# ---------------------------------------------------------------------------
-
-
-class ReviewerRegistry:
-    """Registry of reviewer agents. Writers look up reviewers by domain.
-
-    Usage:
-        # Get a tool function for a writer agent
-        review_tool = ReviewerRegistry.create_tool("component")
-
-        # Wire into writer agent
-        @writer_agent.tool
-        async def review_component(ctx: RunContext[None], content: str) -> str:
-            return await review_tool(ctx, content)
-    """
-
-    _registry: dict[str, Agent] = {}
-
-    @classmethod
-    def register(cls, domain: str, agent: Agent) -> None:
-        """Register a reviewer agent for a domain."""
-        cls._registry[domain] = agent
-
-    @classmethod
-    def get(cls, domain: str) -> Agent:
-        """Get the reviewer agent for a domain."""
-        if domain not in cls._registry:
-            raise KeyError(f"No reviewer registered for domain '{domain}'")
-        return cls._registry[domain]
-
-    @classmethod
-    def create_tool(cls, domain: str) -> Callable:
-        """Create a tool function that delegates to the domain's reviewer.
-
-        Returns a coroutine that accepts (ctx: RunContext, content_to_review: str)
-        and returns the reviewer's structured output as a string summary.
-        """
-        reviewer_agent = cls.get(domain)
-
-        async def _review(ctx: RunContext[Any], content_to_review: str) -> str:
-            from src.agents.model import make_model
-
-            # Use same model as parent agent for consistency
-            model = make_model(ctx.deps) if isinstance(ctx.deps, str) else None
-            result = await reviewer_agent.run(
-                content_to_review,
-                model=model,
-                usage=ctx.usage,
-            )
-            # Return summary for the writer to incorporate
-            output = result.output
-            parts = [output.summary]
-            if output.suggestions:
-                parts.append("Suggestions:")
-                for s in output.suggestions:
-                    parts.append(f"- {s}")
-            return "\n".join(parts)
-
-        return _review
-
-
-# ---------------------------------------------------------------------------
-# Registration
-# ---------------------------------------------------------------------------
-
-ReviewerRegistry.register("component", component_reviewer)
-ReviewerRegistry.register("outline", outline_reviewer)
-ReviewerRegistry.register("quiz", quiz_reviewer)
+    system_prompt=QUIZ_REVIEWER_SYSTEM,
+    output_type=QuizReview,
+    category=AgentCategory.REVIEWER,
+    description="Reviews quiz questions for objective alignment, distractor quality, and clarity.",
+    tags=["review", "quiz"],
+    expose_a2a=True,
+))

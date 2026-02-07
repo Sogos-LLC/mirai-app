@@ -9,8 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from pydantic_ai import Agent, NativeOutput
-
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.component_content import LessonComponents
 from src.models.outcome_tracker import OutcomeCoverage
 
@@ -131,11 +130,14 @@ to the appropriate list type. Text components should read like paragraphs, not l
 - Report which outcome keys you covered in outcomes_covered
 """
 
-component_generation_agent = Agent(
-    output_type=NativeOutput(LessonComponents),
-    system_prompt=COMPONENT_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="component-generator",
-)
+    system_prompt=COMPONENT_SYSTEM,
+    output_type=LessonComponents,
+    category=AgentCategory.LESSON,
+    description="Generates full lesson content as structured components.",
+    tags=["lesson", "component-generation"],
+))
 
 
 # =============================================================================

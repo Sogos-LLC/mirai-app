@@ -23,10 +23,9 @@ from src.agents.lesson_agent import (
     PlannedComponent,
     build_component_plan_prompt,
     build_single_component_prompt,
-    component_gen_agent,
-    component_plan_agent,
     generate_segue,
 )
+from src.agents.registry import AgentRegistry
 from src.agents.model import make_model
 from src.judges.lesson_judge import judge_lesson
 from src.models.knowledge import KnowledgeChunk
@@ -176,7 +175,7 @@ class PlanComponentsNode(BaseNode[LessonState, LessonDeps]):
             concept_map_context=deps.concept_map_context,
         )
 
-        result = await component_plan_agent.run(
+        result = await AgentRegistry.get("lesson-component-plan").run(
             prompt, model=make_model(deps.api_key)
         )
         state.component_plan = result.output.components
@@ -222,7 +221,7 @@ class GenerateComponentsNode(BaseNode[LessonState, LessonDeps]):
                 web_context=deps.web_context,
             )
 
-            result = await component_gen_agent.run(
+            result = await AgentRegistry.get("lesson-component-gen").run(
                 prompt,
                 model=model,
                 deps=deps.api_key,

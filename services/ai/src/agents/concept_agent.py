@@ -1,8 +1,7 @@
 """Concept map agent — generates cross-lesson concept progression from outline."""
 
-from pydantic_ai import Agent, NativeOutput
-
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.outline import ConceptMap, CourseOutline
 
 
@@ -23,11 +22,15 @@ Guidelines:
 - A concept can be reinforced in multiple later lessons
 """
 
-concept_map_agent = Agent(
-    output_type=NativeOutput(ConceptMap),
-    system_prompt=CONCEPT_MAP_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="concept-map",
-)
+    system_prompt=CONCEPT_MAP_SYSTEM,
+    output_type=ConceptMap,
+    category=AgentCategory.UTILITY,
+    description="Extracts concept progression map across lessons.",
+    tags=["utility", "concept-map"],
+    expose_a2a=True,
+))
 
 
 def _build_concept_map_prompt(outline: CourseOutline) -> str:
@@ -63,5 +66,6 @@ async def generate_concept_map(
 ) -> ConceptMap:
     """Generate a concept progression map from a course outline."""
     prompt = _build_concept_map_prompt(outline)
-    result = await concept_map_agent.run(prompt, model=make_model(api_key))
+    agent = AgentRegistry.get("concept-map")
+    result = await agent.run(prompt, model=make_model(api_key))
     return result.output

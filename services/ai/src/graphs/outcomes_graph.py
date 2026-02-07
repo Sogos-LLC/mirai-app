@@ -15,7 +15,8 @@ from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 from src.adapters.embedding import EmbeddingClient
 from src.adapters.qdrant import QdrantAdapter
 from src.agents.model import make_model
-from src.agents.wizard_agents import build_outcomes_prompt, outcomes_agent
+from src.agents.registry import AgentRegistry
+from src.agents.wizard_agents import build_outcomes_prompt
 from src.graphs.wizard_utils import search_wizard_knowledge
 from src.models.knowledge import KnowledgeChunk
 
@@ -85,7 +86,7 @@ class GenerateOutcomesNode(BaseNode[OutcomesState, OutcomesDeps]):
         if state.refinement_feedback:
             prompt += f"\n\n{state.refinement_feedback}"
 
-        result = await outcomes_agent.run(prompt, model=make_model(deps.api_key))
+        result = await AgentRegistry.get("wizard-outcomes").run(prompt, model=make_model(deps.api_key))
         state.outcomes = result.output.outcomes
 
         log.info("outcomes_generated")

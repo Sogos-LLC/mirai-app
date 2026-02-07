@@ -2,9 +2,9 @@
 
 import structlog
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 
 log = structlog.get_logger()
 
@@ -37,11 +37,15 @@ Given the context of where an image appears in a lesson, generate:
    - Do not start with "Image of" or "Picture of"
 """
 
-_image_description_agent = Agent(
-    output_type=NativeOutput(ImageDescriptionOutput),
-    system_prompt=IMAGE_DESCRIPTION_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="image-description",
-)
+    system_prompt=IMAGE_DESCRIPTION_SYSTEM,
+    output_type=ImageDescriptionOutput,
+    category=AgentCategory.UTILITY,
+    description="Generates image descriptions and alt text for educational content.",
+    tags=["utility", "image"],
+    expose_a2a=True,
+))
 
 
 async def run_image_description(
@@ -69,7 +73,8 @@ async def run_image_description(
 Generate a detailed image description and accessible alt text for an
 educational image that fits this context."""
 
-    result = await _image_description_agent.run(
+    agent = AgentRegistry.get("image-description")
+    result = await agent.run(
         prompt,
         model=make_model(api_key),
     )

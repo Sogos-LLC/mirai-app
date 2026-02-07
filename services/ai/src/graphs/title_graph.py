@@ -15,7 +15,8 @@ from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 from src.adapters.embedding import EmbeddingClient
 from src.adapters.qdrant import QdrantAdapter
 from src.agents.model import make_model
-from src.agents.wizard_agents import build_title_prompt, title_agent
+from src.agents.registry import AgentRegistry
+from src.agents.wizard_agents import build_title_prompt
 from src.graphs.wizard_utils import search_wizard_knowledge
 from src.models.knowledge import KnowledgeChunk
 
@@ -87,7 +88,7 @@ class GenerateTitleNode(BaseNode[TitleState, TitleDeps]):
         if state.refinement_feedback:
             prompt += f"\n\n{state.refinement_feedback}"
 
-        result = await title_agent.run(prompt, model=make_model(deps.api_key))
+        result = await AgentRegistry.get("wizard-title").run(prompt, model=make_model(deps.api_key))
         state.improved_title = result.output.improved_title
         state.description = result.output.description
 

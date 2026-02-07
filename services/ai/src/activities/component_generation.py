@@ -14,13 +14,12 @@ from temporalio import activity
 from src.agents.component_generation_agent import (
     ComponentContext,
     build_component_prompt,
-    component_generation_agent,
 )
 from src.agents.model import make_model
+from src.agents.registry import AgentRegistry
 from src.agents.section_qa_agent import (
     SectionQAResult,
     build_section_qa_prompt,
-    section_qa_agent,
 )
 from src.models.component_content import LessonComponents
 from src.models.outcome_tracker import OutcomeCoverage
@@ -90,7 +89,7 @@ async def generate_lesson_components(
     model = make_model(input.api_key)
     prompt = build_component_prompt(input.context)
 
-    result = await component_generation_agent.run(prompt, model=model)
+    result = await AgentRegistry.get("component-generator").run(prompt, model=model)
     activity.heartbeat()
 
     return GenerateComponentsOutput(
@@ -122,7 +121,7 @@ async def review_section_components(
         course_goal=input.course_goal,
     )
 
-    result = await section_qa_agent.run(prompt, model=model)
+    result = await AgentRegistry.get("section-qa-judge").run(prompt, model=model)
     activity.heartbeat()
 
     return ReviewSectionOutput(qa=result.output)

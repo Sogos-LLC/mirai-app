@@ -1,9 +1,9 @@
 """Structural elements agents — section intros, summaries, and course conclusion."""
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, NativeOutput
 
 from src.agents.model import make_model
+from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.outline import CourseOutline
 
 
@@ -54,11 +54,14 @@ Keep a warm, encouraging, and professional tone throughout.
 Use the section and lesson titles to make references specific.
 """
 
-structural_agent = Agent(
-    output_type=NativeOutput(StructuralElementsOutput),
-    system_prompt=STRUCTURAL_SYSTEM,
+AgentRegistry.register(AgentSpec(
     name="structural-elements",
-)
+    system_prompt=STRUCTURAL_SYSTEM,
+    output_type=StructuralElementsOutput,
+    category=AgentCategory.STRUCTURAL,
+    description="Generates section introductions, summaries, and course conclusion.",
+    tags=["structural"],
+))
 
 
 def _build_structural_prompt(outline: CourseOutline) -> str:
@@ -90,5 +93,6 @@ async def generate_structural_elements(
 ) -> StructuralElementsOutput:
     """Generate all structural elements for a course in one batch."""
     prompt = _build_structural_prompt(outline)
-    result = await structural_agent.run(prompt, model=make_model(api_key))
+    agent = AgentRegistry.get("structural-elements")
+    result = await agent.run(prompt, model=make_model(api_key))
     return result.output

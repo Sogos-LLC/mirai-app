@@ -15,7 +15,8 @@ from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 from src.adapters.embedding import EmbeddingClient
 from src.adapters.qdrant import QdrantAdapter
 from src.agents.model import make_model
-from src.agents.wizard_agents import build_sme_prompt, sme_agent
+from src.agents.registry import AgentRegistry
+from src.agents.wizard_agents import build_sme_prompt
 from src.graphs.wizard_utils import search_wizard_knowledge
 from src.models.knowledge import KnowledgeChunk
 from src.models.wizard import SMEPersona
@@ -87,7 +88,7 @@ class GenerateSMENode(BaseNode[SMEState, SMEDeps]):
         if state.refinement_feedback:
             prompt += f"\n\n{state.refinement_feedback}"
 
-        result = await sme_agent.run(prompt, model=make_model(deps.api_key))
+        result = await AgentRegistry.get("wizard-sme").run(prompt, model=make_model(deps.api_key))
         state.personas = result.output.personas
 
         log.info("sme_generated", count=len(state.personas))
