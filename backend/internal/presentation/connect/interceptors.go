@@ -74,7 +74,6 @@ func NewAuthInterceptor(identity service.IdentityProvider, userRepo repository.U
 func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		procedure := req.Spec().Procedure
-		authStart := time.Now()
 
 		// Skip auth for public procedures
 		if i.publicProcedures[procedure] {
@@ -113,15 +112,12 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			if entry, err := i.cache.Get(ctx, cacheKey, &cached); err == nil && entry != nil && cached.Active {
 				kratosID = cached.KratosID
 				email = cached.Email
-				i.logger.Info("[auth] session cache hit", "procedure", procedure, "elapsed", time.Since(authStart))
 			}
 		}
 
 		// Cache miss: validate with Kratos and cache the result
 		if kratosID == "" {
-			i.logger.Info("[auth] session cache miss, calling Kratos", "procedure", procedure, "elapsed", time.Since(authStart))
 			session, err := i.identity.ValidateSession(ctx, cookies)
-			i.logger.Info("[auth] Kratos validation done", "procedure", procedure, "elapsed", time.Since(authStart), "error", err)
 			if err != nil {
 				i.logger.Debug("session validation failed", "error", err)
 				return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
@@ -151,7 +147,6 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 
 		// Look up user to get tenant ID for RLS
 		// First check cache, then fall back to database lookup
-		i.logger.Info("[auth] looking up tenant", "procedure", procedure, "elapsed", time.Since(authStart))
 		if i.userRepo != nil {
 			cacheKey := cache.GlobalCacheKeys.UserTenantMapping(kratosID)
 			var tenantID uuid.UUID
@@ -194,7 +189,6 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			}
 		}
 
-		i.logger.Info("[auth] complete", "procedure", procedure, "elapsed", time.Since(authStart))
 		return next(ctx, req)
 	}
 }

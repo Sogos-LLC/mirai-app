@@ -341,11 +341,8 @@ func (s *CourseService) GetCourse(ctx context.Context, kratosID uuid.UUID, id st
 // CreateCourse creates a new course.
 func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, input *StoredCourse) (*StoredCourse, error) {
 	log := s.logger.With("kratosID", kratosID)
-	start := time.Now()
-	log.Info("[CreateCourse] started")
 
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
-	log.Info("[CreateCourse] GetByKratosID done", "elapsed", time.Since(start))
 	if err != nil || user == nil {
 		return nil, domainerrors.ErrUserNotFound
 	}
@@ -431,25 +428,21 @@ func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, in
 	}
 
 	// Write content to S3 first
-	log.Info("[CreateCourse] writing S3 content", "elapsed", time.Since(start))
 	if err := s.storage.WriteCourseContent(ctx, *user.TenantID, courseID, &s3Content); err != nil {
-		log.Error("failed to write course content to storage", "error", err, "elapsed", time.Since(start))
+		log.Error("failed to write course content to storage", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
-	log.Info("[CreateCourse] S3 write done", "elapsed", time.Since(start))
 
 	// Insert metadata into PostgreSQL
 	if err := s.courseRepo.Create(ctx, course); err != nil {
 		// Attempt to clean up S3 content
 		_ = s.storage.DeleteCourseContent(ctx, *user.TenantID, courseID)
-		log.Error("failed to create course in database", "error", err, "elapsed", time.Since(start))
+		log.Error("failed to create course in database", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
-	log.Info("[CreateCourse] DB insert done", "elapsed", time.Since(start))
 
 	// Invalidate cache
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
-	log.Info("[CreateCourse] completed", "elapsed", time.Since(start))
 
 	return &StoredCourse{
 		ID:      course.ID.String(),
