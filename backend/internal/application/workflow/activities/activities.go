@@ -29,6 +29,7 @@ type APIKeyDecryptor interface {
 // Register this struct with the Temporal worker to make all methods available.
 type GoActivities struct {
 	JobRepo        repository.GenerationJobRepository
+	KnowledgeRepo  repository.TeamKnowledgeRepository
 	ContentStorage storage.StorageAdapter
 	KeyDecryptor   APIKeyDecryptor
 	Logger         *slog.Logger
@@ -254,4 +255,54 @@ func (a *GoActivities) ReadFileContent(ctx context.Context, input ReadFileConten
 	}
 
 	return &ReadFileContentOutput{Content: string(data)}, nil
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge Status Activities
+// ---------------------------------------------------------------------------
+
+// UpdateKnowledgeStatusInput is the input for the UpdateKnowledgeStatus activity.
+type UpdateKnowledgeStatusInput struct {
+	SourceID     string `json:"source_id"`
+	TenantID     string `json:"tenant_id"`
+	Status       string `json:"status"`
+	ErrorMessage string `json:"error_message,omitempty"`
+	ChunkCount   int32  `json:"chunk_count,omitempty"`
+	Summary      string `json:"summary,omitempty"`
+	TokenCount   int32  `json:"token_count,omitempty"`
+}
+
+// UpdateKnowledgeStatus updates the knowledge source status in the database.
+func (a *GoActivities) UpdateKnowledgeStatus(ctx context.Context, input UpdateKnowledgeStatusInput) error {
+	ctx = tenant.WithSuperAdmin(ctx, true)
+
+	sourceID, err := uuid.Parse(input.SourceID)
+	if err != nil {
+		return fmt.Errorf("parse source ID: %w", err)
+	}
+
+	status, err := valueobject.ParseKnowledgeSourceStatus(strings.ToLower(input.Status))
+	if err != nil {
+		return fmt.Errorf("parse status: %w", err)
+	}
+
+	var errMsg *string
+	if input.ErrorMessage != "" {
+		errMsg = &input.ErrorMessage
+	}
+
+	if input.Summary != "" {
+		_, err = a.KnowledgeRepo.UpdateStatusWithSummary(ctx, sourceID, status, errMsg, input.ChunkCount, input.Summary, input.TokenCount)
+	} else {
+		_, err = a.KnowledgeRepo.UpdateStatus(ctx, sourceID, status, errMsg, input.ChunkCount)
+	}
+	if err != nil {
+		return fmt.Errorf("update knowledge status: %w", err)
+	}
+
+	activity.GetLogger(ctx).Info("knowledge status updated",
+		"sourceID", input.SourceID,
+		"status", input.Status,
+	)
+	return nil
 }

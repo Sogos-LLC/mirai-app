@@ -38,6 +38,7 @@ class SourceReference:
     team_id: str = ""  # Team UUID (internal) or empty
     team_name: str = ""  # Team name (internal) or empty
     excerpt: str = ""  # Original chunk text (first 200 chars)
+    section_heading: str = ""  # Section breadcrumb from structured chunking
 
 
 def format_source_context(
@@ -57,6 +58,11 @@ def format_source_context(
 
     # Internal knowledge sources
     for chunk in rag_chunks:
+        # Build section context label
+        section_ctx = chunk.source_name
+        if chunk.section_heading:
+            section_ctx = f"{chunk.source_name} > {chunk.section_heading}"
+
         refs.append(SourceReference(
             index=index,
             source_type="internal",
@@ -65,9 +71,10 @@ def format_source_context(
             chunk_index=chunk.chunk_index,
             score=chunk.score,
             excerpt=chunk.content[:200],
+            section_heading=chunk.section_heading,
         ))
         lines.append(
-            f"[Source {index}] (Internal: {chunk.source_name})\n"
+            f"[Source {index}] (Internal: {section_ctx})\n"
             f"{chunk.content[:500]}"
         )
         index += 1
@@ -177,6 +184,7 @@ def resolve_component_provenance(
                 "pageTitle": ref.page_title,
                 "teamId": ref.team_id,
                 "teamName": ref.team_name,
+                "sectionHeading": ref.section_heading,
             }
             source_chunks.append(chunk)
 

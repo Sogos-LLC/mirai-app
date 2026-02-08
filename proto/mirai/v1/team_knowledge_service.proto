@@ -44,6 +44,10 @@ service TeamKnowledgeService {
   // CheckDuplicateKnowledge checks if a file with the same content hash already exists.
   // Used before upload to warn users about duplicate files.
   rpc CheckDuplicateKnowledge(CheckDuplicateKnowledgeRequest) returns (CheckDuplicateKnowledgeResponse);
+
+  // GetKnowledgeIngestionState queries the Temporal workflow for real-time ingestion progress.
+  // Falls back to DB status if the workflow is no longer running.
+  rpc GetKnowledgeIngestionState(GetKnowledgeIngestionStateRequest) returns (GetKnowledgeIngestionStateResponse);
 }
 
 // UploadTeamKnowledgeRequest for uploading a file to knowledge base.
@@ -142,4 +146,25 @@ message CheckDuplicateKnowledgeResponse {
 
   // Human-readable location of the duplicate (e.g., "Global Knowledge" or "Team: Engineering")
   string location = 3;
+}
+
+// GetKnowledgeIngestionStateRequest to query real-time ingestion progress.
+message GetKnowledgeIngestionStateRequest {
+  string source_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetKnowledgeIngestionStateResponse with workflow progress details.
+message GetKnowledgeIngestionStateResponse {
+  // Current stage: "pending", "processing", "decrypting", "reading", "chunking",
+  // "analyzing", "finalizing", "ready", "failed"
+  string stage = 1;
+
+  // Progress percentage (0-100)
+  int32 progress_percent = 2;
+
+  // Human-readable progress message
+  string progress_message = 3;
+
+  // Error message if stage is "failed"
+  string error_message = 4;
 }

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CheckDuplicateKnowledgeRequest, CheckDuplicateKnowledgeResponse, DeleteTeamKnowledgeSourceRequest, DeleteTeamKnowledgeSourceResponse, GetTeamKnowledgeSourceRequest, GetTeamKnowledgeSourceResponse, ListTeamKnowledgeSourcesRequest, ListTeamKnowledgeSourcesResponse, SearchTeamKnowledgeRequest, SearchTeamKnowledgeResponse, UploadTeamKnowledgeRequest, UploadTeamKnowledgeResponse } from "./team_knowledge_service_pb.js";
+import { CheckDuplicateKnowledgeRequest, CheckDuplicateKnowledgeResponse, DeleteTeamKnowledgeSourceRequest, DeleteTeamKnowledgeSourceResponse, GetKnowledgeIngestionStateRequest, GetKnowledgeIngestionStateResponse, GetTeamKnowledgeSourceRequest, GetTeamKnowledgeSourceResponse, ListTeamKnowledgeSourcesRequest, ListTeamKnowledgeSourcesResponse, SearchTeamKnowledgeRequest, SearchTeamKnowledgeResponse, UploadTeamKnowledgeRequest, UploadTeamKnowledgeResponse } from "./team_knowledge_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -85,6 +85,18 @@ export const TeamKnowledgeService = {
       name: "CheckDuplicateKnowledge",
       I: CheckDuplicateKnowledgeRequest,
       O: CheckDuplicateKnowledgeResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetKnowledgeIngestionState queries the Temporal workflow for real-time ingestion progress.
+     * Falls back to DB status if the workflow is no longer running.
+     *
+     * @generated from rpc mirai.v1.TeamKnowledgeService.GetKnowledgeIngestionState
+     */
+    getKnowledgeIngestionState: {
+      name: "GetKnowledgeIngestionState",
+      I: GetKnowledgeIngestionStateRequest,
+      O: GetKnowledgeIngestionStateResponse,
       kind: MethodKind.Unary,
     },
   }

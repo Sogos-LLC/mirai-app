@@ -70,3 +70,13 @@ export const CheckDuplicateKnowledgeRequestSchema = z.object({
 
 export type CheckDuplicateKnowledgeRequest = z.infer<typeof CheckDuplicateKnowledgeRequestSchema>;
 
+/**
+ * Zod schema for GetKnowledgeIngestionStateRequest
+ * @generated from message mirai.v1.GetKnowledgeIngestionStateRequest
+ */
+export const GetKnowledgeIngestionStateRequestSchema = z.object({
+  sourceId: z.string().uuid(),
+});
+
+export type GetKnowledgeIngestionStateRequest = z.infer<typeof GetKnowledgeIngestionStateRequestSchema>;
+

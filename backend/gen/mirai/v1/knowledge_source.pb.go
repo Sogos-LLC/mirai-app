@@ -450,8 +450,10 @@ type RetrievedChunk struct {
 	Content         string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
 	SimilarityScore float32                `protobuf:"fixed32,5,opt,name=similarity_score,json=similarityScore,proto3" json:"similarity_score,omitempty"`
 	ChunkIndex      *int32                 `protobuf:"varint,6,opt,name=chunk_index,json=chunkIndex,proto3,oneof" json:"chunk_index,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Section heading breadcrumb from structured chunking (e.g. "Getting Started > Installation")
+	SectionHeading string `protobuf:"bytes,7,opt,name=section_heading,json=sectionHeading,proto3" json:"section_heading,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *RetrievedChunk) Reset() {
@@ -526,6 +528,13 @@ func (x *RetrievedChunk) GetChunkIndex() int32 {
 	return 0
 }
 
+func (x *RetrievedChunk) GetSectionHeading() string {
+	if x != nil {
+		return x.SectionHeading
+	}
+	return ""
+}
+
 var File_mirai_v1_knowledge_source_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
@@ -576,7 +585,7 @@ const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"mainTopics\x12!\n" +
 	"\fkey_concepts\x18\x03 \x03(\tR\vkeyConcepts\x124\n" +
 	"\x16estimated_lesson_count\x18\x04 \x01(\x05R\x14estimatedLessonCount\x12#\n" +
-	"\rcontent_depth\x18\x05 \x01(\tR\fcontentDepth\"\xd9\x01\n" +
+	"\rcontent_depth\x18\x05 \x01(\tR\fcontentDepth\"\x82\x02\n" +
 	"\x0eRetrievedChunk\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x1f\n" +
@@ -585,7 +594,8 @@ const file_mirai_v1_knowledge_source_proto_rawDesc = "" +
 	"\acontent\x18\x04 \x01(\tR\acontent\x12)\n" +
 	"\x10similarity_score\x18\x05 \x01(\x02R\x0fsimilarityScore\x12$\n" +
 	"\vchunk_index\x18\x06 \x01(\x05H\x00R\n" +
-	"chunkIndex\x88\x01\x01B\x0e\n" +
+	"chunkIndex\x88\x01\x01\x12'\n" +
+	"\x0fsection_heading\x18\a \x01(\tR\x0esectionHeadingB\x0e\n" +
 	"\f_chunk_index*\xbe\x02\n" +
 	"\x13KnowledgeSourceType\x12%\n" +
 	"!KNOWLEDGE_SOURCE_TYPE_UNSPECIFIED\x10\x00\x12%\n" +

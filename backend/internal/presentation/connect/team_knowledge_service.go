@@ -17,9 +17,11 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 )
 
-// KnowledgeWorkflowStarter starts knowledge ingestion workflows.
+// KnowledgeWorkflowStarter starts and queries knowledge ingestion workflows.
 type KnowledgeWorkflowStarter interface {
 	StartKnowledgeIngestion(ctx context.Context, sourceID, tenantID, teamID, filePath string) (string, error)
+	QueryWorkflow(ctx context.Context, workflowID, queryType string) (map[string]interface{}, error)
+	IsWorkflowRunning(ctx context.Context, workflowID string) (bool, error)
 }
 
 // TeamKnowledgeServiceServer implements the TeamKnowledgeService Connect handler.
@@ -326,6 +328,86 @@ func (s *TeamKnowledgeServiceServer) SearchTeamKnowledge(
 	_ *connect.Request[v1.SearchTeamKnowledgeRequest],
 ) (*connect.Response[v1.SearchTeamKnowledgeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("search is handled by the AI service via Temporal"))
+}
+
+// GetKnowledgeIngestionState queries the Temporal workflow for real-time progress.
+// Falls back to DB status if the workflow is no longer running.
+func (s *TeamKnowledgeServiceServer) GetKnowledgeIngestionState(
+	ctx context.Context,
+	req *connect.Request[v1.GetKnowledgeIngestionStateRequest],
+) (*connect.Response[v1.GetKnowledgeIngestionStateResponse], error) {
+	_, ok := tenant.FromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	sourceID := req.Msg.SourceId
+
+	// Try querying the Temporal workflow first
+	if s.workflowStarter != nil {
+		workflowID := fmt.Sprintf("knowledge-%s", sourceID)
+
+		running, err := s.workflowStarter.IsWorkflowRunning(ctx, workflowID)
+		if err == nil && running {
+			state, err := s.workflowStarter.QueryWorkflow(ctx, workflowID, "get_state")
+			if err == nil && state != nil {
+				stage, _ := state["stage"].(string)
+				progressPercent := int32(0)
+				if v, ok := state["progress_percent"].(float64); ok {
+					progressPercent = int32(v)
+				}
+				progressMessage, _ := state["progress_message"].(string)
+				errorMessage, _ := state["error_message"].(string)
+
+				return connect.NewResponse(&v1.GetKnowledgeIngestionStateResponse{
+					Stage:           stage,
+					ProgressPercent: progressPercent,
+					ProgressMessage: progressMessage,
+					ErrorMessage:    errorMessage,
+				}), nil
+			}
+		}
+	}
+
+	// Fallback: derive state from DB status
+	id, err := parseUUID(sourceID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid source_id"))
+	}
+
+	source, err := s.teamKnowledgeService.GetByID(ctx, id)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	if source == nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("knowledge source not found"))
+	}
+
+	// Map DB status to response
+	resp := &v1.GetKnowledgeIngestionStateResponse{}
+	switch source.Status {
+	case valueobject.KnowledgeSourceStatusPending:
+		resp.Stage = "pending"
+		resp.ProgressPercent = 0
+		resp.ProgressMessage = "Waiting to start"
+	case valueobject.KnowledgeSourceStatusProcessing:
+		resp.Stage = "processing"
+		resp.ProgressPercent = 30
+		resp.ProgressMessage = "Processing document"
+	case valueobject.KnowledgeSourceStatusReady:
+		resp.Stage = "ready"
+		resp.ProgressPercent = 100
+		resp.ProgressMessage = "Complete"
+	case valueobject.KnowledgeSourceStatusFailed:
+		resp.Stage = "failed"
+		resp.ProgressPercent = 0
+		resp.ProgressMessage = "Processing failed"
+		if source.ErrorMessage != nil {
+			resp.ErrorMessage = *source.ErrorMessage
+		}
+	}
+
+	return connect.NewResponse(resp), nil
 }
 
 // teamKnowledgeSourceToProto converts a domain entity to proto message.

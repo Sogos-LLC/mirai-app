@@ -52,3 +52,11 @@ export const searchTeamKnowledge = TeamKnowledgeService.method.searchTeamKnowled
  * @generated from rpc mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge
  */
 export const checkDuplicateKnowledge = TeamKnowledgeService.method.checkDuplicateKnowledge;
+
+/**
+ * GetKnowledgeIngestionState queries the Temporal workflow for real-time ingestion progress.
+ * Falls back to DB status if the workflow is no longer running.
+ *
+ * @generated from rpc mirai.v1.TeamKnowledgeService.GetKnowledgeIngestionState
+ */
+export const getKnowledgeIngestionState = TeamKnowledgeService.method.getKnowledgeIngestionState;

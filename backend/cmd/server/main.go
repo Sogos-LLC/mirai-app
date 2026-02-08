@@ -361,6 +361,7 @@ func main() {
 		// GoActivities: database, storage, API key decryption
 		goActivities := &activities.GoActivities{
 			JobRepo:        generationJobRepo,
+			KnowledgeRepo:  teamKnowledgeRepo,
 			ContentStorage: baseStorage,
 			Logger:         slogLogger,
 		}

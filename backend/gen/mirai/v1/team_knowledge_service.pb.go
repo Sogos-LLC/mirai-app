@@ -666,6 +666,125 @@ func (x *CheckDuplicateKnowledgeResponse) GetLocation() string {
 	return ""
 }
 
+// GetKnowledgeIngestionStateRequest to query real-time ingestion progress.
+type GetKnowledgeIngestionStateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourceId      string                 `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetKnowledgeIngestionStateRequest) Reset() {
+	*x = GetKnowledgeIngestionStateRequest{}
+	mi := &file_mirai_v1_team_knowledge_service_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetKnowledgeIngestionStateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetKnowledgeIngestionStateRequest) ProtoMessage() {}
+
+func (x *GetKnowledgeIngestionStateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_team_knowledge_service_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetKnowledgeIngestionStateRequest.ProtoReflect.Descriptor instead.
+func (*GetKnowledgeIngestionStateRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_team_knowledge_service_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetKnowledgeIngestionStateRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+// GetKnowledgeIngestionStateResponse with workflow progress details.
+type GetKnowledgeIngestionStateResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Current stage: "pending", "processing", "decrypting", "reading", "chunking",
+	// "analyzing", "finalizing", "ready", "failed"
+	Stage string `protobuf:"bytes,1,opt,name=stage,proto3" json:"stage,omitempty"`
+	// Progress percentage (0-100)
+	ProgressPercent int32 `protobuf:"varint,2,opt,name=progress_percent,json=progressPercent,proto3" json:"progress_percent,omitempty"`
+	// Human-readable progress message
+	ProgressMessage string `protobuf:"bytes,3,opt,name=progress_message,json=progressMessage,proto3" json:"progress_message,omitempty"`
+	// Error message if stage is "failed"
+	ErrorMessage  string `protobuf:"bytes,4,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetKnowledgeIngestionStateResponse) Reset() {
+	*x = GetKnowledgeIngestionStateResponse{}
+	mi := &file_mirai_v1_team_knowledge_service_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetKnowledgeIngestionStateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetKnowledgeIngestionStateResponse) ProtoMessage() {}
+
+func (x *GetKnowledgeIngestionStateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_team_knowledge_service_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetKnowledgeIngestionStateResponse.ProtoReflect.Descriptor instead.
+func (*GetKnowledgeIngestionStateResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_team_knowledge_service_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetKnowledgeIngestionStateResponse) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
+}
+
+func (x *GetKnowledgeIngestionStateResponse) GetProgressPercent() int32 {
+	if x != nil {
+		return x.ProgressPercent
+	}
+	return 0
+}
+
+func (x *GetKnowledgeIngestionStateResponse) GetProgressMessage() string {
+	if x != nil {
+		return x.ProgressMessage
+	}
+	return ""
+}
+
+func (x *GetKnowledgeIngestionStateResponse) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
 var File_mirai_v1_team_knowledge_service_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_team_knowledge_service_proto_rawDesc = "" +
@@ -712,14 +831,22 @@ const file_mirai_v1_team_knowledge_service_proto_rawDesc = "" +
 	"\x1fCheckDuplicateKnowledgeResponse\x12\x16\n" +
 	"\x06exists\x18\x01 \x01(\bR\x06exists\x12B\n" +
 	"\x0fexisting_source\x18\x02 \x01(\v2\x19.mirai.v1.KnowledgeSourceR\x0eexistingSource\x12\x1a\n" +
-	"\blocation\x18\x03 \x01(\tR\blocation2\xa4\x05\n" +
+	"\blocation\x18\x03 \x01(\tR\blocation\"J\n" +
+	"!GetKnowledgeIngestionStateRequest\x12%\n" +
+	"\tsource_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bsourceId\"\xb5\x01\n" +
+	"\"GetKnowledgeIngestionStateResponse\x12\x14\n" +
+	"\x05stage\x18\x01 \x01(\tR\x05stage\x12)\n" +
+	"\x10progress_percent\x18\x02 \x01(\x05R\x0fprogressPercent\x12)\n" +
+	"\x10progress_message\x18\x03 \x01(\tR\x0fprogressMessage\x12#\n" +
+	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage2\x9d\x06\n" +
 	"\x14TeamKnowledgeService\x12b\n" +
 	"\x13UploadTeamKnowledge\x12$.mirai.v1.UploadTeamKnowledgeRequest\x1a%.mirai.v1.UploadTeamKnowledgeResponse\x12q\n" +
 	"\x18ListTeamKnowledgeSources\x12).mirai.v1.ListTeamKnowledgeSourcesRequest\x1a*.mirai.v1.ListTeamKnowledgeSourcesResponse\x12k\n" +
 	"\x16GetTeamKnowledgeSource\x12'.mirai.v1.GetTeamKnowledgeSourceRequest\x1a(.mirai.v1.GetTeamKnowledgeSourceResponse\x12t\n" +
 	"\x19DeleteTeamKnowledgeSource\x12*.mirai.v1.DeleteTeamKnowledgeSourceRequest\x1a+.mirai.v1.DeleteTeamKnowledgeSourceResponse\x12b\n" +
 	"\x13SearchTeamKnowledge\x12$.mirai.v1.SearchTeamKnowledgeRequest\x1a%.mirai.v1.SearchTeamKnowledgeResponse\x12n\n" +
-	"\x17CheckDuplicateKnowledge\x12(.mirai.v1.CheckDuplicateKnowledgeRequest\x1a).mirai.v1.CheckDuplicateKnowledgeResponseB\x9f\x01\n" +
+	"\x17CheckDuplicateKnowledge\x12(.mirai.v1.CheckDuplicateKnowledgeRequest\x1a).mirai.v1.CheckDuplicateKnowledgeResponse\x12w\n" +
+	"\x1aGetKnowledgeIngestionState\x12+.mirai.v1.GetKnowledgeIngestionStateRequest\x1a,.mirai.v1.GetKnowledgeIngestionStateResponseB\x9f\x01\n" +
 	"\fcom.mirai.v1B\x19TeamKnowledgeServiceProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -734,43 +861,47 @@ func file_mirai_v1_team_knowledge_service_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_team_knowledge_service_proto_rawDescData
 }
 
-var file_mirai_v1_team_knowledge_service_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_mirai_v1_team_knowledge_service_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_mirai_v1_team_knowledge_service_proto_goTypes = []any{
-	(*UploadTeamKnowledgeRequest)(nil),        // 0: mirai.v1.UploadTeamKnowledgeRequest
-	(*UploadTeamKnowledgeResponse)(nil),       // 1: mirai.v1.UploadTeamKnowledgeResponse
-	(*ListTeamKnowledgeSourcesRequest)(nil),   // 2: mirai.v1.ListTeamKnowledgeSourcesRequest
-	(*ListTeamKnowledgeSourcesResponse)(nil),  // 3: mirai.v1.ListTeamKnowledgeSourcesResponse
-	(*GetTeamKnowledgeSourceRequest)(nil),     // 4: mirai.v1.GetTeamKnowledgeSourceRequest
-	(*GetTeamKnowledgeSourceResponse)(nil),    // 5: mirai.v1.GetTeamKnowledgeSourceResponse
-	(*DeleteTeamKnowledgeSourceRequest)(nil),  // 6: mirai.v1.DeleteTeamKnowledgeSourceRequest
-	(*DeleteTeamKnowledgeSourceResponse)(nil), // 7: mirai.v1.DeleteTeamKnowledgeSourceResponse
-	(*SearchTeamKnowledgeRequest)(nil),        // 8: mirai.v1.SearchTeamKnowledgeRequest
-	(*SearchTeamKnowledgeResponse)(nil),       // 9: mirai.v1.SearchTeamKnowledgeResponse
-	(*CheckDuplicateKnowledgeRequest)(nil),    // 10: mirai.v1.CheckDuplicateKnowledgeRequest
-	(*CheckDuplicateKnowledgeResponse)(nil),   // 11: mirai.v1.CheckDuplicateKnowledgeResponse
-	(*KnowledgeSource)(nil),                   // 12: mirai.v1.KnowledgeSource
-	(*RetrievedChunk)(nil),                    // 13: mirai.v1.RetrievedChunk
+	(*UploadTeamKnowledgeRequest)(nil),         // 0: mirai.v1.UploadTeamKnowledgeRequest
+	(*UploadTeamKnowledgeResponse)(nil),        // 1: mirai.v1.UploadTeamKnowledgeResponse
+	(*ListTeamKnowledgeSourcesRequest)(nil),    // 2: mirai.v1.ListTeamKnowledgeSourcesRequest
+	(*ListTeamKnowledgeSourcesResponse)(nil),   // 3: mirai.v1.ListTeamKnowledgeSourcesResponse
+	(*GetTeamKnowledgeSourceRequest)(nil),      // 4: mirai.v1.GetTeamKnowledgeSourceRequest
+	(*GetTeamKnowledgeSourceResponse)(nil),     // 5: mirai.v1.GetTeamKnowledgeSourceResponse
+	(*DeleteTeamKnowledgeSourceRequest)(nil),   // 6: mirai.v1.DeleteTeamKnowledgeSourceRequest
+	(*DeleteTeamKnowledgeSourceResponse)(nil),  // 7: mirai.v1.DeleteTeamKnowledgeSourceResponse
+	(*SearchTeamKnowledgeRequest)(nil),         // 8: mirai.v1.SearchTeamKnowledgeRequest
+	(*SearchTeamKnowledgeResponse)(nil),        // 9: mirai.v1.SearchTeamKnowledgeResponse
+	(*CheckDuplicateKnowledgeRequest)(nil),     // 10: mirai.v1.CheckDuplicateKnowledgeRequest
+	(*CheckDuplicateKnowledgeResponse)(nil),    // 11: mirai.v1.CheckDuplicateKnowledgeResponse
+	(*GetKnowledgeIngestionStateRequest)(nil),  // 12: mirai.v1.GetKnowledgeIngestionStateRequest
+	(*GetKnowledgeIngestionStateResponse)(nil), // 13: mirai.v1.GetKnowledgeIngestionStateResponse
+	(*KnowledgeSource)(nil),                    // 14: mirai.v1.KnowledgeSource
+	(*RetrievedChunk)(nil),                     // 15: mirai.v1.RetrievedChunk
 }
 var file_mirai_v1_team_knowledge_service_proto_depIdxs = []int32{
-	12, // 0: mirai.v1.UploadTeamKnowledgeResponse.source:type_name -> mirai.v1.KnowledgeSource
-	12, // 1: mirai.v1.ListTeamKnowledgeSourcesResponse.sources:type_name -> mirai.v1.KnowledgeSource
-	12, // 2: mirai.v1.GetTeamKnowledgeSourceResponse.source:type_name -> mirai.v1.KnowledgeSource
-	13, // 3: mirai.v1.SearchTeamKnowledgeResponse.chunks:type_name -> mirai.v1.RetrievedChunk
-	12, // 4: mirai.v1.CheckDuplicateKnowledgeResponse.existing_source:type_name -> mirai.v1.KnowledgeSource
+	14, // 0: mirai.v1.UploadTeamKnowledgeResponse.source:type_name -> mirai.v1.KnowledgeSource
+	14, // 1: mirai.v1.ListTeamKnowledgeSourcesResponse.sources:type_name -> mirai.v1.KnowledgeSource
+	14, // 2: mirai.v1.GetTeamKnowledgeSourceResponse.source:type_name -> mirai.v1.KnowledgeSource
+	15, // 3: mirai.v1.SearchTeamKnowledgeResponse.chunks:type_name -> mirai.v1.RetrievedChunk
+	14, // 4: mirai.v1.CheckDuplicateKnowledgeResponse.existing_source:type_name -> mirai.v1.KnowledgeSource
 	0,  // 5: mirai.v1.TeamKnowledgeService.UploadTeamKnowledge:input_type -> mirai.v1.UploadTeamKnowledgeRequest
 	2,  // 6: mirai.v1.TeamKnowledgeService.ListTeamKnowledgeSources:input_type -> mirai.v1.ListTeamKnowledgeSourcesRequest
 	4,  // 7: mirai.v1.TeamKnowledgeService.GetTeamKnowledgeSource:input_type -> mirai.v1.GetTeamKnowledgeSourceRequest
 	6,  // 8: mirai.v1.TeamKnowledgeService.DeleteTeamKnowledgeSource:input_type -> mirai.v1.DeleteTeamKnowledgeSourceRequest
 	8,  // 9: mirai.v1.TeamKnowledgeService.SearchTeamKnowledge:input_type -> mirai.v1.SearchTeamKnowledgeRequest
 	10, // 10: mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge:input_type -> mirai.v1.CheckDuplicateKnowledgeRequest
-	1,  // 11: mirai.v1.TeamKnowledgeService.UploadTeamKnowledge:output_type -> mirai.v1.UploadTeamKnowledgeResponse
-	3,  // 12: mirai.v1.TeamKnowledgeService.ListTeamKnowledgeSources:output_type -> mirai.v1.ListTeamKnowledgeSourcesResponse
-	5,  // 13: mirai.v1.TeamKnowledgeService.GetTeamKnowledgeSource:output_type -> mirai.v1.GetTeamKnowledgeSourceResponse
-	7,  // 14: mirai.v1.TeamKnowledgeService.DeleteTeamKnowledgeSource:output_type -> mirai.v1.DeleteTeamKnowledgeSourceResponse
-	9,  // 15: mirai.v1.TeamKnowledgeService.SearchTeamKnowledge:output_type -> mirai.v1.SearchTeamKnowledgeResponse
-	11, // 16: mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge:output_type -> mirai.v1.CheckDuplicateKnowledgeResponse
-	11, // [11:17] is the sub-list for method output_type
-	5,  // [5:11] is the sub-list for method input_type
+	12, // 11: mirai.v1.TeamKnowledgeService.GetKnowledgeIngestionState:input_type -> mirai.v1.GetKnowledgeIngestionStateRequest
+	1,  // 12: mirai.v1.TeamKnowledgeService.UploadTeamKnowledge:output_type -> mirai.v1.UploadTeamKnowledgeResponse
+	3,  // 13: mirai.v1.TeamKnowledgeService.ListTeamKnowledgeSources:output_type -> mirai.v1.ListTeamKnowledgeSourcesResponse
+	5,  // 14: mirai.v1.TeamKnowledgeService.GetTeamKnowledgeSource:output_type -> mirai.v1.GetTeamKnowledgeSourceResponse
+	7,  // 15: mirai.v1.TeamKnowledgeService.DeleteTeamKnowledgeSource:output_type -> mirai.v1.DeleteTeamKnowledgeSourceResponse
+	9,  // 16: mirai.v1.TeamKnowledgeService.SearchTeamKnowledge:output_type -> mirai.v1.SearchTeamKnowledgeResponse
+	11, // 17: mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge:output_type -> mirai.v1.CheckDuplicateKnowledgeResponse
+	13, // 18: mirai.v1.TeamKnowledgeService.GetKnowledgeIngestionState:output_type -> mirai.v1.GetKnowledgeIngestionStateResponse
+	12, // [12:19] is the sub-list for method output_type
+	5,  // [5:12] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -791,7 +922,7 @@ func file_mirai_v1_team_knowledge_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_team_knowledge_service_proto_rawDesc), len(file_mirai_v1_team_knowledge_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

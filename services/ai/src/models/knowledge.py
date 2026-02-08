@@ -11,6 +11,7 @@ class KnowledgeChunk(BaseModel):
     source_id: str
     chunk_index: int
     score: float = 0.0
+    section_heading: str = ""
 
 
 class SearchResult(BaseModel):

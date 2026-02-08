@@ -105,4 +105,6 @@ message RetrievedChunk {
   string content = 4;
   float similarity_score = 5;
   optional int32 chunk_index = 6;
+  // Section heading breadcrumb from structured chunking (e.g. "Getting Started > Installation")
+  string section_heading = 7;
 }

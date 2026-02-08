@@ -22,12 +22,14 @@ type StorageAdapter interface {
 	PutContent(ctx context.Context, path string, content []byte, contentType string) error
 }
 
-// BackgroundWorkflowStarter starts Temporal workflows for background processing.
+// BackgroundWorkflowStarter starts and queries Temporal workflows for background processing.
 // This is the combined interface used by presentation-layer handlers.
 type BackgroundWorkflowStarter interface {
 	StartKnowledgeIngestion(ctx context.Context, sourceID, tenantID, teamID, filePath string) (string, error)
 	StartFeedbackSync(ctx context.Context, input activities.FeedbackSyncInput) (string, error)
 	StartStripeProvision(ctx context.Context, sessionID, customerID, subscriptionID string) (string, error)
+	QueryWorkflow(ctx context.Context, workflowID, queryType string) (map[string]interface{}, error)
+	IsWorkflowRunning(ctx context.Context, workflowID string) (bool, error)
 }
 
 // ServerConfig contains all dependencies needed for the Connect server.

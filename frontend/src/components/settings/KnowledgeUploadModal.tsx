@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   X,
   FileText,
@@ -15,18 +15,16 @@ import {
   BookOpen,
   Layers,
   Hash,
-  Clock,
   FileType,
   HardDrive,
 } from 'lucide-react';
 import {
   useUploadKnowledge,
   useGetTeamKnowledgeSource,
+  useKnowledgeIngestionState,
   computeFileHash,
   formatFileSize,
-  KnowledgeSourceStatus,
 } from '@/hooks/useTeamKnowledge';
-import { GetTeamKnowledgeSourceResponse } from '@/gen/mirai/v1/team_knowledge_service_pb';
 
 // =============================================================================
 // Types
@@ -35,10 +33,12 @@ import { GetTeamKnowledgeSourceResponse } from '@/gen/mirai/v1/team_knowledge_se
 type ProcessingStage =
   | 'pending'
   | 'uploading'
-  | 'parsing'
+  | 'processing'
+  | 'decrypting'
+  | 'reading'
   | 'chunking'
-  | 'embedding'
-  | 'indexing'
+  | 'analyzing'
+  | 'finalizing'
   | 'ready'
   | 'failed';
 
@@ -65,22 +65,36 @@ interface ProcessingStep {
 
 const PROCESSING_STEPS: ProcessingStep[] = [
   { stage: 'uploading', label: 'Uploading', description: 'Transferring file to server' },
-  { stage: 'parsing', label: 'Parsing', description: 'Extracting text content' },
-  { stage: 'chunking', label: 'Chunking', description: 'Splitting into semantic chunks' },
-  { stage: 'embedding', label: 'Embedding', description: 'Generating vector embeddings' },
-  { stage: 'indexing', label: 'Indexing', description: 'Adding to knowledge base' },
+  { stage: 'reading', label: 'Reading', description: 'Extracting text content' },
+  { stage: 'chunking', label: 'Chunking', description: 'Splitting into semantic chunks & embedding' },
+  { stage: 'analyzing', label: 'Analyzing', description: 'Generating document summary' },
+  { stage: 'finalizing', label: 'Finalizing', description: 'Saving to knowledge base' },
 ];
 
-const STAGE_TIMINGS: Record<ProcessingStage, number> = {
-  pending: 0,
-  uploading: 2000,
-  parsing: 3000,
-  chunking: 4000,
-  embedding: 5000,
-  indexing: 2000,
-  ready: 0,
-  failed: 0,
-};
+// Map workflow stages to display step stages
+function mapToDisplayStage(stage: string): ProcessingStage {
+  switch (stage) {
+    case 'pending':
+      return 'pending';
+    case 'processing':
+    case 'decrypting':
+      return 'uploading'; // Combine early stages into "uploading" display
+    case 'reading':
+      return 'reading';
+    case 'chunking':
+      return 'chunking';
+    case 'analyzing':
+      return 'analyzing';
+    case 'finalizing':
+      return 'finalizing';
+    case 'ready':
+      return 'ready';
+    case 'failed':
+      return 'failed';
+    default:
+      return 'processing';
+  }
+}
 
 // =============================================================================
 // Main Component
@@ -93,155 +107,63 @@ export function KnowledgeUploadModal({
   onSuccess,
 }: KnowledgeUploadModalProps) {
   // State
-  const [currentStage, setCurrentStage] = useState<ProcessingStage>('pending');
-  const [error, setError] = useState<string | null>(null);
+  const [uploadComplete, setUploadComplete] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [showContentPreview, setShowContentPreview] = useState(false);
   const [filePreview, setFilePreview] = useState<string | null>(null);
 
-  // Refs
-  const startTimeRef = useRef<number>(Date.now());
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
   // Hooks
   const { mutate: uploadFile, isLoading: isUploading } = useUploadKnowledge(teamId);
-  const { data: source, refetch: refetchSource } = useGetTeamKnowledgeSource(sourceId || undefined);
+  const { data: source } = useGetTeamKnowledgeSource(sourceId || undefined);
+
+  // Real progress from Temporal workflow
+  const ingestionState = useKnowledgeIngestionState(
+    sourceId,
+    uploadComplete && !uploadError,
+  );
+
+  // Derive current stage from workflow state
+  const currentStage: ProcessingStage = uploadError
+    ? 'failed'
+    : !uploadComplete
+      ? isUploading
+        ? 'uploading'
+        : 'pending'
+      : ingestionState.stage === 'ready'
+        ? 'ready'
+        : ingestionState.stage === 'failed'
+          ? 'failed'
+          : mapToDisplayStage(ingestionState.stage);
+
+  const error = uploadError || (ingestionState.stage === 'failed' ? ingestionState.errorMessage : null);
 
   // Read file preview on mount
   useEffect(() => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
-      // Take first 500 chars for preview
       setFilePreview(content.slice(0, 500));
     };
     reader.readAsText(file.slice(0, 1000));
   }, [file]);
 
-  // Simulate processing stages based on timing
-  useEffect(() => {
-    if (currentStage === 'uploading' && !isUploading) {
-      // Upload complete, start simulating processing stages
-      const stages: ProcessingStage[] = ['parsing', 'chunking', 'embedding', 'indexing'];
-      let stageIndex = 0;
-      let cancelled = false;
-
-      const advanceStage = () => {
-        if (cancelled) return;
-        if (stageIndex < stages.length) {
-          setCurrentStage((prev) => {
-            // Don't advance if we've already reached a terminal state
-            if (prev === 'ready' || prev === 'failed') {
-              cancelled = true;
-              return prev;
-            }
-            return stages[stageIndex];
-          });
-          stageIndex++;
-          if (!cancelled && stageIndex < stages.length) {
-            setTimeout(advanceStage, STAGE_TIMINGS[stages[stageIndex - 1]] || 2000);
-          }
-        }
-      };
-
-      const timeoutId = setTimeout(advanceStage, 1000);
-
-      return () => {
-        cancelled = true;
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [currentStage, isUploading]);
-
-  // Poll for source status updates
-  useEffect(() => {
-    if (!sourceId) return;
-    // Don't poll if we're already done
-    if (currentStage === 'ready' || currentStage === 'failed') return;
-
-    const poll = async () => {
-      try {
-        const result = await refetchSource();
-        // refetch returns QueryObserverResult, data is GetTeamKnowledgeSourceResponse
-        // We need to access .source to get the KnowledgeSource
-        const response = result.data as GetTeamKnowledgeSourceResponse | undefined;
-        const fetchedSource = response?.source;
-        if (fetchedSource?.status === KnowledgeSourceStatus.READY) {
-          setCurrentStage('ready');
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-          }
-        } else if (fetchedSource?.status === KnowledgeSourceStatus.FAILED) {
-          setCurrentStage('failed');
-          setError(fetchedSource.errorMessage || 'Processing failed');
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-          }
-        }
-      } catch (err) {
-        console.error('Error polling source status:', err);
-      }
-    };
-
-    // Initial fetch
-    poll();
-    // Then poll every 2 seconds
-    pollIntervalRef.current = setInterval(poll, 2000);
-
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-  }, [sourceId, currentStage, refetchSource]);
-
-  // Update stage when source status changes (backup check via React Query cache)
-  useEffect(() => {
-    if (!source) return;
-    // Skip if already in terminal state
-    if (currentStage === 'ready' || currentStage === 'failed') return;
-
-    if (source.status === KnowledgeSourceStatus.READY) {
-      setCurrentStage('ready');
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    } else if (source.status === KnowledgeSourceStatus.FAILED) {
-      setCurrentStage('failed');
-      setError(source.errorMessage || 'Processing failed');
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    }
-  }, [source, currentStage]);
-
   // Handle upload
   const handleUpload = useCallback(async () => {
-    setError(null);
-    setCurrentStage('uploading');
-    startTimeRef.current = Date.now();
+    setUploadError(null);
+    setUploadComplete(false);
 
     try {
       const hash = await computeFileHash(file);
       const result = await uploadFile(file, hash);
       const newSourceId = result.source?.id || null;
       setSourceId(newSourceId);
-
-      // Check if the returned source is already READY (e.g., duplicate that was re-processed)
-      if (result.source?.status === KnowledgeSourceStatus.READY) {
-        setCurrentStage('ready');
-      }
+      setUploadComplete(true);
     } catch (err) {
-      setCurrentStage('failed');
       if (err instanceof Error) {
-        setError(err.message);
+        setUploadError(err.message);
       } else {
-        setError('Upload failed. Please try again.');
+        setUploadError('Upload failed. Please try again.');
       }
     }
   }, [file, uploadFile]);
@@ -259,8 +181,9 @@ export function KnowledgeUploadModal({
 
   // Handle retry
   const handleRetry = useCallback(() => {
-    setError(null);
+    setUploadError(null);
     setSourceId(null);
+    setUploadComplete(false);
     handleUpload();
   }, [handleUpload]);
 
@@ -296,14 +219,16 @@ export function KnowledgeUploadModal({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {isComplete ? 'Upload Complete' : isProcessing ? 'Processing Document' : 'Upload Failed'}
+                {isComplete ? 'Upload Complete' : isProcessing ? 'Processing Document' : isFailed ? 'Upload Failed' : 'Uploading'}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {isComplete
                   ? 'Document is ready for use'
                   : isProcessing
-                    ? 'This may take a moment'
-                    : 'An error occurred'}
+                    ? ingestionState.progressMessage || 'This may take a moment'
+                    : isFailed
+                      ? 'An error occurred'
+                      : 'Starting upload'}
               </p>
             </div>
           </div>
@@ -370,13 +295,29 @@ export function KnowledgeUploadModal({
                 Processing Status
               </h3>
               <div className="bg-gray-50 dark:bg-dark-50 rounded-xl p-4">
+                {/* Progress bar */}
+                {isProcessing && ingestionState.progressPercent > 0 && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      <span>{ingestionState.progressMessage}</span>
+                      <span>{ingestionState.progressPercent}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-dark-100 rounded-full h-2">
+                      <div
+                        className="bg-primary-600 dark:bg-primary-500 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${ingestionState.progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-3">
-                  {PROCESSING_STEPS.map((step, index) => {
-                    const stageOrder: ProcessingStage[] = ['uploading', 'parsing', 'chunking', 'embedding', 'indexing'];
-                    const currentIndex = stageOrder.indexOf(currentStage);
-                    const stepIndex = stageOrder.indexOf(step.stage);
-                    const isStepComplete = isComplete || stepIndex < currentIndex;
-                    const isStepActive = step.stage === currentStage;
+                  {PROCESSING_STEPS.map((step) => {
+                    const displayStage = currentStage;
+                    const stepStages: ProcessingStage[] = ['uploading', 'reading', 'chunking', 'analyzing', 'finalizing'];
+                    const currentIdx = stepStages.indexOf(displayStage);
+                    const stepIdx = stepStages.indexOf(step.stage);
+                    const isStepComplete = isComplete || stepIdx < currentIdx;
+                    const isStepActive = step.stage === displayStage;
 
                     return (
                       <div key={step.stage} className="flex items-center gap-3">

@@ -51,6 +51,9 @@ const (
 	// TeamKnowledgeServiceCheckDuplicateKnowledgeProcedure is the fully-qualified name of the
 	// TeamKnowledgeService's CheckDuplicateKnowledge RPC.
 	TeamKnowledgeServiceCheckDuplicateKnowledgeProcedure = "/mirai.v1.TeamKnowledgeService/CheckDuplicateKnowledge"
+	// TeamKnowledgeServiceGetKnowledgeIngestionStateProcedure is the fully-qualified name of the
+	// TeamKnowledgeService's GetKnowledgeIngestionState RPC.
+	TeamKnowledgeServiceGetKnowledgeIngestionStateProcedure = "/mirai.v1.TeamKnowledgeService/GetKnowledgeIngestionState"
 )
 
 // TeamKnowledgeServiceClient is a client for the mirai.v1.TeamKnowledgeService service.
@@ -74,6 +77,9 @@ type TeamKnowledgeServiceClient interface {
 	// CheckDuplicateKnowledge checks if a file with the same content hash already exists.
 	// Used before upload to warn users about duplicate files.
 	CheckDuplicateKnowledge(context.Context, *connect.Request[v1.CheckDuplicateKnowledgeRequest]) (*connect.Response[v1.CheckDuplicateKnowledgeResponse], error)
+	// GetKnowledgeIngestionState queries the Temporal workflow for real-time ingestion progress.
+	// Falls back to DB status if the workflow is no longer running.
+	GetKnowledgeIngestionState(context.Context, *connect.Request[v1.GetKnowledgeIngestionStateRequest]) (*connect.Response[v1.GetKnowledgeIngestionStateResponse], error)
 }
 
 // NewTeamKnowledgeServiceClient constructs a client for the mirai.v1.TeamKnowledgeService service.
@@ -123,17 +129,24 @@ func NewTeamKnowledgeServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(teamKnowledgeServiceMethods.ByName("CheckDuplicateKnowledge")),
 			connect.WithClientOptions(opts...),
 		),
+		getKnowledgeIngestionState: connect.NewClient[v1.GetKnowledgeIngestionStateRequest, v1.GetKnowledgeIngestionStateResponse](
+			httpClient,
+			baseURL+TeamKnowledgeServiceGetKnowledgeIngestionStateProcedure,
+			connect.WithSchema(teamKnowledgeServiceMethods.ByName("GetKnowledgeIngestionState")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // teamKnowledgeServiceClient implements TeamKnowledgeServiceClient.
 type teamKnowledgeServiceClient struct {
-	uploadTeamKnowledge       *connect.Client[v1.UploadTeamKnowledgeRequest, v1.UploadTeamKnowledgeResponse]
-	listTeamKnowledgeSources  *connect.Client[v1.ListTeamKnowledgeSourcesRequest, v1.ListTeamKnowledgeSourcesResponse]
-	getTeamKnowledgeSource    *connect.Client[v1.GetTeamKnowledgeSourceRequest, v1.GetTeamKnowledgeSourceResponse]
-	deleteTeamKnowledgeSource *connect.Client[v1.DeleteTeamKnowledgeSourceRequest, v1.DeleteTeamKnowledgeSourceResponse]
-	searchTeamKnowledge       *connect.Client[v1.SearchTeamKnowledgeRequest, v1.SearchTeamKnowledgeResponse]
-	checkDuplicateKnowledge   *connect.Client[v1.CheckDuplicateKnowledgeRequest, v1.CheckDuplicateKnowledgeResponse]
+	uploadTeamKnowledge        *connect.Client[v1.UploadTeamKnowledgeRequest, v1.UploadTeamKnowledgeResponse]
+	listTeamKnowledgeSources   *connect.Client[v1.ListTeamKnowledgeSourcesRequest, v1.ListTeamKnowledgeSourcesResponse]
+	getTeamKnowledgeSource     *connect.Client[v1.GetTeamKnowledgeSourceRequest, v1.GetTeamKnowledgeSourceResponse]
+	deleteTeamKnowledgeSource  *connect.Client[v1.DeleteTeamKnowledgeSourceRequest, v1.DeleteTeamKnowledgeSourceResponse]
+	searchTeamKnowledge        *connect.Client[v1.SearchTeamKnowledgeRequest, v1.SearchTeamKnowledgeResponse]
+	checkDuplicateKnowledge    *connect.Client[v1.CheckDuplicateKnowledgeRequest, v1.CheckDuplicateKnowledgeResponse]
+	getKnowledgeIngestionState *connect.Client[v1.GetKnowledgeIngestionStateRequest, v1.GetKnowledgeIngestionStateResponse]
 }
 
 // UploadTeamKnowledge calls mirai.v1.TeamKnowledgeService.UploadTeamKnowledge.
@@ -166,6 +179,11 @@ func (c *teamKnowledgeServiceClient) CheckDuplicateKnowledge(ctx context.Context
 	return c.checkDuplicateKnowledge.CallUnary(ctx, req)
 }
 
+// GetKnowledgeIngestionState calls mirai.v1.TeamKnowledgeService.GetKnowledgeIngestionState.
+func (c *teamKnowledgeServiceClient) GetKnowledgeIngestionState(ctx context.Context, req *connect.Request[v1.GetKnowledgeIngestionStateRequest]) (*connect.Response[v1.GetKnowledgeIngestionStateResponse], error) {
+	return c.getKnowledgeIngestionState.CallUnary(ctx, req)
+}
+
 // TeamKnowledgeServiceHandler is an implementation of the mirai.v1.TeamKnowledgeService service.
 type TeamKnowledgeServiceHandler interface {
 	// UploadTeamKnowledge uploads a file and processes it for RAG.
@@ -187,6 +205,9 @@ type TeamKnowledgeServiceHandler interface {
 	// CheckDuplicateKnowledge checks if a file with the same content hash already exists.
 	// Used before upload to warn users about duplicate files.
 	CheckDuplicateKnowledge(context.Context, *connect.Request[v1.CheckDuplicateKnowledgeRequest]) (*connect.Response[v1.CheckDuplicateKnowledgeResponse], error)
+	// GetKnowledgeIngestionState queries the Temporal workflow for real-time ingestion progress.
+	// Falls back to DB status if the workflow is no longer running.
+	GetKnowledgeIngestionState(context.Context, *connect.Request[v1.GetKnowledgeIngestionStateRequest]) (*connect.Response[v1.GetKnowledgeIngestionStateResponse], error)
 }
 
 // NewTeamKnowledgeServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -232,6 +253,12 @@ func NewTeamKnowledgeServiceHandler(svc TeamKnowledgeServiceHandler, opts ...con
 		connect.WithSchema(teamKnowledgeServiceMethods.ByName("CheckDuplicateKnowledge")),
 		connect.WithHandlerOptions(opts...),
 	)
+	teamKnowledgeServiceGetKnowledgeIngestionStateHandler := connect.NewUnaryHandler(
+		TeamKnowledgeServiceGetKnowledgeIngestionStateProcedure,
+		svc.GetKnowledgeIngestionState,
+		connect.WithSchema(teamKnowledgeServiceMethods.ByName("GetKnowledgeIngestionState")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.TeamKnowledgeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TeamKnowledgeServiceUploadTeamKnowledgeProcedure:
@@ -246,6 +273,8 @@ func NewTeamKnowledgeServiceHandler(svc TeamKnowledgeServiceHandler, opts ...con
 			teamKnowledgeServiceSearchTeamKnowledgeHandler.ServeHTTP(w, r)
 		case TeamKnowledgeServiceCheckDuplicateKnowledgeProcedure:
 			teamKnowledgeServiceCheckDuplicateKnowledgeHandler.ServeHTTP(w, r)
+		case TeamKnowledgeServiceGetKnowledgeIngestionStateProcedure:
+			teamKnowledgeServiceGetKnowledgeIngestionStateHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -277,4 +306,8 @@ func (UnimplementedTeamKnowledgeServiceHandler) SearchTeamKnowledge(context.Cont
 
 func (UnimplementedTeamKnowledgeServiceHandler) CheckDuplicateKnowledge(context.Context, *connect.Request[v1.CheckDuplicateKnowledgeRequest]) (*connect.Response[v1.CheckDuplicateKnowledgeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.TeamKnowledgeService.CheckDuplicateKnowledge is not implemented"))
+}
+
+func (UnimplementedTeamKnowledgeServiceHandler) GetKnowledgeIngestionState(context.Context, *connect.Request[v1.GetKnowledgeIngestionStateRequest]) (*connect.Response[v1.GetKnowledgeIngestionStateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.TeamKnowledgeService.GetKnowledgeIngestionState is not implemented"))
 }

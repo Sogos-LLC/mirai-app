@@ -84,6 +84,7 @@ class QdrantAdapter:
                     source_id=payload.get("source_id", ""),
                     chunk_index=payload.get("chunk_index", 0),
                     score=point.score,
+                    section_heading=payload.get("section_heading", ""),
                 )
             )
 

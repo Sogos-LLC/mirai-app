@@ -44,6 +44,7 @@ export const RetrievedChunkSchema = z.object({
   content: z.string(),
   similarityScore: z.number(),
   chunkIndex: z.number().int().optional(),
+  sectionHeading: z.string(),
 });
 
 export type RetrievedChunk = z.infer<typeof RetrievedChunkSchema>;

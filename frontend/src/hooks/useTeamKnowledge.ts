@@ -7,6 +7,7 @@ import {
   uploadTeamKnowledge,
   deleteTeamKnowledgeSource,
   checkDuplicateKnowledge,
+  getKnowledgeIngestionState,
 } from '@/gen/mirai/v1/team_knowledge_service-TeamKnowledgeService_connectquery';
 import {
   UploadTeamKnowledgeRequestSchema,
@@ -14,6 +15,7 @@ import {
   GetTeamKnowledgeSourceRequestSchema,
   ListTeamKnowledgeSourcesRequestSchema,
   CheckDuplicateKnowledgeRequestSchema,
+  GetKnowledgeIngestionStateRequestSchema,
 } from '@/gen/mirai/v1/team_knowledge_service_pb';
 import {
   KnowledgeSource,
@@ -276,4 +278,35 @@ export function useDeleteKnowledgeSource(teamId?: string) {
  */
 export function useDeleteTeamKnowledgeSource() {
   return useDeleteKnowledgeSource();
+}
+
+/**
+ * Hook to poll real-time ingestion progress from the Temporal workflow.
+ * Polls every 2s while active, stops when stage is "ready" or "failed".
+ *
+ * @param sourceId - Knowledge source ID to track
+ * @param enabled - Whether to enable polling
+ */
+export function useKnowledgeIngestionState(sourceId: string | null, enabled: boolean) {
+  const request = sourceId
+    ? create(GetKnowledgeIngestionStateRequestSchema, { sourceId })
+    : undefined;
+
+  const query = useQuery(getKnowledgeIngestionState, enabled && sourceId ? request : undefined, {
+    enabled: enabled && !!sourceId,
+    refetchInterval: (q) => {
+      const stage = q.state.data?.stage;
+      if (stage === 'ready' || stage === 'failed') return false;
+      return 2000;
+    },
+  });
+
+  return {
+    stage: query.data?.stage ?? 'pending',
+    progressPercent: query.data?.progressPercent ?? 0,
+    progressMessage: query.data?.progressMessage ?? '',
+    errorMessage: query.data?.errorMessage ?? '',
+    isLoading: query.isLoading,
+    error: query.error,
+  };
 }
