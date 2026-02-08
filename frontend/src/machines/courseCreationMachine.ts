@@ -279,15 +279,15 @@ function stepStringToEnum(step: string): WorkflowStepType {
 export function getWorkflowStepLabel(step: WorkflowStepType): string {
   switch (step) {
     case WorkflowStepType.INTENT_ANALYSIS:
-      return 'Course Analysis';
+      return 'Review Course Analysis';
     case WorkflowStepType.DEFINE_SUCCESS:
-      return 'Learning Outcomes';
+      return 'Review Learning Outcomes';
     case WorkflowStepType.APPROVE_STRUCTURE:
-      return 'Course Structure';
+      return 'Review Course Structure';
     case WorkflowStepType.SAMPLE_LESSON:
-      return 'Sample Lesson';
+      return 'Review Sample Lesson';
     case WorkflowStepType.FINAL_REVIEW:
-      return 'Final Review';
+      return 'Final Review & Export';
     default:
       return 'Unknown Step';
   }

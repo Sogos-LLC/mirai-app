@@ -565,11 +565,8 @@ export default function CourseWizardPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle as="h3">
-                    Step {stepNumber}: {stepLabel}
+                    {stepLabel}
                   </CardTitle>
-                  <span className="text-xs text-muted">
-                    {stepNumber} of {TOTAL_WORKFLOW_STEPS}
-                  </span>
                 </div>
                 <div className="w-full h-1 bg-page rounded-full overflow-hidden mt-2">
                   <div

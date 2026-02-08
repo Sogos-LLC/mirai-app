@@ -4,7 +4,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { useGraphVisualization } from '@/hooks/useCourseCreation';
-import { getWorkflowStepLabel, getWorkflowStepNumber, TOTAL_WORKFLOW_STEPS } from '@/machines/courseCreationMachine';
+import { getWorkflowStepLabel } from '@/machines/courseCreationMachine';
 
 const MermaidDiagram = dynamic(() => import('@/components/ui/MermaidDiagram'), {
   ssr: false,
@@ -57,19 +57,13 @@ export function WorkflowVisualization({
     ? stepToMermaidNodeId(pendingStep)
     : undefined;
 
-  const stepNumber = pendingStep ? getWorkflowStepNumber(pendingStep) : 0;
   const stepLabel = pendingStep ? getWorkflowStepLabel(pendingStep) : '';
 
   return (
     <div className="bg-surface border rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b flex items-center justify-between">
+      <div className="px-4 py-3 border-b">
         <h3 className="text-sm font-medium text-primary">Workflow Progress</h3>
-        {isActive && stepNumber > 0 && (
-          <span className="text-xs text-secondary">
-            Step {stepNumber} of {TOTAL_WORKFLOW_STEPS}
-          </span>
-        )}
       </div>
 
       {/* Progress bar — only when workflow is active */}
