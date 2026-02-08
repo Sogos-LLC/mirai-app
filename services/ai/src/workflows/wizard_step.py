@@ -92,16 +92,17 @@ class WizardStepWorkflow:
             return result.model_dump()
 
         if input.step_type == "generate_audience_personas":
-            from src.models.wizard import SMEPersona
-
-            sme_personas = [SMEPersona(**p) for p in payload.get("sme_personas", [])]
+            # Pass raw dicts — Pydantic coerces them to SMEPersona.
+            # Constructing SMEPersona inside the workflow sandbox creates
+            # sandboxed instances that fail Pydantic type checks against the
+            # unsandboxed GenerateAudiencePersonasInput field type.
             result = await workflow.execute_activity(
                 generate_audience_personas_activity,
                 GenerateAudiencePersonasInput(
                     api_key=input.api_key,
                     title=payload["title"],
                     description=payload["description"],
-                    sme_personas=sme_personas,
+                    sme_personas=payload.get("sme_personas", []),
                     rag_filters=rag_filters,
                 ),
                 start_to_close_timeout=_ACTIVITY_TIMEOUT,
@@ -109,18 +110,14 @@ class WizardStepWorkflow:
             return result.model_dump()
 
         if input.step_type == "generate_tone_options":
-            from src.models.wizard import AudiencePersona
-
-            audience_personas = [
-                AudiencePersona(**p) for p in payload.get("audience_personas", [])
-            ]
+            # Pass raw dicts — same sandbox issue as audience step above.
             result = await workflow.execute_activity(
                 generate_tone_options_activity,
                 GenerateToneOptionsInput(
                     api_key=input.api_key,
                     title=payload["title"],
                     description=payload["description"],
-                    audience_personas=audience_personas,
+                    audience_personas=payload.get("audience_personas", []),
                     rag_filters=rag_filters,
                 ),
                 start_to_close_timeout=_ACTIVITY_TIMEOUT,
