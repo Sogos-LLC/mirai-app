@@ -69,6 +69,9 @@ class ComponentContext:
     # Strict mode: only use internal knowledge, no outside information
     strict_knowledge_only: bool = False
 
+    # Creator's additional instructions (e.g. "focus on practical examples")
+    additional_context: str = ""
+
     def __post_init__(self) -> None:
         if self.resource_hints is None:
             self.resource_hints = []
@@ -280,8 +283,16 @@ If source material is insufficient for a topic, create FEWER components rather t
 Quality and accuracy over quantity. Every claim must be traceable to the source material.
 """
 
+    # Creator's additional instructions
+    extra_str = ""
+    if ctx.additional_context:
+        extra_str = f"""
+## Creator's Additional Instructions (HIGH PRIORITY)
+{ctx.additional_context}
+"""
+
     return f"""\
-{strict_str}## Course Context
+{strict_str}{extra_str}## Course Context
 **Topic**: {ctx.topic}
 **Audience**: {ctx.audience}
 **Course Goal**: {ctx.course_goal}

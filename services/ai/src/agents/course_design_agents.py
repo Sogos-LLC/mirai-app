@@ -102,9 +102,11 @@ def build_analysis_prompt(
     use_context: str,
     rag_context: str = "",
     strict_knowledge_only: bool = False,
+    additional_context: str = "",
 ) -> str:
     strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Available Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    extra = f"\n## Creator's Additional Instructions (HIGH PRIORITY)\n{additional_context}\n" if additional_context else ""
     return f"""\
 {strict}## Course Topic
 {topic}
@@ -114,7 +116,7 @@ def build_analysis_prompt(
 
 ## Use Context
 {use_context or "Not specified — infer from the topic and audience."}
-{rag}
+{extra}{rag}
 ## Instructions
 Analyze this course request and produce:
 
@@ -173,11 +175,13 @@ def build_outcomes_prompt(
     audience: str,
     rag_context: str = "",
     strict_knowledge_only: bool = False,
+    additional_context: str = "",
 ) -> str:
     assumptions_str = "\n".join(f"- {a}" for a in learner_assumptions)
     constraints_str = "\n".join(f"- {c}" for c in constraints)
     strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    extra = f"\n## Creator's Additional Instructions (HIGH PRIORITY)\n{additional_context}\n" if additional_context else ""
     return f"""\
 {strict}## Approved Course Analysis
 **Topic**: {topic}
@@ -189,7 +193,7 @@ def build_outcomes_prompt(
 
 **Constraints (out of scope)**:
 {constraints_str}
-{rag}
+{extra}{rag}
 ## Instructions
 Based on this approved analysis, generate:
 
@@ -241,12 +245,14 @@ def build_structure_prompt(
     audience: str,
     rag_context: str = "",
     strict_knowledge_only: bool = False,
+    additional_context: str = "",
 ) -> str:
     outcomes_str = "\n".join(
         f"- {o.verb} {o.object} ({o.condition})" for o in outcomes.outcomes
     )
     strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    extra = f"\n## Creator's Additional Instructions (HIGH PRIORITY)\n{additional_context}\n" if additional_context else ""
     return f"""\
 {strict}## Approved Course Outcomes
 **Goal**: {outcomes.goal.goal_statement}
@@ -254,7 +260,7 @@ def build_structure_prompt(
 
 **Learning Outcomes**:
 {outcomes_str}
-{rag}
+{extra}{rag}
 ## Context
 **Topic**: {topic}
 **Audience**: {audience}
@@ -423,6 +429,7 @@ def build_lesson_prompt(
     rag_context: str = "",
     use_context: str = "",
     strict_knowledge_only: bool = False,
+    additional_context: str = "",
 ) -> str:
     outcomes_str = ""
     if section_outcomes:
@@ -435,6 +442,7 @@ def build_lesson_prompt(
     strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
     context = f"\n## Additional Context from Creator\n{use_context}\n" if use_context else ""
+    extra = f"\n## Creator's Additional Instructions (HIGH PRIORITY)\n{additional_context}\n" if additional_context else ""
     return f"""\
 {strict}## Course Context
 **Topic**: {topic}
@@ -444,7 +452,7 @@ def build_lesson_prompt(
 ## Section: {section_title}
 **Section Outcomes**:
 {outcomes_str or "Generate appropriate lesson objectives based on the section title."}
-{rag}{context}
+{extra}{rag}{context}
 ## Instructions
 Generate a COMPLETE sample lesson for this section. This lesson will establish
 the pattern for all remaining lessons in the course.
@@ -541,11 +549,13 @@ def build_expansion_prompt(
     audience: str,
     rag_context: str = "",
     strict_knowledge_only: bool = False,
+    additional_context: str = "",
 ) -> str:
     blocks_str = " → ".join(template.block_sequence)
     rules_str = "\n".join(f"- {r}" for r in template.interaction_rules)
     strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
+    extra = f"\n## Creator's Additional Instructions (HIGH PRIORITY)\n{additional_context}\n" if additional_context else ""
     return f"""\
 {strict}## Course Context
 **Topic**: {topic}
@@ -561,7 +571,7 @@ def build_expansion_prompt(
 **Block Sequence**: {blocks_str}
 **Interaction Rules**:
 {rules_str}
-{rag}
+{extra}{rag}
 ## Instructions
 Generate a complete lesson following the template EXACTLY.
 

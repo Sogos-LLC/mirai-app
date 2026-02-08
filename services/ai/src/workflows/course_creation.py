@@ -316,6 +316,7 @@ class CourseCreationWorkflow:
                 enable_web_research=input.enable_web_research,
                 selected_team_doc_ids=input.selected_team_doc_ids,
                 selected_global_doc_ids=input.selected_global_doc_ids,
+                additional_context=input.additional_context,
             )
 
             analysis, knowledge_coverage = await self._generate_analysis(api_key, feedback_input)
@@ -477,6 +478,7 @@ class CourseCreationWorkflow:
                 enable_web_research=False,  # Orchestrator handles web research now
                 rag_context=rag_context,
                 strict_knowledge_only=input.strict_knowledge_only,
+                additional_context=input.additional_context,
             ),
             GenerateAnalysisOutput,
         )
@@ -509,6 +511,7 @@ class CourseCreationWorkflow:
                 constraints=analysis.constraints,
                 rag_context=rag_context,
                 strict_knowledge_only=input.strict_knowledge_only,
+                additional_context=input.additional_context,
             ),
             GenerateOutcomesOutput,
         )
@@ -534,6 +537,7 @@ class CourseCreationWorkflow:
                 outcomes=outcomes,
                 rag_context=rag_context,
                 strict_knowledge_only=input.strict_knowledge_only,
+                additional_context=input.additional_context,
             ),
             GenerateStructureOutput,
         )
@@ -588,6 +592,7 @@ class CourseCreationWorkflow:
                 use_context=input.use_context,
                 rag_context=rag_context,
                 strict_knowledge_only=input.strict_knowledge_only,
+                additional_context=input.additional_context,
             ),
             GenerateSampleLessonOutput,
             timeout=AI_LESSON_TIMEOUT,
@@ -629,6 +634,7 @@ class CourseCreationWorkflow:
             resource_hints=resource_hints,
             rag_context=rag_context,
             strict_knowledge_only=input.strict_knowledge_only,
+            additional_context=input.additional_context,
         )
 
         sample_components_result: GenerateComponentsOutput = await self._run_ai_activity(
@@ -908,6 +914,7 @@ class CourseCreationWorkflow:
                     rag_context=rag_context_text,
                     source_references=source_references,
                     strict_knowledge_only=input.strict_knowledge_only,
+                    additional_context=input.additional_context,
                 )
                 lesson_contexts.append(
                     GenerateComponentsInput(api_key=api_key, context=ctx)

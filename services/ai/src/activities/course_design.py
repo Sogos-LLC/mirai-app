@@ -54,6 +54,7 @@ class GenerateAnalysisInput:
     rag_context: str = ""
     enable_web_research: bool = False
     strict_knowledge_only: bool = False
+    additional_context: str = ""
 
 
 @dataclass
@@ -80,6 +81,7 @@ class GenerateOutcomesInput:
     constraints: list[str]
     rag_context: str = ""
     strict_knowledge_only: bool = False
+    additional_context: str = ""
 
 
 @dataclass
@@ -95,6 +97,7 @@ class GenerateStructureInput:
     outcomes: CourseOutcomes
     rag_context: str = ""
     strict_knowledge_only: bool = False
+    additional_context: str = ""
 
 
 @dataclass
@@ -125,6 +128,7 @@ class GenerateSampleLessonInput:
     rag_context: str = ""
     use_context: str = ""
     strict_knowledge_only: bool = False
+    additional_context: str = ""
 
 
 @dataclass
@@ -228,6 +232,7 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
         use_context=input.use_context,
         rag_context=combined_context,
         strict_knowledge_only=input.strict_knowledge_only,
+        additional_context=input.additional_context,
     )
 
     result = await AgentRegistry.get("course-analysis").run(prompt, model=model)
@@ -379,6 +384,7 @@ async def generate_course_outcomes(input: GenerateOutcomesInput) -> GenerateOutc
             audience=input.audience,
             rag_context=input.rag_context,
             strict_knowledge_only=input.strict_knowledge_only,
+            additional_context=input.additional_context,
         )
         if last_error:
             prompt += f"\n\n## PREVIOUS ATTEMPT FAILED VALIDATION\n{last_error}\nPlease fix the issues and try again."
@@ -426,6 +432,7 @@ async def generate_course_structure(input: GenerateStructureInput) -> GenerateSt
             audience=input.audience,
             rag_context=input.rag_context,
             strict_knowledge_only=input.strict_knowledge_only,
+            additional_context=input.additional_context,
         )
         if last_error:
             prompt += f"\n\n## PREVIOUS ATTEMPT FAILED VALIDATION\n{last_error}\nPlease fix."
@@ -512,6 +519,7 @@ async def generate_sample_lesson(input: GenerateSampleLessonInput) -> GenerateSa
         rag_context=input.rag_context,
         use_context=input.use_context,
         strict_knowledge_only=input.strict_knowledge_only,
+        additional_context=input.additional_context,
     )
 
     result = await AgentRegistry.get("sample-lesson").run(prompt, model=model)
