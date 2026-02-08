@@ -187,7 +187,6 @@ export function WizardStep1CourseName({ context, send, isGeneratingOutcomes }: W
               </div>
             </label>
           </div>
-        </div>
       </div>
 
       {/* Knowledge selection modal */}
