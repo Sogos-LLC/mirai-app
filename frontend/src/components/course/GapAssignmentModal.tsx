@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@connectrpc/connect-query';
-import { Users, Send, Loader2 } from 'lucide-react';
+import { Users, Send, Loader2, Plus, X } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import Button from '@/components/ui/Button';
 import { useListTeams } from '@/hooks/useTeams';
@@ -10,9 +10,11 @@ import { useCreateGapTasks } from '@/hooks/useKnowledgeGapTasks';
 import { listCompanyUsers } from '@/gen/mirai/v1/user-UserService_connectquery';
 import type { User } from '@/gen/mirai/v1/common_pb';
 
-interface GapAssignment {
-  gapDescription: string;
+interface GapItem {
+  description: string;
+  selected: boolean;
   assignedToUserId: string;
+  isCustom?: boolean;
 }
 
 interface GapAssignmentModalProps {
@@ -30,12 +32,14 @@ function getDisplayName(user: User): string {
 }
 
 export function GapAssignmentModal({ courseId, gaps, onClose, onDefer }: GapAssignmentModalProps) {
-  const [assignments, setAssignments] = useState<GapAssignment[]>(
-    gaps.map((gap) => ({ gapDescription: gap, assignedToUserId: '' }))
+  const [items, setItems] = useState<GapItem[]>(
+    gaps.map((gap) => ({ description: gap, selected: false, assignedToUserId: '' }))
   );
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newGapText, setNewGapText] = useState('');
+  const [showAddInput, setShowAddInput] = useState(false);
 
   const { data: teams } = useListTeams();
   const { data: companyUsersData } = useQuery(listCompanyUsers, {});
@@ -46,20 +50,46 @@ export function GapAssignmentModal({ courseId, gaps, onClose, onDefer }: GapAssi
     [companyUsersData]
   );
 
+  const selectedItems = useMemo(() => items.filter((i) => i.selected), [items]);
+
   const canSubmit = useMemo(() => {
     if (!selectedTeamId) return false;
-    return assignments.every((a) => a.assignedToUserId !== '');
-  }, [selectedTeamId, assignments]);
+    if (selectedItems.length === 0) return false;
+    return selectedItems.every((i) => i.assignedToUserId !== '');
+  }, [selectedTeamId, selectedItems]);
 
-  const handleAssigneeChange = (index: number, userId: string) => {
-    setAssignments((prev) =>
-      prev.map((a, i) => (i === index ? { ...a, assignedToUserId: userId } : a))
+  const toggleSelection = useCallback((index: number) => {
+    setItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, selected: !item.selected } : item))
     );
-  };
+  }, []);
 
-  const handleAssignAll = (userId: string) => {
-    setAssignments((prev) => prev.map((a) => ({ ...a, assignedToUserId: userId })));
-  };
+  const handleAssigneeChange = useCallback((index: number, userId: string) => {
+    setItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, assignedToUserId: userId } : item))
+    );
+  }, []);
+
+  const handleAssignAllSelected = useCallback((userId: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.selected ? { ...item, assignedToUserId: userId } : item))
+    );
+  }, []);
+
+  const handleAddCustomGap = useCallback(() => {
+    const trimmed = newGapText.trim();
+    if (!trimmed) return;
+    setItems((prev) => [
+      ...prev,
+      { description: trimmed, selected: true, assignedToUserId: '', isCustom: true },
+    ]);
+    setNewGapText('');
+    setShowAddInput(false);
+  }, [newGapText]);
+
+  const handleRemoveCustomGap = useCallback((index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -70,9 +100,9 @@ export function GapAssignmentModal({ courseId, gaps, onClose, onDefer }: GapAssi
       await createGapTasks.mutate({
         courseId,
         targetTeamId: selectedTeamId,
-        tasks: assignments.map((a) => ({
-          gapDescription: a.gapDescription,
-          assignedToUserId: a.assignedToUserId,
+        tasks: selectedItems.map((item) => ({
+          gapDescription: item.description,
+          assignedToUserId: item.assignedToUserId,
         })),
       });
 
@@ -93,8 +123,8 @@ export function GapAssignmentModal({ courseId, gaps, onClose, onDefer }: GapAssi
     >
       <div className="space-y-5">
         <p className="text-sm text-secondary">
-          Assign each knowledge gap to a team member. They&apos;ll be notified and can upload
-          documents to fill the gaps. The course will be saved as a draft until gaps are resolved.
+          Select the knowledge gaps you want to address and assign them to team members.
+          The course will be saved as a draft until selected gaps are resolved.
         </p>
 
         {/* Team selector */}
@@ -119,14 +149,14 @@ export function GapAssignmentModal({ courseId, gaps, onClose, onDefer }: GapAssi
           </p>
         </div>
 
-        {/* Bulk assign */}
-        {companyUsers.length > 0 && (
+        {/* Bulk assign selected */}
+        {companyUsers.length > 0 && selectedItems.length > 0 && (
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-muted shrink-0" />
-            <span className="text-xs text-muted">Assign all to:</span>
+            <span className="text-xs text-muted">Assign selected to:</span>
             <select
               onChange={(e) => {
-                if (e.target.value) handleAssignAll(e.target.value);
+                if (e.target.value) handleAssignAllSelected(e.target.value);
               }}
               className="px-2 py-1 bg-page border rounded text-xs text-primary min-h-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
               defaultValue=""
@@ -142,31 +172,103 @@ export function GapAssignmentModal({ courseId, gaps, onClose, onDefer }: GapAssi
         )}
 
         {/* Gap rows */}
-        <div className="space-y-3 max-h-[40vh] overflow-y-auto">
-          {assignments.map((assignment, index) => (
+        <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+          {items.map((item, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 rounded-lg border bg-page p-3"
+              className={`rounded-lg border p-3 transition-colors ${
+                item.selected
+                  ? 'border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-950/20'
+                  : 'bg-page'
+              }`}
             >
-              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-primary mb-2">{assignment.gapDescription}</p>
-                <select
-                  value={assignment.assignedToUserId}
-                  onChange={(e) => handleAssigneeChange(index, e.target.value)}
-                  className="w-full px-2 py-1.5 bg-surface border rounded text-xs text-primary min-h-[36px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Assign to...</option>
-                  {companyUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {getDisplayName(user)}
-                      {user.email ? ` (${user.email})` : ''}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={item.selected}
+                  onChange={() => toggleSelection(index)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0 cursor-pointer"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-2">
+                    <p
+                      className={`text-sm flex-1 ${item.selected ? 'text-primary' : 'text-muted'}`}
+                      onClick={() => toggleSelection(index)}
+                      role="button"
+                    >
+                      {item.description}
+                    </p>
+                    {item.isCustom && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCustomGap(index)}
+                        className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-muted hover:text-red-500 transition-colors shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {item.selected && (
+                    <select
+                      value={item.assignedToUserId}
+                      onChange={(e) => handleAssigneeChange(index, e.target.value)}
+                      className="mt-2 w-full px-2 py-1.5 bg-surface border rounded text-xs text-primary min-h-[36px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">Assign to...</option>
+                      {companyUsers.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {getDisplayName(user)}
+                          {user.email ? ` (${user.email})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
             </div>
           ))}
+
+          {/* Add custom gap */}
+          {showAddInput ? (
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-dashed">
+              <input
+                type="text"
+                value={newGapText}
+                onChange={(e) => setNewGapText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddCustomGap();
+                  if (e.key === 'Escape') { setShowAddInput(false); setNewGapText(''); }
+                }}
+                placeholder="Describe the knowledge gap..."
+                className="flex-1 px-2 py-1.5 bg-page border rounded text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                autoFocus
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAddCustomGap}
+                disabled={!newGapText.trim()}
+              >
+                Add
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setShowAddInput(false); setNewGapText(''); }}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowAddInput(true)}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-dashed text-sm text-muted hover:text-secondary hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors min-h-[44px]"
+            >
+              <Plus className="w-4 h-4" />
+              Add custom gap
+            </button>
+          )}
         </div>
 
         {error && (
@@ -178,24 +280,31 @@ export function GapAssignmentModal({ courseId, gaps, onClose, onDefer }: GapAssi
           <Button variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={!canSubmit || isSubmitting}
-            className="gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Assigning...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                Assign & Save Draft
-              </>
+          <div className="flex items-center gap-3">
+            {selectedItems.length > 0 && (
+              <span className="text-xs text-muted">
+                {selectedItems.length} gap{selectedItems.length !== 1 ? 's' : ''} selected
+              </span>
             )}
-          </Button>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={!canSubmit || isSubmitting}
+              className="gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Assigning...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Assign & Save Draft
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </ResponsiveModal>
