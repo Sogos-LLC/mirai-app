@@ -21,6 +21,8 @@ import type {
 // Context
 // ============================================================
 
+export type ContextUploadStatus = 'idle' | 'uploading' | 'processing' | 'ready' | 'error';
+
 export interface WizardContext {
   // Step 1
   courseTitle: string;
@@ -36,6 +38,9 @@ export interface WizardContext {
   contextText: string;
   contextFile: File | null;
   contextFileName: string;
+  contextSourceId: string;
+  contextUploadStatus: ContextUploadStatus;
+  contextUploadError: string;
 
   // UI state
   currentStep: number;
@@ -53,6 +58,10 @@ export type WizardEvent =
   | { type: 'SET_STUDENT'; student: AudiencePersona }
   | { type: 'SET_CONTEXT_TEXT'; value: string }
   | { type: 'SET_CONTEXT_FILE'; file: File | null; fileName: string }
+  | { type: 'CONTEXT_UPLOAD_START' }
+  | { type: 'CONTEXT_UPLOAD_DONE'; sourceId: string }
+  | { type: 'CONTEXT_INGESTION_READY' }
+  | { type: 'CONTEXT_UPLOAD_ERROR'; error: string }
   | { type: 'NEXT' }
   | { type: 'BACK' }
   | { type: 'COMPLETE' }
@@ -71,6 +80,9 @@ export const initialWizardContext: WizardContext = {
   contextText: '',
   contextFile: null,
   contextFileName: '',
+  contextSourceId: '',
+  contextUploadStatus: 'idle',
+  contextUploadError: '',
   currentStep: 1,
   error: null,
 };
@@ -120,9 +132,36 @@ export const wizardMachine = createMachine({
       actions: assign({ contextText: ({ event }) => event.value }),
     },
     SET_CONTEXT_FILE: {
+      actions: assign(({ context, event }) => ({
+        contextFile: event.file,
+        contextFileName: event.fileName,
+        // Reset upload tracking when file is cleared
+        contextSourceId: event.file ? context.contextSourceId : '',
+        contextUploadStatus: event.file ? context.contextUploadStatus : 'idle' as const,
+        contextUploadError: event.file ? context.contextUploadError : '',
+      })),
+    },
+    CONTEXT_UPLOAD_START: {
       actions: assign({
-        contextFile: ({ event }) => event.file,
-        contextFileName: ({ event }) => event.fileName,
+        contextUploadStatus: 'uploading' as const,
+        contextUploadError: '',
+      }),
+    },
+    CONTEXT_UPLOAD_DONE: {
+      actions: assign({
+        contextUploadStatus: 'processing' as const,
+        contextSourceId: ({ event }) => event.sourceId,
+      }),
+    },
+    CONTEXT_INGESTION_READY: {
+      actions: assign({
+        contextUploadStatus: 'ready' as const,
+      }),
+    },
+    CONTEXT_UPLOAD_ERROR: {
+      actions: assign({
+        contextUploadStatus: 'error' as const,
+        contextUploadError: ({ event }) => event.error,
       }),
     },
   },

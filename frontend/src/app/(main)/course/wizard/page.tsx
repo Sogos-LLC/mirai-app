@@ -277,7 +277,14 @@ export default function CourseWizardPage() {
         const audiencePersonas = ctx.student ? [ctx.student] : [];
         const selectedAudienceIds = ctx.student ? [ctx.student.id] : [];
 
-        // 3. Start Temporal workflow with simplified wizard data
+        // 3. Detect URLs in context text for web research
+        const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+        const hasUrls = URL_REGEX.test(ctx.contextText);
+
+        // Include uploaded file as a knowledge source
+        const contextDocIds = ctx.contextSourceId ? [ctx.contextSourceId] : [];
+
+        // 4. Start Temporal workflow with simplified wizard data
         const result = await startCreation.mutate({
           courseId,
           topic: ctx.courseTitle,
@@ -290,6 +297,9 @@ export default function CourseWizardPage() {
           audiencePersonas,
           selectedAudienceIds,
           additionalContext: ctx.contextText,
+          enableInternalKnowledge: contextDocIds.length > 0,
+          selectedGlobalDocIds: contextDocIds,
+          enableWebResearch: hasUrls,
           skipQa: !showQAChecks,
         });
 
@@ -327,7 +337,7 @@ export default function CourseWizardPage() {
       case 1: return wizardCtx.courseTitle.trim().length > 0;
       case 2: return wizardCtx.outcomes.trim().length > 0;
       case 3: return wizardCtx.teacher !== null && wizardCtx.student !== null;
-      case 4: return true; // Context is optional
+      case 4: return wizardCtx.contextUploadStatus !== 'uploading' && wizardCtx.contextUploadStatus !== 'processing';
       default: return false;
     }
   })();
