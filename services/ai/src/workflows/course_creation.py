@@ -214,7 +214,16 @@ class CourseCreationWorkflow:
     @workflow.run
     async def run(self, input: CourseCreationInput) -> CourseCreationOutput:
         """Execute the full 5-step course creation pipeline."""
-        log.info("course_creation_started", job_id=input.job_id, topic=input.topic)
+        log.info(
+            "course_creation_started",
+            job_id=input.job_id,
+            topic=input.topic,
+            enable_internal_knowledge=input.enable_internal_knowledge,
+            strict_knowledge_only=input.strict_knowledge_only,
+            enable_web_research=input.enable_web_research,
+            team_doc_ids=input.selected_team_doc_ids,
+            global_doc_ids=input.selected_global_doc_ids,
+        )
 
         self._status = "processing"
         self._progress = 0
@@ -322,6 +331,7 @@ class CourseCreationWorkflow:
                 use_context=input.use_context,
                 enable_web_research=input.enable_web_research,
                 rag_context=rag_context,
+                strict_knowledge_only=input.strict_knowledge_only,
             ),
             GenerateAnalysisOutput,
         )
@@ -344,6 +354,7 @@ class CourseCreationWorkflow:
                     use_context=input.use_context + f"\n\nFEEDBACK: {approval.feedback}",
                     enable_web_research=input.enable_web_research,
                     rag_context=rag_context,
+                    strict_knowledge_only=input.strict_knowledge_only,
                 ),
                 GenerateAnalysisOutput,
             )
@@ -396,6 +407,7 @@ class CourseCreationWorkflow:
                 learner_assumptions=analysis.learner_assumptions,
                 constraints=analysis.constraints,
                 rag_context=rag_context,
+                strict_knowledge_only=input.strict_knowledge_only,
             ),
             GenerateOutcomesOutput,
         )
@@ -418,6 +430,7 @@ class CourseCreationWorkflow:
                     learner_assumptions=analysis.learner_assumptions,
                     constraints=analysis.constraints,
                     rag_context=rag_context,
+                    strict_knowledge_only=input.strict_knowledge_only,
                 ),
                 GenerateOutcomesOutput,
             )
@@ -456,6 +469,7 @@ class CourseCreationWorkflow:
                 audience=input.audience,
                 outcomes=outcomes,
                 rag_context=rag_context,
+                strict_knowledge_only=input.strict_knowledge_only,
             ),
             GenerateStructureOutput,
         )
@@ -488,6 +502,7 @@ class CourseCreationWorkflow:
                     audience=f"{input.audience}\n\nFEEDBACK: {approval.feedback}",
                     outcomes=outcomes,
                     rag_context=rag_context,
+                    strict_knowledge_only=input.strict_knowledge_only,
                 ),
                 GenerateStructureOutput,
             )
@@ -552,6 +567,7 @@ class CourseCreationWorkflow:
                 section_outcomes=section_outcomes,
                 use_context=input.use_context,
                 rag_context=rag_context,
+                strict_knowledge_only=input.strict_knowledge_only,
             ),
             GenerateSampleLessonOutput,
             timeout=AI_LESSON_TIMEOUT,
@@ -591,6 +607,8 @@ class CourseCreationWorkflow:
             outcomes_to_reinforce=[],
             recently_covered=[],
             resource_hints=resource_hints,
+            rag_context=rag_context,
+            strict_knowledge_only=input.strict_knowledge_only,
         )
 
         sample_components_result: GenerateComponentsOutput = await self._run_ai_activity(
@@ -631,6 +649,7 @@ class CourseCreationWorkflow:
                     section_outcomes=section_outcomes,
                     use_context=input.use_context,
                     rag_context=rag_context,
+                    strict_knowledge_only=input.strict_knowledge_only,
                 ),
                 GenerateSampleLessonOutput,
                 timeout=AI_LESSON_TIMEOUT,
@@ -793,6 +812,7 @@ class CourseCreationWorkflow:
                     resource_hints=resource_hints,
                     rag_context=rag_context_text,
                     source_references=source_references,
+                    strict_knowledge_only=input.strict_knowledge_only,
                 )
                 lesson_contexts.append(
                     GenerateComponentsInput(api_key=api_key, context=ctx)
@@ -1141,6 +1161,7 @@ class CourseCreationWorkflow:
         Returns (chunks, rag_context_text, source_references).
         """
         if not input.enable_internal_knowledge:
+            log.debug("rag_search_skipped", reason="internal_knowledge_disabled")
             return [], "", []
 
         all_ids = list(set(
@@ -1148,7 +1169,16 @@ class CourseCreationWorkflow:
             + (input.selected_global_doc_ids or [])
         ))
         if not all_ids:
+            log.warning("rag_search_skipped", reason="no_document_ids_selected")
             return [], "", []
+
+        log.info(
+            "rag_search_starting",
+            query=query[:100],
+            source_ids=all_ids,
+            tenant_id=input.tenant_id,
+            top_k=top_k,
+        )
 
         try:
             search_result: SearchKnowledgeOutput = await self._run_ai_activity(
@@ -1163,10 +1193,23 @@ class CourseCreationWorkflow:
                 SearchKnowledgeOutput,
             )
             chunks = search_result.chunks
+            log.info(
+                "rag_search_complete",
+                query=query[:100],
+                chunks_found=len(chunks),
+                source_ids=all_ids,
+            )
+            if not chunks:
+                log.warning(
+                    "rag_search_empty",
+                    query=query[:100],
+                    source_ids=all_ids,
+                    tenant_id=input.tenant_id,
+                )
             rag_context_text, source_refs = format_source_context(chunks, [])
             return chunks, rag_context_text, source_refs
         except Exception:
-            log.warning("rag_search_failed", query=query[:100], exc_info=True)
+            log.error("rag_search_failed", query=query[:100], source_ids=all_ids, exc_info=True)
             return [], "", []
 
     def _set_progress(self, percent: int, message: str) -> None:

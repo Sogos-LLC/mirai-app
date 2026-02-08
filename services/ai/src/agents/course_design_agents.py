@@ -82,15 +82,31 @@ Search the web for current, relevant information about this topic that would hel
 an instructional designer create an effective course for this audience."""
 
 
+def _strict_preamble(strict: bool, has_rag: bool) -> str:
+    """Return the strict-mode constraint block when applicable."""
+    if not strict or not has_rag:
+        return ""
+    return """\
+## CRITICAL CONSTRAINT: INTERNAL DATA ONLY MODE
+**All course content MUST be derived from the provided source material below.**
+You are strictly forbidden from adding information not present in the source documents.
+If source material is insufficient, narrow the scope rather than inventing content.
+Quality and accuracy over quantity. Every claim must be traceable to the source material.
+
+"""
+
+
 def build_analysis_prompt(
     topic: str,
     audience: str,
     use_context: str,
     rag_context: str = "",
+    strict_knowledge_only: bool = False,
 ) -> str:
+    strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Available Knowledge Sources\n{rag_context}\n" if rag_context else ""
     return f"""\
-## Course Topic
+{strict}## Course Topic
 {topic}
 
 ## Target Audience
@@ -154,12 +170,14 @@ def build_outcomes_prompt(
     topic: str,
     audience: str,
     rag_context: str = "",
+    strict_knowledge_only: bool = False,
 ) -> str:
     assumptions_str = "\n".join(f"- {a}" for a in learner_assumptions)
     constraints_str = "\n".join(f"- {c}" for c in constraints)
+    strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
     return f"""\
-## Approved Course Analysis
+{strict}## Approved Course Analysis
 **Topic**: {topic}
 **Audience**: {audience}
 **Purpose**: {purpose_statement}
@@ -220,13 +238,15 @@ def build_structure_prompt(
     topic: str,
     audience: str,
     rag_context: str = "",
+    strict_knowledge_only: bool = False,
 ) -> str:
     outcomes_str = "\n".join(
         f"- {o.verb} {o.object} ({o.condition})" for o in outcomes.outcomes
     )
+    strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
     return f"""\
-## Approved Course Outcomes
+{strict}## Approved Course Outcomes
 **Goal**: {outcomes.goal.goal_statement}
 **Behavior Change**: {outcomes.behavior_change.description}
 
@@ -400,6 +420,7 @@ def build_lesson_prompt(
     audience: str,
     rag_context: str = "",
     use_context: str = "",
+    strict_knowledge_only: bool = False,
 ) -> str:
     outcomes_str = ""
     if section_outcomes:
@@ -409,10 +430,11 @@ def build_lesson_prompt(
                     outcomes_str = "\n".join(f"- {s.description}" for s in sos)
                     break
 
+    strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
     context = f"\n## Additional Context from Creator\n{use_context}\n" if use_context else ""
     return f"""\
-## Course Context
+{strict}## Course Context
 **Topic**: {topic}
 **Audience**: {audience}
 **Course Goal**: {course_goal}
@@ -516,12 +538,14 @@ def build_expansion_prompt(
     topic: str,
     audience: str,
     rag_context: str = "",
+    strict_knowledge_only: bool = False,
 ) -> str:
     blocks_str = " → ".join(template.block_sequence)
     rules_str = "\n".join(f"- {r}" for r in template.interaction_rules)
+    strict = _strict_preamble(strict_knowledge_only, bool(rag_context))
     rag = f"\n## Knowledge Sources\n{rag_context}\n" if rag_context else ""
     return f"""\
-## Course Context
+{strict}## Course Context
 **Topic**: {topic}
 **Audience**: {audience}
 **Course Goal**: {course_goal}

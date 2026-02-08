@@ -31,6 +31,7 @@ type CourseCreationInput struct {
 	SelectedTeamDocIDs     []string `json:"selected_team_doc_ids"`
 	SelectedGlobalDocIDs   []string `json:"selected_global_doc_ids"`
 	EnableWebResearch      bool     `json:"enable_web_research"`
+	StrictKnowledgeOnly    bool     `json:"strict_knowledge_only"`
 }
 
 // WorkflowStarter starts Temporal workflows for async processing.

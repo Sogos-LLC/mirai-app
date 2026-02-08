@@ -33,6 +33,7 @@ class CourseCreationInput:
     use_context: str = ""
     enable_internal_knowledge: bool = False
     enable_web_research: bool = False
+    strict_knowledge_only: bool = False
 
     # Knowledge source IDs (for RAG)
     selected_team_doc_ids: list[str] | None = field(default_factory=list)

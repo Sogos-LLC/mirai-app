@@ -13,6 +13,7 @@ import {
   AlertCircle,
   BookOpen,
   Globe,
+  Lock,
 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
 import { KnowledgeSelectionModal } from '@/components/course/KnowledgeSelectionModal';
@@ -62,6 +63,7 @@ export default function CourseWizardPage() {
 
   // Knowledge selection
   const [enableInternalKnowledge, setEnableInternalKnowledge] = useState(false);
+  const [strictKnowledgeOnly, setStrictKnowledgeOnly] = useState(false);
   const [selectedTeamDocIds, setSelectedTeamDocIds] = useState<string[]>([]);
   const [selectedGlobalDocIds, setSelectedGlobalDocIds] = useState<string[]>([]);
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
@@ -158,6 +160,7 @@ export default function CourseWizardPage() {
         selectedTeamDocIds: selectedTeamDocIds.length > 0 ? selectedTeamDocIds : undefined,
         selectedGlobalDocIds: selectedGlobalDocIds.length > 0 ? selectedGlobalDocIds : undefined,
         enableWebResearch,
+        strictKnowledgeOnly: enableInternalKnowledge && strictKnowledgeOnly,
       });
 
       if (result.job?.id) {
@@ -172,7 +175,7 @@ export default function CourseWizardPage() {
     } finally {
       setIsStarting(false);
     }
-  }, [topic, audience, useContext, enableInternalKnowledge, selectedTeamDocIds, selectedGlobalDocIds, enableWebResearch, createCourse, startCreation, send]);
+  }, [topic, audience, useContext, enableInternalKnowledge, strictKnowledgeOnly, selectedTeamDocIds, selectedGlobalDocIds, enableWebResearch, createCourse, startCreation, send]);
 
   // Approve current step
   const handleApprove = useCallback(() => {
@@ -313,7 +316,10 @@ export default function CourseWizardPage() {
                           id="internalKnowledge"
                           type="checkbox"
                           checked={enableInternalKnowledge}
-                          onChange={(e) => setEnableInternalKnowledge(e.target.checked)}
+                          onChange={(e) => {
+                            setEnableInternalKnowledge(e.target.checked);
+                            if (!e.target.checked) setStrictKnowledgeOnly(false);
+                          }}
                           className="sr-only peer"
                         />
                         <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-colors" />
@@ -331,7 +337,7 @@ export default function CourseWizardPage() {
                     </label>
 
                     {enableInternalKnowledge && (
-                      <div className="ml-12 mt-2">
+                      <div className="ml-12 mt-2 space-y-2">
                         <button
                           type="button"
                           onClick={() => setShowKnowledgeModal(true)}
@@ -347,6 +353,34 @@ export default function CourseWizardPage() {
                             </span>
                           )}
                         </button>
+
+                        {totalSelectedDocs > 0 && (
+                          <label
+                            htmlFor="strictKnowledge"
+                            className="flex items-center gap-3 cursor-pointer select-none"
+                          >
+                            <div className="relative">
+                              <input
+                                id="strictKnowledge"
+                                type="checkbox"
+                                checked={strictKnowledgeOnly}
+                                onChange={(e) => setStrictKnowledgeOnly(e.target.checked)}
+                                className="sr-only peer"
+                              />
+                              <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-amber-600 peer-checked:border-amber-600 transition-colors" />
+                              <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                              <span className="text-xs font-medium text-primary">
+                                Strict mode
+                              </span>
+                              <span className="text-[10px] text-muted">
+                                — only use internal knowledge
+                              </span>
+                            </div>
+                          </label>
+                        )}
                       </div>
                     )}
                   </div>

@@ -63,6 +63,9 @@ class ComponentContext:
     rag_context: str = ""
     source_references: list[SourceReference] = field(default_factory=list)
 
+    # Strict mode: only use internal knowledge, no outside information
+    strict_knowledge_only: bool = False
+
     def __post_init__(self) -> None:
         if self.resource_hints is None:
             self.resource_hints = []
@@ -248,8 +251,19 @@ IMPORTANT — follow these rules for EVERY resource listed above:
 - NEVER invent URLs — only use URLs explicitly listed above.
 """
 
+    # Strict knowledge constraint
+    strict_str = ""
+    if ctx.strict_knowledge_only and ctx.rag_context:
+        strict_str = """
+## CRITICAL CONSTRAINT: INTERNAL DATA ONLY MODE
+**All lesson content MUST come from the provided source material below.**
+You are strictly forbidden from adding information not present in the source documents.
+If source material is insufficient for a topic, create FEWER components rather than inventing content.
+Quality and accuracy over quantity. Every claim must be traceable to the source material.
+"""
+
     return f"""\
-## Course Context
+{strict_str}## Course Context
 **Topic**: {ctx.topic}
 **Audience**: {ctx.audience}
 **Course Goal**: {ctx.course_goal}

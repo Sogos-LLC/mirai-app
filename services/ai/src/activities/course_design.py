@@ -53,6 +53,7 @@ class GenerateAnalysisInput:
     use_context: str = ""
     rag_context: str = ""
     enable_web_research: bool = False
+    strict_knowledge_only: bool = False
 
 
 @dataclass
@@ -78,6 +79,7 @@ class GenerateOutcomesInput:
     learner_assumptions: list[str]
     constraints: list[str]
     rag_context: str = ""
+    strict_knowledge_only: bool = False
 
 
 @dataclass
@@ -92,6 +94,7 @@ class GenerateStructureInput:
     audience: str
     outcomes: CourseOutcomes
     rag_context: str = ""
+    strict_knowledge_only: bool = False
 
 
 @dataclass
@@ -121,6 +124,7 @@ class GenerateSampleLessonInput:
     section_outcomes: SectionOutcomes | None = None
     rag_context: str = ""
     use_context: str = ""
+    strict_knowledge_only: bool = False
 
 
 @dataclass
@@ -150,6 +154,7 @@ class ExpandLessonInput:
     lesson_objective: str
     template: LessonTemplate
     rag_context: str = ""
+    strict_knowledge_only: bool = False
 
 
 @dataclass
@@ -208,6 +213,7 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
         audience=input.audience,
         use_context=input.use_context,
         rag_context=combined_context,
+        strict_knowledge_only=input.strict_knowledge_only,
     )
 
     result = await AgentRegistry.get("course-analysis").run(prompt, model=model)
@@ -358,6 +364,7 @@ async def generate_course_outcomes(input: GenerateOutcomesInput) -> GenerateOutc
             topic=input.topic,
             audience=input.audience,
             rag_context=input.rag_context,
+            strict_knowledge_only=input.strict_knowledge_only,
         )
         if last_error:
             prompt += f"\n\n## PREVIOUS ATTEMPT FAILED VALIDATION\n{last_error}\nPlease fix the issues and try again."
@@ -404,6 +411,7 @@ async def generate_course_structure(input: GenerateStructureInput) -> GenerateSt
             topic=input.topic,
             audience=input.audience,
             rag_context=input.rag_context,
+            strict_knowledge_only=input.strict_knowledge_only,
         )
         if last_error:
             prompt += f"\n\n## PREVIOUS ATTEMPT FAILED VALIDATION\n{last_error}\nPlease fix."
@@ -489,6 +497,7 @@ async def generate_sample_lesson(input: GenerateSampleLessonInput) -> GenerateSa
         audience=input.audience,
         rag_context=input.rag_context,
         use_context=input.use_context,
+        strict_knowledge_only=input.strict_knowledge_only,
     )
 
     result = await AgentRegistry.get("sample-lesson").run(prompt, model=model)
@@ -528,6 +537,7 @@ async def expand_lesson(input: ExpandLessonInput) -> ExpandLessonOutput:
         topic=input.topic,
         audience=input.audience,
         rag_context=input.rag_context,
+        strict_knowledge_only=input.strict_knowledge_only,
     )
 
     result = await AgentRegistry.get("lesson-expansion").run(prompt, model=model)
