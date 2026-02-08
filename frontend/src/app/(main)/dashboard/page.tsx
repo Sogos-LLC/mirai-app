@@ -7,6 +7,7 @@ import { CourseStatus } from '@/gen/mirai/v1/course_pb';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
 import { ActiveWorkflowCard } from '@/components/course/ActiveWorkflowCard';
+import { GapTaskList } from '@/components/dashboard/GapTaskList';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
@@ -182,6 +183,9 @@ export default function Dashboard() {
 
       {/* Active Workflow Card */}
       {activeJob && <ActiveWorkflowCard job={activeJob} />}
+
+      {/* Assigned Gap Tasks */}
+      <GapTaskList />
 
       {/* Your Courses Section */}
       <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-200 dark:border-dark-border p-6">

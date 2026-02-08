@@ -198,6 +198,7 @@ const (
 	GenerationJobStatusFailed           GenerationJobStatus = "failed"
 	GenerationJobStatusCancelled        GenerationJobStatus = "cancelled"
 	GenerationJobStatusAwaitingApproval GenerationJobStatus = "awaiting_approval"
+	GenerationJobStatusDeferred         GenerationJobStatus = "deferred"
 )
 
 func (e *GenerationJobStatus) Scan(src interface{}) error {
@@ -626,6 +627,21 @@ type Invitation struct {
 	ExpiresAt        time.Time     `db:"expires_at" json:"expires_at"`
 	CreatedAt        time.Time     `db:"created_at" json:"created_at"`
 	UpdatedAt        time.Time     `db:"updated_at" json:"updated_at"`
+}
+
+type KnowledgeGapTask struct {
+	ID                uuid.UUID     `db:"id" json:"id"`
+	TenantID          uuid.UUID     `db:"tenant_id" json:"tenant_id"`
+	CourseID          uuid.UUID     `db:"course_id" json:"course_id"`
+	GapDescription    string        `db:"gap_description" json:"gap_description"`
+	AssignedToUserID  uuid.UUID     `db:"assigned_to_user_id" json:"assigned_to_user_id"`
+	AssignedByUserID  uuid.UUID     `db:"assigned_by_user_id" json:"assigned_by_user_id"`
+	TargetTeamID      uuid.NullUUID `db:"target_team_id" json:"target_team_id"`
+	Status            string        `db:"status" json:"status"`
+	KnowledgeSourceID uuid.NullUUID `db:"knowledge_source_id" json:"knowledge_source_id"`
+	CreatedAt         time.Time     `db:"created_at" json:"created_at"`
+	UpdatedAt         time.Time     `db:"updated_at" json:"updated_at"`
+	CompletedAt       **time.Time   `db:"completed_at" json:"completed_at"`
 }
 
 // Knowledge sources can be scoped to: course (course_id), session (session_id), team (team_id), or global/tenant (all NULL)

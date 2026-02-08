@@ -1,0 +1,2 @@
+-- Cannot remove enum values in PostgreSQL; this is a no-op
+-- The 'deferred' value will remain but be unused after rollback

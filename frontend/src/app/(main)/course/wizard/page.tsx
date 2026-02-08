@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMachine } from '@xstate/react';
 import { fromPromise } from 'xstate';
 import {
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
 import { KnowledgeSelectionModal } from '@/components/course/KnowledgeSelectionModal';
+import { GapAssignmentModal } from '@/components/course/GapAssignmentModal';
 import { PageShell } from '@/components/layout/PageShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -33,7 +34,7 @@ import {
   useRejectWorkflowStep,
   useWorkflowState,
 } from '@/hooks/useCourseCreation';
-import { useCreateCourse } from '@/hooks/useCourses';
+import { useCreateCourse, useGetCourse } from '@/hooks/useCourses';
 import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
 import {
   GenerationJobStatus,
@@ -42,6 +43,8 @@ import {
 
 export default function CourseWizardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resumeCourseId = searchParams.get('courseId');
 
   // Form state — 3 fields matching the new 5-step design
   const [topic, setTopic] = useState('');
@@ -50,6 +53,16 @@ export default function CourseWizardPage() {
   const [enableWebResearch, setEnableWebResearch] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+
+  // Resume flow: load course data from URL param to pre-fill form
+  const { data: resumeCourse } = useGetCourse(resumeCourseId ?? undefined);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only pre-fill on initial course load
+  useEffect(() => {
+    if (resumeCourse?.settings?.title && !topic) {
+      setTopic(resumeCourse.settings.title);
+    }
+  }, [resumeCourse]);
 
   // Connect-Query mutations
   const createCourse = useCreateCourse();
@@ -67,6 +80,8 @@ export default function CourseWizardPage() {
   const [selectedTeamDocIds, setSelectedTeamDocIds] = useState<string[]>([]);
   const [selectedGlobalDocIds, setSelectedGlobalDocIds] = useState<string[]>([]);
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
+  const [showGapAssignment, setShowGapAssignment] = useState(false);
+  const [gapDescriptions, setGapDescriptions] = useState<string[]>([]);
   const totalSelectedDocs = selectedTeamDocIds.length + selectedGlobalDocIds.length;
 
   // XState machine with real actor implementations
@@ -143,12 +158,15 @@ export default function CourseWizardPage() {
     setStartError(null);
 
     try {
-      // 1. Create a course record in the DB
-      const courseResult = await createCourse.mutate({
-        settings: { title: topicVal },
-      });
-      const courseId = courseResult.course?.id;
-      if (!courseId) throw new Error('Failed to create course');
+      // 1. Reuse existing course if resuming, otherwise create new
+      let courseId = resumeCourseId ?? undefined;
+      if (!courseId) {
+        const courseResult = await createCourse.mutate({
+          settings: { title: topicVal },
+        });
+        courseId = courseResult.course?.id;
+        if (!courseId) throw new Error('Failed to create course');
+      }
 
       // 2. Start the unified AI workflow
       const result = await startCreation.mutate({
@@ -169,13 +187,17 @@ export default function CourseWizardPage() {
           jobId: result.job.id,
           courseId,
         });
+        // Clean up resume URL param
+        if (resumeCourseId) {
+          router.replace('/course/wizard', { scroll: false });
+        }
       }
     } catch (err) {
       setStartError(err instanceof Error ? err.message : 'Failed to start course creation');
     } finally {
       setIsStarting(false);
     }
-  }, [topic, audience, useContext, enableInternalKnowledge, strictKnowledgeOnly, selectedTeamDocIds, selectedGlobalDocIds, enableWebResearch, createCourse, startCreation, send]);
+  }, [topic, audience, useContext, enableInternalKnowledge, strictKnowledgeOnly, selectedTeamDocIds, selectedGlobalDocIds, enableWebResearch, resumeCourseId, createCourse, startCreation, send, router]);
 
   // Approve current step
   const handleApprove = useCallback(() => {
@@ -191,6 +213,18 @@ export default function CourseWizardPage() {
     send({ type: 'REJECT', feedback: feedback.trim() });
     setFeedback('');
   }, [feedback, send]);
+
+  // Open gap assignment modal
+  const handleAssignGaps = useCallback((gaps: string[]) => {
+    setGapDescriptions(gaps);
+    setShowGapAssignment(true);
+  }, []);
+
+  // Defer workflow: send __DEFERRED__ rejection to save draft
+  const handleDefer = useCallback(() => {
+    setShowGapAssignment(false);
+    send({ type: 'REJECT', feedback: '__DEFERRED__' });
+  }, [send]);
 
   // Step-specific labels for approval UI
   const pendingStep = state.context.pendingStep;
@@ -240,6 +274,18 @@ export default function CourseWizardPage() {
           <>
             <CardContent>
               <div className="max-w-2xl mx-auto">
+                {/* Resume banner */}
+                {resumeCourseId && resumeCourse && (
+                  <div className="mb-6 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                      Resuming course creation
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                      Knowledge gaps have been addressed. Generate again with enriched sources.
+                    </p>
+                  </div>
+                )}
+
                 {/* Hero icon + heading */}
                 <div className="flex flex-col items-center text-center mb-8">
                   <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
@@ -502,6 +548,7 @@ export default function CourseWizardPage() {
                 <StepDataRenderer
                   step={state.context.pendingStep}
                   data={state.context.stepData}
+                  onAssignGaps={state.context.pendingStep === WorkflowStepType.INTENT_ANALYSIS ? handleAssignGaps : undefined}
                 />
               </CardContent>
             )}
@@ -664,6 +711,16 @@ export default function CourseWizardPage() {
             setShowKnowledgeModal(false);
           }}
           onClose={() => setShowKnowledgeModal(false)}
+        />
+      )}
+
+      {/* Gap assignment modal */}
+      {showGapAssignment && state.context.courseId && (
+        <GapAssignmentModal
+          courseId={state.context.courseId}
+          gaps={gapDescriptions}
+          onClose={() => setShowGapAssignment(false)}
+          onDefer={handleDefer}
         />
       )}
     </PageShell>

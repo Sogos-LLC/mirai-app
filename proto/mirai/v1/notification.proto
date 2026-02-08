@@ -13,6 +13,8 @@ enum NotificationType {
   NOTIFICATION_TYPE_APPROVAL_REQUESTED = 8; // Content awaiting approval
   NOTIFICATION_TYPE_EXPORT_COMPLETE = 9; // Course export complete, ready for download
   NOTIFICATION_TYPE_EXPORT_FAILED = 10; // Course export failed
+  NOTIFICATION_TYPE_GAP_TASK_ASSIGNED = 11; // Knowledge gap task assigned to user
+  NOTIFICATION_TYPE_GAP_TASK_COMPLETED = 12; // Knowledge gap task completed by assignee
 }
 
 // NotificationPriority indicates urgency.

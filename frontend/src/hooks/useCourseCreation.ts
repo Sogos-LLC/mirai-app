@@ -201,7 +201,7 @@ export function useWorkflowState(jobId: string | null, enabled: boolean) {
       enabled: enabled && !!jobId,
       refetchInterval: (query) => {
         const status = query.state.data?.status;
-        if (status === 'completed' || status === 'failed') return false;
+        if (status === 'completed' || status === 'failed' || status === 'deferred') return false;
         return 2000;
       },
     },

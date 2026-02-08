@@ -239,6 +239,22 @@ class CourseCreationWorkflow:
 
         analysis = await self._step_intent_analysis(api_key, input)
 
+        # Handle deferral: user chose to assign gaps to SMEs and save draft
+        if analysis is None:
+            self._status = "deferred"
+            self._progress = 10
+            self._progress_message = "Saved as draft — waiting for knowledge gaps to be filled"
+            await self._update_job(
+                input, "DEFERRED", 10,
+                "Saved as draft — waiting for knowledge gaps to be filled",
+            )
+            await workflow.wait_condition(workflow.all_handlers_finished)
+            return CourseCreationOutput(
+                course_id=input.course_id,
+                total_lessons=0,
+                total_sections=0,
+            )
+
         # =============================================================
         # STEP 2: Define Success → CourseOutcomes
         # =============================================================
@@ -313,7 +329,7 @@ class CourseCreationWorkflow:
 
     async def _step_intent_analysis(
         self, api_key: str, input: CourseCreationInput,
-    ) -> CourseAnalysis:
+    ) -> CourseAnalysis | None:
         self._set_progress(5, "Analyzing course intent...")
         await self._update_job(input, "PROCESSING", 5, "Analyzing course intent")
 
@@ -360,6 +376,10 @@ class CourseCreationWorkflow:
             10,
         )
 
+        # Check for deferred: user chose to assign gaps to SMEs
+        if approval and not approval.approved and approval.feedback == "__DEFERRED__":
+            return None
+
         if approval and not approval.approved and approval.feedback:
             # Regenerate with feedback
             analysis_result = await self._run_ai_activity(
@@ -387,6 +407,10 @@ class CourseCreationWorkflow:
                 json.dumps(step_data),
                 10,
             )
+
+            # Check for deferred after retry
+            if approval and not approval.approved and approval.feedback == "__DEFERRED__":
+                return None
 
         # Apply user modifications if any
         analysis = analysis_result.analysis

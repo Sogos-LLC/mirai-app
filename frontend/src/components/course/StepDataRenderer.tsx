@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   FileSearch,
   Lightbulb,
+  Users,
 } from 'lucide-react';
 import { WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
@@ -115,12 +116,13 @@ interface StepDataRendererProps {
   step: WorkflowStepType;
   data: Record<string, unknown>;
   onModificationsChange?: (mods: Record<string, string>) => void;
+  onAssignGaps?: (gaps: string[]) => void;
 }
 
-export function StepDataRenderer({ step, data, onModificationsChange }: StepDataRendererProps) {
+export function StepDataRenderer({ step, data, onModificationsChange, onAssignGaps }: StepDataRendererProps) {
   switch (step) {
     case WorkflowStepType.INTENT_ANALYSIS:
-      return <AnalysisStep data={data as unknown as AnalysisStepData} onModificationsChange={onModificationsChange} />;
+      return <AnalysisStep data={data as unknown as AnalysisStepData} onModificationsChange={onModificationsChange} onAssignGaps={onAssignGaps} />;
     case WorkflowStepType.DEFINE_SUCCESS:
       return <OutcomesStep data={data as unknown as OutcomesStepData} />;
     case WorkflowStepType.APPROVE_STRUCTURE:
@@ -142,7 +144,7 @@ export function StepDataRenderer({ step, data, onModificationsChange }: StepData
 // Step 1: Course Analysis
 // ============================================================
 
-function KnowledgeCoveragePanel({ coverage }: { coverage: KnowledgeCoverage }) {
+function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: KnowledgeCoverage; onAssignGaps?: (gaps: string[]) => void }) {
   const assessmentConfig = {
     comprehensive: {
       icon: ShieldCheck,
@@ -242,11 +244,23 @@ function KnowledgeCoveragePanel({ coverage }: { coverage: KnowledgeCoverage }) {
           </div>
         </div>
       )}
+
+      {/* Assign gaps button */}
+      {coverage.gaps.length > 0 && onAssignGaps && coverage.coverage_assessment !== 'comprehensive' && (
+        <button
+          type="button"
+          onClick={() => onAssignGaps(coverage.gaps)}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 transition-colors min-h-[36px]"
+        >
+          <Users className="w-3.5 h-3.5" />
+          Assign Gaps to Team
+        </button>
+      )}
     </div>
   );
 }
 
-function AnalysisStep({ data, onModificationsChange }: { data: AnalysisStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
+function AnalysisStep({ data, onModificationsChange, onAssignGaps }: { data: AnalysisStepData; onModificationsChange?: (mods: Record<string, string>) => void; onAssignGaps?: (gaps: string[]) => void }) {
   const [purpose, setPurpose] = useState(data.purpose_statement ?? '');
 
   const handlePurposeChange = useCallback((val: string) => {
@@ -257,7 +271,7 @@ function AnalysisStep({ data, onModificationsChange }: { data: AnalysisStepData;
   return (
     <div className="space-y-5">
       {data.knowledge_coverage && (
-        <KnowledgeCoveragePanel coverage={data.knowledge_coverage} />
+        <KnowledgeCoveragePanel coverage={data.knowledge_coverage} onAssignGaps={onAssignGaps} />
       )}
 
       <div>

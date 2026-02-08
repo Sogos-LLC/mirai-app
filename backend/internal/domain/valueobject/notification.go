@@ -19,6 +19,8 @@ const (
 	NotificationTypeChangesRequested         NotificationType = "changes_requested"
 	NotificationTypeExportComplete           NotificationType = "export_complete"
 	NotificationTypeExportFailed             NotificationType = "export_failed"
+	NotificationTypeGapTaskAssigned          NotificationType = "gap_task_assigned"
+	NotificationTypeGapTaskCompleted         NotificationType = "gap_task_completed"
 )
 
 func (t NotificationType) String() string {
@@ -33,7 +35,8 @@ func (t NotificationType) IsValid() bool {
 		NotificationTypeGenerationFailed, NotificationTypeApprovalRequested,
 		NotificationTypeSubmissionReadyForReview, NotificationTypeSubmissionApproved,
 		NotificationTypeChangesRequested, NotificationTypeExportComplete,
-		NotificationTypeExportFailed:
+		NotificationTypeExportFailed, NotificationTypeGapTaskAssigned,
+		NotificationTypeGapTaskCompleted:
 		return true
 	}
 	return false

@@ -33,6 +33,8 @@ const (
 	NotificationType_NOTIFICATION_TYPE_APPROVAL_REQUESTED  NotificationType = 8  // Content awaiting approval
 	NotificationType_NOTIFICATION_TYPE_EXPORT_COMPLETE     NotificationType = 9  // Course export complete, ready for download
 	NotificationType_NOTIFICATION_TYPE_EXPORT_FAILED       NotificationType = 10 // Course export failed
+	NotificationType_NOTIFICATION_TYPE_GAP_TASK_ASSIGNED   NotificationType = 11 // Knowledge gap task assigned to user
+	NotificationType_NOTIFICATION_TYPE_GAP_TASK_COMPLETED  NotificationType = 12 // Knowledge gap task completed by assignee
 )
 
 // Enum value maps for NotificationType.
@@ -45,6 +47,8 @@ var (
 		8:  "NOTIFICATION_TYPE_APPROVAL_REQUESTED",
 		9:  "NOTIFICATION_TYPE_EXPORT_COMPLETE",
 		10: "NOTIFICATION_TYPE_EXPORT_FAILED",
+		11: "NOTIFICATION_TYPE_GAP_TASK_ASSIGNED",
+		12: "NOTIFICATION_TYPE_GAP_TASK_COMPLETED",
 	}
 	NotificationType_value = map[string]int32{
 		"NOTIFICATION_TYPE_UNSPECIFIED":         0,
@@ -54,6 +58,8 @@ var (
 		"NOTIFICATION_TYPE_APPROVAL_REQUESTED":  8,
 		"NOTIFICATION_TYPE_EXPORT_COMPLETE":     9,
 		"NOTIFICATION_TYPE_EXPORT_FAILED":       10,
+		"NOTIFICATION_TYPE_GAP_TASK_ASSIGNED":   11,
+		"NOTIFICATION_TYPE_GAP_TASK_COMPLETED":  12,
 	}
 )
 
@@ -976,7 +982,7 @@ const file_mirai_v1_notification_proto_rawDesc = "" +
 	"\fmarked_count\x18\x01 \x01(\x05R\vmarkedCount\"D\n" +
 	"\x19DeleteNotificationRequest\x12'\n" +
 	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\"\x1c\n" +
-	"\x1aDeleteNotificationResponse*\xa4\x02\n" +
+	"\x1aDeleteNotificationResponse*\xf7\x02\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fNOTIFICATION_TYPE_OUTLINE_READY\x10\x05\x12)\n" +
@@ -985,7 +991,9 @@ const file_mirai_v1_notification_proto_rawDesc = "" +
 	"$NOTIFICATION_TYPE_APPROVAL_REQUESTED\x10\b\x12%\n" +
 	"!NOTIFICATION_TYPE_EXPORT_COMPLETE\x10\t\x12#\n" +
 	"\x1fNOTIFICATION_TYPE_EXPORT_FAILED\x10\n" +
-	"*\x9e\x01\n" +
+	"\x12'\n" +
+	"#NOTIFICATION_TYPE_GAP_TASK_ASSIGNED\x10\v\x12(\n" +
+	"$NOTIFICATION_TYPE_GAP_TASK_COMPLETED\x10\f*\x9e\x01\n" +
 	"\x14NotificationPriority\x12%\n" +
 	"!NOTIFICATION_PRIORITY_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19NOTIFICATION_PRIORITY_LOW\x10\x01\x12 \n" +

@@ -47,6 +47,7 @@ type ServerConfig struct {
 	AIGenerationService    *service.AIGenerationService
 	KnowledgeSourceService *service.KnowledgeSourceService
 	TeamKnowledgeService   *service.TeamKnowledgeService
+	KnowledgeGapService    *service.KnowledgeGapService
 	CurriculumService      *service.CurriculumService
 	BaseStorage            StorageAdapter // For knowledge source presigned URLs
 
@@ -167,6 +168,15 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	if cfg.TeamKnowledgeService != nil && cfg.TeamService != nil && cfg.BaseStorage != nil {
 		path, handler = miraiv1connect.NewTeamKnowledgeServiceHandler(
 			NewTeamKnowledgeServiceServer(cfg.TeamKnowledgeService, cfg.TeamService, cfg.BaseStorage, cfg.WorkflowStarter),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// KnowledgeGapService - knowledge gap task management
+	if cfg.KnowledgeGapService != nil {
+		path, handler = miraiv1connect.NewKnowledgeGapServiceHandler(
+			NewKnowledgeGapServiceServer(cfg.KnowledgeGapService),
 			interceptors,
 		)
 		mux.Handle(path, handler)

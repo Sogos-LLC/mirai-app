@@ -106,6 +106,7 @@ func main() {
 	generationJobRepo := sqlc.NewGenerationJobRepository(db.DB)
 	knowledgeRepo := sqlc.NewKnowledgeSourceRepository(db.DB)
 	teamKnowledgeRepo := sqlc.NewTeamKnowledgeRepository(db.DB)
+	gapTaskRepo := sqlc.NewKnowledgeGapTaskRepository(db.DB)
 
 	// Initialize shared HTTP client
 	httpClient := httputil.NewClient()
@@ -285,6 +286,10 @@ func main() {
 	// Notification service
 	notificationService := service.NewNotificationService(userRepo, notificationRepo, kratosClient, emailClient, notificationPubSub, cfg.FrontendURL, logger)
 
+	// Knowledge gap service
+	knowledgeGapService := service.NewKnowledgeGapService(gapTaskRepo, userRepo, notificationService, kratosClient, logger)
+	logger.Info("knowledge gap service initialized")
+
 	// SCORM packager for course exports
 	scormPackager := scorm.NewPackager()
 
@@ -413,6 +418,7 @@ func main() {
 		AIGenerationService:    aiGenerationService,
 		KnowledgeSourceService: knowledgeSourceService,
 		TeamKnowledgeService:   teamKnowledgeService,
+		KnowledgeGapService:    knowledgeGapService,
 		CurriculumService:      curriculumService,
 		BaseStorage:            baseStorage,
 		PendingRegRepo:         pendingRegRepo,

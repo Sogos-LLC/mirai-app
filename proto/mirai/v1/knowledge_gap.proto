@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// KnowledgeGapTaskStatus represents the status of a knowledge gap task.
+enum KnowledgeGapTaskStatus {
+  KNOWLEDGE_GAP_TASK_STATUS_UNSPECIFIED = 0;
+  KNOWLEDGE_GAP_TASK_STATUS_PENDING = 1;
+  KNOWLEDGE_GAP_TASK_STATUS_IN_PROGRESS = 2;
+  KNOWLEDGE_GAP_TASK_STATUS_COMPLETED = 3;
+}
+
+// KnowledgeGapTask represents a task assigned to an SME to fill a knowledge gap.
+message KnowledgeGapTask {
+  string id = 1;
+  string course_id = 2;
+  string gap_description = 3;
+  string assigned_to_user_id = 4;
+  string assigned_by_user_id = 5;
+  string target_team_id = 6;
+  KnowledgeGapTaskStatus status = 7;
+  optional string knowledge_source_id = 8;
+  optional string assigned_to_name = 9;
+  optional string assigned_to_email = 10;
+  google.protobuf.Timestamp created_at = 11;
+  optional google.protobuf.Timestamp completed_at = 12;
+}
+
+// GapTaskInput is used when creating gap tasks in bulk.
+message GapTaskInput {
+  string gap_description = 1;
+  string assigned_to_user_id = 2;
+}
+
+// KnowledgeGapService manages knowledge gap tasks.
+service KnowledgeGapService {
+  // CreateGapTasks creates gap tasks in bulk from Step 1 analysis gaps.
+  rpc CreateGapTasks(CreateGapTasksRequest) returns (CreateGapTasksResponse);
+
+  // ListGapTasksForUser returns gap tasks assigned to the current user.
+  rpc ListGapTasksForUser(ListGapTasksForUserRequest) returns (ListGapTasksForUserResponse);
+
+  // ListGapTasksForCourse returns gap tasks for a specific course.
+  rpc ListGapTasksForCourse(ListGapTasksForCourseRequest) returns (ListGapTasksForCourseResponse);
+
+  // CompleteGapTask marks a gap task as completed after knowledge upload.
+  rpc CompleteGapTask(CompleteGapTaskRequest) returns (CompleteGapTaskResponse);
+}
+
+// CreateGapTasksRequest contains the bulk gap task creation parameters.
+message CreateGapTasksRequest {
+  string course_id = 1;
+  string target_team_id = 2;
+  repeated GapTaskInput tasks = 3;
+}
+
+// CreateGapTasksResponse contains the created gap tasks.
+message CreateGapTasksResponse {
+  repeated KnowledgeGapTask tasks = 1;
+}
+
+// ListGapTasksForUserRequest contains optional status filter.
+message ListGapTasksForUserRequest {
+  optional KnowledgeGapTaskStatus status = 1;
+}
+
+// ListGapTasksForUserResponse contains the user's assigned gap tasks.
+message ListGapTasksForUserResponse {
+  repeated KnowledgeGapTask tasks = 1;
+}
+
+// ListGapTasksForCourseRequest contains the course ID.
+message ListGapTasksForCourseRequest {
+  string course_id = 1;
+}
+
+// ListGapTasksForCourseResponse contains the course's gap tasks.
+message ListGapTasksForCourseResponse {
+  repeated KnowledgeGapTask tasks = 1;
+}
+
+// CompleteGapTaskRequest marks a gap task as completed.
+message CompleteGapTaskRequest {
+  string task_id = 1;
+  optional string knowledge_source_id = 2;
+}
+
+// CompleteGapTaskResponse contains the updated gap task.
+message CompleteGapTaskResponse {
+  KnowledgeGapTask task = 1;
+}

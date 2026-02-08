@@ -25,6 +25,7 @@ type Querier interface {
 	// Atomic claim: UPDATE with subquery SELECT FOR UPDATE SKIP LOCKED
 	// This ensures only one worker can claim each job
 	ClaimQueuedJob(ctx context.Context) (GenerationJob, error)
+	CompleteGapTask(ctx context.Context, arg CompleteGapTaskParams) (KnowledgeGapTask, error)
 	// Count active wizards for a tenant (for analytics)
 	CountActiveWizards(ctx context.Context, tenantID uuid.UUID) (int32, error)
 	CountAuditLogByCourse(ctx context.Context, courseID uuid.UUID) (int64, error)
@@ -37,6 +38,7 @@ type Querier interface {
 	// Count sources for a team
 	CountKnowledgeSourcesByTeam(ctx context.Context, teamID uuid.NullUUID) (int32, error)
 	CountNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
+	CountPendingGapTasksByCourse(ctx context.Context, courseID uuid.UUID) (int32, error)
 	CountPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) (int32, error)
 	CountUnreadNotificationsByUserID(ctx context.Context, userID uuid.UUID) (int32, error)
 	CountUsersByCompanyID(ctx context.Context, companyID uuid.NullUUID) (int32, error)
@@ -55,6 +57,10 @@ type Querier interface {
 	// Folder CRUD operations
 	// Schema: folders table with RLS isolation by tenant_id
 	CreateFolder(ctx context.Context, arg CreateFolderParams) (Folder, error)
+	// Knowledge Gap Task CRUD operations
+	// Schema: knowledge_gap_tasks table with RLS isolation by tenant_id
+	// Note: User names/emails come from Kratos identity, not the users table
+	CreateGapTask(ctx context.Context, arg CreateGapTaskParams) (KnowledgeGapTask, error)
 	// Generation Job CRUD operations
 	// Schema: generation_jobs table with RLS isolation by tenant_id
 	CreateGenerationJob(ctx context.Context, arg CreateGenerationJobParams) (GenerationJob, error)
@@ -124,6 +130,7 @@ type Querier interface {
 	// Filters PERSONAL folders to only show the user's own private folder.
 	// Defense-in-depth: explicit tenant_id filter in addition to RLS
 	GetFolderHierarchy(ctx context.Context, arg GetFolderHierarchyParams) ([]Folder, error)
+	GetGapTaskByID(ctx context.Context, id uuid.UUID) (KnowledgeGapTask, error)
 	GetGenerationJobByID(ctx context.Context, id uuid.UUID) (GenerationJob, error)
 	GetInvitationByID(ctx context.Context, id uuid.UUID) (Invitation, error)
 	GetInvitationByToken(ctx context.Context, token string) (Invitation, error)
@@ -179,6 +186,8 @@ type Querier interface {
 	ListCoursesByTeamID(ctx context.Context, teamID uuid.NullUUID) ([]Course, error)
 	// Defense-in-depth: explicit tenant_id filter in addition to RLS
 	ListFoldersByParentID(ctx context.Context, arg ListFoldersByParentIDParams) ([]Folder, error)
+	ListGapTasksByCourse(ctx context.Context, courseID uuid.UUID) ([]KnowledgeGapTask, error)
+	ListGapTasksByUser(ctx context.Context, arg ListGapTasksByUserParams) ([]KnowledgeGapTask, error)
 	ListGenerationJobs(ctx context.Context, arg ListGenerationJobsParams) ([]GenerationJob, error)
 	ListGenerationJobsByParentID(ctx context.Context, parentJobID uuid.NullUUID) ([]GenerationJob, error)
 	// List all global knowledge sources (team_id IS NULL)
