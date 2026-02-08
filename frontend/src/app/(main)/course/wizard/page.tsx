@@ -36,6 +36,8 @@ import {
 } from '@/hooks/useCourseCreation';
 import { useCreateCourse, useGetCourse } from '@/hooks/useCourses';
 import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
+import { useListGapTasksForCourse } from '@/hooks/useKnowledgeGapTasks';
+import { KnowledgeGapTaskStatus } from '@/gen/mirai/v1/knowledge_gap_pb';
 import {
   GenerationJobStatus,
   WorkflowStepType,
@@ -56,6 +58,13 @@ export default function CourseWizardPage() {
 
   // Resume flow: load course data from URL param to pre-fill form
   const { data: resumeCourse } = useGetCourse(resumeCourseId ?? undefined);
+  const { data: gapTasks } = useListGapTasksForCourse(resumeCourseId ?? '');
+
+  const pendingGapTasks = gapTasks.filter(
+    (t) => t.status === KnowledgeGapTaskStatus.PENDING || t.status === KnowledgeGapTaskStatus.IN_PROGRESS
+  );
+  const completedGapTasks = gapTasks.filter((t) => t.status === KnowledgeGapTaskStatus.COMPLETED);
+  const allGapsAddressed = gapTasks.length > 0 && pendingGapTasks.length === 0;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only pre-fill on initial course load
   useEffect(() => {
@@ -283,12 +292,34 @@ export default function CourseWizardPage() {
               <div className="max-w-2xl mx-auto">
                 {/* Resume banner */}
                 {resumeCourseId && resumeCourse && (
-                  <div className="mb-6 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  <div className={`mb-6 rounded-lg border p-4 ${
+                    allGapsAddressed
+                      ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+                      : pendingGapTasks.length > 0
+                        ? 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'
+                        : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                  }`}>
+                    <p className={`text-sm font-medium ${
+                      allGapsAddressed
+                        ? 'text-green-800 dark:text-green-300'
+                        : pendingGapTasks.length > 0
+                          ? 'text-amber-800 dark:text-amber-300'
+                          : 'text-blue-800 dark:text-blue-300'
+                    }`}>
                       Resuming course creation
                     </p>
-                    <p className="text-xs text-green-700 dark:text-green-400 mt-1">
-                      Knowledge gaps have been addressed. Generate again with enriched sources.
+                    <p className={`text-xs mt-1 ${
+                      allGapsAddressed
+                        ? 'text-green-700 dark:text-green-400'
+                        : pendingGapTasks.length > 0
+                          ? 'text-amber-700 dark:text-amber-400'
+                          : 'text-blue-700 dark:text-blue-400'
+                    }`}>
+                      {allGapsAddressed
+                        ? `All ${completedGapTasks.length} knowledge gaps addressed. Generate again with enriched sources.`
+                        : pendingGapTasks.length > 0
+                          ? `${pendingGapTasks.length} of ${gapTasks.length} knowledge gap${gapTasks.length !== 1 ? ' tasks' : ' task'} still outstanding. You can wait or regenerate now.`
+                          : 'Your draft course is ready to resume.'}
                     </p>
                   </div>
                 )}

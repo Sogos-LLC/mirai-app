@@ -10,6 +10,8 @@ import {
   ChevronRight,
   FileText,
   BookOpen,
+  MessageSquare,
+  X,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
@@ -100,7 +102,7 @@ function ExistingKnowledgeSection({ teamId }: { teamId: string }) {
 }
 
 // =============================================================================
-// Task Card — notes field always visible, upload doesn't auto-complete
+// Task Card — upload, add note, and mark complete are separate actions
 // =============================================================================
 
 function TaskCard({
@@ -108,15 +110,20 @@ function TaskCard({
   onUpload,
   onComplete,
   isCompleting,
+  hasUploaded,
 }: {
   task: KnowledgeGapTask;
   onUpload: (task: KnowledgeGapTask) => void;
   onComplete: (taskId: string, notes?: string) => void;
   isCompleting: boolean;
+  hasUploaded: boolean;
 }) {
+  const [showNoteField, setShowNoteField] = useState(false);
   const [notes, setNotes] = useState('');
   const badge = getStatusBadge(task.status);
   const BadgeIcon = badge.icon;
+
+  const canComplete = hasUploaded || notes.trim().length > 0;
 
   return (
     <div className="rounded-lg border bg-page p-4">
@@ -151,16 +158,37 @@ function TaskCard({
           <BadgeIcon className="w-3 h-3" />
           {badge.label}
         </span>
+        {hasUploaded && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20">
+            <Upload className="w-3 h-3" />
+            Document uploaded
+          </span>
+        )}
       </div>
 
-      {/* Optional notes */}
-      <textarea
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="Add a note (optional)"
-        rows={2}
-        className="w-full px-3 py-2 bg-surface border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none leading-relaxed mb-3"
-      />
+      {/* Note field — toggled via Add Note button */}
+      {showNoteField && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-medium text-secondary">Note</label>
+            <button
+              type="button"
+              onClick={() => { setShowNoteField(false); setNotes(''); }}
+              className="text-muted hover:text-secondary transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Explain how this gap was addressed..."
+            rows={2}
+            className="w-full px-3 py-2 bg-surface border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none leading-relaxed"
+            autoFocus
+          />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-2">
@@ -174,12 +202,24 @@ function TaskCard({
           <Upload className="w-3.5 h-3.5" />
           Upload Document
         </Button>
+        {!showNoteField && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowNoteField(true)}
+            className="gap-1.5"
+            disabled={isCompleting}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            Add Note
+          </Button>
+        )}
         <Button
           variant="primary"
           size="sm"
           onClick={() => onComplete(task.id, notes.trim() || undefined)}
           className="gap-1.5"
-          disabled={isCompleting}
+          disabled={isCompleting || !canComplete}
         >
           {isCompleting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -212,6 +252,7 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
 
   const [uploadingTask, setUploadingTask] = useState<KnowledgeGapTask | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedTaskIds, setUploadedTaskIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback((task: KnowledgeGapTask) => {
@@ -227,11 +268,14 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
     e.target.value = '';
   }, []);
 
-  // Upload finishes — just close the upload modal, don't complete the task
+  // Upload finishes — mark this task as having an uploaded doc
   const handleUploadSuccess = useCallback(() => {
+    if (uploadingTask) {
+      setUploadedTaskIds((prev) => new Set(prev).add(uploadingTask.id));
+    }
     setUploadingTask(null);
     setSelectedFile(null);
-  }, []);
+  }, [uploadingTask]);
 
   const handleUploadClose = useCallback(() => {
     setUploadingTask(null);
@@ -267,6 +311,7 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
               onUpload={handleFileSelect}
               onComplete={handleComplete}
               isCompleting={completeTask.isPending}
+              hasUploaded={uploadedTaskIds.has(task.id)}
             />
           ))}
         </div>
