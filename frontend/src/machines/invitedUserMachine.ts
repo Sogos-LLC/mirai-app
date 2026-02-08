@@ -268,7 +268,6 @@ export const invitedUserMachine = createMachine({
             firstName: ({ event }) => event.firstName,
             lastName: ({ event }) => event.lastName,
             password: ({ event }) => event.password,
-            error: null,
           }),
         },
         SUBMIT: {

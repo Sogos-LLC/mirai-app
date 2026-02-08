@@ -360,6 +360,15 @@ export default function AcceptInvitePage() {
               {invitedUser.error && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm text-red-600">{invitedUser.error.message}</p>
+                  {(invitedUser.error.message.toLowerCase().includes('already exists') ||
+                    invitedUser.error.message.toLowerCase().includes('login failed')) && (
+                    <a
+                      href={`/auth/login?return_to=${encodeURIComponent(`/auth/accept-invite?token=${token}`)}`}
+                      className="mt-2 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                    >
+                      Sign in instead
+                    </a>
+                  )}
                 </div>
               )}
 
