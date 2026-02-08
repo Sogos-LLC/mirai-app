@@ -40,6 +40,7 @@ import {
   useStartCourseCreation,
   useApproveWorkflowStep,
   useRejectWorkflowStep,
+  useResumeWorkflowDeferral,
   useWorkflowState,
 } from '@/hooks/useCourseCreation';
 import { useCreateCourse } from '@/hooks/useCourses';
@@ -52,7 +53,6 @@ import {
   useGenerateToneOptions,
   useDeleteWizardState,
   useSaveWizardState,
-  useGetWizardState,
   buildWizardStepData,
 } from '@/hooks/useCourseWizard';
 import { useListGapTasksForCourse } from '@/hooks/useKnowledgeGapTasks';
@@ -78,7 +78,7 @@ export default function CourseWizardPage() {
   const genToneOptions = useGenerateToneOptions();
   const deleteState = useDeleteWizardState();
   const saveState = useSaveWizardState();
-  const { data: savedWizardState, isLoading: isLoadingWizardState } = useGetWizardState();
+  // savedWizardState no longer needed — deferral resume uses Temporal workflow state
 
   // =========================================================================
   // Wizard XState Machine
@@ -148,6 +148,7 @@ export default function CourseWizardPage() {
   const startCreation = useStartCourseCreation();
   const approveStep = useApproveWorkflowStep();
   const rejectStep = useRejectWorkflowStep();
+  const resumeDeferral = useResumeWorkflowDeferral();
 
   const [feedback, setFeedback] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -214,53 +215,43 @@ export default function CourseWizardPage() {
     });
   }, [resumeJob, courseJob, workflowMachineState, workflowSend]);
 
-  // Resume from deferral: restore wizard state when a deferred job is found
+  // Resume from deferral: send resume update to Temporal workflow
   const [deferralRestored, setDeferralRestored] = useState(false);
   useEffect(() => {
     if (deferralRestored) return;
     if (!resumeCourseId || !deferredJob) return;
     // Don't restore if an active job was found (takes precedence)
     if (resumeJob || courseJob) return;
-    if (isLoadingWizardState || isLoadingGapTasks) return;
+    if (isLoadingGapTasks) return;
 
-    // Compute gap task counts
+    // Compute gap task counts for the banner
     const total = gapTasks.length;
     const completed = gapTasks.filter(
       (t) => t.status === KnowledgeGapTaskStatus.COMPLETED
     ).length;
     setDeferralInfo({ totalTasks: total, completedTasks: completed });
 
-    // Restore wizard state if saved
-    if (savedWizardState?.data) {
-      const data = savedWizardState.data;
-      wizardSend({
-        type: 'RESTORE_STATE',
-        state: {
-          courseName: data.courseName,
-          improvedTitle: data.improvedTitle,
-          description: data.description,
-          desiredOutcomes: data.desiredOutcomes,
-          smePersonas: [...data.smePersonas],
-          selectedSmeIds: [...data.selectedSmeIds],
-          audiencePersonas: [...data.audiencePersonas],
-          selectedAudienceIds: [...data.selectedAudienceIds],
-          toneOptions: [...data.toneOptions],
-          selectedToneId: data.selectedToneId,
-          additionalContext: data.additionalContext,
-          enableInternalKnowledge: data.selectedTeamDocIds.length > 0 || data.selectedGlobalDocIds.length > 0,
-          selectedTeamDocIds: [...data.selectedTeamDocIds],
-          selectedGlobalDocIds: [...data.selectedGlobalDocIds],
-          strictKnowledgeOnly: data.internalDataOnly,
-        },
-        step: 5,
-      });
-      // Wizard was already completed before deferral — skip straight to workflow
-      wizardSend({ type: 'COMPLETE' });
-    }
+    // Send resume update to Temporal — wakes the workflow and re-enters combined review
+    const resumeWorkflow = async () => {
+      try {
+        await resumeDeferral.mutate(deferredJob.id);
+        // Switch to workflow phase — polling will pick up the awaiting_approval state
+        setPhase('workflow');
+        workflowSend({
+          type: 'RESUME',
+          jobId: deferredJob.id,
+          courseId: resumeCourseId,
+          status: GenerationJobStatus.PROCESSING,
+        });
+      } catch (err) {
+        setStartError(err instanceof Error ? err.message : 'Failed to resume workflow');
+      }
+    };
 
     setDeferralRestored(true);
+    resumeWorkflow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deferredJob, resumeJob, courseJob, savedWizardState, isLoadingWizardState, isLoadingGapTasks, deferralRestored, resumeCourseId, gapTasks]);
+  }, [deferredJob, resumeJob, courseJob, isLoadingGapTasks, deferralRestored, resumeCourseId, gapTasks]);
 
   // Poll Temporal workflow state
   const wfIsIdle = workflowMachineState.matches('idle');

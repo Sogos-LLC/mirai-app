@@ -200,6 +200,26 @@ func (s *AIGenerationService) RejectWorkflowStep(ctx context.Context, kratosID u
 	return nil
 }
 
+// ResumeWorkflowDeferral sends a resume update to a deferred course creation workflow.
+func (s *AIGenerationService) ResumeWorkflowDeferral(ctx context.Context, kratosID uuid.UUID, jobID uuid.UUID) error {
+	log := s.logger.With("kratosID", kratosID, "jobID", jobID)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return domainerrors.ErrUserNotFound
+	}
+
+	workflowID := fmt.Sprintf("course-creation-%s", jobID.String())
+
+	if err := s.workflowStarter.UpdateWorkflow(ctx, workflowID, "resume_workflow", nil); err != nil {
+		log.Error("failed to send workflow resume update", "error", err)
+		return domainerrors.ErrInternal.WithMessage("failed to resume deferred workflow")
+	}
+
+	log.Info("deferred workflow resumed")
+	return nil
+}
+
 // WorkflowState represents the current state of a course creation workflow.
 type WorkflowState struct {
 	Status          string

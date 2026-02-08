@@ -36,6 +36,7 @@ service AIGenerationService {
   rpc RejectWorkflowStep(RejectWorkflowStepRequest) returns (RejectWorkflowStepResponse);
   rpc GetGraphVisualization(GetGraphVisualizationRequest) returns (GetGraphVisualizationResponse);
   rpc GetWorkflowState(GetWorkflowStateRequest) returns (GetWorkflowStateResponse);
+  rpc ResumeWorkflowDeferral(ResumeWorkflowDeferralRequest) returns (ResumeWorkflowDeferralResponse);
 }
 
 // StoredWizardData represents wizard selections persisted with the course.
@@ -246,3 +247,9 @@ message GetWorkflowStateResponse {
   int32 progress_percent = 4;
   string progress_message = 5;
 }
+
+message ResumeWorkflowDeferralRequest {
+  string job_id = 1;
+}
+
+message ResumeWorkflowDeferralResponse {}

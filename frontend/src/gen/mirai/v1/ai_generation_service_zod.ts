@@ -249,3 +249,13 @@ export const GetWorkflowStateRequestSchema = z.object({
 
 export type GetWorkflowStateRequest = z.infer<typeof GetWorkflowStateRequestSchema>;
 
+/**
+ * Zod schema for ResumeWorkflowDeferralRequest
+ * @generated from message mirai.v1.ResumeWorkflowDeferralRequest
+ */
+export const ResumeWorkflowDeferralRequestSchema = z.object({
+  jobId: z.string(),
+});
+
+export type ResumeWorkflowDeferralRequest = z.infer<typeof ResumeWorkflowDeferralRequestSchema>;
+

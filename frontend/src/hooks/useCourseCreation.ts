@@ -15,6 +15,7 @@ import {
   startCourseCreation,
   approveWorkflowStep,
   rejectWorkflowStep,
+  resumeWorkflowDeferral,
   getGraphVisualization,
   getWorkflowState,
   listJobs,
@@ -25,6 +26,7 @@ import {
   StartCourseCreationRequestSchema,
   ApproveWorkflowStepRequestSchema,
   RejectWorkflowStepRequestSchema,
+  ResumeWorkflowDeferralRequestSchema,
   GetGraphVisualizationRequestSchema,
 } from '@/gen/mirai/v1/ai_generation_service_pb';
 
@@ -184,6 +186,28 @@ export function useRejectWorkflowStep() {
 }
 
 // =============================================================================
+// Resume Deferred Workflow
+// =============================================================================
+
+/**
+ * Resume a deferred course creation workflow.
+ * Sends a Temporal update to wake the workflow from its deferred state
+ * and re-enter the combined review step with the same data.
+ */
+export function useResumeWorkflowDeferral() {
+  const mutation = useMutation(resumeWorkflowDeferral);
+
+  return {
+    mutate: async (jobId: string) => {
+      const request = create(ResumeWorkflowDeferralRequestSchema, { jobId });
+      return await mutation.mutateAsync(request);
+    },
+    isPending: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+// =============================================================================
 // Graph Visualization
 // =============================================================================
 
@@ -222,7 +246,7 @@ export function useWorkflowState(jobId: string | null, enabled: boolean) {
       enabled: enabled && !!jobId,
       refetchInterval: (query) => {
         const status = query.state.data?.status;
-        if (status === 'completed' || status === 'failed' || status === 'deferred') return false;
+        if (status === 'completed' || status === 'failed') return false;
         return 2000;
       },
     },

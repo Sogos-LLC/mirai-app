@@ -100,3 +100,8 @@ export const getGraphVisualization = AIGenerationService.method.getGraphVisualiz
  * @generated from rpc mirai.v1.AIGenerationService.GetWorkflowState
  */
 export const getWorkflowState = AIGenerationService.method.getWorkflowState;
+
+/**
+ * @generated from rpc mirai.v1.AIGenerationService.ResumeWorkflowDeferral
+ */
+export const resumeWorkflowDeferral = AIGenerationService.method.resumeWorkflowDeferral;

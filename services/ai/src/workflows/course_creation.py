@@ -163,6 +163,7 @@ class CourseCreationWorkflow:
         self._step_data: str = ""
         self._progress: int = 0
         self._progress_message: str = ""
+        self._resume_requested: bool = False
         self._artifacts = LockedArtifacts()
         self._orchestrator: ResearchOrchestrator | None = None
         self._course_research: ResearchResult | None = None  # Cached top-level research
@@ -204,6 +205,15 @@ class CourseCreationWorkflow:
     def validate_reject(self, data: StepApproval) -> None:
         if self._status != "awaiting_approval":
             raise ApplicationError(f"Not in approval state: {self._status}")
+
+    @workflow.update
+    async def resume_workflow(self) -> None:
+        self._resume_requested = True
+
+    @resume_workflow.validator
+    def validate_resume(self) -> None:
+        if self._status != "deferred":
+            raise ApplicationError(f"Not in deferred state: {self._status}")
 
     # ------------------------------------------------------------------
     # Main run
@@ -267,19 +277,26 @@ class CourseCreationWorkflow:
         )
 
         # Handle deferral: user chose to assign gaps to SMEs and save draft
-        if approval and not approval.approved and approval.feedback == "__DEFERRED__":
+        # Workflow stays alive — waits for resume, then re-shows combined review
+        while approval and not approval.approved and approval.feedback == "__DEFERRED__":
             self._status = "deferred"
-            self._progress = 10
+            self._progress = 55
             self._progress_message = "Saved as draft — waiting for knowledge gaps to be filled"
             await self._update_job(
-                input, "DEFERRED", 10,
+                input, "DEFERRED", 55,
                 "Saved as draft — waiting for knowledge gaps to be filled",
             )
-            await workflow.wait_condition(workflow.all_handlers_finished)
-            return CourseCreationOutput(
-                course_id=input.course_id,
-                total_lessons=0,
-                total_sections=0,
+
+            # Wait for resume_workflow update
+            await workflow.wait_condition(lambda: self._resume_requested)
+            self._resume_requested = False
+
+            # Re-enter combined review with same data
+            await self._update_job(input, "AWAITING_APPROVAL", 55, "Review course plan")
+            approval = await self._publish_and_wait(
+                input, "combined_review",
+                json.dumps(combined_data),
+                55,
             )
 
         # Handle rejection: re-run ALL 4 generators with feedback
@@ -321,20 +338,24 @@ class CourseCreationWorkflow:
                 55,
             )
 
-            # Handle deferral after retry
-            if approval and not approval.approved and approval.feedback == "__DEFERRED__":
+            # Handle deferral after retry — same wait-for-resume pattern
+            while approval and not approval.approved and approval.feedback == "__DEFERRED__":
                 self._status = "deferred"
-                self._progress = 10
+                self._progress = 55
                 self._progress_message = "Saved as draft — waiting for knowledge gaps to be filled"
                 await self._update_job(
-                    input, "DEFERRED", 10,
+                    input, "DEFERRED", 55,
                     "Saved as draft — waiting for knowledge gaps to be filled",
                 )
-                await workflow.wait_condition(workflow.all_handlers_finished)
-                return CourseCreationOutput(
-                    course_id=input.course_id,
-                    total_lessons=0,
-                    total_sections=0,
+
+                await workflow.wait_condition(lambda: self._resume_requested)
+                self._resume_requested = False
+
+                await self._update_job(input, "AWAITING_APPROVAL", 55, "Review course plan")
+                approval = await self._publish_and_wait(
+                    input, "combined_review",
+                    json.dumps(combined_data),
+                    55,
                 )
 
         # Apply user modifications from approval

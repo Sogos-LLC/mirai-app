@@ -90,6 +90,9 @@ const (
 	// AIGenerationServiceGetWorkflowStateProcedure is the fully-qualified name of the
 	// AIGenerationService's GetWorkflowState RPC.
 	AIGenerationServiceGetWorkflowStateProcedure = "/mirai.v1.AIGenerationService/GetWorkflowState"
+	// AIGenerationServiceResumeWorkflowDeferralProcedure is the fully-qualified name of the
+	// AIGenerationService's ResumeWorkflowDeferral RPC.
+	AIGenerationServiceResumeWorkflowDeferralProcedure = "/mirai.v1.AIGenerationService/ResumeWorkflowDeferral"
 )
 
 // AIGenerationServiceClient is a client for the mirai.v1.AIGenerationService service.
@@ -114,6 +117,7 @@ type AIGenerationServiceClient interface {
 	RejectWorkflowStep(context.Context, *connect.Request[v1.RejectWorkflowStepRequest]) (*connect.Response[v1.RejectWorkflowStepResponse], error)
 	GetGraphVisualization(context.Context, *connect.Request[v1.GetGraphVisualizationRequest]) (*connect.Response[v1.GetGraphVisualizationResponse], error)
 	GetWorkflowState(context.Context, *connect.Request[v1.GetWorkflowStateRequest]) (*connect.Response[v1.GetWorkflowStateResponse], error)
+	ResumeWorkflowDeferral(context.Context, *connect.Request[v1.ResumeWorkflowDeferralRequest]) (*connect.Response[v1.ResumeWorkflowDeferralResponse], error)
 }
 
 // NewAIGenerationServiceClient constructs a client for the mirai.v1.AIGenerationService service. By
@@ -241,6 +245,12 @@ func NewAIGenerationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(aIGenerationServiceMethods.ByName("GetWorkflowState")),
 			connect.WithClientOptions(opts...),
 		),
+		resumeWorkflowDeferral: connect.NewClient[v1.ResumeWorkflowDeferralRequest, v1.ResumeWorkflowDeferralResponse](
+			httpClient,
+			baseURL+AIGenerationServiceResumeWorkflowDeferralProcedure,
+			connect.WithSchema(aIGenerationServiceMethods.ByName("ResumeWorkflowDeferral")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -265,6 +275,7 @@ type aIGenerationServiceClient struct {
 	rejectWorkflowStep     *connect.Client[v1.RejectWorkflowStepRequest, v1.RejectWorkflowStepResponse]
 	getGraphVisualization  *connect.Client[v1.GetGraphVisualizationRequest, v1.GetGraphVisualizationResponse]
 	getWorkflowState       *connect.Client[v1.GetWorkflowStateRequest, v1.GetWorkflowStateResponse]
+	resumeWorkflowDeferral *connect.Client[v1.ResumeWorkflowDeferralRequest, v1.ResumeWorkflowDeferralResponse]
 }
 
 // GenerateCourseOutline calls mirai.v1.AIGenerationService.GenerateCourseOutline.
@@ -362,6 +373,11 @@ func (c *aIGenerationServiceClient) GetWorkflowState(ctx context.Context, req *c
 	return c.getWorkflowState.CallUnary(ctx, req)
 }
 
+// ResumeWorkflowDeferral calls mirai.v1.AIGenerationService.ResumeWorkflowDeferral.
+func (c *aIGenerationServiceClient) ResumeWorkflowDeferral(ctx context.Context, req *connect.Request[v1.ResumeWorkflowDeferralRequest]) (*connect.Response[v1.ResumeWorkflowDeferralResponse], error) {
+	return c.resumeWorkflowDeferral.CallUnary(ctx, req)
+}
+
 // AIGenerationServiceHandler is an implementation of the mirai.v1.AIGenerationService service.
 type AIGenerationServiceHandler interface {
 	GenerateCourseOutline(context.Context, *connect.Request[v1.GenerateCourseOutlineRequest]) (*connect.Response[v1.GenerateCourseOutlineResponse], error)
@@ -384,6 +400,7 @@ type AIGenerationServiceHandler interface {
 	RejectWorkflowStep(context.Context, *connect.Request[v1.RejectWorkflowStepRequest]) (*connect.Response[v1.RejectWorkflowStepResponse], error)
 	GetGraphVisualization(context.Context, *connect.Request[v1.GetGraphVisualizationRequest]) (*connect.Response[v1.GetGraphVisualizationResponse], error)
 	GetWorkflowState(context.Context, *connect.Request[v1.GetWorkflowStateRequest]) (*connect.Response[v1.GetWorkflowStateResponse], error)
+	ResumeWorkflowDeferral(context.Context, *connect.Request[v1.ResumeWorkflowDeferralRequest]) (*connect.Response[v1.ResumeWorkflowDeferralResponse], error)
 }
 
 // NewAIGenerationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -507,6 +524,12 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 		connect.WithSchema(aIGenerationServiceMethods.ByName("GetWorkflowState")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aIGenerationServiceResumeWorkflowDeferralHandler := connect.NewUnaryHandler(
+		AIGenerationServiceResumeWorkflowDeferralProcedure,
+		svc.ResumeWorkflowDeferral,
+		connect.WithSchema(aIGenerationServiceMethods.ByName("ResumeWorkflowDeferral")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.AIGenerationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIGenerationServiceGenerateCourseOutlineProcedure:
@@ -547,6 +570,8 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 			aIGenerationServiceGetGraphVisualizationHandler.ServeHTTP(w, r)
 		case AIGenerationServiceGetWorkflowStateProcedure:
 			aIGenerationServiceGetWorkflowStateHandler.ServeHTTP(w, r)
+		case AIGenerationServiceResumeWorkflowDeferralProcedure:
+			aIGenerationServiceResumeWorkflowDeferralHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -630,4 +655,8 @@ func (UnimplementedAIGenerationServiceHandler) GetGraphVisualization(context.Con
 
 func (UnimplementedAIGenerationServiceHandler) GetWorkflowState(context.Context, *connect.Request[v1.GetWorkflowStateRequest]) (*connect.Response[v1.GetWorkflowStateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.GetWorkflowState is not implemented"))
+}
+
+func (UnimplementedAIGenerationServiceHandler) ResumeWorkflowDeferral(context.Context, *connect.Request[v1.ResumeWorkflowDeferralRequest]) (*connect.Response[v1.ResumeWorkflowDeferralResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.ResumeWorkflowDeferral is not implemented"))
 }

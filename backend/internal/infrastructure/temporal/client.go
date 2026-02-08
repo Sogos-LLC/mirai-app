@@ -186,12 +186,15 @@ func (s *workflowStarter) QueryWorkflow(ctx context.Context, workflowID, queryTy
 }
 
 func (s *workflowStarter) UpdateWorkflow(ctx context.Context, workflowID, updateName string, args interface{}) error {
-	handle, err := s.client.UpdateWorkflow(ctx, temporalclient.UpdateWorkflowOptions{
+	opts := temporalclient.UpdateWorkflowOptions{
 		WorkflowID:   workflowID,
 		UpdateName:   updateName,
-		Args:         []interface{}{args},
 		WaitForStage: temporalclient.WorkflowUpdateStageCompleted,
-	})
+	}
+	if args != nil {
+		opts.Args = []interface{}{args}
+	}
+	handle, err := s.client.UpdateWorkflow(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("update workflow %s/%s: %w", workflowID, updateName, err)
 	}

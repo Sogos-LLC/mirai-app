@@ -1359,6 +1359,37 @@ func (s *AIGenerationServiceServer) GetWorkflowState(
 	}), nil
 }
 
+// ResumeWorkflowDeferral resumes a deferred course creation workflow.
+func (s *AIGenerationServiceServer) ResumeWorkflowDeferral(
+	ctx context.Context,
+	req *connect.Request[v1.ResumeWorkflowDeferralRequest],
+) (*connect.Response[v1.ResumeWorkflowDeferralResponse], error) {
+	slog.Info("[ResumeWorkflowDeferral] Request received", "jobId", req.Msg.GetJobId())
+
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	jobID, err := parseUUID(req.Msg.GetJobId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	err = s.aiService.ResumeWorkflowDeferral(ctx, kratosID, jobID)
+	if err != nil {
+		slog.Error("[ResumeWorkflowDeferral] Service error", "jobId", jobID.String(), "error", err)
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.ResumeWorkflowDeferralResponse{}), nil
+}
+
 // GetGraphVisualization returns the mermaid diagram for the course creation graph.
 func (s *AIGenerationServiceServer) GetGraphVisualization(
 	ctx context.Context,
