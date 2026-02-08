@@ -19,12 +19,12 @@ import { PageShell } from '@/components/layout/PageShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { WizardStepper } from '@/components/course/WizardStepper';
-import { GeneratingOverlay } from '@/components/course/GeneratingOverlay';
-import { WizardStep1CourseName } from '@/components/course/wizard/WizardStep1CourseName';
-import { WizardStep2TitleDescription } from '@/components/course/wizard/WizardStep2TitleDescription';
-import { WizardStep3Personas } from '@/components/course/wizard/WizardStep3Personas';
-import { WizardStep4Audience } from '@/components/course/wizard/WizardStep4Audience';
-import { WizardStep5ToneContext } from '@/components/course/wizard/WizardStep5ToneContext';
+import { FunLoadingOverlay } from '@/components/course/FunLoadingOverlay';
+import { outcomesMessages, personaMessages, courseCreationMessages } from '@/components/course/loadingMessages';
+import { WizardStep1Title } from '@/components/course/wizard/WizardStep1Title';
+import { WizardStep2Outcomes } from '@/components/course/wizard/WizardStep2Outcomes';
+import { WizardStep3TeacherStudent } from '@/components/course/wizard/WizardStep3TeacherStudent';
+import { WizardStep4Context } from '@/components/course/wizard/WizardStep4Context';
 
 import {
   wizardMachine,
@@ -46,16 +46,17 @@ import {
 import { useCreateCourse } from '@/hooks/useCourses';
 import { useGetJob, useGetActiveJobForCourse, useGetDeferredJobForCourse } from '@/hooks/ai-generation/useJobs';
 import {
-  useGenerateTitle,
   useGenerateOutcomes,
   useGenerateSMEPersonas,
   useGenerateAudiencePersonas,
-  useGenerateToneOptions,
-  useDeleteWizardState,
   useSaveWizardState,
+  useDeleteWizardState,
   buildWizardStepData,
 } from '@/hooks/useCourseWizard';
 import { useListGapTasksForCourse } from '@/hooks/useKnowledgeGapTasks';
+import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
+import { GuidedTour } from '@/components/onboarding/GuidedTour';
+import { wizardTourSteps } from '@/components/onboarding/tours/wizardTour';
 import { KnowledgeGapTaskStatus } from '@/gen/mirai/v1/knowledge_gap_pb';
 import {
   GenerationJobStatus,
@@ -68,74 +69,45 @@ export default function CourseWizardPage() {
   const resumeJobId = searchParams.get('jobId') ?? undefined;
   const resumeCourseId = searchParams.get('courseId') ?? undefined;
 
+  const { showQAChecks } = useFeatureTogglesStore();
+
   // =========================================================================
   // Wizard hooks (Step collection phase)
   // =========================================================================
-  const genTitle = useGenerateTitle();
   const genOutcomes = useGenerateOutcomes();
   const genSMEPersonas = useGenerateSMEPersonas();
   const genAudiencePersonas = useGenerateAudiencePersonas();
-  const genToneOptions = useGenerateToneOptions();
   const deleteState = useDeleteWizardState();
-  const saveState = useSaveWizardState();
-  // savedWizardState no longer needed — deferral resume uses Temporal workflow state
 
   // =========================================================================
-  // Wizard XState Machine
+  // Wizard XState Machine (simplified 4 steps)
   // =========================================================================
   const [wizardState, wizardSend] = useMachine(
     wizardMachine.provide({
       actors: {
         generateOutcomesActor: fromPromise(async ({ input }) => {
           const result = await genOutcomes.mutate({
-            courseName: input.courseName,
-            selectedTeamDocIds: input.teamDocIds,
-            selectedGlobalDocIds: input.globalDocIds,
+            courseName: input.courseTitle,
           });
           return result.outcomes;
         }),
-        generateTitleActor: fromPromise(async ({ input }) => {
-          const result = await genTitle.mutate({
-            courseName: input.courseName,
-            selectedTeamDocIds: input.teamDocIds,
-            selectedGlobalDocIds: input.globalDocIds,
-          });
+        generatePersonasActor: fromPromise(async ({ input }) => {
+          // Generate teacher (SME) and student (audience) in parallel
+          const [smeResult, audienceResult] = await Promise.all([
+            genSMEPersonas.mutate({
+              title: input.courseTitle,
+              description: input.outcomes,
+            }),
+            genAudiencePersonas.mutate({
+              title: input.courseTitle,
+              description: input.outcomes,
+              selectedSmes: [],
+            }),
+          ]);
           return {
-            improvedTitle: result.improvedTitle,
-            description: result.description,
+            teacher: smeResult.personas[0],
+            student: audienceResult.personas[0],
           };
-        }),
-        generateSMEPersonasActor: fromPromise(async ({ input }) => {
-          const result = await genSMEPersonas.mutate({
-            title: input.title,
-            description: input.description,
-            selectedTeamDocIds: input.teamDocIds,
-            selectedGlobalDocIds: input.globalDocIds,
-          });
-          return result.personas;
-        }),
-        generateAudiencePersonasActor: fromPromise(async ({ input }) => {
-          const result = await genAudiencePersonas.mutate({
-            title: input.title,
-            description: input.description,
-            selectedSmes: input.selectedSmes,
-            selectedTeamDocIds: input.teamDocIds,
-            selectedGlobalDocIds: input.globalDocIds,
-          });
-          return result.personas;
-        }),
-        generateToneOptionsActor: fromPromise(async ({ input }) => {
-          const result = await genToneOptions.mutate({
-            title: input.title,
-            description: input.description,
-            selectedAudiences: input.selectedAudiences,
-            selectedTeamDocIds: input.teamDocIds,
-            selectedGlobalDocIds: input.globalDocIds,
-          });
-          return result.options;
-        }),
-        saveStateActor: fromPromise(async () => {
-          // No-op — state saving removed
         }),
       },
     })
@@ -183,12 +155,10 @@ export default function CourseWizardPage() {
 
   // Resume a specific job if jobId is provided via query param
   const { data: resumeJob } = useGetJob(resumeJobId);
-  // Resume by courseId — look up the active job for this course
   const { data: courseJob } = useGetActiveJobForCourse(resumeCourseId);
-  // Look for a deferred job for this course (gap tasks assigned)
   const { data: deferredJob } = useGetDeferredJobForCourse(resumeCourseId);
 
-  // Gap task tracking for deferred courses — use courseId from URL or from the resumed job
+  // Gap task tracking
   const gapTaskCourseId = resumeCourseId ?? resumeJob?.courseId ?? '';
   const { data: gapTasks, isLoading: isLoadingGapTasks } = useListGapTasksForCourse(gapTaskCourseId);
   const [deferralInfo, setDeferralInfo] = useState<{
@@ -198,18 +168,12 @@ export default function CourseWizardPage() {
 
   useEffect(() => {
     if (!workflowMachineState.matches('idle')) return;
-
-    // Prefer explicit jobId, fall back to courseId lookup
     const job = resumeJob ?? courseJob;
     if (!job) return;
-
     const courseId = job.courseId;
     if (!courseId) return;
-
-    // If this is a deferred job, we need to call resumeDeferral first
     if (job.status === GenerationJobStatus.DEFERRED) return;
 
-    // Skip wizard, go straight to workflow phase with this specific job
     setPhase('workflow');
     workflowSend({
       type: 'RESUME',
@@ -219,36 +183,26 @@ export default function CourseWizardPage() {
     });
   }, [resumeJob, courseJob, workflowMachineState, workflowSend]);
 
-  // Resume from deferral: send resume update to Temporal workflow
-  // Handles both ?courseId= (from editor "Resume Wizard") and ?jobId= (from "In Progress" tab)
+  // Resume from deferral
   const [deferralRestored, setDeferralRestored] = useState(false);
   useEffect(() => {
     if (deferralRestored) return;
-
-    // Find the deferred job — either from ?jobId= (resumeJob) or ?courseId= (deferredJob)
     const jobToResume = (resumeJob?.status === GenerationJobStatus.DEFERRED ? resumeJob : null) ?? deferredJob;
     if (!jobToResume) return;
-
-    // Don't restore if an active (non-deferred) job was found (takes precedence)
     if (courseJob) return;
-
     const courseId = jobToResume.courseId;
     if (!courseId) return;
-
     if (isLoadingGapTasks) return;
 
-    // Compute gap task counts for the banner
     const total = gapTasks.length;
     const completed = gapTasks.filter(
       (t) => t.status === KnowledgeGapTaskStatus.COMPLETED
     ).length;
     setDeferralInfo({ totalTasks: total, completedTasks: completed });
 
-    // Send resume update to Temporal — wakes the workflow and re-enters combined review
     const resumeWorkflow = async () => {
       try {
         await resumeDeferral.mutate(jobToResume.id);
-        // Switch to workflow phase — polling will pick up the awaiting_approval state
         setPhase('workflow');
         workflowSend({
           type: 'RESUME',
@@ -307,46 +261,40 @@ export default function CourseWizardPage() {
       try {
         const ctx = wizardState.context;
 
-        // 1. Use existing course (deferral resume) or create new one
+        // 1. Create course (auto-assign to personal folder handled by backend)
         let courseId = resumeCourseId;
         if (!courseId) {
           const courseResult = await createCourse.mutate({
-            settings: { title: ctx.improvedTitle || ctx.courseName },
+            settings: { title: ctx.courseTitle },
           });
           courseId = courseResult.course?.id;
         }
         if (!courseId) throw new Error('Failed to create course');
 
-        // 2. Find the selected tone object
-        const selectedTone = ctx.toneOptions.find((t) => t.id === ctx.selectedToneId);
+        // 2. Build the teacher/student persona data for the workflow
+        const smePersonas = ctx.teacher ? [ctx.teacher] : [];
+        const selectedSmeIds = ctx.teacher ? [ctx.teacher.id] : [];
+        const audiencePersonas = ctx.student ? [ctx.student] : [];
+        const selectedAudienceIds = ctx.student ? [ctx.student.id] : [];
 
-        // 3. Start Temporal workflow with wizard data
+        // 3. Start Temporal workflow with simplified wizard data
         const result = await startCreation.mutate({
           courseId,
-          topic: ctx.courseName,
-          audience: ctx.selectedAudienceIds.join(','), // audience descriptions
-          enableInternalKnowledge: ctx.enableInternalKnowledge,
-          selectedTeamDocIds: ctx.selectedTeamDocIds.length > 0 ? ctx.selectedTeamDocIds : undefined,
-          selectedGlobalDocIds: ctx.selectedGlobalDocIds.length > 0 ? ctx.selectedGlobalDocIds : undefined,
-          enableWebResearch: ctx.enableWebResearch,
-          strictKnowledgeOnly: ctx.enableInternalKnowledge && ctx.strictKnowledgeOnly,
-          // Wizard-enriched data
-          desiredOutcomes: ctx.desiredOutcomes,
-          improvedTitle: ctx.improvedTitle,
-          description: ctx.description,
-          smePersonas: ctx.smePersonas,
-          selectedSmeIds: ctx.selectedSmeIds,
-          audiencePersonas: ctx.audiencePersonas,
-          selectedAudienceIds: ctx.selectedAudienceIds,
-          selectedTone,
-          additionalContext: ctx.additionalContext,
+          topic: ctx.courseTitle,
+          audience: ctx.student?.role ?? '',
+          desiredOutcomes: ctx.outcomes,
+          improvedTitle: ctx.courseTitle,
+          description: ctx.outcomes,
+          smePersonas,
+          selectedSmeIds,
+          audiencePersonas,
+          selectedAudienceIds,
+          additionalContext: ctx.contextText,
+          skipQa: !showQAChecks,
         });
 
         if (result.job?.id) {
-          // 4. Delete wizard state (no longer needed)
-          deleteState.mutate().catch(() => {}); // fire-and-forget
-
-          // 5. Transition to workflow phase
+          deleteState.mutate().catch(() => {});
           setPhase('workflow');
           workflowSend({
             type: 'WORKFLOW_STARTED',
@@ -370,41 +318,28 @@ export default function CourseWizardPage() {
   const isWizardPhase = phase === 'wizard' || phase === 'starting';
   const isWorkflowPhase = phase === 'workflow';
 
-  const isGenerating = [
-    'generatingOutcomes', 'generatingTitle', 'generatingPersonas',
-    'generatingAudience', 'generatingTone',
-  ].some((s) => wizardState.matches(s));
+  const isGenerating = ['generatingOutcomes', 'generatingPersonas'].some((s) => wizardState.matches(s));
 
   const wizardCtx = wizardState.context;
 
   const canGoNext = (() => {
     switch (wizardCtx.currentStep) {
-      case 1: return wizardCtx.courseName.trim().length > 0;
-      case 2: return wizardCtx.improvedTitle.trim().length > 0;
-      case 3: return wizardCtx.selectedSmeIds.length > 0;
-      case 4: return wizardCtx.selectedAudienceIds.length > 0;
-      case 5: return wizardCtx.selectedToneId !== '';
+      case 1: return wizardCtx.courseTitle.trim().length > 0;
+      case 2: return wizardCtx.outcomes.trim().length > 0;
+      case 3: return wizardCtx.teacher !== null && wizardCtx.student !== null;
+      case 4: return true; // Context is optional
       default: return false;
     }
   })();
 
-  const getGeneratingOverlayProps = () => {
+  const getLoadingProps = () => {
     if (wizardState.matches('generatingOutcomes')) {
-      return { title: 'Generating Outcomes', message: 'AI is analyzing your topic to suggest learning outcomes...' };
-    }
-    if (wizardState.matches('generatingTitle')) {
-      return { title: 'Refining Your Title', message: 'AI is crafting an optimized course title and description...' };
+      return { title: 'Generating Outcomes', messages: outcomesMessages };
     }
     if (wizardState.matches('generatingPersonas')) {
-      return { title: 'Creating Expert Personas', message: 'AI is generating subject matter expert profiles for your course...' };
+      return { title: 'Creating Teacher & Student', messages: personaMessages };
     }
-    if (wizardState.matches('generatingAudience')) {
-      return { title: 'Defining Audiences', message: 'AI is creating target learner profiles based on your experts...' };
-    }
-    if (wizardState.matches('generatingTone')) {
-      return { title: 'Crafting Tone Options', message: 'AI is preparing tone and style options for your course...' };
-    }
-    return { title: 'Working...', message: 'Please wait...' };
+    return { title: 'Working...', messages: ['Please wait...'] };
   };
 
   // =========================================================================
@@ -432,15 +367,26 @@ export default function CourseWizardPage() {
     setShowGapAssignment(true);
   }, []);
 
+  const saveState = useSaveWizardState();
   const handleDefer = useCallback(async () => {
     setShowGapAssignment(false);
-
-    // Save wizard state so it can be restored on resume
-    const stepData = buildWizardStepData(wizardState.context);
-    saveState.mutate({
-      currentStep: 'toneSelection', // save at last wizard step
-      data: stepData,
-    }).catch(() => {}); // fire-and-forget
+    const stepData = buildWizardStepData({
+      courseName: wizardState.context.courseTitle,
+      improvedTitle: wizardState.context.courseTitle,
+      description: wizardState.context.outcomes,
+      desiredOutcomes: wizardState.context.outcomes,
+      smePersonas: wizardState.context.teacher ? [wizardState.context.teacher] : [],
+      selectedSmeIds: wizardState.context.teacher ? [wizardState.context.teacher.id] : [],
+      audiencePersonas: wizardState.context.student ? [wizardState.context.student] : [],
+      selectedAudienceIds: wizardState.context.student ? [wizardState.context.student.id] : [],
+      toneOptions: [],
+      selectedToneId: '',
+      additionalContext: wizardState.context.contextText,
+      selectedTeamDocIds: [],
+      selectedGlobalDocIds: [],
+      strictKnowledgeOnly: false,
+    });
+    saveState.mutate({ currentStep: 'context', data: stepData }).catch(() => {});
 
     rejectStep.mutate({
       jobId: workflowMachineState.context.jobId!,
@@ -452,7 +398,6 @@ export default function CourseWizardPage() {
 
   const pendingStep = workflowMachineState.context.pendingStep;
 
-  // Clear pending modifications when step changes
   useEffect(() => {
     setPendingModifications({});
   }, [pendingStep]);
@@ -471,23 +416,26 @@ export default function CourseWizardPage() {
   return (
     <PageShell
       title="Create New Course"
-      description="Let AI guide you through creating an engaging course in 5 simple steps"
+      description="AI builds your course in 4 simple steps"
       backButton={{ label: 'Back to Dashboard', onClick: () => router.push('/dashboard') }}
       maxWidth="6xl"
     >
       {/* ===================== WIZARD PHASE ===================== */}
       {isWizardPhase && (
         <>
-          <WizardStepper currentPhase={wizardCtx.currentStep} />
+          <GuidedTour tourId="wizard" steps={wizardTourSteps} />
+          <div data-tour="wizard-stepper">
+            <WizardStepper currentPhase={wizardCtx.currentStep} />
+          </div>
 
           <Card>
             <CardContent>
               {isGenerating ? (
-                <GeneratingOverlay {...getGeneratingOverlayProps()} />
+                <FunLoadingOverlay {...getLoadingProps()} />
               ) : phase === 'starting' ? (
-                <GeneratingOverlay
+                <FunLoadingOverlay
                   title="Starting Course Creation"
-                  message="Setting up your AI-powered course generation workflow..."
+                  messages={courseCreationMessages}
                 />
               ) : (
                 <>
@@ -500,7 +448,7 @@ export default function CourseWizardPage() {
                     />
                   )}
 
-                  {/* Wizard error banner */}
+                  {/* Error banners */}
                   {wizardCtx.error && (
                     <div className="mb-6 flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                       <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
@@ -513,8 +461,6 @@ export default function CourseWizardPage() {
                       </button>
                     </div>
                   )}
-
-                  {/* Start error banner */}
                   {startError && (
                     <div className="mb-6 flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                       <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
@@ -529,30 +475,25 @@ export default function CourseWizardPage() {
                   )}
 
                   {/* Step content */}
+                  <div data-tour="wizard-step-content">
                   {wizardCtx.currentStep === 1 && (
-                    <WizardStep1CourseName
-                      context={wizardCtx}
-                      send={wizardSend}
-                      isGeneratingOutcomes={wizardState.matches('generatingOutcomes')}
-                    />
+                    <WizardStep1Title context={wizardCtx} send={wizardSend} />
                   )}
                   {wizardCtx.currentStep === 2 && (
-                    <WizardStep2TitleDescription context={wizardCtx} send={wizardSend} />
+                    <WizardStep2Outcomes context={wizardCtx} send={wizardSend} />
                   )}
                   {wizardCtx.currentStep === 3 && (
-                    <WizardStep3Personas context={wizardCtx} send={wizardSend} />
+                    <WizardStep3TeacherStudent context={wizardCtx} send={wizardSend} />
                   )}
                   {wizardCtx.currentStep === 4 && (
-                    <WizardStep4Audience context={wizardCtx} send={wizardSend} />
+                    <WizardStep4Context context={wizardCtx} send={wizardSend} />
                   )}
-                  {wizardCtx.currentStep === 5 && (
-                    <WizardStep5ToneContext context={wizardCtx} send={wizardSend} />
-                  )}
+                  </div>
                 </>
               )}
             </CardContent>
 
-            {/* Wizard footer — only show when not generating */}
+            {/* Wizard footer */}
             {!isGenerating && phase !== 'starting' && (
               <div className="px-4 py-4 sm:px-6 border-t flex items-center justify-between">
                 <div>
@@ -581,21 +522,21 @@ export default function CourseWizardPage() {
                   <span className="text-xs text-muted">
                     Step {wizardCtx.currentStep} of {TOTAL_WIZARD_STEPS}
                   </span>
-                  {wizardCtx.currentStep < 5 ? (
+                  {wizardCtx.currentStep < TOTAL_WIZARD_STEPS ? (
                     <Button
                       variant="primary"
                       onClick={() => wizardSend({ type: 'NEXT' })}
                       disabled={!canGoNext}
                       className="gap-1.5"
+                      data-tour="wizard-next-btn"
                     >
-                      {wizardCtx.currentStep === 1 ? 'Generate Title' : 'Next'}
+                      Next
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   ) : (
                     <Button
                       variant="primary"
                       onClick={() => wizardSend({ type: 'COMPLETE' })}
-                      disabled={!canGoNext}
                       className="gap-1.5"
                     >
                       Create Course
@@ -625,21 +566,11 @@ export default function CourseWizardPage() {
           {/* Processing */}
           {showProcessing && (
             <CardContent>
-              <div className="w-full h-1 bg-page rounded-full mb-8 overflow-hidden">
-                <div
-                  className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                  style={{ width: `${workflowMachineState.context.progressPercent}%` }}
-                />
-              </div>
-              <div className="flex flex-col items-center text-center py-12">
-                <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-                <p className="text-sm font-medium text-primary mb-1">
-                  {workflowMachineState.context.progressMessage || 'Working on your course...'}
-                </p>
-                <p className="text-xs text-muted">
-                  {workflowMachineState.context.progressPercent}% complete
-                </p>
-              </div>
+              <FunLoadingOverlay
+                title="Building Your Course"
+                messages={courseCreationMessages}
+                progress={workflowMachineState.context.progressPercent}
+              />
             </CardContent>
           )}
 
@@ -714,10 +645,7 @@ export default function CourseWizardPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setShowRejectForm(false);
-                          setFeedback('');
-                        }}
+                        onClick={() => { setShowRejectForm(false); setFeedback(''); }}
                       >
                         Cancel
                       </Button>
@@ -806,7 +734,7 @@ export default function CourseWizardPage() {
         </Card>
       )}
 
-      {/* Error toast (non-fatal errors during active workflow) */}
+      {/* Error toast */}
       {isWorkflowPhase && workflowMachineState.context.error && !wfIsFailed && (
         <div className="mt-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center justify-between">
           <p className="text-sm text-red-600 dark:text-red-400">

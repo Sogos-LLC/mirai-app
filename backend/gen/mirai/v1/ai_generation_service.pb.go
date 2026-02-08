@@ -1576,6 +1576,8 @@ type StartCourseCreationRequest struct {
 	SelectedAudienceIds []string           `protobuf:"bytes,16,rep,name=selected_audience_ids,json=selectedAudienceIds,proto3" json:"selected_audience_ids,omitempty"`
 	SelectedTone        *ToneOption        `protobuf:"bytes,17,opt,name=selected_tone,json=selectedTone,proto3,oneof" json:"selected_tone,omitempty"`
 	AdditionalContext   string             `protobuf:"bytes,18,opt,name=additional_context,json=additionalContext,proto3" json:"additional_context,omitempty"`
+	ContextFileUrl      string             `protobuf:"bytes,19,opt,name=context_file_url,json=contextFileUrl,proto3" json:"context_file_url,omitempty"`
+	SkipQa              bool               `protobuf:"varint,20,opt,name=skip_qa,json=skipQa,proto3" json:"skip_qa,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1734,6 +1736,20 @@ func (x *StartCourseCreationRequest) GetAdditionalContext() string {
 		return x.AdditionalContext
 	}
 	return ""
+}
+
+func (x *StartCourseCreationRequest) GetContextFileUrl() string {
+	if x != nil {
+		return x.ContextFileUrl
+	}
+	return ""
+}
+
+func (x *StartCourseCreationRequest) GetSkipQa() bool {
+	if x != nil {
+		return x.SkipQa
+	}
+	return false
 }
 
 type StartCourseCreationResponse struct {
@@ -2375,7 +2391,7 @@ const file_mirai_v1_ai_generation_service_proto_rawDesc = "" +
 	"\x18ApproveCoursePlanRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"E\n" +
 	"\x19ApproveCoursePlanResponse\x12(\n" +
-	"\x04plan\x18\x01 \x01(\v2\x14.mirai.v1.CoursePlanR\x04plan\"\xff\x06\n" +
+	"\x04plan\x18\x01 \x01(\v2\x14.mirai.v1.CoursePlanR\x04plan\"\xc2\a\n" +
 	"\x1aStartCourseCreationRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x14\n" +
 	"\x05topic\x18\x02 \x01(\tR\x05topic\x12\x1a\n" +
@@ -2396,7 +2412,9 @@ const file_mirai_v1_ai_generation_service_proto_rawDesc = "" +
 	"\x11audience_personas\x18\x0f \x03(\v2\x19.mirai.v1.AudiencePersonaR\x10audiencePersonas\x122\n" +
 	"\x15selected_audience_ids\x18\x10 \x03(\tR\x13selectedAudienceIds\x12>\n" +
 	"\rselected_tone\x18\x11 \x01(\v2\x14.mirai.v1.ToneOptionH\x01R\fselectedTone\x88\x01\x01\x12-\n" +
-	"\x12additional_context\x18\x12 \x01(\tR\x11additionalContextB\x0e\n" +
+	"\x12additional_context\x18\x12 \x01(\tR\x11additionalContext\x12(\n" +
+	"\x10context_file_url\x18\x13 \x01(\tR\x0econtextFileUrl\x12\x17\n" +
+	"\askip_qa\x18\x14 \x01(\bR\x06skipQaB\x0e\n" +
 	"\f_use_contextB\x10\n" +
 	"\x0e_selected_tone\"H\n" +
 	"\x1bStartCourseCreationResponse\x12)\n" +

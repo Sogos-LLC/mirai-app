@@ -1264,6 +1264,8 @@ func (s *AIGenerationServiceServer) StartCourseCreation(
 		SelectedAudienceIDs:     req.Msg.GetSelectedAudienceIds(),
 		SelectedTone:            selectedTone,
 		AdditionalContext:       req.Msg.GetAdditionalContext(),
+		ContextFileURL:          req.Msg.GetContextFileUrl(),
+		SkipQA:                  req.Msg.GetSkipQa(),
 	}
 
 	result, err := s.aiService.StartCourseCreation(ctx, kratosID, serviceReq)

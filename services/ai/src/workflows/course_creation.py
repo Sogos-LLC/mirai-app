@@ -243,8 +243,19 @@ class CourseCreationWorkflow:
         self._progress_message = "Starting course creation"
         await self._update_job(input, "PROCESSING", 0, "Starting course creation")
 
+        # Use wizard-improved title if provided
+        if input.improved_title:
+            input.topic = input.improved_title
+
         # Decrypt API key (Go activity)
         api_key = await self._decrypt_api_key(input.tenant_id)
+
+        # If context file was uploaded, read its content and prepend to use_context
+        if input.context_file_url:
+            file_text = await self._read_context_file(input.context_file_url)
+            if file_text:
+                input.use_context = f"{file_text}\n\n{input.use_context}" if input.use_context else file_text
+                log.info("context_file_loaded", url=input.context_file_url, chars=len(file_text))
 
         # Initialize research orchestrator + health check
         self._orchestrator = ResearchOrchestrator.from_input(input)
@@ -413,7 +424,10 @@ class CourseCreationWorkflow:
             len(lc.components) for lcs in all_lesson_components.values()
             for lc in lcs.values()
         )
-        await self._run_qa(api_key, input, outcomes, structure, all_lesson_components, total_components)
+        if not input.skip_qa:
+            await self._run_qa(api_key, input, outcomes, structure, all_lesson_components, total_components)
+        else:
+            log.info("skipping QA check (skip_qa=True)")
 
         # =============================================================
         # AUTO-RUN: Export to S3
@@ -500,6 +514,15 @@ class CourseCreationWorkflow:
         # Use cached course-level research
         rag_context = self._course_research.formatted_context if self._course_research else ""
 
+        # If wizard provided desired outcomes, inject them as high-priority context
+        additional = input.additional_context or ""
+        if input.desired_outcomes:
+            additional = (
+                f"IMPORTANT — The creator has already defined desired outcomes. "
+                f"Use these as the primary foundation for the learning outcomes:\n"
+                f"{input.desired_outcomes}\n\n{additional}"
+            ).strip()
+
         outcomes_result: GenerateOutcomesOutput = await self._run_ai_activity(
             "generate_course_outcomes",
             GenerateOutcomesInput(
@@ -511,7 +534,7 @@ class CourseCreationWorkflow:
                 constraints=analysis.constraints,
                 rag_context=rag_context,
                 strict_knowledge_only=input.strict_knowledge_only,
-                additional_context=input.additional_context,
+                additional_context=additional,
             ),
             GenerateOutcomesOutput,
         )
@@ -1260,6 +1283,21 @@ class CourseCreationWorkflow:
         self._status = "processing"
         self._step_data = ""
         return approval
+
+    async def _read_context_file(self, file_path: str) -> str:
+        """Read uploaded context file from MinIO via Go activity."""
+        try:
+            result = await workflow.execute_activity(
+                "ReadFileContent",
+                {"file_path": file_path},
+                task_queue=GO_TASKS,
+                start_to_close_timeout=GO_TIMEOUT,
+                retry_policy=RetryPolicy(**GO_RETRY),
+            )
+            return result.get("content", "")
+        except Exception as e:
+            log.warning("context_file_read_failed", path=file_path, error=str(e))
+            return ""
 
     async def _decrypt_api_key(self, tenant_id: str) -> str:
         result = await workflow.execute_activity(

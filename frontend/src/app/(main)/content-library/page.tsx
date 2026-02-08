@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Folder, Search, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useGetFolderHierarchy, useListCourses, useCreateFolder, useDeleteFolder, FolderType, type Folder as FolderNode } from '@/hooks/useCourses';
+import { useGetFolderHierarchy, useListCourses, useCreateFolder, useDeleteFolder, useUpdateCourse, useDeleteCourse, FolderType, type Folder as FolderNode } from '@/hooks/useCourses';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { FolderTreeNode } from '@/components/content-library/FolderTreeNode';
 import { CourseCard } from '@/components/content-library/CourseCard';
 import { DeleteFolderModal } from '@/components/content-library/DeleteFolderModal';
+import FolderSelectionModal from '@/components/course/FolderSelectionModal';
 
 const MAX_FOLDER_DEPTH = 3;
 
@@ -19,6 +20,8 @@ export default function ContentLibrary() {
   // Folder mutation hooks
   const createFolderMutation = useCreateFolder();
   const deleteFolderMutation = useDeleteFolder();
+  const updateCourseMutation = useUpdateCourse();
+  const deleteCourseMutation = useDeleteCourse();
 
   // Local UI state only
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -37,6 +40,9 @@ export default function ContentLibrary() {
     offset: pageOffset,
   });
   const [isFolderSheetOpen, setIsFolderSheetOpen] = useState(false);
+
+  // Move-to-folder state
+  const [movingCourseId, setMovingCourseId] = useState<string | null>(null);
 
   // Folder creation state
   const [creatingFolderIn, setCreatingFolderIn] = useState<string | null>(null);
@@ -103,6 +109,31 @@ export default function ContentLibrary() {
 
   const handleCoursePreview = (courseId: string) => {
     router.push(`/preview/${courseId}`);
+  };
+
+  const handleMoveToFolder = (courseId: string) => {
+    setMovingCourseId(courseId);
+  };
+
+  const handleMoveCourseConfirm = async (folderId: string) => {
+    if (!movingCourseId) return;
+    try {
+      await updateCourseMutation.mutate(movingCourseId, {
+        settings: { destinationFolder: folderId },
+      });
+    } catch (error) {
+      console.error('Failed to move course:', error);
+    }
+    setMovingCourseId(null);
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm('Are you sure you want to delete this course?\n\nThis action cannot be undone.')) return;
+    try {
+      await deleteCourseMutation.mutate(courseId);
+    } catch (error) {
+      console.error('Failed to delete course:', error);
+    }
   };
 
   // Folder creation handlers
@@ -295,6 +326,8 @@ export default function ContentLibrary() {
                   course={course}
                   onEdit={handleCourseClick}
                   onPreview={handleCoursePreview}
+                  onMoveToFolder={handleMoveToFolder}
+                  onDelete={handleDeleteCourse}
                 />
               ))}
             </div>
@@ -332,6 +365,13 @@ export default function ContentLibrary() {
         deleteError={deleteError}
         onConfirm={handleDeleteFolder}
         onCancel={handleCancelDelete}
+      />
+
+      {/* Move Course to Folder Modal */}
+      <FolderSelectionModal
+        isOpen={!!movingCourseId}
+        onClose={() => setMovingCourseId(null)}
+        onSelect={(folderId) => handleMoveCourseConfirm(folderId)}
       />
     </>
   );

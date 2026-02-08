@@ -53,6 +53,8 @@ type StartCourseCreationRequest struct {
 	SelectedAudienceIDs []string
 	SelectedTone        *entity.WizardToneOption
 	AdditionalContext   string
+	ContextFileURL      string
+	SkipQA              bool
 }
 
 // StartCourseCreationResult contains the created job.
@@ -128,6 +130,8 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 			SelectedAudienceIDs:     req.SelectedAudienceIDs,
 			SelectedTone:            req.SelectedTone,
 			AdditionalContext:       req.AdditionalContext,
+			ContextFileURL:          req.ContextFileURL,
+			SkipQA:                  req.SkipQA,
 		}
 
 		if _, err := s.workflowStarter.StartCourseCreation(ctx, input); err != nil {

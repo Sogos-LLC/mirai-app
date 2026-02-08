@@ -210,6 +210,8 @@ export const StartCourseCreationRequestSchema = z.object({
   selectedAudienceIds: z.array(z.string()),
   selectedTone: ToneOptionSchema.optional(),
   additionalContext: z.string(),
+  contextFileUrl: z.string(),
+  skipQa: z.boolean(),
 });
 
 export type StartCourseCreationRequest = z.infer<typeof StartCourseCreationRequestSchema>;

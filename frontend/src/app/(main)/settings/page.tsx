@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { User, Bell, Lock, Palette, Globe, CreditCard, Users, ChevronRight, Sparkles, AlertCircle, Database } from 'lucide-react';
+import { User, Bell, Lock, Palette, Globe, CreditCard, Users, ChevronRight, Sparkles, AlertCircle, Database, SlidersHorizontal } from 'lucide-react';
 import {
   useGetAISettings,
   useSetAPIKey,
@@ -18,6 +18,7 @@ const TeamKnowledgeSettings = dynamic(() => import('@/components/settings/TeamKn
 const AISettingsPanel = dynamic(() => import('@/components/settings/AISettingsPanel').then(m => ({ default: m.AISettingsPanel })));
 const KnowledgeSettingsPanel = dynamic(() => import('@/components/settings/KnowledgeSettingsPanel').then(m => ({ default: m.KnowledgeSettingsPanel })));
 const AppearanceSettings = dynamic(() => import('@/components/settings/AppearanceSettings'));
+const AdvancedFeaturesSettings = dynamic(() => import('@/components/settings/AdvancedFeaturesSettings'));
 
 // Wrapper component that connects AISettingsPanel to hooks
 function AISettingsContainer() {
@@ -83,6 +84,7 @@ export default function SettingsPage() {
     { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme settings' },
     { id: 'language', label: 'Language', icon: Globe, description: 'Language and timezone' },
     { id: 'ai', label: 'AI Settings', icon: Sparkles, description: 'API keys and AI configuration' },
+    { id: 'advanced', label: 'Advanced Features', icon: SlidersHorizontal, description: 'Toggle advanced capabilities' },
     { id: 'billing', label: 'Billing', icon: CreditCard, description: 'Plan and payment' },
   ];
 
@@ -362,6 +364,9 @@ export default function SettingsPage() {
             </div>
           </div>
         );
+
+      case 'advanced':
+        return <AdvancedFeaturesSettings />;
 
       case 'billing':
         return <BillingSettings />;

@@ -81,6 +81,8 @@ class CourseCreationInput:
     selected_audience_ids: list[str] | None = field(default_factory=list)
     selected_tone: WizardToneOption | None = None
     additional_context: str = ""
+    context_file_url: str = ""
+    skip_qa: bool = True
 
     def __post_init__(self) -> None:
         """Normalize None → empty for optional collection fields."""

@@ -30,6 +30,7 @@
     "@types/uuid": "^10.0.0",
     "@xstate/react": "^6.0.0",
     "canvas-confetti": "^1.9.4",
+    "driver.js": "^1.4.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.263.1",
     "mermaid": "^11.12.2",

@@ -52,6 +52,9 @@ export {
   useFeedbackModalOpen,
 } from './useFeedbackStore';
 
+export { useFeatureTogglesStore } from './useFeatureTogglesStore';
+export { useOnboardingStore } from './useOnboardingStore';
+
 // ============================================================================
 // Types (for backward-compatible composite store)
 // ============================================================================

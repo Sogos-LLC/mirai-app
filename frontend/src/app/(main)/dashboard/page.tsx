@@ -10,7 +10,7 @@ import { useInProgressJobs } from '@/hooks/useActiveCourseCreation';
 import { useDeleteJob } from '@/hooks/ai-generation/useJobs';
 import { GapTaskList } from '@/components/dashboard/GapTaskList';
 
-type TabType = 'recent' | 'in_progress' | 'draft' | 'published';
+type TabType = 'recent' | 'in_progress';
 
 function getJobStatusDisplay(status: GenerationJobStatus) {
   switch (status) {
@@ -109,16 +109,7 @@ export default function Dashboard() {
     }
   }, [showGapsAssignedBanner]);
 
-  // Server-side filtering based on active tab (only for course tabs)
-  const statusFilter = activeTab === 'draft'
-    ? CourseStatus.DRAFT
-    : activeTab === 'published'
-      ? CourseStatus.PUBLISHED
-      : undefined;
-
-  const { data: courses, isLoading, isFetching } = useListCourses({
-    status: statusFilter,
-  });
+  const { data: courses, isLoading, isFetching } = useListCourses({});
   const deleteCourseMutation = useDeleteCourse();
   const { inProgressJobs, inProgressCount } = useInProgressJobs();
   const deleteJobHook = useDeleteJob();
@@ -170,8 +161,6 @@ export default function Dashboard() {
   const tabs: { key: TabType; label: string; badge?: number }[] = [
     { key: 'recent', label: 'Recent' },
     { key: 'in_progress', label: 'In Progress', badge: inProgressCount > 0 ? inProgressCount : undefined },
-    { key: 'draft', label: 'Drafts' },
-    { key: 'published', label: 'Published' },
   ];
 
   return (
@@ -408,7 +397,7 @@ export default function Dashboard() {
             </div>
           )
         ) : (
-          /* Course list tabs (recent, draft, published) */
+          /* Course list (recent) */
           isLoading ? (
             <div className="min-h-[300px] flex items-center justify-center">
               <div className="text-gray-500 dark:text-gray-400">Loading courses...</div>
@@ -489,9 +478,7 @@ export default function Dashboard() {
                 </svg>
               </div>
               <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {activeTab === 'draft' && 'No draft courses'}
-                {activeTab === 'published' && 'No published courses'}
-                {activeTab === 'recent' && 'No courses yet'}
+                No courses yet
               </h4>
               <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
                 Get started by creating your first course using AI prompts or importing existing materials

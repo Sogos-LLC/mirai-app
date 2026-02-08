@@ -211,6 +211,8 @@ message StartCourseCreationRequest {
   repeated string selected_audience_ids = 16;
   optional ToneOption selected_tone = 17;
   string additional_context = 18;
+  string context_file_url = 19;
+  bool skip_qa = 20;
 }
 
 message StartCourseCreationResponse {

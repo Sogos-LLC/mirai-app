@@ -110,6 +110,7 @@ export default function Layout({
       <Sidebar />
       <main
         className={`flex-1 transition-all duration-300 ${marginClass}`}
+        style={{ background: 'var(--gradient-page)' }}
       >
         <Header />
         {/* Content area */}

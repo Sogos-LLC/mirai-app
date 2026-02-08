@@ -67,6 +67,8 @@ export function useStartCourseCreation() {
       selectedAudienceIds?: string[];
       selectedTone?: ToneOption;
       additionalContext?: string;
+      contextFileUrl?: string;
+      skipQa?: boolean;
     }) => {
       const request = create(StartCourseCreationRequestSchema, {
         courseId: params.courseId,
@@ -88,6 +90,8 @@ export function useStartCourseCreation() {
         selectedAudienceIds: params.selectedAudienceIds ?? [],
         selectedTone: params.selectedTone,
         additionalContext: params.additionalContext ?? '',
+        contextFileUrl: params.contextFileUrl ?? '',
+        skipQa: params.skipQa ?? true,
       });
 
       const result = await mutation.mutateAsync(request);
