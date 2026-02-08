@@ -189,7 +189,7 @@ export default function CourseWizardPage() {
   const { data: deferredJob } = useGetDeferredJobForCourse(resumeCourseId);
 
   // Gap task tracking for deferred courses
-  const { data: gapTasks } = useListGapTasksForCourse(resumeCourseId ?? '');
+  const { data: gapTasks, isLoading: isLoadingGapTasks } = useListGapTasksForCourse(resumeCourseId ?? '');
   const [deferralInfo, setDeferralInfo] = useState<{
     totalTasks: number;
     completedTasks: number;
@@ -222,7 +222,7 @@ export default function CourseWizardPage() {
     if (!resumeCourseId || !deferredJob) return;
     // Don't restore if an active job was found (takes precedence)
     if (resumeJob || courseJob) return;
-    if (isLoadingWizardState) return;
+    if (isLoadingWizardState || isLoadingGapTasks) return;
 
     // Compute gap task counts
     const total = gapTasks.length;
@@ -260,7 +260,7 @@ export default function CourseWizardPage() {
 
     setDeferralRestored(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deferredJob, resumeJob, courseJob, savedWizardState, isLoadingWizardState, deferralRestored, resumeCourseId, gapTasks]);
+  }, [deferredJob, resumeJob, courseJob, savedWizardState, isLoadingWizardState, isLoadingGapTasks, deferralRestored, resumeCourseId, gapTasks]);
 
   // Poll Temporal workflow state
   const wfIsIdle = workflowMachineState.matches('idle');
