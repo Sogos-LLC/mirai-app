@@ -6,7 +6,7 @@ kind: Kustomization
 # NOTE: No global namespace - each sub-kustomization handles its own namespace
 
 resources:
-# Infrastructure (creates mirai-local-dev, kratos-local-dev, redis-local-dev namespaces)
+# Infrastructure (creates mirai-loc-dev, kratos-loc-dev, redis-loc-dev namespaces)
 - namespace.yaml
 - networkpolicies.yaml
 

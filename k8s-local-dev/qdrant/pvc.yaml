@@ -4,7 +4,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: qdrant-data
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
   labels:
     app: qdrant
     environment: dev

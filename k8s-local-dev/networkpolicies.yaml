@@ -5,7 +5,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-dns
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
 spec:
   podSelector: {}
   policyTypes:
@@ -23,7 +23,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-intra-namespace
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
 spec:
   podSelector: {}
   policyTypes:
@@ -40,7 +40,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-egress-external
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
 spec:
   podSelector: {}
   policyTypes:
@@ -63,7 +63,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-from-ingress
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
 spec:
   podSelector: {}
   policyTypes:
@@ -78,7 +78,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-egress-minio
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
 spec:
   podSelector:
     matchLabels:
@@ -99,11 +99,11 @@ apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: allow-cnpg-to-apiserver
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
 spec:
   endpointSelector:
     matchLabels:
-      cnpg.io/cluster: mirai-local-dev-db
+      cnpg.io/cluster: mirai-loc-dev-db
   egress:
   - toEntities:
     - kube-apiserver
@@ -113,11 +113,11 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-from-cnpg-operator
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
 spec:
   podSelector:
     matchLabels:
-      cnpg.io/cluster: mirai-local-dev-db
+      cnpg.io/cluster: mirai-loc-dev-db
   policyTypes:
   - Ingress
   ingress:

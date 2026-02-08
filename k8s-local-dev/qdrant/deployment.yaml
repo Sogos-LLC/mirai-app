@@ -5,7 +5,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: qdrant
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
   labels:
     app: qdrant
     environment: dev
@@ -86,7 +86,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: qdrant-config
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
   labels:
     app: qdrant
     environment: dev

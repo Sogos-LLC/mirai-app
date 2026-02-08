@@ -4,12 +4,12 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: kratos-local-dev-db
-  namespace: kratos-local-dev
+  name: kratos-loc-dev-db
+  namespace: kratos-loc-dev
   labels:
-    app.kubernetes.io/name: kratos-local-dev-db
+    app.kubernetes.io/name: kratos-loc-dev-db
     app.kubernetes.io/component: database
-    app.kubernetes.io/part-of: mirai-local-dev
+    app.kubernetes.io/part-of: mirai-loc-dev
     environment: dev
 spec:
   description: "Kratos Dev Database - Single instance for development"
@@ -36,7 +36,7 @@ spec:
       owner: kratos
       encoding: UTF8
       secret:
-        name: kratos-local-dev-db-credentials
+        name: kratos-loc-dev-db-credentials
 
   # Storage configuration - minimal for dev
   storage:

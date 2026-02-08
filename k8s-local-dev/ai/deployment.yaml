@@ -4,7 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ai-service
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
   labels:
     app: ai-service
     environment: dev
@@ -31,13 +31,13 @@ spec:
           name: http
         env:
         - name: TEMPORAL_ADDRESS
-          value: "temporal-server.mirai-local-dev.svc.cluster.local:7233"
+          value: "temporal-server.mirai-loc-dev.svc.cluster.local:7233"
         - name: TEMPORAL_NAMESPACE
-          value: "mirai-local-dev"
+          value: "mirai-loc-dev"
         - name: TEMPORAL_TASK_QUEUE
           value: "ai-tasks"
         - name: QDRANT_URL
-          value: "http://qdrant.mirai-local-dev.svc.cluster.local:6333"
+          value: "http://qdrant.mirai-loc-dev.svc.cluster.local:6333"
         - name: LOG_LEVEL
           value: "info"
         - name: LOGFIRE_TOKEN

@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: mirai-local-dev
+namespace: mirai-loc-dev
 
 resources:
 - deployment.yaml
@@ -10,5 +10,5 @@ resources:
 
 labels:
 - pairs:
-    app.kubernetes.io/part-of: mirai-local-dev
+    app.kubernetes.io/part-of: mirai-loc-dev
     environment: dev

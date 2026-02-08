@@ -4,23 +4,23 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mirai-local-dev
+  name: mirai-loc-dev
   labels:
     environment: dev
-    app.kubernetes.io/part-of: mirai-local-dev
+    app.kubernetes.io/part-of: mirai-loc-dev
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kratos-local-dev
+  name: kratos-loc-dev
   labels:
     environment: dev
-    app.kubernetes.io/part-of: mirai-local-dev
+    app.kubernetes.io/part-of: mirai-loc-dev
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: redis-local-dev
+  name: redis-loc-dev
   labels:
     environment: dev
-    app.kubernetes.io/part-of: mirai-local-dev
+    app.kubernetes.io/part-of: mirai-loc-dev

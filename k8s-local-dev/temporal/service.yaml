@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: temporal-server
-  namespace: mirai-local-dev
+  namespace: mirai-loc-dev
   labels:
     app: temporal-server
     environment: dev

@@ -1,5 +1,5 @@
 # Ory Kratos Helm Chart Values for Dev Environment
-# Install with: helm install kratos ory/kratos -f values-dev.yaml -n kratos-local-dev --create-namespace
+# Install with: helm install kratos ory/kratos -f values-dev.yaml -n kratos-loc-dev --create-namespace
 
 kratos:
   development: false

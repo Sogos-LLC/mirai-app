@@ -4,12 +4,12 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: mirai-local-dev-db
-  namespace: mirai-local-dev
+  name: mirai-loc-dev-db
+  namespace: mirai-loc-dev
   labels:
-    app.kubernetes.io/name: mirai-local-dev-db
+    app.kubernetes.io/name: mirai-loc-dev-db
     app.kubernetes.io/component: database
-    app.kubernetes.io/part-of: mirai-local-dev
+    app.kubernetes.io/part-of: mirai-loc-dev
     environment: dev
 spec:
   description: "Mirai Dev Database - Single instance for development"
@@ -37,7 +37,7 @@ spec:
       owner: mirai
       encoding: UTF8
       secret:
-        name: mirai-local-dev-db-credentials
+        name: mirai-loc-dev-db-credentials
       postInitSQL:
         - CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
 
