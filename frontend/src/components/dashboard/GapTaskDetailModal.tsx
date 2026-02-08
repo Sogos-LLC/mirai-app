@@ -102,35 +102,17 @@ function ExistingKnowledgeSection({ teamId }: { teamId: string }) {
 }
 
 // =============================================================================
-// Task Card — upload, add note, and mark complete are separate actions
+// Shared task context fields
 // =============================================================================
 
-function TaskCard({
-  task,
-  onUpload,
-  onComplete,
-  isCompleting,
-  hasUploaded,
-}: {
-  task: KnowledgeGapTask;
-  onUpload: (task: KnowledgeGapTask) => void;
-  onComplete: (taskId: string, notes?: string) => void;
-  isCompleting: boolean;
-  hasUploaded: boolean;
-}) {
-  const [showNoteField, setShowNoteField] = useState(false);
-  const [notes, setNotes] = useState('');
+function TaskContextFields({ task }: { task: KnowledgeGapTask }) {
   const badge = getStatusBadge(task.status);
   const BadgeIcon = badge.icon;
 
-  const canComplete = hasUploaded || notes.trim().length > 0;
-
   return (
-    <div className="rounded-lg border bg-page p-4">
-      {/* Gap description */}
+    <>
       <p className="text-sm font-medium text-primary mb-2">{task.gapDescription}</p>
 
-      {/* Context fields */}
       <div className="space-y-1 mb-3">
         {task.courseTitle && (
           <p className="text-xs text-secondary">
@@ -149,7 +131,6 @@ function TaskCard({
         )}
       </div>
 
-      {/* Meta row */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted mb-3">
         {task.createdAt && (
           <span>{new Date(Number(task.createdAt.seconds) * 1000).toLocaleDateString()}</span>
@@ -158,13 +139,45 @@ function TaskCard({
           <BadgeIcon className="w-3 h-3" />
           {badge.label}
         </span>
-        {hasUploaded && (
+      </div>
+    </>
+  );
+}
+
+// =============================================================================
+// Active Task Card — upload, add note, and mark complete
+// =============================================================================
+
+function ActiveTaskCard({
+  task,
+  onUpload,
+  onComplete,
+  isCompleting,
+  hasUploaded,
+}: {
+  task: KnowledgeGapTask;
+  onUpload: (task: KnowledgeGapTask) => void;
+  onComplete: (taskId: string, notes?: string) => void;
+  isCompleting: boolean;
+  hasUploaded: boolean;
+}) {
+  const [showNoteField, setShowNoteField] = useState(false);
+  const [notes, setNotes] = useState('');
+
+  const canComplete = hasUploaded || notes.trim().length > 0;
+
+  return (
+    <div className="rounded-lg border bg-page p-4">
+      <TaskContextFields task={task} />
+
+      {hasUploaded && (
+        <div className="mb-3">
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20">
             <Upload className="w-3 h-3" />
             Document uploaded
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Note field — toggled via Add Note button */}
       {showNoteField && (
@@ -230,7 +243,53 @@ function TaskCard({
         </Button>
       </div>
 
-      {/* Existing knowledge for this team */}
+      {task.targetTeamId && (
+        <ExistingKnowledgeSection teamId={task.targetTeamId} />
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// Completed Task Card — read-only with completion info + upload option
+// =============================================================================
+
+function CompletedTaskCard({
+  task,
+  onUpload,
+}: {
+  task: KnowledgeGapTask;
+  onUpload: (task: KnowledgeGapTask) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-green-200 dark:border-green-800/50 bg-green-50/50 dark:bg-green-900/10 p-4">
+      <TaskContextFields task={task} />
+
+      {/* Completion info */}
+      {task.completionNotes && (
+        <div className="mb-3 px-3 py-2 bg-surface border rounded-lg">
+          <p className="text-[11px] font-medium text-muted mb-1">Completion note</p>
+          <p className="text-xs text-secondary">{task.completionNotes}</p>
+        </div>
+      )}
+
+      {task.completedAt && (
+        <p className="text-xs text-muted mb-3">
+          Completed {new Date(Number(task.completedAt.seconds) * 1000).toLocaleDateString()}
+        </p>
+      )}
+
+      {/* Can still upload replacement documents */}
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => onUpload(task)}
+        className="gap-1.5"
+      >
+        <Upload className="w-3.5 h-3.5" />
+        Upload Document
+      </Button>
+
       {task.targetTeamId && (
         <ExistingKnowledgeSection teamId={task.targetTeamId} />
       )}
@@ -254,6 +313,11 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedTaskIds, setUploadedTaskIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const activeTasks = tasks.filter(
+    (t) => t.status === KnowledgeGapTaskStatus.PENDING || t.status === KnowledgeGapTaskStatus.IN_PROGRESS
+  );
+  const completedTasks = tasks.filter((t) => t.status === KnowledgeGapTaskStatus.COMPLETED);
 
   const handleFileSelect = useCallback((task: KnowledgeGapTask) => {
     setUploadingTask(task);
@@ -304,8 +368,9 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
         mobileHeight="full"
       >
         <div className="max-h-[60vh] overflow-y-auto space-y-3 p-1">
-          {tasks.map((task) => (
-            <TaskCard
+          {/* Active tasks */}
+          {activeTasks.map((task) => (
+            <ActiveTaskCard
               key={task.id}
               task={task}
               onUpload={handleFileSelect}
@@ -314,6 +379,28 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
               hasUploaded={uploadedTaskIds.has(task.id)}
             />
           ))}
+
+          {/* Completed tasks section */}
+          {completedTasks.length > 0 && (
+            <>
+              {activeTasks.length > 0 && (
+                <div className="flex items-center gap-2 pt-2">
+                  <div className="flex-1 border-t" />
+                  <span className="text-xs text-muted">
+                    {completedTasks.length} completed
+                  </span>
+                  <div className="flex-1 border-t" />
+                </div>
+              )}
+              {completedTasks.map((task) => (
+                <CompletedTaskCard
+                  key={task.id}
+                  task={task}
+                  onUpload={handleFileSelect}
+                />
+              ))}
+            </>
+          )}
         </div>
       </ResponsiveModal>
 
