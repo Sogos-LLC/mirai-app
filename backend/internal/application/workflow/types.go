@@ -1,8 +1,5 @@
 package workflow
 
-// AITaskQueue is the task queue for Python AI service activities.
-const AITaskQueue = "ai-tasks"
-
 // KnowledgeIngestionInput is the input for knowledge ingestion workflows.
 type KnowledgeIngestionInput struct {
 	SourceID string `json:"source_id"`

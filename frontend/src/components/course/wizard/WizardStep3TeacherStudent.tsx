@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { GraduationCap, BookOpen, Pencil, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { GraduationCap, BookOpen, Pencil, X } from 'lucide-react';
 import { create } from '@bufbuild/protobuf';
+import Button from '@/components/ui/Button';
 import type { WizardContext, WizardEvent } from '@/machines/wizardMachine';
 import type { SMEPersona, AudiencePersona } from '@/gen/mirai/v1/course_wizard_pb';
 import { SMEPersonaSchema, AudiencePersonaSchema } from '@/gen/mirai/v1/course_wizard_pb';
@@ -12,9 +13,10 @@ interface WizardStep3TeacherStudentProps {
   send: (event: WizardEvent) => void;
 }
 
+type EditTarget = 'teacher' | 'student' | null;
+
 export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherStudentProps) {
-  const [editingTeacher, setEditingTeacher] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(false);
+  const [editTarget, setEditTarget] = useState<EditTarget>(null);
 
   // Local edit state for teacher
   const [teacherTitle, setTeacherTitle] = useState(context.teacher?.jobTitle ?? '');
@@ -26,6 +28,19 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
   const [studentRole, setStudentRole] = useState(context.student?.role ?? '');
   const [studentGoals, setStudentGoals] = useState(context.student?.goals?.join(', ') ?? '');
 
+  // Sync local state when opening modal
+  useEffect(() => {
+    if (editTarget === 'teacher') {
+      setTeacherTitle(context.teacher?.jobTitle ?? '');
+      setTeacherDesc(context.teacher?.description ?? '');
+      setTeacherVoice(context.teacher?.voice ?? '');
+    } else if (editTarget === 'student') {
+      setStudentName(context.student?.name ?? '');
+      setStudentRole(context.student?.role ?? '');
+      setStudentGoals(context.student?.goals?.join(', ') ?? '');
+    }
+  }, [editTarget, context.teacher, context.student]);
+
   const saveTeacher = () => {
     const updated = create(SMEPersonaSchema, {
       id: context.teacher?.id ?? 'teacher-1',
@@ -35,7 +50,7 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
       skills: context.teacher?.skills ?? [],
     });
     send({ type: 'SET_TEACHER', teacher: updated });
-    setEditingTeacher(false);
+    setEditTarget(null);
   };
 
   const saveStudent = () => {
@@ -47,7 +62,7 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
       goals: studentGoals.split(',').map((g) => g.trim()).filter(Boolean),
     });
     send({ type: 'SET_STUDENT', student: updated });
-    setEditingStudent(false);
+    setEditTarget(null);
   };
 
   return (
@@ -63,135 +78,189 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Teacher card */}
-        <div className="border rounded-xl p-5 bg-surface">
+        {/* Teacher card (read-only) */}
+        <button
+          type="button"
+          onClick={() => setEditTarget('teacher')}
+          className="border rounded-xl p-5 bg-surface text-left hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-sm transition-all group cursor-pointer"
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <div>
-                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
-                  Teacher
-                </span>
-              </div>
+              <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
+                Teacher
+              </span>
             </div>
-            <button
-              onClick={() => editingTeacher ? saveTeacher() : setEditingTeacher(true)}
-              className="p-2 text-muted hover:text-primary rounded-lg hover:bg-hover transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
-              title={editingTeacher ? 'Save' : 'Edit'}
-            >
-              {editingTeacher ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
-            </button>
+            <span className="p-2 text-muted group-hover:text-primary transition-colors">
+              <Pencil className="w-4 h-4" />
+            </span>
           </div>
+          <div className="space-y-2">
+            <h3 className="font-semibold text-primary">{context.teacher?.jobTitle ?? 'Expert'}</h3>
+            <p className="text-sm text-secondary line-clamp-3">{context.teacher?.description ?? 'AI-generated expert profile'}</p>
+            {context.teacher?.voice && (
+              <p className="text-xs text-muted italic line-clamp-1">&ldquo;{context.teacher.voice}&rdquo;</p>
+            )}
+          </div>
+        </button>
 
-          {editingTeacher ? (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1">Title / Role</label>
-                <input
-                  value={teacherTitle}
-                  onChange={(e) => setTeacherTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1">Expertise</label>
-                <textarea
-                  value={teacherDesc}
-                  onChange={(e) => setTeacherDesc(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1">Teaching Voice</label>
-                <input
-                  value={teacherVoice}
-                  onChange={(e) => setTeacherVoice(e.target.value)}
-                  className="w-full px-3 py-2 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <h3 className="font-semibold text-primary">{context.teacher?.jobTitle ?? 'Expert'}</h3>
-              <p className="text-sm text-secondary">{context.teacher?.description ?? 'AI-generated expert profile'}</p>
-              {context.teacher?.voice && (
-                <p className="text-xs text-muted italic">&ldquo;{context.teacher.voice}&rdquo;</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Student card */}
-        <div className="border rounded-xl p-5 bg-surface">
+        {/* Student card (read-only) */}
+        <button
+          type="button"
+          onClick={() => setEditTarget('student')}
+          className="border rounded-xl p-5 bg-surface text-left hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-sm transition-all group cursor-pointer"
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <div>
-                <span className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">
-                  Student
-                </span>
-              </div>
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                Student
+              </span>
             </div>
-            <button
-              onClick={() => editingStudent ? saveStudent() : setEditingStudent(true)}
-              className="p-2 text-muted hover:text-primary rounded-lg hover:bg-hover transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
-              title={editingStudent ? 'Save' : 'Edit'}
-            >
-              {editingStudent ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
-            </button>
+            <span className="p-2 text-muted group-hover:text-primary transition-colors">
+              <Pencil className="w-4 h-4" />
+            </span>
           </div>
+          <div className="space-y-2">
+            <h3 className="font-semibold text-primary">{context.student?.name ?? 'Learner'}</h3>
+            <p className="text-sm text-secondary">{context.student?.role ?? 'Target learner'}</p>
+            {context.student?.goals && context.student.goals.length > 0 && (
+              <ul className="text-xs text-muted space-y-1">
+                {context.student.goals.map((goal, i) => (
+                  <li key={i} className="flex items-start gap-1.5">
+                    <span className="text-emerald-500 mt-0.5">&#x2022;</span>
+                    {goal}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </button>
+      </div>
 
-          {editingStudent ? (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1">Name / Title</label>
-                <input
-                  value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
-                  className="w-full px-3 py-2 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+      {/* Edit Modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setEditTarget(null)}
+          />
+
+          {/* Modal */}
+          <div className="relative w-full max-w-lg bg-surface border rounded-2xl shadow-xl">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                  editTarget === 'teacher'
+                    ? 'bg-indigo-100 dark:bg-indigo-900/30'
+                    : 'bg-amber-100 dark:bg-amber-900/30'
+                }`}>
+                  {editTarget === 'teacher' ? (
+                    <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  ) : (
+                    <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  )}
+                </div>
+                <h3 className="text-lg font-semibold text-primary">
+                  Edit {editTarget === 'teacher' ? 'Teacher' : 'Student'}
+                </h3>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1">Role</label>
-                <input
-                  value={studentRole}
-                  onChange={(e) => setStudentRole(e.target.value)}
-                  className="w-full px-3 py-2 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-secondary mb-1">Learning Goals (comma-separated)</label>
-                <textarea
-                  value={studentGoals}
-                  onChange={(e) => setStudentGoals(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-              </div>
+              <button
+                onClick={() => setEditTarget(null)}
+                className="p-2 text-muted hover:text-primary rounded-lg hover:bg-hover transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          ) : (
-            <div className="space-y-2">
-              <h3 className="font-semibold text-primary">{context.student?.name ?? 'Learner'}</h3>
-              <p className="text-sm text-secondary">{context.student?.role ?? 'Target learner'}</p>
-              {context.student?.goals && context.student.goals.length > 0 && (
-                <ul className="text-xs text-muted space-y-1">
-                  {context.student.goals.map((goal, i) => (
-                    <li key={i} className="flex items-start gap-1.5">
-                      <span className="text-emerald-500 mt-0.5">&#x2022;</span>
-                      {goal}
-                    </li>
-                  ))}
-                </ul>
+
+            {/* Modal body */}
+            <div className="px-6 py-5 space-y-4">
+              {editTarget === 'teacher' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Title / Role</label>
+                    <input
+                      value={teacherTitle}
+                      onChange={(e) => setTeacherTitle(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Expertise</label>
+                    <textarea
+                      value={teacherDesc}
+                      onChange={(e) => setTeacherDesc(e.target.value)}
+                      rows={4}
+                      className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Teaching Voice</label>
+                    <input
+                      value={teacherVoice}
+                      onChange={(e) => setTeacherVoice(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Name</label>
+                    <input
+                      value={studentName}
+                      onChange={(e) => setStudentName(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Role</label>
+                    <input
+                      value={studentRole}
+                      onChange={(e) => setStudentRole(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Learning Goals</label>
+                    <p className="text-xs text-muted mb-1.5">Separate goals with commas</p>
+                    <textarea
+                      value={studentGoals}
+                      onChange={(e) => setStudentGoals(e.target.value)}
+                      rows={4}
+                      className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                    />
+                  </div>
+                </>
               )}
             </div>
-          )}
+
+            {/* Modal footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={editTarget === 'teacher' ? saveTeacher : saveStudent}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

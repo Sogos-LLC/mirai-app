@@ -14,6 +14,8 @@ import {
   Users,
   Check,
   X,
+  ClipboardCopy,
+  ClipboardCheck,
 } from 'lucide-react';
 import { WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
@@ -406,6 +408,25 @@ function InlineEdit({
   );
 }
 
+function outlineToMarkdown(sections: Section[], overrides: Record<string, string>): string {
+  const get = (key: string, original: string) => overrides[key] ?? original;
+  const lines: string[] = ['# Course Outline', ''];
+  sections.forEach((section, si) => {
+    const title = get(`section_${si}_title`, section.title);
+    const lessonCount = section.lessons?.length ?? 0;
+    lines.push(`## ${title} (${lessonCount} lesson${lessonCount !== 1 ? 's' : ''})`);
+    lines.push('');
+    section.lessons?.forEach((lesson, li) => {
+      const lTitle = get(`section_${si}_lesson_${li}_title`, lesson.title);
+      const lObj = get(`section_${si}_lesson_${li}_objective`, lesson.objective ?? '');
+      lines.push(`- **${lTitle}**`);
+      if (lObj) lines.push(`  ${lObj}`);
+    });
+    lines.push('');
+  });
+  return lines.join('\n').trimEnd();
+}
+
 function OutlineStep({ data, onModificationsChange }: { data: StructureStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
   const sections = data.sections ?? [];
   const totalLessons = data.total_lessons ?? sections.reduce((sum, s) => sum + (s.lessons?.length ?? 0), 0);
@@ -413,6 +434,14 @@ function OutlineStep({ data, onModificationsChange }: { data: StructureStepData;
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyOutline = useCallback(async () => {
+    const md = outlineToMarkdown(sections, overrides);
+    await navigator.clipboard.writeText(md);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [sections, overrides]);
 
   const toggleSection = useCallback((index: number) => {
     setExpandedSections((prev) => {
@@ -451,9 +480,29 @@ function OutlineStep({ data, onModificationsChange }: { data: StructureStepData;
       <div className="flex items-center gap-2 text-sm text-secondary">
         <ListTree className="w-4 h-4" />
         <span>{sections.length} sections</span>
-        <span className="text-muted">•</span>
+        <span className="text-muted">·</span>
         <BookOpen className="w-4 h-4" />
         <span>{totalLessons} lessons</span>
+        <span className="ml-auto">
+          <button
+            type="button"
+            onClick={handleCopyOutline}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted hover:text-primary rounded-md hover:bg-hover transition-colors"
+            title="Copy outline as markdown"
+          >
+            {copied ? (
+              <>
+                <ClipboardCheck className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                <span className="text-green-600 dark:text-green-400">Copied</span>
+              </>
+            ) : (
+              <>
+                <ClipboardCopy className="w-3.5 h-3.5" />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </span>
       </div>
 
       {/* Accordion outline */}

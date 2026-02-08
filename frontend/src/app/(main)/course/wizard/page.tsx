@@ -423,7 +423,7 @@ export default function CourseWizardPage() {
       {/* ===================== WIZARD PHASE ===================== */}
       {isWizardPhase && (
         <>
-          <GuidedTour tourId="wizard" steps={wizardTourSteps} />
+          <GuidedTour tourId="wizard" steps={wizardTourSteps} persistent />
           <div data-tour="wizard-stepper">
             <WizardStepper currentPhase={wizardCtx.currentStep} />
           </div>

@@ -217,7 +217,7 @@ func main() {
 		logger.Warn("ENCRYPTION_KEY not configured, AI features requiring API keys will not work")
 	}
 
-	// Initialize RAG infrastructure (vector DB only — embeddings handled by Python AI service)
+	// Initialize RAG infrastructure (vector DB + Go-side embeddings for knowledge ingestion)
 	var vectorClient *vectordb.QdrantClient
 	if cfg.QdrantURL != "" {
 		vectorClient = vectordb.NewQdrantClient(cfg.QdrantURL)
@@ -380,12 +380,14 @@ func main() {
 	// ---------------------------------------------------------------------------
 
 	if temporalClient != nil {
-		// GoActivities: database, storage, API key decryption
+		// GoActivities: database, storage, API key decryption, RAG ingestion
 		goActivities := &activities.GoActivities{
-			JobRepo:        generationJobRepo,
-			KnowledgeRepo:  teamKnowledgeRepo,
-			ContentStorage: baseStorage,
-			Logger:         slogLogger,
+			JobRepo:         generationJobRepo,
+			KnowledgeRepo:   teamKnowledgeRepo,
+			ContentStorage:  baseStorage,
+			EmbeddingClient: gemini.NewEmbeddingClient(),
+			QdrantClient:    vectorClient,
+			Logger:          slogLogger,
 		}
 
 		// Set up API key decryptor if tenant settings are available

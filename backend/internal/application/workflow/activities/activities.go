@@ -1,8 +1,6 @@
 // Package activities provides Go-side Temporal activities for the Mirai backend.
-// These activities handle database operations, storage (MinIO), event publishing,
-// and API key decryption — everything that needs direct access to Go infrastructure.
-//
-// Activities run on the "go-tasks" queue while AI generation runs on "ai-tasks" (Python).
+// These activities handle database operations, storage (MinIO), API key decryption,
+// and document ingestion (chunking, embedding, vector storage).
 package activities
 
 import (
@@ -17,6 +15,8 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/gemini"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/vectordb"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
 
@@ -28,11 +28,13 @@ type APIKeyDecryptor interface {
 // GoActivities holds all dependencies for Go-side Temporal activities.
 // Register this struct with the Temporal worker to make all methods available.
 type GoActivities struct {
-	JobRepo        repository.GenerationJobRepository
-	KnowledgeRepo  repository.TeamKnowledgeRepository
-	ContentStorage storage.StorageAdapter
-	KeyDecryptor   APIKeyDecryptor
-	Logger         *slog.Logger
+	JobRepo         repository.GenerationJobRepository
+	KnowledgeRepo   repository.TeamKnowledgeRepository
+	ContentStorage  storage.StorageAdapter
+	KeyDecryptor    APIKeyDecryptor
+	EmbeddingClient *gemini.EmbeddingClient
+	QdrantClient    *vectordb.QdrantClient
+	Logger          *slog.Logger
 }
 
 // ---------------------------------------------------------------------------
