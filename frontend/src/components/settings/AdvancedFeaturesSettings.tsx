@@ -56,6 +56,11 @@ const TOGGLE_ITEMS: ToggleItem[] = [
     description: 'Browse and use pre-built course templates as starting points.',
   },
   {
+    key: 'showWizardTutorial',
+    label: 'Wizard Tutorial',
+    description: 'Show the step-by-step guided tour each time you create a new course.',
+  },
+  {
     key: 'showTutorials',
     label: 'Tutorials',
     description: 'Show built-in tutorials and help guides in the interface.',

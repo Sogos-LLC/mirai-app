@@ -69,7 +69,7 @@ export default function CourseWizardPage() {
   const resumeJobId = searchParams.get('jobId') ?? undefined;
   const resumeCourseId = searchParams.get('courseId') ?? undefined;
 
-  const { showQAChecks } = useFeatureTogglesStore();
+  const { showQAChecks, showWizardTutorial } = useFeatureTogglesStore();
 
   // =========================================================================
   // Wizard hooks (Step collection phase)
@@ -423,7 +423,7 @@ export default function CourseWizardPage() {
       {/* ===================== WIZARD PHASE ===================== */}
       {isWizardPhase && (
         <>
-          <GuidedTour tourId="wizard" steps={wizardTourSteps} persistent />
+          {showWizardTutorial && <GuidedTour tourId="wizard" steps={wizardTourSteps} alwaysShow />}
           <div data-tour="wizard-stepper">
             <WizardStepper currentPhase={wizardCtx.currentStep} />
           </div>
