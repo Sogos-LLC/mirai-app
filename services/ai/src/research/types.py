@@ -29,6 +29,8 @@ class ResearchResult:
     provider_type: str  # "internal", "web", or "combined"
     chunks: list[KnowledgeChunk] = field(default_factory=list)
     web_sources: list[WebSource] = field(default_factory=list)
+    gaps: list[str] = field(default_factory=list)
+    key_findings: list[str] = field(default_factory=list)
 
     @staticmethod
     def empty() -> ResearchResult:
@@ -56,11 +58,15 @@ class ResearchResult:
         # Collect all raw data for re-indexing
         all_chunks: list[KnowledgeChunk] = []
         all_web: list[WebSource] = []
+        all_gaps: list[str] = []
+        all_findings: list[str] = []
         research_parts: list[str] = []
 
         for r in results:
             all_chunks.extend(r.chunks)
             all_web.extend(r.web_sources)
+            all_gaps.extend(r.gaps)
+            all_findings.extend(r.key_findings)
             if r.research_text:
                 label = r.provider_type.title()
                 research_parts.append(f"## {label} Research\n\n{r.research_text}")
@@ -77,4 +83,6 @@ class ResearchResult:
             provider_type="combined",
             chunks=all_chunks,
             web_sources=all_web,
+            gaps=all_gaps,
+            key_findings=all_findings,
         )

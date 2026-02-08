@@ -9,6 +9,10 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
+  ShieldCheck,
+  ShieldAlert,
+  FileSearch,
+  Lightbulb,
 } from 'lucide-react';
 import { WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
@@ -18,10 +22,19 @@ import { ComponentRenderer } from '@/components/course/renderers/ComponentRender
 // Step Data Shape Interfaces
 // ============================================================
 
+interface KnowledgeCoverage {
+  gaps: string[];
+  key_findings: string[];
+  source_count: number;
+  coverage_assessment: 'comprehensive' | 'moderate' | 'limited';
+  recommended_format: 'full_course' | 'micro_course';
+}
+
 interface AnalysisStepData {
   purpose_statement: string;
   learner_assumptions: string[];
   constraints: string[];
+  knowledge_coverage?: KnowledgeCoverage;
 }
 
 interface LearningOutcome {
@@ -129,6 +142,110 @@ export function StepDataRenderer({ step, data, onModificationsChange }: StepData
 // Step 1: Course Analysis
 // ============================================================
 
+function KnowledgeCoveragePanel({ coverage }: { coverage: KnowledgeCoverage }) {
+  const assessmentConfig = {
+    comprehensive: {
+      icon: ShieldCheck,
+      label: 'Comprehensive Coverage',
+      description: 'Your source materials cover this topic well.',
+      borderColor: 'border-green-200 dark:border-green-800',
+      bgColor: 'bg-green-50 dark:bg-green-950/20',
+      textColor: 'text-green-700 dark:text-green-400',
+      iconColor: 'text-green-600 dark:text-green-400',
+    },
+    moderate: {
+      icon: ShieldAlert,
+      label: 'Moderate Coverage',
+      description: 'Your sources cover the core topics but have some gaps.',
+      borderColor: 'border-amber-200 dark:border-amber-800',
+      bgColor: 'bg-amber-50 dark:bg-amber-950/20',
+      textColor: 'text-amber-700 dark:text-amber-400',
+      iconColor: 'text-amber-600 dark:text-amber-400',
+    },
+    limited: {
+      icon: ShieldAlert,
+      label: 'Limited Coverage',
+      description: 'Your source materials have significant gaps for this topic.',
+      borderColor: 'border-red-200 dark:border-red-800',
+      bgColor: 'bg-red-50 dark:bg-red-950/20',
+      textColor: 'text-red-700 dark:text-red-400',
+      iconColor: 'text-red-600 dark:text-red-400',
+    },
+  } as const;
+
+  const config = assessmentConfig[coverage.coverage_assessment];
+  const Icon = config.icon;
+
+  return (
+    <div className="space-y-3">
+      {/* Assessment banner */}
+      <div className={`rounded-lg border p-3 ${config.borderColor} ${config.bgColor}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <Icon className={`w-4 h-4 ${config.iconColor} shrink-0`} />
+          <span className={`text-sm font-medium ${config.textColor}`}>{config.label}</span>
+        </div>
+        <p className={`text-xs ${config.textColor} ml-6`}>
+          {config.description} ({coverage.source_count} source{coverage.source_count !== 1 ? 's' : ''} analyzed)
+        </p>
+      </div>
+
+      {/* Key findings */}
+      {coverage.key_findings.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-muted font-medium mb-1.5">
+            <Lightbulb className="w-3.5 h-3.5" />
+            <span>What Your Sources Cover</span>
+          </div>
+          <ul className="space-y-1">
+            {coverage.key_findings.map((finding, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-primary">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+                <span>{finding}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Gaps */}
+      {coverage.gaps.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-muted font-medium mb-1.5">
+            <FileSearch className="w-3.5 h-3.5" />
+            <span>Knowledge Gaps</span>
+          </div>
+          <ul className="space-y-1">
+            {coverage.gaps.map((gap, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-primary">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                <span>{gap}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Micro course recommendation */}
+      {coverage.recommended_format === 'micro_course' && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-0.5">
+                Consider a focused micro course
+              </div>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                With limited source coverage, a shorter, more focused course may produce higher-quality content.
+                You can still approve to proceed with a full course.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AnalysisStep({ data, onModificationsChange }: { data: AnalysisStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
   const [purpose, setPurpose] = useState(data.purpose_statement ?? '');
 
@@ -139,6 +256,10 @@ function AnalysisStep({ data, onModificationsChange }: { data: AnalysisStepData;
 
   return (
     <div className="space-y-5">
+      {data.knowledge_coverage && (
+        <KnowledgeCoveragePanel coverage={data.knowledge_coverage} />
+      )}
+
       <div>
         <div className="flex items-center gap-2 text-xs text-muted mb-1.5">
           <Target className="w-3.5 h-3.5" />

@@ -236,6 +236,8 @@ class ResearchOrchestrator:
             formatted_context=formatted_context,
             provider_type="internal",
             chunks=chunks,
+            gaps=synthesis.gaps,
+            key_findings=synthesis.key_findings,
         )
 
     async def _research_web(self, query: str, api_key: str) -> ResearchResult:

@@ -348,9 +348,15 @@ class CourseCreationWorkflow:
         )
 
         # Present to user for approval
+        step_data = analysis_result.analysis.model_dump()
+        if input.strict_knowledge_only:
+            coverage = self._build_knowledge_coverage()
+            if coverage:
+                step_data["knowledge_coverage"] = coverage
+
         approval = await self._publish_and_wait(
             input, "intent_analysis",
-            json.dumps(analysis_result.analysis.model_dump()),
+            json.dumps(step_data),
             10,
         )
 
@@ -369,10 +375,16 @@ class CourseCreationWorkflow:
                 ),
                 GenerateAnalysisOutput,
             )
-            # Re-present for approval
+            # Re-present for approval (reuse same coverage — research is cached)
+            step_data = analysis_result.analysis.model_dump()
+            if input.strict_knowledge_only:
+                coverage = self._build_knowledge_coverage()
+                if coverage:
+                    step_data["knowledge_coverage"] = coverage
+
             approval = await self._publish_and_wait(
                 input, "intent_analysis",
-                json.dumps(analysis_result.analysis.model_dump()),
+                json.dumps(step_data),
                 10,
             )
 
@@ -1149,6 +1161,36 @@ class CourseCreationWorkflow:
         text = re.sub(r'\s{2,}', ' ', text)
         text = re.sub(r'\s+([.,;:!?])', r'\1', text)
         return text.strip()
+
+    # -------------------------------------------------------------------
+    # Knowledge Coverage
+    # -------------------------------------------------------------------
+
+    def _build_knowledge_coverage(self) -> dict | None:
+        """Build knowledge coverage metadata from cached research."""
+        if not self._course_research:
+            return None
+        research = self._course_research
+        if not research.gaps and not research.key_findings:
+            return None
+
+        gap_count = len(research.gaps)
+        finding_count = len(research.key_findings)
+
+        if gap_count == 0:
+            coverage = "comprehensive"
+        elif gap_count <= 2 and finding_count >= gap_count:
+            coverage = "moderate"
+        else:
+            coverage = "limited"
+
+        return {
+            "gaps": research.gaps,
+            "key_findings": research.key_findings,
+            "source_count": len(research.chunks),
+            "coverage_assessment": coverage,
+            "recommended_format": "micro_course" if coverage == "limited" else "full_course",
+        }
 
     # -------------------------------------------------------------------
     # Helpers
