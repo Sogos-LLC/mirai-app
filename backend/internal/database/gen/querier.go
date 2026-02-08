@@ -98,6 +98,8 @@ type Querier interface {
 	DeleteCourse(ctx context.Context, id uuid.UUID) error
 	DeleteExpiredPendingRegistrations(ctx context.Context) (int64, error)
 	DeleteFolder(ctx context.Context, id uuid.UUID) error
+	DeleteGenerationJob(ctx context.Context, id uuid.UUID) error
+	DeleteGenerationJobsByParentID(ctx context.Context, parentJobID uuid.NullUUID) error
 	DeleteKnowledgeSource(ctx context.Context, id uuid.UUID) error
 	DeleteKnowledgeSourcesByCourse(ctx context.Context, courseID uuid.NullUUID) error
 	// Delete all knowledge sources for a team

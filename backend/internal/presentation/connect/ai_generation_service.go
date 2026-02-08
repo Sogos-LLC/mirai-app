@@ -278,6 +278,33 @@ func (s *AIGenerationServiceServer) CancelJob(
 	}), nil
 }
 
+// DeleteJob cancels the Temporal workflow (if active) and hard-deletes the job from the DB.
+func (s *AIGenerationServiceServer) DeleteJob(
+	ctx context.Context,
+	req *connect.Request[v1.DeleteJobRequest],
+) (*connect.Response[v1.DeleteJobResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	jobID, err := parseUUID(req.Msg.JobId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	if err := s.aiService.DeleteJob(ctx, kratosID, jobID); err != nil {
+		return nil, toConnectError(err)
+	}
+
+	return connect.NewResponse(&v1.DeleteJobResponse{}), nil
+}
+
 // GetGeneratedLesson returns generated lesson content.
 func (s *AIGenerationServiceServer) GetGeneratedLesson(
 	ctx context.Context,

@@ -215,6 +215,24 @@ func (q *Queries) CreateGenerationJobWithID(ctx context.Context, arg CreateGener
 	return err
 }
 
+const deleteGenerationJob = `-- name: DeleteGenerationJob :exec
+DELETE FROM generation_jobs WHERE id = $1
+`
+
+func (q *Queries) DeleteGenerationJob(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteGenerationJob, id)
+	return err
+}
+
+const deleteGenerationJobsByParentID = `-- name: DeleteGenerationJobsByParentID :exec
+DELETE FROM generation_jobs WHERE parent_job_id = $1
+`
+
+func (q *Queries) DeleteGenerationJobsByParentID(ctx context.Context, parentJobID uuid.NullUUID) error {
+	_, err := q.db.ExecContext(ctx, deleteGenerationJobsByParentID, parentJobID)
+	return err
+}
+
 const finalizeParentJob = `-- name: FinalizeParentJob :exec
 UPDATE generation_jobs
 SET status = $1, progress_percent = 100, progress_message = $2,

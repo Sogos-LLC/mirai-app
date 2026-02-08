@@ -156,6 +156,40 @@ func (s *AIGenerationService) CancelJob(ctx context.Context, kratosID uuid.UUID,
 	return job, nil
 }
 
+// DeleteJob cancels the Temporal workflow (if active) and hard-deletes the job and its children from the DB.
+func (s *AIGenerationService) DeleteJob(ctx context.Context, kratosID uuid.UUID, jobID uuid.UUID) error {
+	log := s.logger.With("kratosID", kratosID, "jobID", jobID)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return domainerrors.ErrUserNotFound
+	}
+
+	job, err := s.jobRepo.GetByID(ctx, jobID)
+	if err != nil || job == nil {
+		return domainerrors.ErrNotFound.WithMessage("job not found")
+	}
+
+	// If the job is active, try to cancel the Temporal workflow first
+	if job.Status == valueobject.GenerationJobStatusQueued ||
+		job.Status == valueobject.GenerationJobStatusProcessing ||
+		job.Status == valueobject.GenerationJobStatusAwaitingApproval ||
+		job.Status == valueobject.GenerationJobStatusDeferred {
+		if cancelErr := s.workflowStarter.CancelWorkflow(ctx, jobID.String(), ""); cancelErr != nil {
+			// Log but don't fail - workflow may already be done
+			log.Warn("failed to cancel workflow during delete, continuing", "error", cancelErr)
+		}
+	}
+
+	if err := s.jobRepo.Delete(ctx, jobID); err != nil {
+		log.Error("failed to delete job", "error", err)
+		return domainerrors.ErrInternal.WithCause(err)
+	}
+
+	log.Info("job deleted")
+	return nil
+}
+
 // GetUserIDByKratosID returns the user's internal ID from their Kratos ID.
 func (s *AIGenerationService) GetUserIDByKratosID(ctx context.Context, kratosID uuid.UUID) (uuid.UUID, error) {
 	user, err := s.userRepo.GetByKratosID(ctx, kratosID)

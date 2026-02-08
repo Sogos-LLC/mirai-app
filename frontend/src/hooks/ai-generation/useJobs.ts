@@ -5,6 +5,7 @@ import {
   getJob,
   listJobs,
   cancelJob,
+  deleteJob,
 } from '@/gen/mirai/v1/ai_generation_service-AIGenerationService_connectquery';
 import {
   GenerationJobStatus,
@@ -13,6 +14,7 @@ import {
 } from '@/gen/mirai/v1/ai_generation_types_pb';
 import {
   CancelJobRequestSchema,
+  DeleteJobRequestSchema,
 } from '@/gen/mirai/v1/ai_generation_service_pb';
 import { invalidateJobQueries } from './shared';
 
@@ -51,6 +53,21 @@ export function useCancelJob() {
       const result = await mutation.mutateAsync(request);
       await invalidateJobQueries(queryClient);
       return result;
+    },
+    isLoading: mutation.isPending,
+    error: mutation.error,
+  };
+}
+
+export function useDeleteJob() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(deleteJob);
+
+  return {
+    mutate: async (jobId: string) => {
+      const request = create(DeleteJobRequestSchema, { jobId });
+      await mutation.mutateAsync(request);
+      await invalidateJobQueries(queryClient);
     },
     isLoading: mutation.isPending,
     error: mutation.error,

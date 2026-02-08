@@ -45,6 +45,11 @@ export const listJobs = AIGenerationService.method.listJobs;
 export const cancelJob = AIGenerationService.method.cancelJob;
 
 /**
+ * @generated from rpc mirai.v1.AIGenerationService.DeleteJob
+ */
+export const deleteJob = AIGenerationService.method.deleteJob;
+
+/**
  * @generated from rpc mirai.v1.AIGenerationService.GetGeneratedLesson
  */
 export const getGeneratedLesson = AIGenerationService.method.getGeneratedLesson;

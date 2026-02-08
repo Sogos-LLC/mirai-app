@@ -57,6 +57,9 @@ const (
 	// AIGenerationServiceCancelJobProcedure is the fully-qualified name of the AIGenerationService's
 	// CancelJob RPC.
 	AIGenerationServiceCancelJobProcedure = "/mirai.v1.AIGenerationService/CancelJob"
+	// AIGenerationServiceDeleteJobProcedure is the fully-qualified name of the AIGenerationService's
+	// DeleteJob RPC.
+	AIGenerationServiceDeleteJobProcedure = "/mirai.v1.AIGenerationService/DeleteJob"
 	// AIGenerationServiceGetGeneratedLessonProcedure is the fully-qualified name of the
 	// AIGenerationService's GetGeneratedLesson RPC.
 	AIGenerationServiceGetGeneratedLessonProcedure = "/mirai.v1.AIGenerationService/GetGeneratedLesson"
@@ -105,6 +108,7 @@ type AIGenerationServiceClient interface {
 	GetJob(context.Context, *connect.Request[v1.GetJobRequest]) (*connect.Response[v1.GetJobResponse], error)
 	ListJobs(context.Context, *connect.Request[v1.ListJobsRequest]) (*connect.Response[v1.ListJobsResponse], error)
 	CancelJob(context.Context, *connect.Request[v1.CancelJobRequest]) (*connect.Response[v1.CancelJobResponse], error)
+	DeleteJob(context.Context, *connect.Request[v1.DeleteJobRequest]) (*connect.Response[v1.DeleteJobResponse], error)
 	GetGeneratedLesson(context.Context, *connect.Request[v1.GetGeneratedLessonRequest]) (*connect.Response[v1.GetGeneratedLessonResponse], error)
 	ListGeneratedLessons(context.Context, *connect.Request[v1.ListGeneratedLessonsRequest]) (*connect.Response[v1.ListGeneratedLessonsResponse], error)
 	GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error)
@@ -177,6 +181,12 @@ func NewAIGenerationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			httpClient,
 			baseURL+AIGenerationServiceCancelJobProcedure,
 			connect.WithSchema(aIGenerationServiceMethods.ByName("CancelJob")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteJob: connect.NewClient[v1.DeleteJobRequest, v1.DeleteJobResponse](
+			httpClient,
+			baseURL+AIGenerationServiceDeleteJobProcedure,
+			connect.WithSchema(aIGenerationServiceMethods.ByName("DeleteJob")),
 			connect.WithClientOptions(opts...),
 		),
 		getGeneratedLesson: connect.NewClient[v1.GetGeneratedLessonRequest, v1.GetGeneratedLessonResponse](
@@ -264,6 +274,7 @@ type aIGenerationServiceClient struct {
 	getJob                 *connect.Client[v1.GetJobRequest, v1.GetJobResponse]
 	listJobs               *connect.Client[v1.ListJobsRequest, v1.ListJobsResponse]
 	cancelJob              *connect.Client[v1.CancelJobRequest, v1.CancelJobResponse]
+	deleteJob              *connect.Client[v1.DeleteJobRequest, v1.DeleteJobResponse]
 	getGeneratedLesson     *connect.Client[v1.GetGeneratedLessonRequest, v1.GetGeneratedLessonResponse]
 	listGeneratedLessons   *connect.Client[v1.ListGeneratedLessonsRequest, v1.ListGeneratedLessonsResponse]
 	generateComponentImage *connect.Client[v1.GenerateComponentImageRequest, v1.GenerateComponentImageResponse]
@@ -316,6 +327,11 @@ func (c *aIGenerationServiceClient) ListJobs(ctx context.Context, req *connect.R
 // CancelJob calls mirai.v1.AIGenerationService.CancelJob.
 func (c *aIGenerationServiceClient) CancelJob(ctx context.Context, req *connect.Request[v1.CancelJobRequest]) (*connect.Response[v1.CancelJobResponse], error) {
 	return c.cancelJob.CallUnary(ctx, req)
+}
+
+// DeleteJob calls mirai.v1.AIGenerationService.DeleteJob.
+func (c *aIGenerationServiceClient) DeleteJob(ctx context.Context, req *connect.Request[v1.DeleteJobRequest]) (*connect.Response[v1.DeleteJobResponse], error) {
+	return c.deleteJob.CallUnary(ctx, req)
 }
 
 // GetGeneratedLesson calls mirai.v1.AIGenerationService.GetGeneratedLesson.
@@ -388,6 +404,7 @@ type AIGenerationServiceHandler interface {
 	GetJob(context.Context, *connect.Request[v1.GetJobRequest]) (*connect.Response[v1.GetJobResponse], error)
 	ListJobs(context.Context, *connect.Request[v1.ListJobsRequest]) (*connect.Response[v1.ListJobsResponse], error)
 	CancelJob(context.Context, *connect.Request[v1.CancelJobRequest]) (*connect.Response[v1.CancelJobResponse], error)
+	DeleteJob(context.Context, *connect.Request[v1.DeleteJobRequest]) (*connect.Response[v1.DeleteJobResponse], error)
 	GetGeneratedLesson(context.Context, *connect.Request[v1.GetGeneratedLessonRequest]) (*connect.Response[v1.GetGeneratedLessonResponse], error)
 	ListGeneratedLessons(context.Context, *connect.Request[v1.ListGeneratedLessonsRequest]) (*connect.Response[v1.ListGeneratedLessonsResponse], error)
 	GenerateComponentImage(context.Context, *connect.Request[v1.GenerateComponentImageRequest]) (*connect.Response[v1.GenerateComponentImageResponse], error)
@@ -456,6 +473,12 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 		AIGenerationServiceCancelJobProcedure,
 		svc.CancelJob,
 		connect.WithSchema(aIGenerationServiceMethods.ByName("CancelJob")),
+		connect.WithHandlerOptions(opts...),
+	)
+	aIGenerationServiceDeleteJobHandler := connect.NewUnaryHandler(
+		AIGenerationServiceDeleteJobProcedure,
+		svc.DeleteJob,
+		connect.WithSchema(aIGenerationServiceMethods.ByName("DeleteJob")),
 		connect.WithHandlerOptions(opts...),
 	)
 	aIGenerationServiceGetGeneratedLessonHandler := connect.NewUnaryHandler(
@@ -548,6 +571,8 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 			aIGenerationServiceListJobsHandler.ServeHTTP(w, r)
 		case AIGenerationServiceCancelJobProcedure:
 			aIGenerationServiceCancelJobHandler.ServeHTTP(w, r)
+		case AIGenerationServiceDeleteJobProcedure:
+			aIGenerationServiceDeleteJobHandler.ServeHTTP(w, r)
 		case AIGenerationServiceGetGeneratedLessonProcedure:
 			aIGenerationServiceGetGeneratedLessonHandler.ServeHTTP(w, r)
 		case AIGenerationServiceListGeneratedLessonsProcedure:
@@ -611,6 +636,10 @@ func (UnimplementedAIGenerationServiceHandler) ListJobs(context.Context, *connec
 
 func (UnimplementedAIGenerationServiceHandler) CancelJob(context.Context, *connect.Request[v1.CancelJobRequest]) (*connect.Response[v1.CancelJobResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.CancelJob is not implemented"))
+}
+
+func (UnimplementedAIGenerationServiceHandler) DeleteJob(context.Context, *connect.Request[v1.DeleteJobRequest]) (*connect.Response[v1.DeleteJobResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.DeleteJob is not implemented"))
 }
 
 func (UnimplementedAIGenerationServiceHandler) GetGeneratedLesson(context.Context, *connect.Request[v1.GetGeneratedLessonRequest]) (*connect.Response[v1.GetGeneratedLessonResponse], error) {

@@ -54,6 +54,9 @@ type GenerationJobRepository interface {
 	// Update updates a job.
 	Update(ctx context.Context, job *entity.GenerationJob) error
 
+	// Delete deletes a job and all its children.
+	Delete(ctx context.Context, id uuid.UUID) error
+
 	// GetNextQueued atomically claims the next queued job for processing.
 	// Updates status to 'processing' and sets started_at in one atomic operation.
 	GetNextQueued(ctx context.Context) (*entity.GenerationJob, error)

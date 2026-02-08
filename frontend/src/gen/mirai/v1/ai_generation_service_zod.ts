@@ -112,6 +112,16 @@ export const CancelJobRequestSchema = z.object({
 export type CancelJobRequest = z.infer<typeof CancelJobRequestSchema>;
 
 /**
+ * Zod schema for DeleteJobRequest
+ * @generated from message mirai.v1.DeleteJobRequest
+ */
+export const DeleteJobRequestSchema = z.object({
+  jobId: z.string(),
+});
+
+export type DeleteJobRequest = z.infer<typeof DeleteJobRequestSchema>;
+
+/**
  * Zod schema for GetGeneratedLessonRequest
  * @generated from message mirai.v1.GetGeneratedLessonRequest
  */

@@ -23,6 +23,7 @@ service AIGenerationService {
   rpc GetJob(GetJobRequest) returns (GetJobResponse);
   rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
   rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
+  rpc DeleteJob(DeleteJobRequest) returns (DeleteJobResponse);
   rpc GetGeneratedLesson(GetGeneratedLessonRequest) returns (GetGeneratedLessonResponse);
   rpc ListGeneratedLessons(ListGeneratedLessonsRequest) returns (ListGeneratedLessonsResponse);
   rpc GenerateComponentImage(GenerateComponentImageRequest) returns (GenerateComponentImageResponse);
@@ -122,6 +123,12 @@ message CancelJobRequest {
 message CancelJobResponse {
   GenerationJob job = 1;
 }
+
+message DeleteJobRequest {
+  string job_id = 1;
+}
+
+message DeleteJobResponse {}
 
 message GetGeneratedLessonRequest {
   string lesson_id = 1;

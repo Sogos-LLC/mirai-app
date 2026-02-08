@@ -78,3 +78,9 @@ UPDATE generation_jobs
 SET status = 'processing', started_at = NOW()
 WHERE id = $1 AND status = 'queued'
 RETURNING *;
+
+-- name: DeleteGenerationJobsByParentID :exec
+DELETE FROM generation_jobs WHERE parent_job_id = $1;
+
+-- name: DeleteGenerationJob :exec
+DELETE FROM generation_jobs WHERE id = $1;

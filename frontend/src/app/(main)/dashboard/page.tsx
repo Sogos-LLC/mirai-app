@@ -1,19 +1,38 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2, X, PartyPopper } from 'lucide-react';
+import { Plus, Clock, FileText, CheckCircle, Edit2, Trash2, X, PartyPopper, Loader2, PauseCircle, ArrowRight } from 'lucide-react';
 import { useListCourses, useDeleteCourse, type LibraryEntry } from '@/hooks/useCourses';
 import { CourseStatus } from '@/gen/mirai/v1/course_pb';
+import { GenerationJobStatus, type GenerationJob } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
-import { ActiveJobsList } from '@/components/course/ActiveJobsList';
+import { useInProgressJobs } from '@/hooks/useActiveCourseCreation';
+import { useDeleteJob } from '@/hooks/ai-generation/useJobs';
 import { GapTaskList } from '@/components/dashboard/GapTaskList';
 
+type TabType = 'recent' | 'in_progress' | 'draft' | 'published';
+
+function getJobStatusDisplay(status: GenerationJobStatus) {
+  switch (status) {
+    case GenerationJobStatus.PROCESSING:
+      return { label: 'Generating...', icon: Loader2, iconClass: 'animate-spin text-indigo-500 dark:text-indigo-400' };
+    case GenerationJobStatus.AWAITING_APPROVAL:
+      return { label: 'Awaiting Review', icon: Clock, iconClass: 'text-amber-500 dark:text-amber-400' };
+    case GenerationJobStatus.DEFERRED:
+      return { label: 'Waiting for Gap Tasks', icon: PauseCircle, iconClass: 'text-blue-500 dark:text-blue-400' };
+    case GenerationJobStatus.CANCELLED:
+      return { label: 'Cancelled', icon: X, iconClass: 'text-gray-500 dark:text-gray-400' };
+    default:
+      return { label: 'In Progress', icon: Loader2, iconClass: 'animate-spin text-indigo-500 dark:text-indigo-400' };
+  }
+}
+
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
+  const [activeTab, setActiveTab] = useState<TabType>('recent');
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showGapsAssignedBanner, setShowGapsAssignedBanner] = useState(false);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -90,7 +109,7 @@ export default function Dashboard() {
     }
   }, [showGapsAssignedBanner]);
 
-  // Server-side filtering based on active tab
+  // Server-side filtering based on active tab (only for course tabs)
   const statusFilter = activeTab === 'draft'
     ? CourseStatus.DRAFT
     : activeTab === 'published'
@@ -101,7 +120,8 @@ export default function Dashboard() {
     status: statusFilter,
   });
   const deleteCourseMutation = useDeleteCourse();
-  const { activeJobs } = useActiveCourseCreation();
+  const { inProgressJobs, inProgressCount } = useInProgressJobs();
+  const deleteJobHook = useDeleteJob();
 
   const filteredCourses = courses || [];
 
@@ -110,12 +130,10 @@ export default function Dashboard() {
   };
 
   const handleDeleteCourse = async (courseId: string) => {
-    // Use a more detailed confirmation message
     const confirmMessage = 'Are you sure you want to delete this course?\n\nThis action cannot be undone and will permanently remove the course and all its content.';
 
     if (confirm(confirmMessage)) {
       try {
-        // Delete the course - connect-query automatically refetches via query invalidation
         await deleteCourseMutation.mutate(courseId);
       } catch (error) {
         console.error('Failed to delete course:', error);
@@ -123,6 +141,30 @@ export default function Dashboard() {
       }
     }
   };
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (!confirm('Are you sure you want to delete this job?\n\nThis will cancel any active workflow and permanently remove the job.')) return;
+    setDeletingJobId(jobId);
+    try {
+      await deleteJobHook.mutate(jobId);
+    } catch {
+      // Error handled by hook
+    } finally {
+      setDeletingJobId(null);
+    }
+  };
+
+  const handleResumeJob = (job: GenerationJob) => {
+    router.push(`/course/wizard?jobId=${job.id}`);
+  };
+
+  // Tab configuration
+  const tabs: { key: TabType; label: string; badge?: number }[] = [
+    { key: 'recent', label: 'Recent' },
+    { key: 'in_progress', label: 'In Progress', badge: inProgressCount > 0 ? inProgressCount : undefined },
+    { key: 'draft', label: 'Drafts' },
+    { key: 'published', label: 'Published' },
+  ];
 
   return (
     <>
@@ -215,9 +257,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Active Course Creation Jobs */}
-      <ActiveJobsList jobs={activeJobs} />
-
       {/* Assigned Gap Tasks */}
       <GapTaskList />
 
@@ -227,142 +266,238 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-2">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Your Courses</h3>
-            {isFetching && !isLoading && (
+            {isFetching && !isLoading && activeTab !== 'in_progress' && (
               <div className="w-4 h-4 border-2 border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400 rounded-full animate-spin" />
             )}
           </div>
           {/* Tab buttons - horizontal scroll on mobile */}
           <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
-            <button
-              onClick={() => setActiveTab('recent')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] ${
-                activeTab === 'recent'
-                  ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/40'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-50'
-              }`}
-            >
-              Recent
-            </button>
-            <button
-              onClick={() => setActiveTab('draft')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] ${
-                activeTab === 'draft'
-                  ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/40'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-50'
-              }`}
-            >
-              Drafts
-            </button>
-            <button
-              onClick={() => setActiveTab('published')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] ${
-                activeTab === 'published'
-                  ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/40'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-50'
-              }`}
-            >
-              Published
-            </button>
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[44px] flex items-center gap-1.5 ${
+                  activeTab === tab.key
+                    ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/40'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-50'
+                }`}
+              >
+                {tab.label}
+                {tab.badge !== undefined && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="min-h-[300px] flex items-center justify-center">
-            <div className="text-gray-500 dark:text-gray-400">Loading courses...</div>
-          </div>
-        ) : filteredCourses.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCourses.map((course: LibraryEntry) => (
-              <div
-                key={course.id}
-                className="border border-gray-200 dark:border-dark-border rounded-lg p-4 hover:shadow-md dark:hover:shadow-glow-sm transition-shadow bg-white dark:bg-dark-50"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <h4 className="text-base font-medium text-gray-900 dark:text-white line-clamp-2">
-                    {course.title || 'Untitled Course'}
-                  </h4>
-                  <div className="flex gap-1 -mr-2">
-                    <button
-                      onClick={() => handleEditCourse(course.id)}
-                      className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-50 rounded-lg transition-colors"
-                      title="Edit course"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCourse(course.id)}
-                      className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      title="Delete course"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+        {activeTab === 'in_progress' ? (
+          /* In Progress tab content */
+          inProgressJobs.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {inProgressJobs.map((job) => {
+                const status = getJobStatusDisplay(job.status);
+                const StatusIcon = status.icon;
+                const isDeleting = deletingJobId === job.id;
+                const isCancelled = job.status === GenerationJobStatus.CANCELLED;
 
-                <div className="flex items-center justify-between text-xs mt-3">
-                  <div className="flex items-center gap-1">
-                    {course.status === CourseStatus.PUBLISHED ? (
-                      <>
-                        <CheckCircle className="w-3 h-3 text-green-600 dark:text-green-400" />
-                        <span className="text-green-600 dark:text-green-400">Published</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                        <span className="text-gray-500 dark:text-gray-400">Draft</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {course.modifiedAt
-                        ? new Date(Number(course.modifiedAt.seconds) * 1000).toLocaleDateString()
-                        : 'Unknown'}
-                    </span>
-                  </div>
-                </div>
+                return (
+                  <div
+                    key={job.id}
+                    className="border border-gray-200 dark:border-dark-border rounded-lg p-4 bg-white dark:bg-dark-50"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className="shrink-0 mt-0.5">
+                          <StatusIcon className={`w-5 h-5 ${status.iconClass}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              Course Creation
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              isCancelled
+                                ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                            }`}>
+                              {status.label}
+                            </span>
+                          </div>
+                          {!isCancelled && (
+                            <>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                                {job.progressMessage || 'Processing...'}
+                              </p>
+                              <div className="mt-2 w-full max-w-xs">
+                                <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full transition-all duration-500"
+                                    style={{ width: `${job.progressPercent}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 inline-block">
+                                  {job.progressPercent}%
+                                </span>
+                              </div>
+                            </>
+                          )}
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            Started {job.createdAt
+                              ? new Date(Number(job.createdAt.seconds) * 1000).toLocaleDateString()
+                              : 'Unknown'}
+                          </p>
+                        </div>
+                      </div>
 
-                {course.tags && course.tags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {course.tags.slice(0, 3).map((tag: string) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-50 text-gray-600 dark:text-gray-400 rounded"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {!isCancelled && (
+                          <button
+                            onClick={() => handleResumeJob(job)}
+                            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors min-h-[44px]"
+                          >
+                            Resume
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteJob(job.id)}
+                          disabled={isDeleting}
+                          className="flex items-center justify-center p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors min-h-[44px] min-w-[44px] disabled:opacity-50"
+                          title="Delete"
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="min-h-[300px] flex flex-col items-center justify-center text-center">
-            <div className="w-20 h-20 bg-gray-100 dark:bg-dark-50 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-10 h-10 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
+                );
+              })}
             </div>
-            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              {activeTab === 'draft' && 'No draft courses'}
-              {activeTab === 'published' && 'No published courses'}
-              {activeTab === 'recent' && 'No courses yet'}
-            </h4>
-            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
-              Get started by creating your first course using AI prompts or importing existing materials
-            </p>
-            <button
-              onClick={() => router.push('/course/wizard')}
-              className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
-            >
-              Create your first course
-            </button>
-          </div>
+          ) : (
+            <div className="min-h-[300px] flex flex-col items-center justify-center text-center">
+              <div className="w-20 h-20 bg-gray-100 dark:bg-dark-50 rounded-full flex items-center justify-center mb-4">
+                <Loader2 className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No jobs in progress
+              </h4>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
+                Start creating a course and it will appear here while generating
+              </p>
+              <button
+                onClick={() => router.push('/course/wizard')}
+                className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+              >
+                Create a course
+              </button>
+            </div>
+          )
+        ) : (
+          /* Course list tabs (recent, draft, published) */
+          isLoading ? (
+            <div className="min-h-[300px] flex items-center justify-center">
+              <div className="text-gray-500 dark:text-gray-400">Loading courses...</div>
+            </div>
+          ) : filteredCourses.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredCourses.map((course: LibraryEntry) => (
+                <div
+                  key={course.id}
+                  className="border border-gray-200 dark:border-dark-border rounded-lg p-4 hover:shadow-md dark:hover:shadow-glow-sm transition-shadow bg-white dark:bg-dark-50"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="text-base font-medium text-gray-900 dark:text-white line-clamp-2">
+                      {course.title || 'Untitled Course'}
+                    </h4>
+                    <div className="flex gap-1 -mr-2">
+                      <button
+                        onClick={() => handleEditCourse(course.id)}
+                        className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-50 rounded-lg transition-colors"
+                        title="Edit course"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCourse(course.id)}
+                        className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete course"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs mt-3">
+                    <div className="flex items-center gap-1">
+                      {course.status === CourseStatus.PUBLISHED ? (
+                        <>
+                          <CheckCircle className="w-3 h-3 text-green-600 dark:text-green-400" />
+                          <span className="text-green-600 dark:text-green-400">Published</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                          <span className="text-gray-500 dark:text-gray-400">Draft</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {course.modifiedAt
+                          ? new Date(Number(course.modifiedAt.seconds) * 1000).toLocaleDateString()
+                          : 'Unknown'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {course.tags && course.tags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {course.tags.slice(0, 3).map((tag: string) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-50 text-gray-600 dark:text-gray-400 rounded"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="min-h-[300px] flex flex-col items-center justify-center text-center">
+              <div className="w-20 h-20 bg-gray-100 dark:bg-dark-50 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                {activeTab === 'draft' && 'No draft courses'}
+                {activeTab === 'published' && 'No published courses'}
+                {activeTab === 'recent' && 'No courses yet'}
+              </h4>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
+                Get started by creating your first course using AI prompts or importing existing materials
+              </p>
+              <button
+                onClick={() => router.push('/course/wizard')}
+                className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+              >
+                Create your first course
+              </button>
+            </div>
+          )
         )}
       </div>
     </>
   );
 }
-

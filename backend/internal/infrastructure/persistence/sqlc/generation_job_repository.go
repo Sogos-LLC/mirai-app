@@ -155,6 +155,20 @@ func (r *GenerationJobRepository) Update(ctx context.Context, job *entity.Genera
 	return nil
 }
 
+// Delete deletes a job and all its children.
+func (r *GenerationJobRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
+		// Delete children first to avoid FK constraint violations
+		if err := q.DeleteGenerationJobsByParentID(ctx, uuid.NullUUID{UUID: id, Valid: true}); err != nil {
+			return fmt.Errorf("failed to delete child jobs: %w", err)
+		}
+		if err := q.DeleteGenerationJob(ctx, id); err != nil {
+			return fmt.Errorf("failed to delete job: %w", err)
+		}
+		return nil
+	})
+}
+
 // GetNextQueued atomically claims the next job for processing.
 // Implements "Push + Sweep" pattern for crash recovery.
 func (r *GenerationJobRepository) GetNextQueued(ctx context.Context) (*entity.GenerationJob, error) {

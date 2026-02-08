@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveCoursePlanRequest, ApproveCoursePlanResponse, ApproveWorkflowStepRequest, ApproveWorkflowStepResponse, CancelJobRequest, CancelJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetGraphVisualizationRequest, GetGraphVisualizationResponse, GetJobRequest, GetJobResponse, GetWorkflowStateRequest, GetWorkflowStateResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectWorkflowStepRequest, RejectWorkflowStepResponse, ResumeWorkflowDeferralRequest, ResumeWorkflowDeferralResponse, StartCourseCreationRequest, StartCourseCreationResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
+import { ApproveCoursePlanRequest, ApproveCoursePlanResponse, ApproveWorkflowStepRequest, ApproveWorkflowStepResponse, CancelJobRequest, CancelJobResponse, DeleteJobRequest, DeleteJobResponse, GenerateAllLessonsRequest, GenerateAllLessonsResponse, GenerateComponentImageRequest, GenerateComponentImageResponse, GenerateCourseOutlineRequest, GenerateCourseOutlineResponse, GetCourseOutlineRequest, GetCourseOutlineResponse, GetCoursePlanRequest, GetCoursePlanResponse, GetGeneratedLessonRequest, GetGeneratedLessonResponse, GetGraphVisualizationRequest, GetGraphVisualizationResponse, GetJobRequest, GetJobResponse, GetWorkflowStateRequest, GetWorkflowStateResponse, ListGeneratedLessonsRequest, ListGeneratedLessonsResponse, ListJobsRequest, ListJobsResponse, RegenerateComponentRequest, RegenerateComponentResponse, RejectWorkflowStepRequest, RejectWorkflowStepResponse, ResumeWorkflowDeferralRequest, ResumeWorkflowDeferralResponse, StartCourseCreationRequest, StartCourseCreationResponse, UpdateCourseOutlineRequest, UpdateCourseOutlineResponse, UpdateLessonComponentsRequest, UpdateLessonComponentsResponse } from "./ai_generation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -84,6 +84,15 @@ export const AIGenerationService = {
       name: "CancelJob",
       I: CancelJobRequest,
       O: CancelJobResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc mirai.v1.AIGenerationService.DeleteJob
+     */
+    deleteJob: {
+      name: "DeleteJob",
+      I: DeleteJobRequest,
+      O: DeleteJobResponse,
       kind: MethodKind.Unary,
     },
     /**

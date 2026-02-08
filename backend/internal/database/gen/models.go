@@ -420,10 +420,18 @@ func (ns NullNotificationPriority) Value() (driver.Value, error) {
 type NotificationType string
 
 const (
-	NotificationTypeOutlineReady       NotificationType = "outline_ready"
-	NotificationTypeGenerationComplete NotificationType = "generation_complete"
-	NotificationTypeGenerationFailed   NotificationType = "generation_failed"
-	NotificationTypeApprovalRequested  NotificationType = "approval_requested"
+	NotificationTypeOutlineReady             NotificationType = "outline_ready"
+	NotificationTypeGenerationComplete       NotificationType = "generation_complete"
+	NotificationTypeGenerationFailed         NotificationType = "generation_failed"
+	NotificationTypeApprovalRequested        NotificationType = "approval_requested"
+	NotificationTypeSubmissionReadyForReview NotificationType = "submission_ready_for_review"
+	NotificationTypeSubmissionApproved       NotificationType = "submission_approved"
+	NotificationTypeChangesRequested         NotificationType = "changes_requested"
+	NotificationTypeExportComplete           NotificationType = "export_complete"
+	NotificationTypeExportFailed             NotificationType = "export_failed"
+	NotificationTypeGapTaskAssigned          NotificationType = "gap_task_assigned"
+	NotificationTypeGapTaskCompleted         NotificationType = "gap_task_completed"
+	NotificationTypeGapTasksSubmitted        NotificationType = "gap_tasks_submitted"
 )
 
 func (e *NotificationType) Scan(src interface{}) error {
