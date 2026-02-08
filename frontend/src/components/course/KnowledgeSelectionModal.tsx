@@ -242,7 +242,6 @@ export function KnowledgeSelectionModal({
   const effectiveTeamId = selectedTeamId || (teams.length > 0 ? teams[0].id : '');
   const { sources: teamSources, isLoading: teamLoading } = useListKnowledgeSources(
     effectiveTeamId || undefined,
-    { enabled: activeTab === 'team' && !!effectiveTeamId },
   );
 
   // Track which IDs belong to which tab
@@ -330,7 +329,7 @@ export function KnowledgeSelectionModal({
   return (
     <>
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-surface rounded-xl shadow-xl max-w-5xl w-full max-h-[85vh] flex flex-col border sm:max-h-[85vh]">
+        <div className="bg-surface rounded-xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col border">
           {/* ====== Header ====== */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 border-b gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -453,7 +452,7 @@ export function KnowledgeSelectionModal({
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className={`grid gap-3 ${filtered.length >= 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 max-w-xl'}`}>
                 {filtered.map((source) => (
                   <SourceCard
                     key={source.id}
@@ -505,7 +504,12 @@ export function KnowledgeSelectionModal({
                 <Button variant="ghost" size="sm" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button variant="primary" size="sm" onClick={handleConfirm}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleConfirm}
+                  disabled={selected.size === 0}
+                >
                   Confirm{selected.size > 0 && ` (${selected.size})`}
                 </Button>
               </div>
