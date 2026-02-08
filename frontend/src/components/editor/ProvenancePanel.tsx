@@ -8,6 +8,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import type { LessonProvenance, LessonComponent } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { MarkdownExcerpt } from '@/components/editor/SourceModeOverlay';
 
 interface ProvenancePanelProps {
   provenance: LessonProvenance;
@@ -117,9 +118,9 @@ export function ProvenancePanel({
                       </span>
                     </div>
                     {chunk.excerpt && (
-                      <p className="text-secondary mt-1 leading-relaxed line-clamp-2">
-                        &ldquo;{chunk.excerpt}&rdquo;
-                      </p>
+                      <div className="text-secondary mt-1 leading-relaxed line-clamp-2">
+                        &ldquo;<MarkdownExcerpt text={chunk.excerpt} />&rdquo;
+                      </div>
                     )}
                   </div>
                 ));

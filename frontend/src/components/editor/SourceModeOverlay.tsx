@@ -184,6 +184,30 @@ function SourceDetailPopover({ provenance, onClose }: SourceDetailPopoverProps) 
   );
 }
 
+/**
+ * Renders a short text excerpt with basic inline markdown converted to HTML.
+ * Handles **bold**, *italic*, and --- horizontal rules.
+ */
+export function MarkdownExcerpt({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|^---$)/gm);
+  return (
+    <span>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} className="font-semibold text-primary">{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+          return <em key={i}>{part.slice(1, -1)}</em>;
+        }
+        if (part.trim() === '---') {
+          return <span key={i} className="block my-1 border-t border-subtle" />;
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
+}
+
 function SourceChunkCard({ chunk }: { chunk: ProvenanceChunk }) {
   const sourceType = chunk.sourceType ?? SourceType.UNSPECIFIED;
   const isWeb = sourceType === SourceType.WEB_SEARCH;
@@ -236,9 +260,9 @@ function SourceChunkCard({ chunk }: { chunk: ProvenanceChunk }) {
 
           {chunk.excerpt && (
             <>
-              <p className={`text-secondary mt-1.5 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
-                &ldquo;{chunk.excerpt}&rdquo;
-              </p>
+              <div className={`text-secondary mt-1.5 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
+                &ldquo;<MarkdownExcerpt text={chunk.excerpt} />&rdquo;
+              </div>
               {chunk.excerpt.length > 100 && (
                 <button
                   onClick={() => setExpanded(!expanded)}
