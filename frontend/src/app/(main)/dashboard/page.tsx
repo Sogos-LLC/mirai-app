@@ -6,7 +6,7 @@ import { useListCourses, useDeleteCourse, type LibraryEntry } from '@/hooks/useC
 import { CourseStatus } from '@/gen/mirai/v1/course_pb';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
-import { ActiveWorkflowCard } from '@/components/course/ActiveWorkflowCard';
+import { ActiveJobsList } from '@/components/course/ActiveJobsList';
 import { GapTaskList } from '@/components/dashboard/GapTaskList';
 
 export default function Dashboard() {
@@ -101,7 +101,7 @@ export default function Dashboard() {
     status: statusFilter,
   });
   const deleteCourseMutation = useDeleteCourse();
-  const { activeJob } = useActiveCourseCreation();
+  const { activeJobs } = useActiveCourseCreation();
 
   const filteredCourses = courses || [];
 
@@ -215,8 +215,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Active Workflow Card */}
-      {activeJob && <ActiveWorkflowCard job={activeJob} />}
+      {/* Active Course Creation Jobs */}
+      <ActiveJobsList jobs={activeJobs} />
 
       {/* Assigned Gap Tasks */}
       <GapTaskList />

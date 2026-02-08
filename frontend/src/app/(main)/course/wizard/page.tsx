@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMachine } from '@xstate/react';
 import { fromPromise } from 'xstate';
 import {
@@ -27,7 +27,6 @@ import { WizardStep5ToneContext } from '@/components/course/wizard/WizardStep5To
 
 import {
   wizardMachine,
-  stepNameToNumber,
   TOTAL_WIZARD_STEPS,
 } from '@/machines/wizardMachine';
 import {
@@ -43,17 +42,14 @@ import {
   useWorkflowState,
 } from '@/hooks/useCourseCreation';
 import { useCreateCourse } from '@/hooks/useCourses';
-import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
+import { useGetJob } from '@/hooks/ai-generation/useJobs';
 import {
   useGenerateTitle,
   useGenerateOutcomes,
   useGenerateSMEPersonas,
   useGenerateAudiencePersonas,
   useGenerateToneOptions,
-  useGetWizardState,
-  useSaveWizardState,
   useDeleteWizardState,
-  buildWizardStepData,
 } from '@/hooks/useCourseWizard';
 import {
   GenerationJobStatus,
@@ -62,6 +58,8 @@ import {
 
 export default function CourseWizardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resumeJobId = searchParams.get('jobId') ?? undefined;
 
   // =========================================================================
   // Wizard hooks (Step collection phase)
@@ -71,8 +69,6 @@ export default function CourseWizardPage() {
   const genSMEPersonas = useGenerateSMEPersonas();
   const genAudiencePersonas = useGenerateAudiencePersonas();
   const genToneOptions = useGenerateToneOptions();
-  const saveState = useSaveWizardState();
-  const { data: savedState, isLoading: isLoadingState } = useGetWizardState();
   const deleteState = useDeleteWizardState();
 
   // =========================================================================
@@ -130,66 +126,11 @@ export default function CourseWizardPage() {
           return result.options;
         }),
         saveStateActor: fromPromise(async () => {
-          // State saving is handled by the effect below
+          // No-op — state saving removed
         }),
       },
     })
   );
-
-  // Restore saved wizard state on mount
-  const [hasRestoredState, setHasRestoredState] = useState(false);
-  useEffect(() => {
-    if (hasRestoredState || isLoadingState || !savedState?.data) return;
-    setHasRestoredState(true);
-
-    const data = savedState.data;
-    const step = stepNameToNumber(savedState.currentStep);
-
-    wizardSend({
-      type: 'RESTORE_STATE',
-      step,
-      state: {
-        courseName: data.courseName,
-        desiredOutcomes: data.desiredOutcomes,
-        improvedTitle: data.improvedTitle,
-        description: data.description,
-        smePersonas: data.smePersonas,
-        selectedSmeIds: data.selectedSmeIds,
-        audiencePersonas: data.audiencePersonas,
-        selectedAudienceIds: data.selectedAudienceIds,
-        toneOptions: data.toneOptions,
-        selectedToneId: data.selectedToneId,
-        additionalContext: data.additionalContext,
-        enableInternalKnowledge: data.selectedTeamDocIds.length > 0 || data.selectedGlobalDocIds.length > 0,
-        selectedTeamDocIds: data.selectedTeamDocIds,
-        selectedGlobalDocIds: data.selectedGlobalDocIds,
-        strictKnowledgeOnly: data.internalDataOnly,
-      },
-    });
-  }, [savedState, isLoadingState, hasRestoredState, wizardSend]);
-
-  // Auto-save wizard state on step transitions
-  useEffect(() => {
-    const ctx = wizardState.context;
-    // Only save if we're on an input step (not generating or completed)
-    const isOnInputStep = [
-      'step1_courseName', 'step2_titleDescription', 'step3_smePersonas',
-      'step4_audience', 'step5_toneContext',
-    ].some((s) => wizardState.matches(s));
-    if (!isOnInputStep || !ctx.courseName) return;
-
-    const stepNames: Record<number, string> = {
-      1: 'courseName', 2: 'titleDescription', 3: 'smeSelection',
-      4: 'audienceSelection', 5: 'toneSelection',
-    };
-    const currentStep = stepNames[ctx.currentStep] ?? 'courseName';
-    const data = buildWizardStepData(ctx);
-
-    saveState.mutate({ currentStep, data }).catch(() => {
-      // Silently fail — non-critical
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wizardState.context.currentStep]);
 
   // =========================================================================
   // Workflow hooks (Course generation phase)
@@ -229,23 +170,23 @@ export default function CourseWizardPage() {
     })
   );
 
-  // Check for active workflow to resume (skips wizard phase)
-  const { activeJob } = useActiveCourseCreation();
+  // Resume a specific job if jobId is provided via query param
+  const { data: resumeJob } = useGetJob(resumeJobId);
 
   useEffect(() => {
-    if (!activeJob || !workflowMachineState.matches('idle')) return;
-    const courseId = activeJob.courseId;
+    if (!resumeJobId || !resumeJob || !workflowMachineState.matches('idle')) return;
+    const courseId = resumeJob.courseId;
     if (!courseId) return;
 
-    // We have an active workflow — skip wizard, go straight to workflow phase
+    // Skip wizard, go straight to workflow phase with this specific job
     setPhase('workflow');
     workflowSend({
       type: 'RESUME',
-      jobId: activeJob.id,
+      jobId: resumeJob.id,
       courseId,
-      status: activeJob.status as GenerationJobStatus,
+      status: resumeJob.status as GenerationJobStatus,
     });
-  }, [activeJob, workflowMachineState, workflowSend]);
+  }, [resumeJobId, resumeJob, workflowMachineState, workflowSend]);
 
   // Poll Temporal workflow state
   const wfIsIdle = workflowMachineState.matches('idle');
