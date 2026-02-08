@@ -86,29 +86,15 @@ class QdrantAdapter:
 
         search_filter = Filter(must=must_conditions) if must_conditions else None
 
-        results = await client.search(
+        response = await client.query_points(
             collection_name=self.collection,
-            query_vector=query_vector,
+            query=query_vector,
             limit=top_k,
             query_filter=search_filter,
             search_params=SearchParams(hnsw_ef=128, exact=False),
         )
 
-        chunks = []
-        for point in results:
-            payload = point.payload or {}
-            chunks.append(
-                KnowledgeChunk(
-                    content=payload.get("content", ""),
-                    source_name=payload.get("source_name", ""),
-                    source_id=payload.get("source_id", ""),
-                    chunk_index=payload.get("chunk_index", 0),
-                    score=point.score,
-                    section_heading=payload.get("section_heading", ""),
-                )
-            )
-
-        return chunks
+        return self._points_to_chunks(response.points)
 
     async def search_by_source_ids(
         self,
@@ -134,16 +120,21 @@ class QdrantAdapter:
             should=should_conditions,
         )
 
-        results = await client.search(
+        response = await client.query_points(
             collection_name=self.collection,
-            query_vector=query_vector,
+            query=query_vector,
             limit=top_k,
             query_filter=search_filter,
             search_params=SearchParams(hnsw_ef=128, exact=False),
         )
 
+        return self._points_to_chunks(response.points)
+
+    @staticmethod
+    def _points_to_chunks(points: list) -> list[KnowledgeChunk]:
+        """Convert Qdrant scored points to KnowledgeChunk models."""
         chunks = []
-        for point in results:
+        for point in points:
             payload = point.payload or {}
             chunks.append(
                 KnowledgeChunk(
@@ -155,7 +146,6 @@ class QdrantAdapter:
                     section_heading=payload.get("section_heading", ""),
                 )
             )
-
         return chunks
 
     async def upsert_batch(
