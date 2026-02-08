@@ -339,8 +339,11 @@ func (s *InvitationService) AcceptInvitation(
 		return nil, domainerrors.ErrInvitationEmailMismatch
 	}
 
+	// Use invitation's tenant context for RLS (accepting user may not have a tenant yet)
+	tenantCtx := tenant.WithTenantID(ctx, invitation.TenantID)
+
 	// 4. Get accepting user
-	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	user, err := s.userRepo.GetByKratosID(tenantCtx, kratosID)
 	if err != nil {
 		log.Error("failed to get user", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
@@ -357,21 +360,20 @@ func (s *InvitationService) AcceptInvitation(
 	// 6. Update user with company and role
 	user.CompanyID = &invitation.CompanyID
 	user.Role = invitation.Role
-	if err := s.userRepo.Update(ctx, user); err != nil {
+	if err := s.userRepo.Update(tenantCtx, user); err != nil {
 		log.Error("failed to update user", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
 	// 7. Mark invitation as accepted
 	invitation.Accept(user.ID)
-	if err := s.invitationRepo.Update(ctx, invitation); err != nil {
+	if err := s.invitationRepo.Update(tenantCtx, invitation); err != nil {
 		log.Error("failed to update invitation", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// 8. Get company details (use superadmin context in case user has no tenant yet)
-	adminCtx := tenant.WithSuperAdmin(ctx, true)
-	company, err := s.companyRepo.GetByID(adminCtx, invitation.CompanyID)
+	// 8. Get company details
+	company, err := s.companyRepo.GetByID(tenantCtx, invitation.CompanyID)
 	if err != nil {
 		log.Error("failed to get company", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)

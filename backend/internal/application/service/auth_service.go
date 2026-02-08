@@ -11,6 +11,7 @@ import (
 	domainerrors "github.com/sogos/mirai-backend/internal/domain/errors"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
+	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 	"github.com/sogos/mirai-backend/internal/infrastructure/crypto"
 )
@@ -379,6 +380,9 @@ func (s *AuthService) RegisterWithInvitation(ctx context.Context, req dto.Regist
 
 	log = log.With("email", invitation.Email)
 
+	// Set tenant context from invitation for RLS (this is a public endpoint with no auth)
+	tenantCtx := tenant.WithTenantID(ctx, invitation.TenantID)
+
 	// Step 3: Create identity in Kratos
 	identity, err := s.identity.CreateIdentity(ctx, service.CreateIdentityRequest{
 		Email:     invitation.Email,
@@ -408,20 +412,20 @@ func (s *AuthService) RegisterWithInvitation(ctx context.Context, req dto.Regist
 		Role:      invitation.Role,
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	if err := s.userRepo.Create(tenantCtx, user); err != nil {
 		log.Error("failed to create user", "error", err)
 		return nil, domainerrors.ErrInternal.WithMessage("failed to create user")
 	}
 
 	// Step 5: Mark invitation as accepted
 	invitation.Accept(user.ID)
-	if err := s.invitationRepo.Update(ctx, invitation); err != nil {
+	if err := s.invitationRepo.Update(tenantCtx, invitation); err != nil {
 		log.Error("failed to update invitation", "error", err)
 		// Don't fail - user is created, just log the error
 	}
 
 	// Step 6: Get company details
-	company, err := s.companyRepo.GetByID(ctx, invitation.CompanyID)
+	company, err := s.companyRepo.GetByID(tenantCtx, invitation.CompanyID)
 	if err != nil {
 		log.Error("failed to get company", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
