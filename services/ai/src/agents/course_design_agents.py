@@ -120,6 +120,8 @@ Analyze this course request and produce:
 
 1. **Purpose Statement**: A clear, specific statement of why this course exists and what
    knowledge/skill gap it fills for this audience. Be concrete, not generic.
+   IMPORTANT: Do NOT reference audience personas by name. Use "the target audience" or
+   "learners" instead of specific persona names.
 
 2. **Learner Assumptions** (2-6): What do learners already know coming in? Be specific
    about prerequisite skills and knowledge. These set the baseline.

@@ -654,7 +654,7 @@ export default function CourseWizardPage() {
               </CardHeader>
 
               {workflowMachineState.context.stepData && workflowMachineState.context.pendingStep && (
-                <CardContent className="max-h-[60vh] overflow-y-auto">
+                <CardContent className="max-h-[70vh] overflow-y-auto">
                   <StepDataRenderer
                     step={workflowMachineState.context.pendingStep}
                     data={workflowMachineState.context.stepData}

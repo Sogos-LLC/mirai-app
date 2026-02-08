@@ -12,7 +12,8 @@ import {
   FileSearch,
   Lightbulb,
   Users,
-  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 import { WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
@@ -351,15 +352,59 @@ function OutcomesStep({ data }: { data: OutcomesStepData }) {
 // Step 3: Course Outline (main branch design)
 // ============================================================
 
+function InlineEdit({
+  value,
+  onChange,
+  onSave,
+  onCancel,
+  className,
+  inputClassName,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  className?: string;
+  inputClassName?: string;
+}) {
+  return (
+    <div className={`flex items-center gap-1 ${className ?? ''}`} onClick={(e) => e.stopPropagation()}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSave();
+          if (e.key === 'Escape') onCancel();
+        }}
+        className={`flex-1 min-w-0 px-2 py-1 bg-page border rounded text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${inputClassName ?? 'text-sm'}`}
+        autoFocus
+      />
+      <button
+        type="button"
+        onClick={onSave}
+        className="p-1 rounded hover:bg-green-50 dark:hover:bg-green-950/20 text-green-600 dark:text-green-400 transition-colors"
+      >
+        <Check className="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 text-red-500 dark:text-red-400 transition-colors"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
 function OutlineStep({ data, onModificationsChange }: { data: StructureStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
   const sections = data.sections ?? [];
   const totalLessons = data.total_lessons ?? sections.reduce((sum, s) => sum + (s.lessons?.length ?? 0), 0);
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(
-    () => new Set(sections.map((_, i) => i))
-  );
-  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [titleOverrides, setTitleOverrides] = useState<Record<number, string>>({});
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
 
   const toggleSection = useCallback((index: number) => {
     setExpandedSections((prev) => {
@@ -370,31 +415,27 @@ function OutlineStep({ data, onModificationsChange }: { data: StructureStepData;
     });
   }, []);
 
-  const getSectionTitle = useCallback((idx: number) => {
-    return titleOverrides[idx] ?? sections[idx]?.title ?? '';
-  }, [titleOverrides, sections]);
-
-  const handleStartEdit = useCallback((idx: number, currentTitle: string) => {
-    setEditingIdx(idx);
-    setEditValue(currentTitle);
+  const startEdit = useCallback((key: string, currentValue: string) => {
+    setEditingKey(key);
+    setEditValue(currentValue);
   }, []);
 
-  const handleSaveEdit = useCallback((idx: number) => {
+  const saveEdit = useCallback(() => {
+    if (!editingKey) return;
     const trimmed = editValue.trim();
-    if (!trimmed || trimmed === sections[idx]?.title) {
-      setEditingIdx(null);
+    if (!trimmed) {
+      setEditingKey(null);
       return;
     }
-    const newOverrides = { ...titleOverrides, [idx]: trimmed };
-    setTitleOverrides(newOverrides);
-    setEditingIdx(null);
+    const newOverrides = { ...overrides, [editingKey]: trimmed };
+    setOverrides(newOverrides);
+    setEditingKey(null);
+    onModificationsChange?.(newOverrides);
+  }, [editingKey, editValue, overrides, onModificationsChange]);
 
-    const mods: Record<string, string> = {};
-    for (const [key, value] of Object.entries(newOverrides)) {
-      mods[`section_${key}_title`] = value;
-    }
-    onModificationsChange?.(mods);
-  }, [editValue, titleOverrides, sections, onModificationsChange]);
+  const cancelEdit = useCallback(() => setEditingKey(null), []);
+
+  const getDisplay = useCallback((key: string, original: string) => overrides[key] ?? original, [overrides]);
 
   return (
     <div className="space-y-4">
@@ -411,8 +452,9 @@ function OutlineStep({ data, onModificationsChange }: { data: StructureStepData;
       <div className="border rounded-lg divide-y">
         {sections.map((section, sectionIndex) => {
           const isExpanded = expandedSections.has(sectionIndex);
-          const displayTitle = getSectionTitle(sectionIndex);
-          const isEditing = editingIdx === sectionIndex;
+          const sectionTitleKey = `section_${sectionIndex}_title`;
+          const displayTitle = getDisplay(sectionTitleKey, section.title);
+          const isEditingTitle = editingKey === sectionTitleKey;
           const lessonCount = section.lessons?.length ?? 0;
 
           return (
@@ -436,100 +478,85 @@ function OutlineStep({ data, onModificationsChange }: { data: StructureStepData;
                       ({lessonCount} lesson{lessonCount !== 1 ? 's' : ''})
                     </span>
                   </div>
-                  <h3 className="font-semibold text-primary truncate">
-                    {displayTitle}
-                  </h3>
+                  {isEditingTitle ? (
+                    <InlineEdit
+                      value={editValue}
+                      onChange={setEditValue}
+                      onSave={saveEdit}
+                      onCancel={cancelEdit}
+                      className="mt-0.5"
+                      inputClassName="text-sm font-semibold"
+                    />
+                  ) : (
+                    <h3
+                      className={`font-semibold text-primary truncate ${onModificationsChange ? 'hover:text-indigo-600 dark:hover:text-indigo-400 cursor-text' : ''}`}
+                      onClick={onModificationsChange ? (e) => {
+                        e.stopPropagation();
+                        startEdit(sectionTitleKey, displayTitle);
+                      } : undefined}
+                    >
+                      {displayTitle}
+                    </h3>
+                  )}
                 </div>
-                {onModificationsChange && (
-                  <Pencil
-                    className="w-4 h-4 text-muted shrink-0 opacity-0 group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleStartEdit(sectionIndex, displayTitle);
-                    }}
-                  />
-                )}
               </button>
 
-              {isExpanded && (
-                <div className="px-4 pb-3">
-                  {/* Inline title edit */}
-                  {onModificationsChange && (
-                    <div className="ml-8 mb-3">
-                      {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEdit(sectionIndex);
-                              if (e.key === 'Escape') setEditingIdx(null);
-                            }}
-                            className="flex-1 px-2 py-1 text-sm bg-page border rounded text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSaveEdit(sectionIndex)}
-                            className="px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded transition-colors"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingIdx(null)}
-                            className="px-2 py-1 text-xs text-muted hover:text-secondary transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleStartEdit(sectionIndex, displayTitle)}
-                          className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-                        >
-                          <Pencil className="w-3 h-3" />
-                          <span>Edit title</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+              {isExpanded && section.lessons && section.lessons.length > 0 && (
+                <div className="px-4 pb-3 ml-8 space-y-2">
+                  {section.lessons.map((lesson, lessonIndex) => {
+                    const titleKey = `section_${sectionIndex}_lesson_${lessonIndex}_title`;
+                    const objectiveKey = `section_${sectionIndex}_lesson_${lessonIndex}_objective`;
+                    const displayLessonTitle = getDisplay(titleKey, lesson.title);
+                    const displayObjective = getDisplay(objectiveKey, lesson.objective ?? '');
+                    const isEditingLessonTitle = editingKey === titleKey;
+                    const isEditingObjective = editingKey === objectiveKey;
 
-                  {/* Lessons */}
-                  {section.lessons && section.lessons.length > 0 && (
-                    <div className="ml-8 space-y-2">
-                      {section.lessons.map((lesson, lessonIndex) => (
-                        <div
-                          key={lessonIndex}
-                          className="flex items-start gap-3 p-2 rounded hover:bg-hover"
-                        >
-                          <BookOpen className="w-4 h-4 text-muted mt-0.5 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-primary">
-                              {lesson.title}
+                    return (
+                      <div key={lessonIndex} className="flex items-start gap-3 p-2 rounded hover:bg-hover">
+                        <BookOpen className="w-4 h-4 text-muted mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          {isEditingLessonTitle ? (
+                            <InlineEdit
+                              value={editValue}
+                              onChange={setEditValue}
+                              onSave={saveEdit}
+                              onCancel={cancelEdit}
+                            />
+                          ) : (
+                            <p
+                              className={`text-sm font-medium text-primary ${onModificationsChange ? 'hover:text-indigo-600 dark:hover:text-indigo-400 cursor-text' : ''}`}
+                              onClick={onModificationsChange ? () => startEdit(titleKey, displayLessonTitle) : undefined}
+                            >
+                              {displayLessonTitle}
                             </p>
-                            {lesson.objective && (
-                              <p className="text-xs text-secondary line-clamp-2">
-                                {lesson.objective}
-                              </p>
-                            )}
-                          </div>
+                          )}
+                          {isEditingObjective ? (
+                            <InlineEdit
+                              value={editValue}
+                              onChange={setEditValue}
+                              onSave={saveEdit}
+                              onCancel={cancelEdit}
+                              className="mt-1"
+                              inputClassName="text-xs"
+                            />
+                          ) : displayObjective ? (
+                            <p
+                              className={`text-xs text-secondary line-clamp-2 ${onModificationsChange ? 'hover:text-indigo-600 dark:hover:text-indigo-400 cursor-text' : ''}`}
+                              onClick={onModificationsChange ? () => startEdit(objectiveKey, displayObjective) : undefined}
+                            >
+                              {displayObjective}
+                            </p>
+                          ) : null}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           );
         })}
       </div>
-
-      {onModificationsChange && (
-        <p className="text-xs text-muted">Click &ldquo;Edit title&rdquo; on any section to rename it before approving.</p>
-      )}
     </div>
   );
 }
