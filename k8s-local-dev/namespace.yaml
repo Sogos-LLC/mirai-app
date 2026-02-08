@@ -1,0 +1,26 @@
+# Dev Environment Namespaces
+# All dev resources are isolated from UAT and production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mirai-local-dev
+  labels:
+    environment: dev
+    app.kubernetes.io/part-of: mirai-local-dev
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kratos-local-dev
+  labels:
+    environment: dev
+    app.kubernetes.io/part-of: mirai-local-dev
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redis-local-dev
+  labels:
+    environment: dev
+    app.kubernetes.io/part-of: mirai-local-dev

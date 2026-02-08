@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-server
+  namespace: mirai-local-dev
+  labels:
+    app: temporal-server
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-server
+  template:
+    metadata:
+      labels:
+        app: temporal-server
+        environment: dev
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: temporal-server
+        image: temporalio/auto-setup:1.25.2
+        ports:
+        - containerPort: 7233
+          name: grpc
+        env:
+        - name: DB
+          value: "postgres12_pgx"
+        - name: DB_PORT
+          value: "5432"
+        - name: POSTGRES_SEEDS
+          value: "mirai-local-dev-db-rw.mirai-local-dev.svc.cluster.local"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: temporal-db-credentials
+              key: username
+        - name: POSTGRES_PWD
+          valueFrom:
+            secretKeyRef:
+              name: temporal-db-credentials
+              key: password
+        - name: SKIP_DEFAULT_NAMESPACE_CREATION
+          value: "false"
+        - name: DEFAULT_NAMESPACE
+          value: "mirai-local-dev"
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        livenessProbe:
+          tcpSocket:
+            port: 7233
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 7233
+          initialDelaySeconds: 15
+          periodSeconds: 10

@@ -2,7 +2,7 @@ name: Build AI Service (GitOps)
 
 on:
   push:
-    branches: [ main, uat ]
+    branches: [ main, uat, dev ]
     paths:
       - 'services/ai/**'
       - '.github/workflows/build-ai.yml'
@@ -45,6 +45,9 @@ jobs:
         if [ "$BRANCH" = "uat" ]; then
           echo "kustomize_path=k8s-uat/ai" >> $GITHUB_OUTPUT
           echo "environment=uat" >> $GITHUB_OUTPUT
+        elif [ "$BRANCH" = "dev" ]; then
+          echo "kustomize_path=k8s-local-dev/ai" >> $GITHUB_OUTPUT
+          echo "environment=dev" >> $GITHUB_OUTPUT
         else
           echo "kustomize_path=k8s/ai" >> $GITHUB_OUTPUT
           echo "environment=production" >> $GITHUB_OUTPUT
@@ -74,7 +77,7 @@ jobs:
         push: true
         tags: |
           ${{ steps.version.outputs.full-tag }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.env-config.outputs.branch == 'uat' && 'uat-latest' || 'latest' }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.env-config.outputs.branch == 'uat' && 'uat-latest' || (steps.env-config.outputs.branch == 'dev' && 'dev-latest' || 'latest') }}
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.version.outputs.sha }}
         labels: |
           org.opencontainers.image.revision=${{ github.sha }}

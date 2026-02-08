@@ -1,0 +1,67 @@
+# CloudNativePG Cluster for Kratos Dev Database
+# Single instance, minimal resources, no backups
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: kratos-local-dev-db
+  namespace: kratos-local-dev
+  labels:
+    app.kubernetes.io/name: kratos-local-dev-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: mirai-local-dev
+    environment: dev
+spec:
+  description: "Kratos Dev Database - Single instance for development"
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+
+  # Single instance - no HA for dev
+  instances: 1
+
+  # PostgreSQL configuration - minimal for dev
+  postgresql:
+    parameters:
+      shared_buffers: "64MB"
+      effective_cache_size: "128MB"
+      max_connections: "30"
+      log_statement: "ddl"
+    pg_hba:
+      - host all all 10.0.0.0/8 scram-sha-256
+      - host all all 192.168.0.0/16 scram-sha-256
+
+  # Bootstrap configuration
+  bootstrap:
+    initdb:
+      database: kratos
+      owner: kratos
+      encoding: UTF8
+      secret:
+        name: kratos-local-dev-db-credentials
+
+  # Storage configuration - minimal for dev
+  storage:
+    storageClass: local-path
+    size: 2Gi
+
+  # Resource allocation - minimal for dev
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+  # Affinity - allow scheduling on control plane
+  affinity:
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
+  # Monitoring
+  monitoring:
+    enablePodMonitor: true
+
+  # Disable superuser access
+  enableSuperuserAccess: false
