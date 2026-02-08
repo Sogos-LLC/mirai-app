@@ -321,10 +321,14 @@ func main() {
 	teamKnowledgeService := service.NewTeamKnowledgeService(unifiedKnowledgeService)
 	logger.Info("team knowledge service initialized")
 
+	// Wizard state repository
+	wizardStateRepo := sqlc.NewWizardStateRepository(db.DB)
+
 	// AI services (require encryptor)
 	var tenantSettingsService *service.TenantSettingsService
 	var aiGenerationService *service.AIGenerationService
 	var curriculumService *service.CurriculumService
+	var wizardService *service.WizardService
 	if encryptor != nil {
 		tenantSettingsService = service.NewTenantSettingsService(userRepo, aiSettingsRepo, knowledgeSettingsRepo, encryptor, logger)
 
@@ -348,6 +352,19 @@ func main() {
 
 		// Curriculum service
 		curriculumService = service.NewCurriculumService(aiGenerationService, userRepo)
+
+		// Wizard service (multi-step course creation wizard)
+		if workflowStarter != nil {
+			wizardService = service.NewWizardService(
+				wizardStateRepo,
+				userRepo,
+				aiSettingsRepo,
+				tenantSettingsService,
+				workflowStarter,
+				logger,
+			)
+			logger.Info("wizard service initialized")
+		}
 
 		logger.Info("AI services initialized")
 	} else {
@@ -420,6 +437,7 @@ func main() {
 		TeamKnowledgeService:   teamKnowledgeService,
 		KnowledgeGapService:    knowledgeGapService,
 		CurriculumService:      curriculumService,
+		WizardService:          wizardService,
 		BaseStorage:            baseStorage,
 		PendingRegRepo:         pendingRegRepo,
 		UserRepo:               userRepo,

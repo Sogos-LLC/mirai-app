@@ -20,18 +20,29 @@ type AIProviderFactory interface {
 
 // CourseCreationInput is the input for the unified Python CourseCreationWorkflow.
 type CourseCreationInput struct {
-	JobID                string            `json:"job_id"`
-	TenantID             string            `json:"tenant_id"`
-	CourseID             string            `json:"course_id"`
-	UserID               string            `json:"user_id"`
-	Topic                string            `json:"topic"`
-	Audience             string            `json:"audience"`
-	UseContext           string            `json:"use_context"`
-	EnableInternalKnowledge bool     `json:"enable_internal_knowledge"`
+	JobID                  string   `json:"job_id"`
+	TenantID               string   `json:"tenant_id"`
+	CourseID               string   `json:"course_id"`
+	UserID                 string   `json:"user_id"`
+	Topic                  string   `json:"topic"`
+	Audience               string   `json:"audience"`
+	UseContext             string   `json:"use_context"`
+	EnableInternalKnowledge bool    `json:"enable_internal_knowledge"`
 	SelectedTeamDocIDs     []string `json:"selected_team_doc_ids"`
 	SelectedGlobalDocIDs   []string `json:"selected_global_doc_ids"`
 	EnableWebResearch      bool     `json:"enable_web_research"`
 	StrictKnowledgeOnly    bool     `json:"strict_knowledge_only"`
+
+	// Wizard-generated data (present when multi-step wizard was used)
+	DesiredOutcomes     string                       `json:"desired_outcomes,omitempty"`
+	ImprovedTitle       string                       `json:"improved_title,omitempty"`
+	Description         string                       `json:"description,omitempty"`
+	SMEPersonas         []entity.WizardSMEPersona    `json:"sme_personas,omitempty"`
+	SelectedSMEIDs      []string                     `json:"selected_sme_ids,omitempty"`
+	AudiencePersonas    []entity.WizardAudiencePersona `json:"audience_personas,omitempty"`
+	SelectedAudienceIDs []string                     `json:"selected_audience_ids,omitempty"`
+	SelectedTone        *entity.WizardToneOption      `json:"selected_tone,omitempty"`
+	AdditionalContext   string                       `json:"additional_context,omitempty"`
 }
 
 // WorkflowStarter starts Temporal workflows for async processing.
@@ -42,6 +53,7 @@ type WorkflowStarter interface {
 	UpdateWorkflow(ctx context.Context, workflowID, updateName string, args interface{}) error
 	CancelWorkflow(ctx context.Context, workflowID, runID string) error
 	IsWorkflowRunning(ctx context.Context, workflowID string) (bool, error)
+	ExecuteWizardStep(ctx context.Context, stepType string, input interface{}) (map[string]interface{}, error)
 }
 
 // ImageStorage abstracts image storage operations.

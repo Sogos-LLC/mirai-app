@@ -29,6 +29,7 @@ import {
 } from '@/gen/mirai/v1/ai_generation_service_pb';
 
 import { type WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
+import type { SMEPersona, AudiencePersona, ToneOption } from '@/gen/mirai/v1/course_wizard_pb';
 
 // =============================================================================
 // Start Course Creation Workflow
@@ -54,6 +55,16 @@ export function useStartCourseCreation() {
       selectedGlobalDocIds?: string[];
       enableWebResearch?: boolean;
       strictKnowledgeOnly?: boolean;
+      // Wizard-generated data
+      desiredOutcomes?: string;
+      improvedTitle?: string;
+      description?: string;
+      smePersonas?: SMEPersona[];
+      selectedSmeIds?: string[];
+      audiencePersonas?: AudiencePersona[];
+      selectedAudienceIds?: string[];
+      selectedTone?: ToneOption;
+      additionalContext?: string;
     }) => {
       const request = create(StartCourseCreationRequestSchema, {
         courseId: params.courseId,
@@ -65,6 +76,16 @@ export function useStartCourseCreation() {
         selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],
         enableWebResearch: params.enableWebResearch ?? false,
         strictKnowledgeOnly: params.strictKnowledgeOnly ?? false,
+        // Wizard data
+        desiredOutcomes: params.desiredOutcomes ?? '',
+        improvedTitle: params.improvedTitle ?? '',
+        description: params.description ?? '',
+        smePersonas: params.smePersonas ?? [],
+        selectedSmeIds: params.selectedSmeIds ?? [],
+        audiencePersonas: params.audiencePersonas ?? [],
+        selectedAudienceIds: params.selectedAudienceIds ?? [],
+        selectedTone: params.selectedTone,
+        additionalContext: params.additionalContext ?? '',
       });
 
       const result = await mutation.mutateAsync(request);

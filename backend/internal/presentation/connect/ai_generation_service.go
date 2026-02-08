@@ -1187,16 +1187,48 @@ func (s *AIGenerationServiceServer) StartCourseCreation(
 		useContext = *req.Msg.UseContext
 	}
 
+	// Map wizard persona/tone data from proto to domain entities
+	var smePersonas []entity.WizardSMEPersona
+	for _, p := range req.Msg.GetSmePersonas() {
+		smePersonas = append(smePersonas, entity.WizardSMEPersona{
+			ID: p.GetId(), JobTitle: p.GetJobTitle(), Description: p.GetDescription(),
+			Skills: p.GetSkills(), Voice: p.GetVoice(),
+		})
+	}
+	var audiencePersonas []entity.WizardAudiencePersona
+	for _, p := range req.Msg.GetAudiencePersonas() {
+		audiencePersonas = append(audiencePersonas, entity.WizardAudiencePersona{
+			ID: p.GetId(), Name: p.GetName(), Role: p.GetRole(),
+			Description: p.GetDescription(), Goals: p.GetGoals(),
+		})
+	}
+	var selectedTone *entity.WizardToneOption
+	if t := req.Msg.GetSelectedTone(); t != nil {
+		selectedTone = &entity.WizardToneOption{
+			ID: t.GetId(), Name: t.GetName(), Description: t.GetDescription(),
+			LevelOfDetail: entity.ParseToneDetailLevel(t.GetLevelOfDetail().String()),
+		}
+	}
+
 	serviceReq := service.StartCourseCreationRequest{
-		CourseID:             courseID,
-		Topic:               req.Msg.GetTopic(),
-		Audience:             req.Msg.GetAudience(),
-		UseContext:           useContext,
+		CourseID:                courseID,
+		Topic:                   req.Msg.GetTopic(),
+		Audience:                req.Msg.GetAudience(),
+		UseContext:              useContext,
 		EnableInternalKnowledge: req.Msg.GetEnableInternalKnowledge(),
-		SelectedTeamDocIDs:   req.Msg.GetSelectedTeamDocIds(),
-		SelectedGlobalDocIDs: req.Msg.GetSelectedGlobalDocIds(),
-		EnableWebResearch:    req.Msg.GetEnableWebResearch(),
-		StrictKnowledgeOnly: req.Msg.GetStrictKnowledgeOnly(),
+		SelectedTeamDocIDs:      req.Msg.GetSelectedTeamDocIds(),
+		SelectedGlobalDocIDs:    req.Msg.GetSelectedGlobalDocIds(),
+		EnableWebResearch:       req.Msg.GetEnableWebResearch(),
+		StrictKnowledgeOnly:     req.Msg.GetStrictKnowledgeOnly(),
+		DesiredOutcomes:         req.Msg.GetDesiredOutcomes(),
+		ImprovedTitle:           req.Msg.GetImprovedTitle(),
+		Description:             req.Msg.GetDescription(),
+		SMEPersonas:             smePersonas,
+		SelectedSMEIDs:          req.Msg.GetSelectedSmeIds(),
+		AudiencePersonas:        audiencePersonas,
+		SelectedAudienceIDs:     req.Msg.GetSelectedAudienceIds(),
+		SelectedTone:            selectedTone,
+		AdditionalContext:       req.Msg.GetAdditionalContext(),
 	}
 
 	result, err := s.aiService.StartCourseCreation(ctx, kratosID, serviceReq)

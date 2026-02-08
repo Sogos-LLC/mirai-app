@@ -1,27 +1,35 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useMachine } from '@xstate/react';
 import { fromPromise } from 'xstate';
 import {
-  Sparkles,
   Check,
   RotateCcw,
   Loader2,
   ArrowRight,
+  ArrowLeft,
   AlertCircle,
-  BookOpen,
-  Globe,
-  Lock,
 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
-import { KnowledgeSelectionModal } from '@/components/course/KnowledgeSelectionModal';
 import { GapAssignmentModal } from '@/components/course/GapAssignmentModal';
 import { PageShell } from '@/components/layout/PageShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { WizardStepper } from '@/components/course/WizardStepper';
+import { GeneratingOverlay } from '@/components/course/GeneratingOverlay';
+import { WizardStep1CourseName } from '@/components/course/wizard/WizardStep1CourseName';
+import { WizardStep2TitleDescription } from '@/components/course/wizard/WizardStep2TitleDescription';
+import { WizardStep3Personas } from '@/components/course/wizard/WizardStep3Personas';
+import { WizardStep4Audience } from '@/components/course/wizard/WizardStep4Audience';
+import { WizardStep5ToneContext } from '@/components/course/wizard/WizardStep5ToneContext';
 
+import {
+  wizardMachine,
+  stepNameToNumber,
+  TOTAL_WIZARD_STEPS,
+} from '@/machines/wizardMachine';
 import {
   courseCreationMachine,
   getWorkflowStepLabel,
@@ -34,10 +42,19 @@ import {
   useRejectWorkflowStep,
   useWorkflowState,
 } from '@/hooks/useCourseCreation';
-import { useCreateCourse, useGetCourse } from '@/hooks/useCourses';
+import { useCreateCourse } from '@/hooks/useCourses';
 import { useActiveCourseCreation } from '@/hooks/useActiveCourseCreation';
-import { useListGapTasksForCourse } from '@/hooks/useKnowledgeGapTasks';
-import { KnowledgeGapTaskStatus } from '@/gen/mirai/v1/knowledge_gap_pb';
+import {
+  useGenerateTitle,
+  useGenerateOutcomes,
+  useGenerateSMEPersonas,
+  useGenerateAudiencePersonas,
+  useGenerateToneOptions,
+  useGetWizardState,
+  useSaveWizardState,
+  useDeleteWizardState,
+  buildWizardStepData,
+} from '@/hooks/useCourseWizard';
 import {
   GenerationJobStatus,
   WorkflowStepType,
@@ -45,56 +62,152 @@ import {
 
 export default function CourseWizardPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const resumeCourseId = searchParams.get('courseId');
 
-  // Form state — 3 fields matching the new 5-step design
-  const [topic, setTopic] = useState('');
-  const [audience, setAudience] = useState('');
-  const [useContext, setUseContext] = useState('');
-  const [enableWebResearch, setEnableWebResearch] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
+  // =========================================================================
+  // Wizard hooks (Step collection phase)
+  // =========================================================================
+  const genTitle = useGenerateTitle();
+  const genOutcomes = useGenerateOutcomes();
+  const genSMEPersonas = useGenerateSMEPersonas();
+  const genAudiencePersonas = useGenerateAudiencePersonas();
+  const genToneOptions = useGenerateToneOptions();
+  const saveState = useSaveWizardState();
+  const { data: savedState, isLoading: isLoadingState } = useGetWizardState();
+  const deleteState = useDeleteWizardState();
 
-  // Resume flow: load course data from URL param to pre-fill form
-  const { data: resumeCourse } = useGetCourse(resumeCourseId ?? undefined);
-  const { data: gapTasks } = useListGapTasksForCourse(resumeCourseId ?? '');
-
-  const pendingGapTasks = gapTasks.filter(
-    (t) => t.status === KnowledgeGapTaskStatus.PENDING || t.status === KnowledgeGapTaskStatus.IN_PROGRESS
+  // =========================================================================
+  // Wizard XState Machine
+  // =========================================================================
+  const [wizardState, wizardSend] = useMachine(
+    wizardMachine.provide({
+      actors: {
+        generateOutcomesActor: fromPromise(async ({ input }) => {
+          const result = await genOutcomes.mutate({
+            courseName: input.courseName,
+            selectedTeamDocIds: input.teamDocIds,
+            selectedGlobalDocIds: input.globalDocIds,
+          });
+          return result.outcomes;
+        }),
+        generateTitleActor: fromPromise(async ({ input }) => {
+          const result = await genTitle.mutate({
+            courseName: input.courseName,
+            selectedTeamDocIds: input.teamDocIds,
+            selectedGlobalDocIds: input.globalDocIds,
+          });
+          return {
+            improvedTitle: result.improvedTitle,
+            description: result.description,
+          };
+        }),
+        generateSMEPersonasActor: fromPromise(async ({ input }) => {
+          const result = await genSMEPersonas.mutate({
+            title: input.title,
+            description: input.description,
+            selectedTeamDocIds: input.teamDocIds,
+            selectedGlobalDocIds: input.globalDocIds,
+          });
+          return result.personas;
+        }),
+        generateAudiencePersonasActor: fromPromise(async ({ input }) => {
+          const result = await genAudiencePersonas.mutate({
+            title: input.title,
+            description: input.description,
+            selectedSmes: input.selectedSmes,
+            selectedTeamDocIds: input.teamDocIds,
+            selectedGlobalDocIds: input.globalDocIds,
+          });
+          return result.personas;
+        }),
+        generateToneOptionsActor: fromPromise(async ({ input }) => {
+          const result = await genToneOptions.mutate({
+            title: input.title,
+            description: input.description,
+            selectedAudiences: input.selectedAudiences,
+            selectedTeamDocIds: input.teamDocIds,
+            selectedGlobalDocIds: input.globalDocIds,
+          });
+          return result.options;
+        }),
+        saveStateActor: fromPromise(async () => {
+          // State saving is handled by the effect below
+        }),
+      },
+    })
   );
-  const completedGapTasks = gapTasks.filter((t) => t.status === KnowledgeGapTaskStatus.COMPLETED);
-  const allGapsAddressed = gapTasks.length > 0 && pendingGapTasks.length === 0;
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- only pre-fill on initial course load
+  // Restore saved wizard state on mount
+  const [hasRestoredState, setHasRestoredState] = useState(false);
   useEffect(() => {
-    if (resumeCourse?.settings?.title && !topic) {
-      setTopic(resumeCourse.settings.title);
-    }
-  }, [resumeCourse]);
+    if (hasRestoredState || isLoadingState || !savedState?.data) return;
+    setHasRestoredState(true);
 
-  // Connect-Query mutations
+    const data = savedState.data;
+    const step = stepNameToNumber(savedState.currentStep);
+
+    wizardSend({
+      type: 'RESTORE_STATE',
+      step,
+      state: {
+        courseName: data.courseName,
+        desiredOutcomes: data.desiredOutcomes,
+        improvedTitle: data.improvedTitle,
+        description: data.description,
+        smePersonas: data.smePersonas,
+        selectedSmeIds: data.selectedSmeIds,
+        audiencePersonas: data.audiencePersonas,
+        selectedAudienceIds: data.selectedAudienceIds,
+        toneOptions: data.toneOptions,
+        selectedToneId: data.selectedToneId,
+        additionalContext: data.additionalContext,
+        enableInternalKnowledge: data.selectedTeamDocIds.length > 0 || data.selectedGlobalDocIds.length > 0,
+        selectedTeamDocIds: data.selectedTeamDocIds,
+        selectedGlobalDocIds: data.selectedGlobalDocIds,
+        strictKnowledgeOnly: data.internalDataOnly,
+      },
+    });
+  }, [savedState, isLoadingState, hasRestoredState, wizardSend]);
+
+  // Auto-save wizard state on step transitions
+  useEffect(() => {
+    const ctx = wizardState.context;
+    // Only save if we're on an input step (not generating or completed)
+    const isOnInputStep = [
+      'step1_courseName', 'step2_titleDescription', 'step3_smePersonas',
+      'step4_audience', 'step5_toneContext',
+    ].some((s) => wizardState.matches(s));
+    if (!isOnInputStep || !ctx.courseName) return;
+
+    const stepNames: Record<number, string> = {
+      1: 'courseName', 2: 'titleDescription', 3: 'smeSelection',
+      4: 'audienceSelection', 5: 'toneSelection',
+    };
+    const currentStep = stepNames[ctx.currentStep] ?? 'courseName';
+    const data = buildWizardStepData(ctx);
+
+    saveState.mutate({ currentStep, data }).catch(() => {
+      // Silently fail — non-critical
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardState.context.currentStep]);
+
+  // =========================================================================
+  // Workflow hooks (Course generation phase)
+  // =========================================================================
   const createCourse = useCreateCourse();
   const startCreation = useStartCourseCreation();
   const approveStep = useApproveWorkflowStep();
   const rejectStep = useRejectWorkflowStep();
 
-  // Rejection feedback
   const [feedback, setFeedback] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
-
-  // Knowledge selection
-  const [enableInternalKnowledge, setEnableInternalKnowledge] = useState(false);
-  const [strictKnowledgeOnly, setStrictKnowledgeOnly] = useState(false);
-  const [selectedTeamDocIds, setSelectedTeamDocIds] = useState<string[]>([]);
-  const [selectedGlobalDocIds, setSelectedGlobalDocIds] = useState<string[]>([]);
-  const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
   const [showGapAssignment, setShowGapAssignment] = useState(false);
   const [gapDescriptions, setGapDescriptions] = useState<string[]>([]);
-  const totalSelectedDocs = selectedTeamDocIds.length + selectedGlobalDocIds.length;
 
-  // XState machine with real actor implementations
-  const [state, send] = useMachine(
+  // =========================================================================
+  // Workflow XState Machine
+  // =========================================================================
+  const [workflowMachineState, workflowSend] = useMachine(
     courseCreationMachine.provide({
       actors: {
         approveStepActor: fromPromise(async ({ input }) => {
@@ -116,156 +229,211 @@ export default function CourseWizardPage() {
     })
   );
 
-  // Check for active workflow to resume
+  // Check for active workflow to resume (skips wizard phase)
   const { activeJob } = useActiveCourseCreation();
 
-  // Resume active workflow on mount
   useEffect(() => {
-    if (!activeJob || !state.matches('idle')) return;
-
+    if (!activeJob || !workflowMachineState.matches('idle')) return;
     const courseId = activeJob.courseId;
     if (!courseId) return;
 
-    send({
+    // We have an active workflow — skip wizard, go straight to workflow phase
+    setPhase('workflow');
+    workflowSend({
       type: 'RESUME',
       jobId: activeJob.id,
       courseId,
       status: activeJob.status as GenerationJobStatus,
     });
-  }, [activeJob, state, send]);
-
-  // Derive active state for polling
-  const isIdle = state.matches('idle');
-  const isCompleted = state.matches('completed');
-  const isFailed = state.matches('failed');
-  const isActive = !isIdle && !isCompleted && !isFailed;
+  }, [activeJob, workflowMachineState, workflowSend]);
 
   // Poll Temporal workflow state
-  const { state: workflowState } = useWorkflowState(state.context.jobId, isActive);
+  const wfIsIdle = workflowMachineState.matches('idle');
+  const wfIsCompleted = workflowMachineState.matches('completed');
+  const wfIsFailed = workflowMachineState.matches('failed');
+  const wfIsActive = !wfIsIdle && !wfIsCompleted && !wfIsFailed;
 
-  // Bridge polling state to XState machine
+  const { state: temporalState } = useWorkflowState(
+    workflowMachineState.context.jobId,
+    wfIsActive,
+  );
+
   useEffect(() => {
-    if (!workflowState) return;
-    send({ type: 'STATE_UPDATE', state: workflowState });
-  }, [workflowState, send]);
+    if (!temporalState) return;
+    workflowSend({ type: 'STATE_UPDATE', state: temporalState });
+  }, [temporalState, workflowSend]);
 
-  const isProcessing = state.matches('processing');
-  const isAwaitingApproval = state.matches('awaitingApproval');
-  const isSendingSignal = state.matches('sendingApproval') || state.matches('sendingRejection');
-
-  // ALL 5 steps show approval UI
+  const isProcessing = workflowMachineState.matches('processing');
+  const isAwaitingApproval = workflowMachineState.matches('awaitingApproval');
+  const isSendingSignal = workflowMachineState.matches('sendingApproval') || workflowMachineState.matches('sendingRejection');
   const showStepReview = isAwaitingApproval || isSendingSignal;
   const showProcessing = isProcessing;
 
-  // Start the workflow: create a course record, then start the Temporal workflow
-  const handleStart = useCallback(async () => {
-    const topicVal = topic.trim();
-    const audienceVal = audience.trim();
-    if (!topicVal || !audienceVal) return;
+  // =========================================================================
+  // Phase management: wizard → workflow
+  // =========================================================================
+  const [phase, setPhase] = useState<'wizard' | 'workflow' | 'starting'>('wizard');
+  const [startError, setStartError] = useState<string | null>(null);
 
-    setIsStarting(true);
-    setStartError(null);
+  // When wizard completes, start the Temporal workflow
+  const isWizardCompleted = wizardState.matches('completed');
+  useEffect(() => {
+    if (!isWizardCompleted || phase !== 'wizard') return;
 
-    try {
-      // 1. Reuse existing course if resuming, otherwise create new
-      let courseId = resumeCourseId ?? undefined;
-      if (!courseId) {
+    const startWorkflow = async () => {
+      setPhase('starting');
+      setStartError(null);
+
+      try {
+        const ctx = wizardState.context;
+
+        // 1. Create course record
         const courseResult = await createCourse.mutate({
-          settings: { title: topicVal },
+          settings: { title: ctx.improvedTitle || ctx.courseName },
         });
-        courseId = courseResult.course?.id;
+        const courseId = courseResult.course?.id;
         if (!courseId) throw new Error('Failed to create course');
-      }
 
-      // 2. Start the unified AI workflow
-      const result = await startCreation.mutate({
-        courseId,
-        topic: topicVal,
-        audience: audienceVal,
-        useContext: useContext.trim() || undefined,
-        enableInternalKnowledge,
-        selectedTeamDocIds: selectedTeamDocIds.length > 0 ? selectedTeamDocIds : undefined,
-        selectedGlobalDocIds: selectedGlobalDocIds.length > 0 ? selectedGlobalDocIds : undefined,
-        enableWebResearch,
-        strictKnowledgeOnly: enableInternalKnowledge && strictKnowledgeOnly,
-      });
+        // 2. Find the selected tone object
+        const selectedTone = ctx.toneOptions.find((t) => t.id === ctx.selectedToneId);
 
-      if (result.job?.id) {
-        send({
-          type: 'WORKFLOW_STARTED',
-          jobId: result.job.id,
+        // 3. Start Temporal workflow with wizard data
+        const result = await startCreation.mutate({
           courseId,
+          topic: ctx.courseName,
+          audience: ctx.selectedAudienceIds.join(','), // audience descriptions
+          enableInternalKnowledge: ctx.enableInternalKnowledge,
+          selectedTeamDocIds: ctx.selectedTeamDocIds.length > 0 ? ctx.selectedTeamDocIds : undefined,
+          selectedGlobalDocIds: ctx.selectedGlobalDocIds.length > 0 ? ctx.selectedGlobalDocIds : undefined,
+          enableWebResearch: ctx.enableWebResearch,
+          strictKnowledgeOnly: ctx.enableInternalKnowledge && ctx.strictKnowledgeOnly,
+          // Wizard-enriched data
+          desiredOutcomes: ctx.desiredOutcomes,
+          improvedTitle: ctx.improvedTitle,
+          description: ctx.description,
+          smePersonas: ctx.smePersonas,
+          selectedSmeIds: ctx.selectedSmeIds,
+          audiencePersonas: ctx.audiencePersonas,
+          selectedAudienceIds: ctx.selectedAudienceIds,
+          selectedTone,
+          additionalContext: ctx.additionalContext,
         });
-        // Clean up resume URL param
-        if (resumeCourseId) {
-          router.replace('/course/wizard', { scroll: false });
-        }
-      }
-    } catch (err) {
-      setStartError(err instanceof Error ? err.message : 'Failed to start course creation');
-    } finally {
-      setIsStarting(false);
-    }
-  }, [topic, audience, useContext, enableInternalKnowledge, strictKnowledgeOnly, selectedTeamDocIds, selectedGlobalDocIds, enableWebResearch, resumeCourseId, createCourse, startCreation, send, router]);
 
-  // Approve current step
+        if (result.job?.id) {
+          // 4. Delete wizard state (no longer needed)
+          deleteState.mutate().catch(() => {}); // fire-and-forget
+
+          // 5. Transition to workflow phase
+          setPhase('workflow');
+          workflowSend({
+            type: 'WORKFLOW_STARTED',
+            jobId: result.job.id,
+            courseId,
+          });
+        }
+      } catch (err) {
+        setStartError(err instanceof Error ? err.message : 'Failed to start course creation');
+        setPhase('wizard');
+      }
+    };
+
+    startWorkflow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWizardCompleted]);
+
+  // =========================================================================
+  // Wizard state helpers
+  // =========================================================================
+  const isWizardPhase = phase === 'wizard' || phase === 'starting';
+  const isWorkflowPhase = phase === 'workflow';
+
+  const isGenerating = [
+    'generatingOutcomes', 'generatingTitle', 'generatingPersonas',
+    'generatingAudience', 'generatingTone',
+  ].some((s) => wizardState.matches(s));
+
+  const wizardCtx = wizardState.context;
+
+  const canGoNext = (() => {
+    switch (wizardCtx.currentStep) {
+      case 1: return wizardCtx.courseName.trim().length > 0;
+      case 2: return wizardCtx.improvedTitle.trim().length > 0;
+      case 3: return wizardCtx.selectedSmeIds.length > 0;
+      case 4: return wizardCtx.selectedAudienceIds.length > 0;
+      case 5: return wizardCtx.selectedToneId !== '';
+      default: return false;
+    }
+  })();
+
+  const getGeneratingOverlayProps = () => {
+    if (wizardState.matches('generatingOutcomes')) {
+      return { title: 'Generating Outcomes', message: 'AI is analyzing your topic to suggest learning outcomes...' };
+    }
+    if (wizardState.matches('generatingTitle')) {
+      return { title: 'Refining Your Title', message: 'AI is crafting an optimized course title and description...' };
+    }
+    if (wizardState.matches('generatingPersonas')) {
+      return { title: 'Creating Expert Personas', message: 'AI is generating subject matter expert profiles for your course...' };
+    }
+    if (wizardState.matches('generatingAudience')) {
+      return { title: 'Defining Audiences', message: 'AI is creating target learner profiles based on your experts...' };
+    }
+    if (wizardState.matches('generatingTone')) {
+      return { title: 'Crafting Tone Options', message: 'AI is preparing tone and style options for your course...' };
+    }
+    return { title: 'Working...', message: 'Please wait...' };
+  };
+
+  // =========================================================================
+  // Workflow phase handlers
+  // =========================================================================
   const handleApprove = useCallback(() => {
     setShowRejectForm(false);
     setFeedback('');
-    send({ type: 'APPROVE' });
-  }, [send]);
+    workflowSend({ type: 'APPROVE' });
+  }, [workflowSend]);
 
-  // Reject current step with feedback
   const handleReject = useCallback(() => {
     if (!feedback.trim()) return;
     setShowRejectForm(false);
-    send({ type: 'REJECT', feedback: feedback.trim() });
+    workflowSend({ type: 'REJECT', feedback: feedback.trim() });
     setFeedback('');
-  }, [feedback, send]);
+  }, [feedback, workflowSend]);
 
-  // Open gap assignment modal
   const handleAssignGaps = useCallback((gaps: string[]) => {
     setGapDescriptions(gaps);
     setShowGapAssignment(true);
   }, []);
 
-  // Defer workflow: fire-and-forget reject + redirect immediately
   const handleDefer = useCallback(() => {
     setShowGapAssignment(false);
-    // Fire-and-forget: reject the workflow directly, don't wait for XState
     rejectStep.mutate({
-      jobId: state.context.jobId!,
-      step: state.context.pendingStep!,
+      jobId: workflowMachineState.context.jobId!,
+      step: workflowMachineState.context.pendingStep!,
       feedback: '__DEFERRED__',
     });
-    // Redirect immediately — user doesn't need to watch the spinner
     router.push('/dashboard?gaps_assigned=true');
-  }, [rejectStep, state.context, router]);
+  }, [rejectStep, workflowMachineState.context, router]);
 
-  // Step-specific labels for approval UI
-  const pendingStep = state.context.pendingStep;
+  const pendingStep = workflowMachineState.context.pendingStep;
   const stepLabel = pendingStep ? getWorkflowStepLabel(pendingStep) : '';
   const stepNumber = pendingStep ? getWorkflowStepNumber(pendingStep) : 0;
 
-  // Approve button label varies by step
   const getApproveLabel = () => {
     if (!pendingStep) return 'Approve';
     switch (pendingStep) {
-      case WorkflowStepType.INTENT_ANALYSIS:
-        return 'Approve Analysis';
-      case WorkflowStepType.DEFINE_SUCCESS:
-        return 'Approve Outcomes';
-      case WorkflowStepType.APPROVE_STRUCTURE:
-        return 'Approve Structure';
-      case WorkflowStepType.SAMPLE_LESSON:
-        return 'Approve Lesson';
-      case WorkflowStepType.FINAL_REVIEW:
-        return 'Approve & Export';
-      default:
-        return 'Approve';
+      case WorkflowStepType.INTENT_ANALYSIS: return 'Approve Analysis';
+      case WorkflowStepType.DEFINE_SUCCESS: return 'Approve Outcomes';
+      case WorkflowStepType.APPROVE_STRUCTURE: return 'Approve Structure';
+      case WorkflowStepType.SAMPLE_LESSON: return 'Approve Lesson';
+      case WorkflowStepType.FINAL_REVIEW: return 'Approve & Export';
+      default: return 'Approve';
     }
   };
 
+  // =========================================================================
+  // Render
+  // =========================================================================
   return (
     <PageShell
       title="Create New Course"
@@ -273,489 +441,348 @@ export default function CourseWizardPage() {
       backButton={{ label: 'Back to Dashboard', onClick: () => router.push('/dashboard') }}
       maxWidth="5xl"
     >
-      <Card
-        data-wizard-state={
-          isIdle ? 'idle'
-            : isCompleted ? 'completed'
-            : isFailed ? 'failed'
-            : isAwaitingApproval ? 'awaiting-approval'
-            : isSendingSignal ? 'sending-signal'
-            : 'processing'
-        }
-        data-wizard-step={pendingStep ? getWorkflowStepLabel(pendingStep).toLowerCase().replace(/\s+/g, '-') : ''}
-        data-wizard-progress={state.context.progressPercent}
-      >
-        {/* ===================== IDLE STATE ===================== */}
-        {isIdle && (
-          <>
+      {/* ===================== WIZARD PHASE ===================== */}
+      {isWizardPhase && (
+        <>
+          <WizardStepper currentPhase={wizardCtx.currentStep} />
+
+          <Card>
             <CardContent>
-              <div className="max-w-2xl mx-auto">
-                {/* Resume banner */}
-                {resumeCourseId && resumeCourse && (
-                  <div className={`mb-6 rounded-lg border p-4 ${
-                    allGapsAddressed
-                      ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
-                      : pendingGapTasks.length > 0
-                        ? 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'
-                        : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
-                  }`}>
-                    <p className={`text-sm font-medium ${
-                      allGapsAddressed
-                        ? 'text-green-800 dark:text-green-300'
-                        : pendingGapTasks.length > 0
-                          ? 'text-amber-800 dark:text-amber-300'
-                          : 'text-blue-800 dark:text-blue-300'
-                    }`}>
-                      Resuming course creation
-                    </p>
-                    <p className={`text-xs mt-1 ${
-                      allGapsAddressed
-                        ? 'text-green-700 dark:text-green-400'
-                        : pendingGapTasks.length > 0
-                          ? 'text-amber-700 dark:text-amber-400'
-                          : 'text-blue-700 dark:text-blue-400'
-                    }`}>
-                      {allGapsAddressed
-                        ? `All ${completedGapTasks.length} knowledge gaps addressed. Generate again with enriched sources.`
-                        : pendingGapTasks.length > 0
-                          ? `${pendingGapTasks.length} of ${gapTasks.length} knowledge gap${gapTasks.length !== 1 ? ' tasks' : ' task'} still outstanding. You can wait or regenerate now.`
-                          : 'Your draft course is ready to resume.'}
-                    </p>
-                  </div>
-                )}
-
-                {/* Hero icon + heading */}
-                <div className="flex flex-col items-center text-center mb-8">
-                  <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
-                    <Sparkles className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-primary mb-2">
-                    What would you like to teach?
-                  </h2>
-                  <p className="text-sm text-secondary max-w-lg">
-                    Describe your course topic and target audience. AI will design a complete
-                    instructional program through a 5-step validation process.
-                  </p>
-                </div>
-
-                {/* Topic */}
-                <div className="mb-5">
-                  <label htmlFor="topic" className="block text-sm font-semibold text-primary mb-1.5">
-                    Course Topic
-                  </label>
-                  <input
-                    id="topic"
-                    type="text"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    placeholder="e.g., Introduction to Machine Learning, Leadership Skills for Managers"
-                    className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Audience */}
-                <div className="mb-5">
-                  <label htmlFor="audience" className="block text-sm font-semibold text-primary mb-1.5">
-                    Target Audience
-                  </label>
-                  <input
-                    id="audience"
-                    type="text"
-                    value={audience}
-                    onChange={(e) => setAudience(e.target.value)}
-                    placeholder="e.g., Junior developers with 1-2 years experience, New managers transitioning from IC roles"
-                    className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Use Context (optional) */}
-                <div>
-                  <label
-                    htmlFor="useContext"
-                    className="block text-sm font-semibold text-primary mb-1.5"
-                  >
-                    Additional Context
-                    <span className="text-muted font-normal ml-1">(optional)</span>
-                  </label>
-                  <textarea
-                    id="useContext"
-                    value={useContext}
-                    onChange={(e) => setUseContext(e.target.value)}
-                    placeholder="Describe how the course will be used: delivery format (self-paced, instructor-led), time constraints, prerequisites, or any specific requirements..."
-                    rows={3}
-                    className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                  />
-                </div>
-
-                {/* Data Source Toggles */}
-                <div className="mt-5 space-y-3">
-                  {/* Internal Knowledge Toggle */}
-                  <div>
-                    <label
-                      htmlFor="internalKnowledge"
-                      className="flex items-center gap-3 cursor-pointer select-none"
-                    >
-                      <div className="relative">
-                        <input
-                          id="internalKnowledge"
-                          type="checkbox"
-                          checked={enableInternalKnowledge}
-                          onChange={(e) => {
-                            setEnableInternalKnowledge(e.target.checked);
-                            if (!e.target.checked) setStrictKnowledgeOnly(false);
-                          }}
-                          className="sr-only peer"
-                        />
-                        <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-colors" />
-                        <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <BookOpen className="w-4 h-4 text-secondary" />
-                        <span className="text-sm font-medium text-primary">
-                          Internal Knowledge
-                        </span>
-                        <span className="text-xs text-muted">
-                          — ground content in your documents
-                        </span>
-                      </div>
-                    </label>
-
-                    {enableInternalKnowledge && (
-                      <div className="ml-12 mt-2 space-y-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowKnowledgeModal(true)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary bg-surface border rounded-lg hover:bg-hover transition-colors min-h-[32px]"
-                        >
-                          <BookOpen className="w-3.5 h-3.5" />
-                          {totalSelectedDocs > 0
-                            ? `${totalSelectedDocs} source${totalSelectedDocs === 1 ? '' : 's'} selected`
-                            : 'Select Knowledge Sources'}
-                          {totalSelectedDocs > 0 && (
-                            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full">
-                              {totalSelectedDocs}
-                            </span>
-                          )}
-                        </button>
-
-                        {totalSelectedDocs > 0 && (
-                          <label
-                            htmlFor="strictKnowledge"
-                            className="flex items-center gap-3 cursor-pointer select-none"
-                          >
-                            <div className="relative">
-                              <input
-                                id="strictKnowledge"
-                                type="checkbox"
-                                checked={strictKnowledgeOnly}
-                                onChange={(e) => setStrictKnowledgeOnly(e.target.checked)}
-                                className="sr-only peer"
-                              />
-                              <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-amber-600 peer-checked:border-amber-600 transition-colors" />
-                              <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                              <span className="text-xs font-medium text-primary">
-                                Strict mode
-                              </span>
-                              <span className="text-[10px] text-muted">
-                                — only use internal knowledge
-                              </span>
-                            </div>
-                          </label>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Web Research Toggle */}
-                  <label
-                    htmlFor="webResearch"
-                    className="flex items-center gap-3 cursor-pointer select-none"
-                  >
-                    <div className="relative">
-                      <input
-                        id="webResearch"
-                        type="checkbox"
-                        checked={enableWebResearch}
-                        onChange={(e) => setEnableWebResearch(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-colors" />
-                      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
+              {isGenerating ? (
+                <GeneratingOverlay {...getGeneratingOverlayProps()} />
+              ) : phase === 'starting' ? (
+                <GeneratingOverlay
+                  title="Starting Course Creation"
+                  message="Setting up your AI-powered course generation workflow..."
+                />
+              ) : (
+                <>
+                  {/* Wizard error banner */}
+                  {wizardCtx.error && (
+                    <div className="mb-6 flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                      <p className="text-sm text-red-600 dark:text-red-400 flex-1">{wizardCtx.error}</p>
+                      <button
+                        onClick={() => wizardSend({ type: 'DISMISS_ERROR' })}
+                        className="text-xs text-red-500 hover:text-red-600 underline ml-2"
+                      >
+                        Dismiss
+                      </button>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Globe className="w-4 h-4 text-secondary" />
-                      <span className="text-sm font-medium text-primary">
-                        Web Research
-                      </span>
-                      <span className="text-xs text-muted">
-                        — enrich analysis with live web data
-                      </span>
-                    </div>
-                  </label>
-                </div>
+                  )}
 
-                {startError && (
-                  <div className="mt-4 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    {startError}
-                  </div>
-                )}
-              </div>
+                  {/* Start error banner */}
+                  {startError && (
+                    <div className="mb-6 flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                      <p className="text-sm text-red-600 dark:text-red-400 flex-1">{startError}</p>
+                      <button
+                        onClick={() => setStartError(null)}
+                        className="text-xs text-red-500 hover:text-red-600 underline ml-2"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step content */}
+                  {wizardCtx.currentStep === 1 && (
+                    <WizardStep1CourseName
+                      context={wizardCtx}
+                      send={wizardSend}
+                      isGeneratingOutcomes={wizardState.matches('generatingOutcomes')}
+                    />
+                  )}
+                  {wizardCtx.currentStep === 2 && (
+                    <WizardStep2TitleDescription context={wizardCtx} send={wizardSend} />
+                  )}
+                  {wizardCtx.currentStep === 3 && (
+                    <WizardStep3Personas context={wizardCtx} send={wizardSend} />
+                  )}
+                  {wizardCtx.currentStep === 4 && (
+                    <WizardStep4Audience context={wizardCtx} send={wizardSend} />
+                  )}
+                  {wizardCtx.currentStep === 5 && (
+                    <WizardStep5ToneContext context={wizardCtx} send={wizardSend} />
+                  )}
+                </>
+              )}
             </CardContent>
 
-            {/* Footer */}
-            <div className="px-4 py-4 sm:px-6 border-t flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleStart}
-                disabled={!topic.trim() || !audience.trim() || isStarting}
-                className="gap-2"
-              >
-                {isStarting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Starting...
-                  </>
-                ) : (
-                  <>
-                    Generate Course
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </>
-        )}
-
-        {/* ===================== PROCESSING STATE ===================== */}
-        {showProcessing && (
-          <CardContent>
-            {/* Thin progress bar */}
-            <div className="w-full h-1 bg-page rounded-full mb-8 overflow-hidden">
-              <div
-                className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                style={{ width: `${state.context.progressPercent}%` }}
-              />
-            </div>
-
-            <div className="flex flex-col items-center text-center py-12">
-              <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-              <p className="text-sm font-medium text-primary mb-1">
-                {state.context.progressMessage || 'Working on your course...'}
-              </p>
-              <p className="text-xs text-muted">
-                {state.context.progressPercent}% complete
-              </p>
-            </div>
-          </CardContent>
-        )}
-
-        {/* ============ STEP REVIEW (all 5 steps) ============ */}
-        {showStepReview && (
-          <>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle as="h3">
-                  Step {stepNumber}: {stepLabel}
-                </CardTitle>
-                <span className="text-xs text-muted">
-                  {stepNumber} of {TOTAL_WORKFLOW_STEPS}
-                </span>
-              </div>
-              {/* Step progress bar */}
-              <div className="w-full h-1 bg-page rounded-full overflow-hidden mt-2">
-                <div
-                  className="h-full bg-indigo-600 rounded-full transition-all duration-500"
-                  style={{ width: `${(stepNumber / TOTAL_WORKFLOW_STEPS) * 100}%` }}
-                />
-              </div>
-            </CardHeader>
-
-            {state.context.stepData && state.context.pendingStep && (
-              <CardContent className="max-h-[60vh] overflow-y-auto">
-                <StepDataRenderer
-                  step={state.context.pendingStep}
-                  data={state.context.stepData}
-                  onAssignGaps={state.context.pendingStep === WorkflowStepType.INTENT_ANALYSIS ? handleAssignGaps : undefined}
-                />
-              </CardContent>
-            )}
-
-            {/* Action footer */}
-            <div className="px-4 py-4 sm:px-6 border-t">
-              {!showRejectForm ? (
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowRejectForm(true)}
-                    disabled={isSendingSignal}
-                    className="gap-2"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Regenerate
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={handleApprove}
-                    disabled={isSendingSignal}
-                    className="gap-2"
-                  >
-                    {isSendingSignal ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Check className="w-4 h-4" />
-                    )}
-                    {getApproveLabel()}
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <textarea
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    placeholder={`What should be different about the ${stepLabel.toLowerCase()}?`}
-                    rows={2}
-                    className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                    autoFocus
-                  />
-                  <div className="flex items-center justify-between">
+            {/* Wizard footer — only show when not generating */}
+            {!isGenerating && phase !== 'starting' && (
+              <div className="px-4 py-4 sm:px-6 border-t flex items-center justify-between">
+                <div>
+                  {wizardCtx.currentStep === 1 ? (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        setShowRejectForm(false);
-                        setFeedback('');
-                      }}
+                      onClick={() => router.push('/dashboard')}
                     >
                       Cancel
                     </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => wizardSend({ type: 'BACK' })}
+                      className="gap-1.5"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted">
+                    Step {wizardCtx.currentStep} of {TOTAL_WIZARD_STEPS}
+                  </span>
+                  {wizardCtx.currentStep < 5 ? (
                     <Button
                       variant="primary"
-                      onClick={handleReject}
-                      disabled={!feedback.trim() || isSendingSignal}
+                      onClick={() => wizardSend({ type: 'NEXT' })}
+                      disabled={!canGoNext}
+                      className="gap-1.5"
+                    >
+                      {wizardCtx.currentStep === 1 ? 'Generate Title' : 'Next'}
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      onClick={() => wizardSend({ type: 'COMPLETE' })}
+                      disabled={!canGoNext}
+                      className="gap-1.5"
+                    >
+                      Create Course
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+
+      {/* ===================== WORKFLOW PHASE ===================== */}
+      {isWorkflowPhase && (
+        <Card
+          data-wizard-state={
+            wfIsCompleted ? 'completed'
+              : wfIsFailed ? 'failed'
+              : isAwaitingApproval ? 'awaiting-approval'
+              : isSendingSignal ? 'sending-signal'
+              : 'processing'
+          }
+          data-wizard-step={pendingStep ? getWorkflowStepLabel(pendingStep).toLowerCase().replace(/\s+/g, '-') : ''}
+          data-wizard-progress={workflowMachineState.context.progressPercent}
+        >
+          {/* Processing */}
+          {showProcessing && (
+            <CardContent>
+              <div className="w-full h-1 bg-page rounded-full mb-8 overflow-hidden">
+                <div
+                  className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                  style={{ width: `${workflowMachineState.context.progressPercent}%` }}
+                />
+              </div>
+              <div className="flex flex-col items-center text-center py-12">
+                <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+                <p className="text-sm font-medium text-primary mb-1">
+                  {workflowMachineState.context.progressMessage || 'Working on your course...'}
+                </p>
+                <p className="text-xs text-muted">
+                  {workflowMachineState.context.progressPercent}% complete
+                </p>
+              </div>
+            </CardContent>
+          )}
+
+          {/* Step Review */}
+          {showStepReview && (
+            <>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle as="h3">
+                    Step {stepNumber}: {stepLabel}
+                  </CardTitle>
+                  <span className="text-xs text-muted">
+                    {stepNumber} of {TOTAL_WORKFLOW_STEPS}
+                  </span>
+                </div>
+                <div className="w-full h-1 bg-page rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                    style={{ width: `${(stepNumber / TOTAL_WORKFLOW_STEPS) * 100}%` }}
+                  />
+                </div>
+              </CardHeader>
+
+              {workflowMachineState.context.stepData && workflowMachineState.context.pendingStep && (
+                <CardContent className="max-h-[60vh] overflow-y-auto">
+                  <StepDataRenderer
+                    step={workflowMachineState.context.pendingStep}
+                    data={workflowMachineState.context.stepData}
+                    onAssignGaps={workflowMachineState.context.pendingStep === WorkflowStepType.INTENT_ANALYSIS ? handleAssignGaps : undefined}
+                  />
+                </CardContent>
+              )}
+
+              <div className="px-4 py-4 sm:px-6 border-t">
+                {!showRejectForm ? (
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowRejectForm(true)}
+                      disabled={isSendingSignal}
+                      className="gap-2"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Regenerate
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleApprove}
+                      disabled={isSendingSignal}
                       className="gap-2"
                     >
                       {isSendingSignal ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <RotateCcw className="w-4 h-4" />
+                        <Check className="w-4 h-4" />
                       )}
-                      Regenerate {stepLabel}
+                      {getApproveLabel()}
+                      <ArrowRight className="w-4 h-4" />
                     </Button>
                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    <textarea
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      placeholder={`What should be different about the ${stepLabel.toLowerCase()}?`}
+                      rows={2}
+                      className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                      autoFocus
+                    />
+                    <div className="flex items-center justify-between">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowRejectForm(false);
+                          setFeedback('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={handleReject}
+                        disabled={!feedback.trim() || isSendingSignal}
+                        className="gap-2"
+                      >
+                        {isSendingSignal ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-4 h-4" />
+                        )}
+                        Regenerate {stepLabel}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Completed */}
+          {wfIsCompleted && (
+            <CardContent>
+              <div className="flex flex-col items-center text-center py-12">
+                <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+                  <Check className="w-7 h-7 text-green-600 dark:text-green-400" />
                 </div>
-              )}
-            </div>
-          </>
-        )}
+                <h2 className="text-xl font-semibold text-primary mb-2">
+                  Course Created!
+                </h2>
+                <p className="text-sm text-secondary mb-6">
+                  Your course has been generated successfully.
+                </p>
+                {workflowMachineState.context.courseId && (
+                  <Button
+                    variant="primary"
+                    onClick={() => router.push(`/course/${workflowMachineState.context.courseId}/editor`)}
+                    className="gap-2"
+                  >
+                    Open in Editor
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          )}
 
-        {/* ===================== COMPLETED STATE ===================== */}
-        {isCompleted && (
-          <CardContent>
-            <div className="flex flex-col items-center text-center py-12">
-              <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
-                <Check className="w-7 h-7 text-green-600 dark:text-green-400" />
+          {/* Failed */}
+          {wfIsFailed && (
+            <CardContent>
+              <div className="flex flex-col items-center text-center py-12">
+                <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                  <AlertCircle className="w-7 h-7 text-red-600 dark:text-red-400" />
+                </div>
+                <h2 className="text-xl font-semibold text-primary mb-2">
+                  Something went wrong
+                </h2>
+                <p className="text-sm text-secondary mb-6">
+                  {workflowMachineState.context.error ?? 'An unexpected error occurred'}
+                </p>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push('/dashboard')}
+                  >
+                    Back to Dashboard
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      workflowSend({ type: 'RESET' });
+                      setPhase('wizard');
+                    }}
+                    className="gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Try Again
+                  </Button>
+                </div>
               </div>
-              <h2 className="text-xl font-semibold text-primary mb-2">
-                Course Created!
-              </h2>
-              <p className="text-sm text-secondary mb-6">
-                Your course has been generated successfully.
-              </p>
-              {state.context.courseId && (
-                <Button
-                  variant="primary"
-                  onClick={() =>
-                    router.push(`/course/${state.context.courseId}/editor`)
-                  }
-                  className="gap-2"
-                >
-                  Open in Editor
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        )}
-
-        {/* ===================== FAILED STATE ===================== */}
-        {isFailed && (
-          <CardContent>
-            <div className="flex flex-col items-center text-center py-12">
-              <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-                <AlertCircle className="w-7 h-7 text-red-600 dark:text-red-400" />
-              </div>
-              <h2 className="text-xl font-semibold text-primary mb-2">
-                Something went wrong
-              </h2>
-              <p className="text-sm text-secondary mb-6">
-                {state.context.error ?? 'An unexpected error occurred'}
-              </p>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={() => router.push('/dashboard')}
-                >
-                  Back to Dashboard
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => send({ type: 'RESET' })}
-                  className="gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Try Again
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Error toast (non-fatal errors during active workflow) */}
-      {state.context.error && !isFailed && (
+      {isWorkflowPhase && workflowMachineState.context.error && !wfIsFailed && (
         <div className="mt-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center justify-between">
           <p className="text-sm text-red-600 dark:text-red-400">
-            {state.context.error}
+            {workflowMachineState.context.error}
           </p>
           <button
-            onClick={() => send({ type: 'DISMISS_ERROR' })}
+            onClick={() => workflowSend({ type: 'DISMISS_ERROR' })}
             className="text-sm text-red-500 hover:text-red-600 underline ml-4"
           >
             Dismiss
           </button>
         </div>
       )}
-      {/* Knowledge selection modal */}
-      {showKnowledgeModal && (
-        <KnowledgeSelectionModal
-          selectedTeamDocIds={selectedTeamDocIds}
-          selectedGlobalDocIds={selectedGlobalDocIds}
-          onConfirm={(teamIds, globalIds) => {
-            setSelectedTeamDocIds(teamIds);
-            setSelectedGlobalDocIds(globalIds);
-            setShowKnowledgeModal(false);
-          }}
-          onClose={() => setShowKnowledgeModal(false)}
-        />
-      )}
 
       {/* Gap assignment modal */}
-      {showGapAssignment && state.context.courseId && (
+      {showGapAssignment && workflowMachineState.context.courseId && (
         <GapAssignmentModal
-          courseId={state.context.courseId}
+          courseId={workflowMachineState.context.courseId}
           gaps={gapDescriptions}
           onClose={() => setShowGapAssignment(false)}
           onDefer={handleDefer}

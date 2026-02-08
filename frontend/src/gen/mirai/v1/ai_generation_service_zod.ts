@@ -191,6 +191,15 @@ export const StartCourseCreationRequestSchema = z.object({
   selectedGlobalDocIds: z.array(z.string()),
   enableWebResearch: z.boolean(),
   strictKnowledgeOnly: z.boolean(),
+  desiredOutcomes: z.string(),
+  improvedTitle: z.string(),
+  description: z.string(),
+  smePersonas: z.array(SMEPersonaSchema),
+  selectedSmeIds: z.array(z.string()),
+  audiencePersonas: z.array(AudiencePersonaSchema),
+  selectedAudienceIds: z.array(z.string()),
+  selectedTone: ToneOptionSchema.optional(),
+  additionalContext: z.string(),
 });
 
 export type StartCourseCreationRequest = z.infer<typeof StartCourseCreationRequestSchema>;

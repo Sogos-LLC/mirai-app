@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	temporalclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/interceptor"
@@ -43,6 +44,10 @@ type WorkflowStarter interface {
 
 	// IsWorkflowRunning checks if a workflow execution is still open (running).
 	IsWorkflowRunning(ctx context.Context, workflowID string) (bool, error)
+
+	// ExecuteWizardStep starts a WizardStepWorkflow and blocks until completion.
+	// Returns the activity result as a map.
+	ExecuteWizardStep(ctx context.Context, stepType string, input interface{}) (map[string]interface{}, error)
 }
 
 // Client wraps the Temporal SDK client.
@@ -218,6 +223,25 @@ func (s *workflowStarter) StartCourseCreation(ctx context.Context, input interfa
 	s.logger.Info("started course creation workflow",
 		"workflowID", run.GetID(), "jobID", ccInput.JobID, "courseID", ccInput.CourseID)
 	return run.GetID(), nil
+}
+
+func (s *workflowStarter) ExecuteWizardStep(ctx context.Context, stepType string, input interface{}) (map[string]interface{}, error) {
+	workflowID := fmt.Sprintf("wizard-step-%s-%d", stepType, time.Now().UnixNano())
+	opts := temporalclient.StartWorkflowOptions{
+		ID:        workflowID,
+		TaskQueue: aiTaskQueue,
+	}
+	run, err := s.client.ExecuteWorkflow(ctx, opts, "WizardStepWorkflow", input)
+	if err != nil {
+		return nil, fmt.Errorf("start wizard step workflow: %w", err)
+	}
+
+	var result map[string]interface{}
+	if err := run.Get(ctx, &result); err != nil {
+		return nil, fmt.Errorf("wizard step workflow result: %w", err)
+	}
+
+	return result, nil
 }
 
 func (s *workflowStarter) IsWorkflowRunning(ctx context.Context, workflowID string) (bool, error) {

@@ -33,15 +33,26 @@ func (s *AIGenerationService) failJob(ctx context.Context, job *entity.Generatio
 
 // StartCourseCreationRequest contains the inputs for starting unified course creation.
 type StartCourseCreationRequest struct {
-	CourseID             uuid.UUID
-	Topic                string
-	Audience             string
-	UseContext           string
+	CourseID               uuid.UUID
+	Topic                  string
+	Audience               string
+	UseContext             string
 	EnableInternalKnowledge bool
 	SelectedTeamDocIDs     []string
 	SelectedGlobalDocIDs   []string
 	EnableWebResearch      bool
 	StrictKnowledgeOnly    bool
+
+	// Wizard-generated data
+	DesiredOutcomes     string
+	ImprovedTitle       string
+	Description         string
+	SMEPersonas         []entity.WizardSMEPersona
+	SelectedSMEIDs      []string
+	AudiencePersonas    []entity.WizardAudiencePersona
+	SelectedAudienceIDs []string
+	SelectedTone        *entity.WizardToneOption
+	AdditionalContext   string
 }
 
 // StartCourseCreationResult contains the created job.
@@ -96,18 +107,27 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 		}
 
 		input := CourseCreationInput{
-			JobID:                  job.ID.String(),
-			TenantID:               user.TenantID.String(),
-			CourseID:               req.CourseID.String(),
-			UserID:                 user.ID.String(),
-			Topic:                  req.Topic,
-			Audience:               req.Audience,
-			UseContext:             req.UseContext,
+			JobID:                   job.ID.String(),
+			TenantID:                user.TenantID.String(),
+			CourseID:                req.CourseID.String(),
+			UserID:                  user.ID.String(),
+			Topic:                   req.Topic,
+			Audience:                req.Audience,
+			UseContext:              req.UseContext,
 			EnableInternalKnowledge: req.EnableInternalKnowledge,
-			SelectedTeamDocIDs:     teamDocIDs,
-			SelectedGlobalDocIDs:   globalDocIDs,
-			EnableWebResearch:      req.EnableWebResearch,
-		StrictKnowledgeOnly:   req.StrictKnowledgeOnly,
+			SelectedTeamDocIDs:      teamDocIDs,
+			SelectedGlobalDocIDs:    globalDocIDs,
+			EnableWebResearch:       req.EnableWebResearch,
+			StrictKnowledgeOnly:     req.StrictKnowledgeOnly,
+			DesiredOutcomes:         req.DesiredOutcomes,
+			ImprovedTitle:           req.ImprovedTitle,
+			Description:             req.Description,
+			SMEPersonas:             req.SMEPersonas,
+			SelectedSMEIDs:          req.SelectedSMEIDs,
+			AudiencePersonas:        req.AudiencePersonas,
+			SelectedAudienceIDs:     req.SelectedAudienceIDs,
+			SelectedTone:            req.SelectedTone,
+			AdditionalContext:       req.AdditionalContext,
 		}
 
 		if _, err := s.workflowStarter.StartCourseCreation(ctx, input); err != nil {

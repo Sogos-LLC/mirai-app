@@ -192,6 +192,17 @@ message StartCourseCreationRequest {
   repeated string selected_global_doc_ids = 7;
   bool enable_web_research = 8;
   bool strict_knowledge_only = 9;
+
+  // Wizard-generated data (present when multi-step wizard was used)
+  string desired_outcomes = 10;
+  string improved_title = 11;
+  string description = 12;
+  repeated SMEPersona sme_personas = 13;
+  repeated string selected_sme_ids = 14;
+  repeated AudiencePersona audience_personas = 15;
+  repeated string selected_audience_ids = 16;
+  optional ToneOption selected_tone = 17;
+  string additional_context = 18;
 }
 
 message StartCourseCreationResponse {

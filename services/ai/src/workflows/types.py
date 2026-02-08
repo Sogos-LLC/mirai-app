@@ -19,6 +19,38 @@ from src.models.course_design import (
 
 
 @dataclass
+class WizardSMEPersona:
+    """SME persona from wizard (matches Go entity.WizardSMEPersona)."""
+
+    id: str = ""
+    job_title: str = ""
+    description: str = ""
+    skills: list[str] = field(default_factory=list)
+    voice: str = ""
+
+
+@dataclass
+class WizardAudiencePersona:
+    """Audience persona from wizard (matches Go entity.WizardAudiencePersona)."""
+
+    id: str = ""
+    name: str = ""
+    role: str = ""
+    description: str = ""
+    goals: list[str] = field(default_factory=list)
+
+
+@dataclass
+class WizardToneOption:
+    """Tone option from wizard (matches Go entity.WizardToneOption)."""
+
+    id: str = ""
+    name: str = ""
+    description: str = ""
+    level_of_detail: str = "moderate"
+
+
+@dataclass
 class CourseCreationInput:
     """Input to start a course creation workflow."""
 
@@ -39,12 +71,31 @@ class CourseCreationInput:
     selected_team_doc_ids: list[str] | None = field(default_factory=list)
     selected_global_doc_ids: list[str] | None = field(default_factory=list)
 
+    # Wizard-generated data (present when multi-step wizard was used)
+    desired_outcomes: str = ""
+    improved_title: str = ""
+    description: str = ""
+    sme_personas: list[WizardSMEPersona] | None = field(default_factory=list)
+    selected_sme_ids: list[str] | None = field(default_factory=list)
+    audience_personas: list[WizardAudiencePersona] | None = field(default_factory=list)
+    selected_audience_ids: list[str] | None = field(default_factory=list)
+    selected_tone: WizardToneOption | None = None
+    additional_context: str = ""
+
     def __post_init__(self) -> None:
         """Normalize None → empty for optional collection fields."""
         if self.selected_team_doc_ids is None:
             self.selected_team_doc_ids = []
         if self.selected_global_doc_ids is None:
             self.selected_global_doc_ids = []
+        if self.sme_personas is None:
+            self.sme_personas = []
+        if self.selected_sme_ids is None:
+            self.selected_sme_ids = []
+        if self.audience_personas is None:
+            self.audience_personas = []
+        if self.selected_audience_ids is None:
+            self.selected_audience_ids = []
 
 
 @dataclass

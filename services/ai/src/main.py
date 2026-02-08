@@ -36,7 +36,15 @@ from src.activities.knowledge import (
     synthesize_knowledge,
 )
 from src.activities.visualization import get_graph_visualization
+from src.activities.wizard import (
+    generate_title_activity,
+    generate_outcomes_activity,
+    generate_sme_personas_activity,
+    generate_audience_personas_activity,
+    generate_tone_options_activity,
+)
 from src.workflows.course_creation import CourseCreationWorkflow
+from src.workflows.wizard_step import WizardStepWorkflow
 from src.config import settings
 
 # Configure structured logging
@@ -124,7 +132,7 @@ async def run_worker() -> None:
     worker = Worker(
         client,
         task_queue=settings.temporal_task_queue,
-        workflows=[CourseCreationWorkflow],
+        workflows=[CourseCreationWorkflow, WizardStepWorkflow],
         activities=[
             # Course design activities (5-step wizard)
             generate_course_analysis,
@@ -147,6 +155,12 @@ async def run_worker() -> None:
             synthesize_knowledge,
             # Visualization
             get_graph_visualization,
+            # Wizard step activities
+            generate_title_activity,
+            generate_outcomes_activity,
+            generate_sme_personas_activity,
+            generate_audience_personas_activity,
+            generate_tone_options_activity,
         ],
     )
 
