@@ -14,6 +14,7 @@ import {
   FileSearch,
   Lightbulb,
   Users,
+  Pencil,
 } from 'lucide-react';
 import { WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
@@ -51,14 +52,21 @@ interface OutcomesStepData {
   outcomes: LearningOutcome[];
 }
 
+interface LessonPreview {
+  title: string;
+  objective: string;
+}
+
 interface Section {
   title: string;
   description?: string;
   mapped_outcomes: string[];
+  lessons?: LessonPreview[];
 }
 
 interface StructureStepData {
   sections: Section[];
+  total_lessons?: number;
 }
 
 interface LessonBlock {
@@ -126,7 +134,7 @@ export function StepDataRenderer({ step, data, onModificationsChange, onAssignGa
     case WorkflowStepType.DEFINE_SUCCESS:
       return <OutcomesStep data={data as unknown as OutcomesStepData} />;
     case WorkflowStepType.APPROVE_STRUCTURE:
-      return <StructureStep data={data as unknown as StructureStepData} />;
+      return <StructureStep data={data as unknown as StructureStepData} onModificationsChange={onModificationsChange} />;
     case WorkflowStepType.SAMPLE_LESSON:
       return <LessonStep data={data as unknown as LessonStepData} />;
     case WorkflowStepType.FINAL_REVIEW:
@@ -411,37 +419,153 @@ function OutcomesStep({ data }: { data: OutcomesStepData }) {
 // Step 3: Course Structure
 // ============================================================
 
-function StructureStep({ data }: { data: StructureStepData }) {
+function StructureStep({ data, onModificationsChange }: { data: StructureStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
   const sections = data.sections ?? [];
+  const totalLessons = data.total_lessons ?? sections.reduce((sum, s) => sum + (s.lessons?.length ?? 0), 0);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [titleOverrides, setTitleOverrides] = useState<Record<number, string>>({});
+
+  const handleStartEdit = useCallback((idx: number, currentTitle: string) => {
+    setEditingIdx(idx);
+    setEditValue(currentTitle);
+  }, []);
+
+  const handleSaveEdit = useCallback((idx: number) => {
+    const trimmed = editValue.trim();
+    if (!trimmed || trimmed === sections[idx]?.title) {
+      setEditingIdx(null);
+      return;
+    }
+    const newOverrides = { ...titleOverrides, [idx]: trimmed };
+    setTitleOverrides(newOverrides);
+    setEditingIdx(null);
+
+    // Convert to modification keys: section_0_title, section_1_title, etc.
+    const mods: Record<string, string> = {};
+    for (const [key, value] of Object.entries(newOverrides)) {
+      mods[`section_${key}_title`] = value;
+    }
+    onModificationsChange?.(mods);
+  }, [editValue, titleOverrides, sections, onModificationsChange]);
+
+  const getSectionTitle = useCallback((idx: number) => {
+    return titleOverrides[idx] ?? sections[idx]?.title ?? '';
+  }, [titleOverrides, sections]);
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-xs text-muted">
-        <ListTree className="w-3.5 h-3.5" />
-        <span>Course Structure &mdash; {sections.length} sections</span>
+      {/* Summary header */}
+      <div className="flex items-center gap-4 text-xs text-muted">
+        <div className="flex items-center gap-1.5">
+          <ListTree className="w-3.5 h-3.5" />
+          <span>{sections.length} sections</span>
+        </div>
+        {totalLessons > 0 && (
+          <div className="flex items-center gap-1.5">
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>{totalLessons} lessons</span>
+          </div>
+        )}
       </div>
+
       <div className="space-y-2">
-        {sections.map((section, i) => (
-          <CollapsibleSection key={i} title={`${i + 1}. ${section.title}`} defaultOpen={false}>
-            {section.description && (
-              <p className="text-xs text-secondary mb-2">{section.description}</p>
-            )}
-            <div>
-              <div className="text-[10px] text-muted font-medium mb-1">Mapped Outcomes:</div>
-              <div className="flex flex-wrap gap-1.5">
-                {(section.mapped_outcomes ?? []).map((outcome, j) => (
-                  <span
-                    key={j}
-                    className="px-2 py-0.5 text-[11px] rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400"
-                  >
-                    {outcome}
-                  </span>
-                ))}
+        {sections.map((section, i) => {
+          const displayTitle = getSectionTitle(i);
+          const isEditing = editingIdx === i;
+          const hasLessons = section.lessons && section.lessons.length > 0;
+
+          return (
+            <CollapsibleSection key={i} title={`${i + 1}. ${displayTitle}`} defaultOpen={i === 0}>
+              {/* Section title edit */}
+              {onModificationsChange && (
+                <div className="mb-2">
+                  {isEditing ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveEdit(i);
+                          if (e.key === 'Escape') setEditingIdx(null);
+                        }}
+                        className="flex-1 px-2 py-1 text-sm bg-page border rounded text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEdit(i)}
+                        className="px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingIdx(null)}
+                        className="px-2 py-1 text-xs text-muted hover:text-secondary transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(i, displayTitle)}
+                      className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>Edit title</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {section.description && (
+                <p className="text-xs text-secondary mb-2">{section.description}</p>
+              )}
+
+              {/* Lesson previews */}
+              {hasLessons && (
+                <div className="mb-2">
+                  <div className="text-[10px] text-muted font-medium mb-1.5">
+                    Lessons ({section.lessons!.length})
+                  </div>
+                  <div className="space-y-1.5">
+                    {section.lessons!.map((lesson, j) => (
+                      <div key={j} className="flex items-start gap-2 pl-2 border-l-2 border-indigo-200 dark:border-indigo-800">
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-primary">{lesson.title}</div>
+                          <div className="text-[11px] text-secondary leading-relaxed">{lesson.objective}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Mapped outcomes */}
+              <div>
+                <div className="text-[10px] text-muted font-medium mb-1">Mapped Outcomes:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(section.mapped_outcomes ?? []).map((outcome, j) => (
+                    <span
+                      key={j}
+                      className="px-2 py-0.5 text-[11px] rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400"
+                    >
+                      {outcome}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          </CollapsibleSection>
-        ))}
+            </CollapsibleSection>
+          );
+        })}
       </div>
+
+      {onModificationsChange && (
+        <p className="text-xs text-muted">Click &ldquo;Edit title&rdquo; on any section to rename it before approving.</p>
+      )}
     </div>
   );
 }

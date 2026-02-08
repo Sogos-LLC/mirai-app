@@ -144,6 +144,7 @@ export default function CourseWizardPage() {
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [showGapAssignment, setShowGapAssignment] = useState(false);
   const [gapDescriptions, setGapDescriptions] = useState<string[]>([]);
+  const [pendingModifications, setPendingModifications] = useState<Record<string, string>>({});
 
   // =========================================================================
   // Workflow XState Machine
@@ -331,8 +332,12 @@ export default function CourseWizardPage() {
   const handleApprove = useCallback(() => {
     setShowRejectForm(false);
     setFeedback('');
-    workflowSend({ type: 'APPROVE' });
-  }, [workflowSend]);
+    workflowSend({
+      type: 'APPROVE',
+      modifications: Object.keys(pendingModifications).length > 0 ? pendingModifications : undefined,
+    });
+    setPendingModifications({});
+  }, [workflowSend, pendingModifications]);
 
   const handleReject = useCallback(() => {
     if (!feedback.trim()) return;
@@ -357,6 +362,11 @@ export default function CourseWizardPage() {
   }, [rejectStep, workflowMachineState.context, router]);
 
   const pendingStep = workflowMachineState.context.pendingStep;
+
+  // Clear pending modifications when step changes
+  useEffect(() => {
+    setPendingModifications({});
+  }, [pendingStep]);
   const stepLabel = pendingStep ? getWorkflowStepLabel(pendingStep) : '';
   const stepNumber = pendingStep ? getWorkflowStepNumber(pendingStep) : 0;
 
@@ -566,6 +576,7 @@ export default function CourseWizardPage() {
                   <StepDataRenderer
                     step={workflowMachineState.context.pendingStep}
                     data={workflowMachineState.context.stepData}
+                    onModificationsChange={setPendingModifications}
                     onAssignGaps={workflowMachineState.context.pendingStep === WorkflowStepType.INTENT_ANALYSIS ? handleAssignGaps : undefined}
                   />
                 </CardContent>

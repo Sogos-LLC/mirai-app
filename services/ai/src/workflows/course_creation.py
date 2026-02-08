@@ -69,6 +69,7 @@ with workflow.unsafe.imports_passed_through():
         CourseStructure,
         Lesson,
         LessonTemplate,
+        Section,
         SectionOutcomes,
     )
     from src.models.outcome_tracker import OutcomeTracker
@@ -485,6 +486,38 @@ class CourseCreationWorkflow:
     # Step 3: Approve Structure
     # -------------------------------------------------------------------
 
+    def _compute_lesson_preview(
+        self,
+        structure: CourseStructure,
+        section_outcomes: SectionOutcomes,
+    ) -> dict:
+        """Compute deterministic lesson titles/objectives from section outcomes.
+
+        Replicates the algorithm used in _generate_all_components so users
+        can see the lesson breakdown before approving the structure.
+        """
+        enriched_sections = []
+        total_lessons = 0
+        for section in structure.sections:
+            section_sos = section_outcomes.section_outcomes.get(section.title, [])
+            num_lessons = max(1, min(3, len(section_sos)))
+            total_lessons += num_lessons
+            lessons = []
+            for i in range(num_lessons):
+                objective = (
+                    section_sos[i].description
+                    if i < len(section_sos)
+                    else f"Apply {section.title} concepts"
+                )
+                title = (
+                    f"{section.title}: Part {i + 1}"
+                    if num_lessons > 1
+                    else section.title
+                )
+                lessons.append({"title": title, "objective": objective})
+            enriched_sections.append({**section.model_dump(), "lessons": lessons})
+        return {"sections": enriched_sections, "total_lessons": total_lessons}
+
     async def _step_approve_structure(
         self,
         api_key: str,
@@ -522,10 +555,13 @@ class CourseCreationWorkflow:
             GenerateSectionOutcomesOutput,
         )
 
-        # User only sees the structure (section titles + mapped outcomes)
+        # User sees structure enriched with lesson previews
+        lesson_preview = self._compute_lesson_preview(
+            structure_result.structure, section_outcomes_result.section_outcomes,
+        )
         approval = await self._publish_and_wait(
             input, "approve_structure",
-            json.dumps(structure_result.structure.model_dump()),
+            json.dumps(lesson_preview),
             45,
         )
 
@@ -552,11 +588,33 @@ class CourseCreationWorkflow:
                 ),
                 GenerateSectionOutcomesOutput,
             )
+            lesson_preview = self._compute_lesson_preview(
+                structure_result.structure, section_outcomes_result.section_outcomes,
+            )
             approval = await self._publish_and_wait(
                 input, "approve_structure",
-                json.dumps(structure_result.structure.model_dump()),
+                json.dumps(lesson_preview),
                 45,
             )
+
+        # Apply section title modifications from the user
+        if approval and approval.approved and approval.modifications:
+            sections_list = [s.model_dump() for s in structure_result.structure.sections]
+            so_data = section_outcomes_result.section_outcomes
+            for key, value in approval.modifications.items():
+                parts = key.split("_")
+                if len(parts) == 3 and parts[0] == "section" and parts[2] == "title":
+                    try:
+                        idx = int(parts[1])
+                    except ValueError:
+                        continue
+                    if 0 <= idx < len(sections_list):
+                        old_title = sections_list[idx]["title"]
+                        sections_list[idx]["title"] = value
+                        if old_title in so_data.section_outcomes:
+                            so_data.section_outcomes[value] = so_data.section_outcomes.pop(old_title)
+            structure_result.structure = CourseStructure(sections=[Section(**s) for s in sections_list])
+            section_outcomes_result.section_outcomes = so_data
 
         self._artifacts.structure = structure_result.structure
         self._artifacts.section_outcomes = section_outcomes_result.section_outcomes
