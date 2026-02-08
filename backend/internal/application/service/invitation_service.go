@@ -12,6 +12,7 @@ import (
 	domainerrors "github.com/sogos/mirai-backend/internal/domain/errors"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/service"
+	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 )
 
@@ -249,7 +250,9 @@ func (s *InvitationService) GetInvitationByToken(
 		}
 	}
 
-	company, err := s.companyRepo.GetByID(ctx, invitation.CompanyID)
+	// Use superadmin context for company lookup (public endpoint, no tenant context)
+	adminCtx := tenant.WithSuperAdmin(ctx, true)
+	company, err := s.companyRepo.GetByID(adminCtx, invitation.CompanyID)
 	if err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
@@ -366,8 +369,9 @@ func (s *InvitationService) AcceptInvitation(
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 
-	// 8. Get company details
-	company, err := s.companyRepo.GetByID(ctx, invitation.CompanyID)
+	// 8. Get company details (use superadmin context in case user has no tenant yet)
+	adminCtx := tenant.WithSuperAdmin(ctx, true)
+	company, err := s.companyRepo.GetByID(adminCtx, invitation.CompanyID)
 	if err != nil {
 		log.Error("failed to get company", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)

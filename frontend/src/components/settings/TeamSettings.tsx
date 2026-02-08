@@ -128,7 +128,7 @@ export default function TeamSettings() {
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
             Pending Invitations ({pendingInvitations.length})
           </h3>
-          <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden">
+          <div className="border border-gray-200 dark:border-dark-border rounded-xl">
             {pendingInvitations.map((invitation, idx) => (
               <InvitationRow
                 key={invitation.id}
@@ -147,7 +147,7 @@ export default function TeamSettings() {
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
             Invitation History
           </h3>
-          <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden">
+          <div className="border border-gray-200 dark:border-dark-border rounded-xl">
             {invitations
               .filter((inv) => inv.status !== InvitationStatus.PENDING)
               .map((invitation, idx, arr) => (
