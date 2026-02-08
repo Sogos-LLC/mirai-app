@@ -29,7 +29,6 @@ from src.activities.course_design import (
     run_web_research,
 )
 from src.activities.knowledge import (
-    ingest_document,
     search_knowledge,
     delete_knowledge,
     check_knowledge_health,
@@ -147,8 +146,7 @@ async def run_worker() -> None:
             # Component generation activities
             generate_lesson_components,
             review_section_components,
-            # Knowledge activities
-            ingest_document,
+            # Knowledge activities (ingestion moved to Go backend)
             search_knowledge,
             delete_knowledge,
             check_knowledge_health,

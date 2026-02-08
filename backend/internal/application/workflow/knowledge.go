@@ -25,8 +25,8 @@ type KnowledgeIngestionState struct {
 //  1. Update status to processing
 //  2. DecryptAPIKey to get per-tenant Gemini key
 //  3. ReadFileContent from MinIO
-//  4. [ai-tasks] ingest_document → chunk + embed (Gemini) + store in Qdrant + analyze
-//  5. Update status to ready (with summary/token_count) or failed (with error)
+//  4. IngestDocument → chunk + embed (Gemini) + store in Qdrant (all Go, no Python)
+//  5. Update status to ready (with chunk_count/token_count) or failed (with error)
 func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionInput) error {
 	logger := workflow.GetLogger(ctx)
 	logger.Info("starting knowledge ingestion", "sourceID", input.SourceID)
@@ -50,8 +50,7 @@ func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionIn
 		},
 	})
 
-	aiCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		TaskQueue:           AITaskQueue,
+	ingestCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Minute,
 		HeartbeatTimeout:    3 * time.Minute,
 		RetryPolicy: &temporal.RetryPolicy{
@@ -110,30 +109,27 @@ func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionIn
 		return fmt.Errorf("read file: %w", err)
 	}
 
-	// Step 3: Ingest via Python AI service (chunk → embed → store in Qdrant → analyze)
+	// Step 3: Ingest document (chunk → embed via Gemini → store in Qdrant) — all in Go
 	state.Stage = "chunking"
 	state.ProgressPercent = 40
 	state.ProgressMessage = "Chunking and embedding document"
 
-	// Detect mime type from file extension
 	mimeType := mimeTypeFromPath(input.FilePath)
 
-	ingestInput := map[string]interface{}{
-		"text":        fileResult.Content,
-		"source_id":   input.SourceID,
-		"source_name": filepath.Base(input.FilePath),
-		"api_key":     keyResult.APIKey,
-		"mime_type":   mimeType,
-		"filename":    filepath.Base(input.FilePath),
-		"metadata": map[string]string{
+	var ingestResult activities.IngestDocumentOutput
+	if err := workflow.ExecuteActivity(ingestCtx, "IngestDocument", activities.IngestDocumentInput{
+		Text:       fileResult.Content,
+		SourceID:   input.SourceID,
+		SourceName: filepath.Base(input.FilePath),
+		APIKey:     keyResult.APIKey,
+		MimeType:   mimeType,
+		Filename:   filepath.Base(input.FilePath),
+		Metadata: map[string]string{
 			"tenant_id": input.TenantID,
 			"team_id":   input.TeamID,
 			"source_id": input.SourceID,
 		},
-	}
-
-	var ingestResult map[string]interface{}
-	if err := workflow.ExecuteActivity(aiCtx, "ingest_document", ingestInput).Get(ctx, &ingestResult); err != nil {
+	}).Get(ctx, &ingestResult); err != nil {
 		setFailed(fmt.Sprintf("Failed to ingest document: %v", err))
 		return fmt.Errorf("ingest document: %w", err)
 	}
@@ -143,26 +139,12 @@ func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionIn
 	state.ProgressPercent = 90
 	state.ProgressMessage = "Saving results"
 
-	chunkCount := int32(0)
-	if v, ok := ingestResult["chunk_count"].(float64); ok {
-		chunkCount = int32(v)
-	}
-	summary := ""
-	if v, ok := ingestResult["summary"].(string); ok {
-		summary = v
-	}
-	tokenCount := int32(0)
-	if v, ok := ingestResult["token_count"].(float64); ok {
-		tokenCount = int32(v)
-	}
-
 	if err := workflow.ExecuteActivity(goCtx, "UpdateKnowledgeStatus", activities.UpdateKnowledgeStatusInput{
 		SourceID:   input.SourceID,
 		TenantID:   input.TenantID,
 		Status:     "ready",
-		ChunkCount: chunkCount,
-		Summary:    summary,
-		TokenCount: tokenCount,
+		ChunkCount: ingestResult.ChunkCount,
+		TokenCount: ingestResult.TokenCount,
 	}).Get(ctx, nil); err != nil {
 		return fmt.Errorf("set ready status: %w", err)
 	}
@@ -173,8 +155,8 @@ func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionIn
 
 	logger.Info("knowledge ingestion completed",
 		"sourceID", input.SourceID,
-		"chunks", chunkCount,
-		"tokenCount", tokenCount,
+		"chunks", ingestResult.ChunkCount,
+		"tokenCount", ingestResult.TokenCount,
 	)
 	return nil
 }

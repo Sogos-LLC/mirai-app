@@ -17,6 +17,8 @@ import (
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/gemini"
+	"github.com/sogos/mirai-backend/internal/infrastructure/external/vectordb"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
 
@@ -28,11 +30,14 @@ type APIKeyDecryptor interface {
 // GoActivities holds all dependencies for Go-side Temporal activities.
 // Register this struct with the Temporal worker to make all methods available.
 type GoActivities struct {
-	JobRepo        repository.GenerationJobRepository
-	KnowledgeRepo  repository.TeamKnowledgeRepository
-	ContentStorage storage.StorageAdapter
-	KeyDecryptor   APIKeyDecryptor
-	Logger         *slog.Logger
+	JobRepo          repository.GenerationJobRepository
+	KnowledgeRepo    repository.TeamKnowledgeRepository
+	ContentStorage   storage.StorageAdapter
+	KeyDecryptor     APIKeyDecryptor
+	EmbeddingClient  *gemini.EmbeddingClient
+	QdrantClient     *vectordb.QdrantClient
+	QdrantCollection string
+	Logger           *slog.Logger
 }
 
 // ---------------------------------------------------------------------------
