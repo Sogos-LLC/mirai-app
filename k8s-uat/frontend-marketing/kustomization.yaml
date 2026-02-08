@@ -46,4 +46,8 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-marketing
   newName: ghcr.io/sogos-llc/mirai-app/mirai-marketing
+<<<<<<< Updated upstream
   newTag: uat-343dfba
+=======
+  newTag: uat-dbfc4f2
+>>>>>>> Stashed changes
