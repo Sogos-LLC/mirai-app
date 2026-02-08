@@ -31,15 +31,12 @@ class CourseCreationInput:
     topic: str
     audience: str = ""
     use_context: str = ""
-    internal_data_only: bool = False
+    enable_internal_knowledge: bool = False
     enable_web_research: bool = False
 
     # Knowledge source IDs (for RAG)
     selected_team_doc_ids: list[str] | None = field(default_factory=list)
     selected_global_doc_ids: list[str] | None = field(default_factory=list)
-
-    # RAG filters (course_id, team_id, etc.)
-    rag_filters: dict[str, str] | None = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Normalize None → empty for optional collection fields."""
@@ -47,8 +44,6 @@ class CourseCreationInput:
             self.selected_team_doc_ids = []
         if self.selected_global_doc_ids is None:
             self.selected_global_doc_ids = []
-        if self.rag_filters is None:
-            self.rag_filters = {}
 
 
 @dataclass

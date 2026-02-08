@@ -37,10 +37,10 @@ type StartCourseCreationRequest struct {
 	Topic                string
 	Audience             string
 	UseContext           string
-	InternalDataOnly     bool
-	SelectedTeamDocIDs   []string
-	SelectedGlobalDocIDs []string
-	EnableWebResearch    bool
+	EnableInternalKnowledge bool
+	SelectedTeamDocIDs     []string
+	SelectedGlobalDocIDs   []string
+	EnableWebResearch      bool
 }
 
 // StartCourseCreationResult contains the created job.
@@ -81,13 +81,6 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 
 	log.Info("course creation job created", "jobID", job.ID)
 
-	// Build RAG filters
-	ragFilters := map[string]string{}
-	if len(req.SelectedTeamDocIDs) > 0 || len(req.SelectedGlobalDocIDs) > 0 {
-		ragFilters["course_id"] = req.CourseID.String()
-		ragFilters["tenant_id"] = user.TenantID.String()
-	}
-
 	// Start the Python CourseCreationWorkflow
 	if s.workflowStarter != nil {
 		// Ensure non-nil slices/maps — Go nil serializes as JSON null,
@@ -102,18 +95,17 @@ func (s *AIGenerationService) StartCourseCreation(ctx context.Context, kratosID 
 		}
 
 		input := CourseCreationInput{
-			JobID:                job.ID.String(),
-			TenantID:             user.TenantID.String(),
-			CourseID:             req.CourseID.String(),
-			UserID:               user.ID.String(),
-			Topic:                req.Topic,
-			Audience:             req.Audience,
-			UseContext:           req.UseContext,
-			InternalDataOnly:     req.InternalDataOnly,
-			SelectedTeamDocIDs:   teamDocIDs,
-			SelectedGlobalDocIDs: globalDocIDs,
-			RAGFilters:           ragFilters,
-			EnableWebResearch:    req.EnableWebResearch,
+			JobID:                  job.ID.String(),
+			TenantID:               user.TenantID.String(),
+			CourseID:               req.CourseID.String(),
+			UserID:                 user.ID.String(),
+			Topic:                  req.Topic,
+			Audience:               req.Audience,
+			UseContext:             req.UseContext,
+			EnableInternalKnowledge: req.EnableInternalKnowledge,
+			SelectedTeamDocIDs:     teamDocIDs,
+			SelectedGlobalDocIDs:   globalDocIDs,
+			EnableWebResearch:      req.EnableWebResearch,
 		}
 
 		if _, err := s.workflowStarter.StartCourseCreation(ctx, input); err != nil {

@@ -12,7 +12,7 @@ from src.adapters.qdrant import QdrantAdapter
 from src.agents.document_analysis_agent import analyze_document
 from src.models.knowledge import KnowledgeChunk
 from src.rag.ingest import ingest_document as _ingest
-from src.rag.search import search_knowledge as _search
+from src.rag.search import search_knowledge as _search, search_knowledge_by_source_ids as _search_by_source_ids
 
 log = structlog.get_logger()
 
@@ -104,8 +104,10 @@ class SearchKnowledgeInput(BaseModel):
 
     query: str
     api_key: str
-    filters: dict[str, str]
+    filters: dict[str, str] = {}
     top_k: int = 15
+    source_ids: list[str] = []
+    tenant_id: str = ""
 
 
 class SearchKnowledgeOutput(BaseModel):
@@ -116,15 +118,28 @@ class SearchKnowledgeOutput(BaseModel):
 
 @activity.defn
 async def search_knowledge(input: SearchKnowledgeInput) -> SearchKnowledgeOutput:
-    """Search the knowledge base for relevant content."""
+    """Search the knowledge base for relevant content.
+
+    Uses source_id-scoped search when source_ids and tenant_id are provided.
+    Falls back to generic filter-based search otherwise.
+    """
     embedding_client = EmbeddingClient(input.api_key)
 
-    chunks = await _search(
-        query=input.query,
-        embedding_client=embedding_client,
-        filters=input.filters,
-        top_k=input.top_k,
-    )
+    if input.source_ids and input.tenant_id:
+        chunks = await _search_by_source_ids(
+            query=input.query,
+            embedding_client=embedding_client,
+            source_ids=input.source_ids,
+            tenant_id=input.tenant_id,
+            top_k=input.top_k,
+        )
+    else:
+        chunks = await _search(
+            query=input.query,
+            embedding_client=embedding_client,
+            filters=input.filters if input.filters else None,
+            top_k=input.top_k,
+        )
 
     return SearchKnowledgeOutput(chunks=chunks)
 

@@ -1192,7 +1192,7 @@ func (s *AIGenerationServiceServer) StartCourseCreation(
 		Topic:               req.Msg.GetTopic(),
 		Audience:             req.Msg.GetAudience(),
 		UseContext:           useContext,
-		InternalDataOnly:     req.Msg.GetInternalDataOnly(),
+		EnableInternalKnowledge: req.Msg.GetEnableInternalKnowledge(),
 		SelectedTeamDocIDs:   req.Msg.GetSelectedTeamDocIds(),
 		SelectedGlobalDocIDs: req.Msg.GetSelectedGlobalDocIds(),
 		EnableWebResearch:    req.Msg.GetEnableWebResearch(),

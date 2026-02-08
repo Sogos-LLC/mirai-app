@@ -49,7 +49,7 @@ export function useStartCourseCreation() {
       topic: string;
       audience: string;
       useContext?: string;
-      internalDataOnly?: boolean;
+      enableInternalKnowledge?: boolean;
       selectedTeamDocIds?: string[];
       selectedGlobalDocIds?: string[];
       enableWebResearch?: boolean;
@@ -59,7 +59,7 @@ export function useStartCourseCreation() {
         topic: params.topic,
         audience: params.audience,
         useContext: params.useContext,
-        internalDataOnly: params.internalDataOnly ?? false,
+        enableInternalKnowledge: params.enableInternalKnowledge ?? false,
         selectedTeamDocIds: params.selectedTeamDocIds ?? [],
         selectedGlobalDocIds: params.selectedGlobalDocIds ?? [],
         enableWebResearch: params.enableWebResearch ?? false,

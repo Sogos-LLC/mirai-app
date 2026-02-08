@@ -187,7 +187,7 @@ message StartCourseCreationRequest {
   string topic = 2;
   string audience = 3;
   optional string use_context = 4;
-  bool internal_data_only = 5;
+  bool enable_internal_knowledge = 5;
   repeated string selected_team_doc_ids = 6;
   repeated string selected_global_doc_ids = 7;
   bool enable_web_research = 8;

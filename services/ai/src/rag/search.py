@@ -50,3 +50,47 @@ async def search_knowledge(
     )
 
     return chunks
+
+
+async def search_knowledge_by_source_ids(
+    query: str,
+    embedding_client: EmbeddingClient,
+    source_ids: list[str],
+    tenant_id: str,
+    top_k: int | None = None,
+    qdrant: QdrantAdapter | None = None,
+) -> list[KnowledgeChunk]:
+    """Search knowledge base scoped to specific source IDs.
+
+    Args:
+        query: Natural language search query
+        embedding_client: Embedding client (requires API key)
+        source_ids: List of source IDs to scope the search to
+        tenant_id: Tenant ID for RLS scoping
+        top_k: Number of results to return
+        qdrant: Optional Qdrant adapter
+
+    Returns:
+        List of knowledge chunks sorted by relevance
+    """
+    top_k = top_k or settings.default_top_k
+    qdrant = qdrant or QdrantAdapter()
+
+    query_vector = await embedding_client.embed_single(query)
+
+    chunks = await qdrant.search_by_source_ids(
+        query_vector=query_vector,
+        source_ids=source_ids,
+        tenant_id=tenant_id,
+        top_k=top_k,
+    )
+
+    log.info(
+        "knowledge search by source_ids completed",
+        query=query[:100],
+        results=len(chunks),
+        source_ids=source_ids,
+        tenant_id=tenant_id,
+    )
+
+    return chunks

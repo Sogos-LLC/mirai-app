@@ -1476,17 +1476,17 @@ func (x *ApproveCoursePlanResponse) GetPlan() *CoursePlan {
 }
 
 type StartCourseCreationRequest struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	CourseId             string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
-	Topic                string                 `protobuf:"bytes,2,opt,name=topic,proto3" json:"topic,omitempty"`
-	Audience             string                 `protobuf:"bytes,3,opt,name=audience,proto3" json:"audience,omitempty"`
-	UseContext           *string                `protobuf:"bytes,4,opt,name=use_context,json=useContext,proto3,oneof" json:"use_context,omitempty"`
-	InternalDataOnly     bool                   `protobuf:"varint,5,opt,name=internal_data_only,json=internalDataOnly,proto3" json:"internal_data_only,omitempty"`
-	SelectedTeamDocIds   []string               `protobuf:"bytes,6,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`
-	SelectedGlobalDocIds []string               `protobuf:"bytes,7,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`
-	EnableWebResearch    bool                   `protobuf:"varint,8,opt,name=enable_web_research,json=enableWebResearch,proto3" json:"enable_web_research,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	CourseId                string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
+	Topic                   string                 `protobuf:"bytes,2,opt,name=topic,proto3" json:"topic,omitempty"`
+	Audience                string                 `protobuf:"bytes,3,opt,name=audience,proto3" json:"audience,omitempty"`
+	UseContext              *string                `protobuf:"bytes,4,opt,name=use_context,json=useContext,proto3,oneof" json:"use_context,omitempty"`
+	EnableInternalKnowledge bool                   `protobuf:"varint,5,opt,name=enable_internal_knowledge,json=enableInternalKnowledge,proto3" json:"enable_internal_knowledge,omitempty"`
+	SelectedTeamDocIds      []string               `protobuf:"bytes,6,rep,name=selected_team_doc_ids,json=selectedTeamDocIds,proto3" json:"selected_team_doc_ids,omitempty"`
+	SelectedGlobalDocIds    []string               `protobuf:"bytes,7,rep,name=selected_global_doc_ids,json=selectedGlobalDocIds,proto3" json:"selected_global_doc_ids,omitempty"`
+	EnableWebResearch       bool                   `protobuf:"varint,8,opt,name=enable_web_research,json=enableWebResearch,proto3" json:"enable_web_research,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *StartCourseCreationRequest) Reset() {
@@ -1547,9 +1547,9 @@ func (x *StartCourseCreationRequest) GetUseContext() string {
 	return ""
 }
 
-func (x *StartCourseCreationRequest) GetInternalDataOnly() bool {
+func (x *StartCourseCreationRequest) GetEnableInternalKnowledge() bool {
 	if x != nil {
-		return x.InternalDataOnly
+		return x.EnableInternalKnowledge
 	}
 	return false
 }
@@ -2131,14 +2131,14 @@ const file_mirai_v1_ai_generation_service_proto_rawDesc = "" +
 	"\x18ApproveCoursePlanRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"E\n" +
 	"\x19ApproveCoursePlanResponse\x12(\n" +
-	"\x04plan\x18\x01 \x01(\v2\x14.mirai.v1.CoursePlanR\x04plan\"\xe9\x02\n" +
+	"\x04plan\x18\x01 \x01(\v2\x14.mirai.v1.CoursePlanR\x04plan\"\xf7\x02\n" +
 	"\x1aStartCourseCreationRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x14\n" +
 	"\x05topic\x18\x02 \x01(\tR\x05topic\x12\x1a\n" +
 	"\baudience\x18\x03 \x01(\tR\baudience\x12$\n" +
 	"\vuse_context\x18\x04 \x01(\tH\x00R\n" +
-	"useContext\x88\x01\x01\x12,\n" +
-	"\x12internal_data_only\x18\x05 \x01(\bR\x10internalDataOnly\x121\n" +
+	"useContext\x88\x01\x01\x12:\n" +
+	"\x19enable_internal_knowledge\x18\x05 \x01(\bR\x17enableInternalKnowledge\x121\n" +
 	"\x15selected_team_doc_ids\x18\x06 \x03(\tR\x12selectedTeamDocIds\x125\n" +
 	"\x17selected_global_doc_ids\x18\a \x03(\tR\x14selectedGlobalDocIds\x12.\n" +
 	"\x13enable_web_research\x18\b \x01(\bR\x11enableWebResearchB\x0e\n" +

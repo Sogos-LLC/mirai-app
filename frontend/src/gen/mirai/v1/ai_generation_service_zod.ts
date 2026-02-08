@@ -186,7 +186,7 @@ export const StartCourseCreationRequestSchema = z.object({
   topic: z.string(),
   audience: z.string(),
   useContext: z.string().optional(),
-  internalDataOnly: z.boolean(),
+  enableInternalKnowledge: z.boolean(),
   selectedTeamDocIds: z.array(z.string()),
   selectedGlobalDocIds: z.array(z.string()),
   enableWebResearch: z.boolean(),

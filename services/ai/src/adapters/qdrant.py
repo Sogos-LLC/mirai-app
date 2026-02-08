@@ -110,6 +110,54 @@ class QdrantAdapter:
 
         return chunks
 
+    async def search_by_source_ids(
+        self,
+        query_vector: list[float],
+        source_ids: list[str],
+        tenant_id: str,
+        top_k: int = 15,
+    ) -> list[KnowledgeChunk]:
+        """Search scoped to specific source IDs within a tenant.
+
+        Uses Qdrant filter: must[tenant_id] + should[source_id=A OR source_id=B ...].
+        Qdrant semantics: all must conditions AND at least one should condition.
+        """
+        client = await self._get_client()
+
+        should_conditions = [
+            FieldCondition(key="source_id", match=MatchValue(value=sid))
+            for sid in source_ids
+        ]
+
+        search_filter = Filter(
+            must=[FieldCondition(key="tenant_id", match=MatchValue(value=tenant_id))],
+            should=should_conditions,
+        )
+
+        results = await client.search(
+            collection_name=self.collection,
+            query_vector=query_vector,
+            limit=top_k,
+            query_filter=search_filter,
+            search_params=SearchParams(hnsw_ef=128, exact=False),
+        )
+
+        chunks = []
+        for point in results:
+            payload = point.payload or {}
+            chunks.append(
+                KnowledgeChunk(
+                    content=payload.get("content", ""),
+                    source_name=payload.get("source_name", ""),
+                    source_id=payload.get("source_id", ""),
+                    chunk_index=payload.get("chunk_index", 0),
+                    score=point.score,
+                    section_heading=payload.get("section_heading", ""),
+                )
+            )
+
+        return chunks
+
     async def upsert_batch(
         self, points: list[dict[str, Any]], batch_size: int = 100
     ) -> None:

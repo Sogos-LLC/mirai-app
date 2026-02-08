@@ -11,7 +11,7 @@ import {
   Loader2,
   ArrowRight,
   AlertCircle,
-  Paperclip,
+  BookOpen,
   Globe,
 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
@@ -61,8 +61,11 @@ export default function CourseWizardPage() {
   const [showRejectForm, setShowRejectForm] = useState(false);
 
   // Knowledge selection
-  const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<string[]>([]);
+  const [enableInternalKnowledge, setEnableInternalKnowledge] = useState(false);
+  const [selectedTeamDocIds, setSelectedTeamDocIds] = useState<string[]>([]);
+  const [selectedGlobalDocIds, setSelectedGlobalDocIds] = useState<string[]>([]);
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
+  const totalSelectedDocs = selectedTeamDocIds.length + selectedGlobalDocIds.length;
 
   // XState machine with real actor implementations
   const [state, send] = useMachine(
@@ -151,7 +154,9 @@ export default function CourseWizardPage() {
         topic: topicVal,
         audience: audienceVal,
         useContext: useContext.trim() || undefined,
-        selectedGlobalDocIds: selectedKnowledgeIds.length > 0 ? selectedKnowledgeIds : undefined,
+        enableInternalKnowledge,
+        selectedTeamDocIds: selectedTeamDocIds.length > 0 ? selectedTeamDocIds : undefined,
+        selectedGlobalDocIds: selectedGlobalDocIds.length > 0 ? selectedGlobalDocIds : undefined,
         enableWebResearch,
       });
 
@@ -167,7 +172,7 @@ export default function CourseWizardPage() {
     } finally {
       setIsStarting(false);
     }
-  }, [topic, audience, useContext, selectedKnowledgeIds, enableWebResearch, createCourse, startCreation, send]);
+  }, [topic, audience, useContext, enableInternalKnowledge, selectedTeamDocIds, selectedGlobalDocIds, enableWebResearch, createCourse, startCreation, send]);
 
   // Approve current step
   const handleApprove = useCallback(() => {
@@ -278,28 +283,13 @@ export default function CourseWizardPage() {
 
                 {/* Use Context (optional) */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label
-                      htmlFor="useContext"
-                      className="text-sm font-semibold text-primary"
-                    >
-                      Additional Context
-                      <span className="text-muted font-normal ml-1">(optional)</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowKnowledgeModal(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary bg-surface border rounded-full hover:bg-hover transition-colors min-h-[32px]"
-                    >
-                      <Paperclip className="w-3.5 h-3.5" />
-                      Add Knowledge
-                      {selectedKnowledgeIds.length > 0 && (
-                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full">
-                          {selectedKnowledgeIds.length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
+                  <label
+                    htmlFor="useContext"
+                    className="block text-sm font-semibold text-primary mb-1.5"
+                  >
+                    Additional Context
+                    <span className="text-muted font-normal ml-1">(optional)</span>
+                  </label>
                   <textarea
                     id="useContext"
                     value={useContext}
@@ -310,32 +300,84 @@ export default function CourseWizardPage() {
                   />
                 </div>
 
-                {/* Web Research Toggle */}
-                <label
-                  htmlFor="webResearch"
-                  className="mt-5 flex items-center gap-3 cursor-pointer select-none"
-                >
-                  <div className="relative">
-                    <input
-                      id="webResearch"
-                      type="checkbox"
-                      checked={enableWebResearch}
-                      onChange={(e) => setEnableWebResearch(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-colors" />
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
+                {/* Data Source Toggles */}
+                <div className="mt-5 space-y-3">
+                  {/* Internal Knowledge Toggle */}
+                  <div>
+                    <label
+                      htmlFor="internalKnowledge"
+                      className="flex items-center gap-3 cursor-pointer select-none"
+                    >
+                      <div className="relative">
+                        <input
+                          id="internalKnowledge"
+                          type="checkbox"
+                          checked={enableInternalKnowledge}
+                          onChange={(e) => setEnableInternalKnowledge(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-colors" />
+                        <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <BookOpen className="w-4 h-4 text-secondary" />
+                        <span className="text-sm font-medium text-primary">
+                          Internal Knowledge
+                        </span>
+                        <span className="text-xs text-muted">
+                          — ground content in your documents
+                        </span>
+                      </div>
+                    </label>
+
+                    {enableInternalKnowledge && (
+                      <div className="ml-12 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowKnowledgeModal(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary bg-surface border rounded-lg hover:bg-hover transition-colors min-h-[32px]"
+                        >
+                          <BookOpen className="w-3.5 h-3.5" />
+                          {totalSelectedDocs > 0
+                            ? `${totalSelectedDocs} source${totalSelectedDocs === 1 ? '' : 's'} selected`
+                            : 'Select Knowledge Sources'}
+                          {totalSelectedDocs > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full">
+                              {totalSelectedDocs}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Globe className="w-4 h-4 text-secondary" />
-                    <span className="text-sm font-medium text-primary">
-                      Web Research
-                    </span>
-                    <span className="text-xs text-muted">
-                      — enrich analysis with live web data
-                    </span>
-                  </div>
-                </label>
+
+                  {/* Web Research Toggle */}
+                  <label
+                    htmlFor="webResearch"
+                    className="flex items-center gap-3 cursor-pointer select-none"
+                  >
+                    <div className="relative">
+                      <input
+                        id="webResearch"
+                        type="checkbox"
+                        checked={enableWebResearch}
+                        onChange={(e) => setEnableWebResearch(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-page border rounded-full peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-colors" />
+                      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-4" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-4 h-4 text-secondary" />
+                      <span className="text-sm font-medium text-primary">
+                        Web Research
+                      </span>
+                      <span className="text-xs text-muted">
+                        — enrich analysis with live web data
+                      </span>
+                    </div>
+                  </label>
+                </div>
 
                 {startError && (
                   <div className="mt-4 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
@@ -580,9 +622,11 @@ export default function CourseWizardPage() {
       {/* Knowledge selection modal */}
       {showKnowledgeModal && (
         <KnowledgeSelectionModal
-          selectedIds={selectedKnowledgeIds}
-          onConfirm={(ids) => {
-            setSelectedKnowledgeIds(ids);
+          selectedTeamDocIds={selectedTeamDocIds}
+          selectedGlobalDocIds={selectedGlobalDocIds}
+          onConfirm={(teamIds, globalIds) => {
+            setSelectedTeamDocIds(teamIds);
+            setSelectedGlobalDocIds(globalIds);
             setShowKnowledgeModal(false);
           }}
           onClose={() => setShowKnowledgeModal(false)}

@@ -27,11 +27,10 @@ type CourseCreationInput struct {
 	Topic                string            `json:"topic"`
 	Audience             string            `json:"audience"`
 	UseContext           string            `json:"use_context"`
-	InternalDataOnly     bool              `json:"internal_data_only"`
-	SelectedTeamDocIDs   []string          `json:"selected_team_doc_ids"`
-	SelectedGlobalDocIDs []string          `json:"selected_global_doc_ids"`
-	RAGFilters           map[string]string `json:"rag_filters"`
-	EnableWebResearch    bool              `json:"enable_web_research"`
+	EnableInternalKnowledge bool     `json:"enable_internal_knowledge"`
+	SelectedTeamDocIDs     []string `json:"selected_team_doc_ids"`
+	SelectedGlobalDocIDs   []string `json:"selected_global_doc_ids"`
+	EnableWebResearch      bool     `json:"enable_web_research"`
 }
 
 // WorkflowStarter starts Temporal workflows for async processing.
