@@ -60,6 +60,7 @@ class ReviewSectionInput:
     section_outcomes: list[str]
     lesson_components: dict[str, LessonComponents]
     course_goal: str
+    prior_content_digest: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -119,6 +120,7 @@ async def review_section_components(
         section_outcomes=input.section_outcomes,
         lesson_components=input.lesson_components,
         course_goal=input.course_goal,
+        prior_content_digest=input.prior_content_digest,
     )
 
     result = await AgentRegistry.get("section-qa-judge").run(prompt, model=model)

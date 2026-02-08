@@ -84,6 +84,7 @@ def build_section_qa_prompt(
     section_outcomes: list[str],
     lesson_components: dict[str, LessonComponents],
     course_goal: str,
+    prior_content_digest: list[str] | None = None,
 ) -> str:
     """Build the QA prompt for a section's worth of components.
 
@@ -93,6 +94,7 @@ def build_section_qa_prompt(
         section_outcomes: List of outcome descriptions for this section.
         lesson_components: Map of lesson_title → LessonComponents (agent output).
         course_goal: The overall course goal for ADDIE context.
+        prior_content_digest: Content identifiers from earlier sections for cross-section dedup.
     """
     outcomes_str = "\n".join(f"- {o}" for o in section_outcomes)
 
@@ -106,6 +108,18 @@ def build_section_qa_prompt(
             # Serialize component content for review
             content_listing += f"{comp.model_dump_json(exclude={'type'})}\n"
 
+    # Cross-section context
+    prior_section = ""
+    if prior_content_digest:
+        digest_str = "\n".join(f"- {item}" for item in prior_content_digest)
+        prior_section = f"""
+## Content From Previous Sections
+The following content was generated in earlier sections. Flag any components in THIS
+section that substantially duplicate these topics:
+{digest_str}
+
+"""
+
     return f"""\
 ## Section Under Review: {section_title}
 {section_description}
@@ -115,7 +129,7 @@ def build_section_qa_prompt(
 
 ## Section Outcomes
 {outcomes_str}
-
+{prior_section}
 ## All Components in This Section
 {content_listing}
 

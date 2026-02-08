@@ -252,3 +252,20 @@ class LessonComponents(BaseModel):
     outcomes_covered: list[str] = Field(
         description="Outcome keys (verb object) introduced or practiced in this lesson"
     )
+
+    def content_digest(self) -> list[str]:
+        """Extract key content identifiers for cross-section dedup."""
+        items: list[str] = []
+        for c in self.components:
+            if isinstance(c, HeadingComponent):
+                items.append(f"heading: {c.headingText}")
+            elif isinstance(c, QuizComponent):
+                items.append(f"quiz: {c.quizQuestion}")
+            elif isinstance(c, StatementComponent):
+                items.append(f"statement: {c.statementText}")
+            elif isinstance(c, CalloutComponent) and c.title:
+                items.append(f"callout: {c.title}")
+            elif isinstance(c, ListComponent) and c.style == "accordion":
+                for li in c.items:
+                    items.append(f"term: {li.text}")
+        return items

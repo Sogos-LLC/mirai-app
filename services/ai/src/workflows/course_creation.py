@@ -729,6 +729,9 @@ class CourseCreationWorkflow:
 
         assert self._orchestrator is not None
 
+        # Cross-section content digest for dedup
+        accumulated_content_digest: list[str] = []
+
         for s_idx, section in enumerate(structure.sections):
             section_sos = section_outcomes.section_outcomes.get(section.title, [])
             num_lessons = max(1, min(3, len(section_sos)))
@@ -808,6 +811,7 @@ class CourseCreationWorkflow:
                     outcomes_to_introduce=pending,
                     outcomes_to_reinforce=reinforce,
                     recently_covered=recent,
+                    prior_content_digest=list(accumulated_content_digest),
                     resource_hints=resource_hints,
                     rag_context=rag_context_text,
                     source_references=source_references,
@@ -861,6 +865,7 @@ class CourseCreationWorkflow:
             # Update tracker after all lessons in section
             for title, lc in section_results.items():
                 tracker.mark_covered(lc.outcomes_covered, s_idx, title)
+                accumulated_content_digest.extend(lc.content_digest())
 
             # Run section QA judge
             section_outcome_strs = [so.description for so in section_sos]
@@ -873,6 +878,7 @@ class CourseCreationWorkflow:
                     section_outcomes=section_outcome_strs,
                     lesson_components=section_results,
                     course_goal=outcomes.goal.goal_statement,
+                    prior_content_digest=list(accumulated_content_digest),
                 ),
                 ReviewSectionOutput,
             )

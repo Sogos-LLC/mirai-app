@@ -59,6 +59,9 @@ class ComponentContext:
     # External resources (parsed from user context)
     resource_hints: list[ResourceHint] = None  # type: ignore[assignment]
 
+    # Cross-section dedup: content already generated in prior sections
+    prior_content_digest: list[str] = field(default_factory=list)
+
     # RAG context for source attribution
     rag_context: str = ""
     source_references: list[SourceReference] = field(default_factory=list)
@@ -179,6 +182,21 @@ AgentRegistry.register(AgentSpec(
 # =============================================================================
 
 
+def _build_prior_content_section(digest: list[str]) -> str:
+    """Build the 'Previously Generated Content' prompt section."""
+    if not digest:
+        return ""
+    digest_str = "\n".join(f"- {item}" for item in digest)
+    return f"""\
+## Previously Generated Content (DO NOT REPEAT)
+The following headings, quiz questions, statements, and terms have already been generated
+in earlier sections. Do NOT create components that cover the same topic or ask the same
+questions — find a new angle or skip the topic entirely.
+{digest_str}
+
+"""
+
+
 def build_component_prompt(ctx: ComponentContext) -> str:
     """Build the user prompt for component generation from context."""
     # Position description
@@ -296,7 +314,7 @@ Quality and accuracy over quantity. Every claim must be traceable to the source 
 {rules_str}
 {resources_str}
 {ctx.rag_context}
-
+{_build_prior_content_section(ctx.prior_content_digest)}
 ## Instructions
 Generate 5-15 structured components for this lesson. Follow the template guidelines
 but adapt as needed for the content. Write REAL, detailed educational content.
