@@ -1,6 +1,7 @@
 import { Users, RefreshCw } from 'lucide-react';
 import type { WizardContext, WizardEvent } from '@/machines/wizardMachine';
 import { WizardPersonaCard } from '@/components/course/WizardPersonaCard';
+import Button from '@/components/ui/Button';
 
 interface WizardStep3PersonasProps {
   context: WizardContext;
@@ -9,35 +10,40 @@ interface WizardStep3PersonasProps {
 
 export function WizardStep3Personas({ context, send }: WizardStep3PersonasProps) {
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Hero */}
-      <div className="flex flex-col items-center text-center mb-8">
-        <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
-          <Users className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+    <div className="max-w-4xl mx-auto">
+      {/* Header — inline icon + title + regenerate */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-primary">
+              Select Your Subject Matter Experts
+            </h2>
+            <p className="text-sm sm:text-base text-secondary">
+              Choose the expert personas that will guide your course content.
+            </p>
+          </div>
         </div>
-        <h2 className="text-xl font-semibold text-primary mb-2">
-          Select Subject Matter Experts
-        </h2>
-        <p className="text-sm text-secondary max-w-lg">
-          AI has generated expert personas to guide your course content.
-          Select the ones that best align with your course goals.
-        </p>
-      </div>
-
-      {/* Regenerate button */}
-      <div className="flex justify-end mb-4">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => send({ type: 'REGENERATE' })}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary hover:text-primary hover:bg-hover rounded-md transition-colors min-h-[32px]"
+          className="self-start sm:self-auto gap-2"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-4 h-4" />
           Regenerate
-        </button>
+        </Button>
       </div>
 
-      {/* Persona cards */}
-      <div className="space-y-3">
+      {/* Section label */}
+      <h3 className="text-sm font-semibold text-primary mb-3">
+        AI Generated Personas
+      </h3>
+
+      {/* 3-column persona grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {context.smePersonas.map((persona) => (
           <WizardPersonaCard
             key={persona.id}
@@ -52,10 +58,13 @@ export function WizardStep3Personas({ context, send }: WizardStep3PersonasProps)
         ))}
       </div>
 
-      {/* Selection count */}
+      {/* Selection hint */}
       {context.smePersonas.length > 0 && (
-        <p className="text-xs text-muted text-center mt-4">
-          {context.selectedSmeIds.length} of {context.smePersonas.length} expert{context.smePersonas.length === 1 ? '' : 's'} selected
+        <p className="text-sm text-muted text-center">
+          Select at least one persona. These experts will influence the tone and depth of your course content.
+          <span className="block text-xs mt-1">
+            {context.selectedSmeIds.length} of {context.smePersonas.length} expert{context.smePersonas.length === 1 ? '' : 's'} selected
+          </span>
         </p>
       )}
     </div>

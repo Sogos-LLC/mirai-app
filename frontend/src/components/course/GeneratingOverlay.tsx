@@ -1,3 +1,5 @@
+import { Loader2, Sparkles } from 'lucide-react';
+
 interface GeneratingOverlayProps {
   title: string;
   message: string;
@@ -7,35 +9,37 @@ interface GeneratingOverlayProps {
 export function GeneratingOverlay({ title, message, onCancel }: GeneratingOverlayProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      {/* Animated bouncing dots */}
-      <div className="flex gap-1.5 mb-6">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="w-3 h-3 rounded-full bg-indigo-500"
-            style={{
-              animation: 'bounce 1.4s infinite ease-in-out both',
-              animationDelay: `${i * 0.16}s`,
-            }}
-          />
-        ))}
+      {/* Pulsing icon */}
+      <div className="relative w-20 h-20 mx-auto mb-6">
+        <div className="absolute inset-0 bg-indigo-100 dark:bg-indigo-900/30 rounded-full animate-pulse" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Sparkles className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+        </div>
       </div>
-      <h3 className="text-lg font-semibold text-primary mb-1">{title}</h3>
-      <p className="text-sm text-secondary max-w-md">{message}</p>
+
+      {/* Title with spinner */}
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <Loader2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 animate-spin" />
+        <h3 className="text-lg sm:text-xl font-bold text-primary">{title}</h3>
+      </div>
+
+      <p className="text-sm sm:text-base text-secondary max-w-md mb-8">{message}</p>
+
+      {/* Bouncing dots */}
+      <div className="flex justify-center gap-2 mb-6">
+        <div className="w-2 h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+        <div className="w-2 h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+        <div className="w-2 h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      </div>
+
       {onCancel && (
         <button
           onClick={onCancel}
-          className="mt-6 text-sm text-muted hover:text-primary transition-colors underline min-h-[44px]"
+          className="text-sm text-muted hover:text-primary transition-colors underline min-h-[44px]"
         >
           Cancel
         </button>
       )}
-      <style>{`
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
-        }
-      `}</style>
     </div>
   );
 }

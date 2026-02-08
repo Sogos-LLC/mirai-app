@@ -1,6 +1,7 @@
 import { Target, RefreshCw } from 'lucide-react';
 import type { WizardContext, WizardEvent } from '@/machines/wizardMachine';
 import { WizardPersonaCard } from '@/components/course/WizardPersonaCard';
+import Button from '@/components/ui/Button';
 
 interface WizardStep4AudienceProps {
   context: WizardContext;
@@ -9,35 +10,40 @@ interface WizardStep4AudienceProps {
 
 export function WizardStep4Audience({ context, send }: WizardStep4AudienceProps) {
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Hero */}
-      <div className="flex flex-col items-center text-center mb-8">
-        <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
-          <Target className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+    <div className="max-w-4xl mx-auto">
+      {/* Header — inline icon + title + regenerate */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+            <Target className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-primary">
+              Define Your Target Audience
+            </h2>
+            <p className="text-sm sm:text-base text-secondary">
+              Select the learner profiles you want to target.
+            </p>
+          </div>
         </div>
-        <h2 className="text-xl font-semibold text-primary mb-2">
-          Define Your Target Audience
-        </h2>
-        <p className="text-sm text-secondary max-w-lg">
-          AI has generated audience personas based on your course and selected experts.
-          Select the learner profiles you want to target.
-        </p>
-      </div>
-
-      {/* Regenerate button */}
-      <div className="flex justify-end mb-4">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => send({ type: 'REGENERATE' })}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-secondary hover:text-primary hover:bg-hover rounded-md transition-colors min-h-[32px]"
+          className="self-start sm:self-auto gap-2"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-4 h-4" />
           Regenerate
-        </button>
+        </Button>
       </div>
 
-      {/* Audience cards */}
-      <div className="space-y-3">
+      {/* Section label */}
+      <h3 className="text-sm font-semibold text-primary mb-3">
+        AI Generated Audiences
+      </h3>
+
+      {/* 3-column audience grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {context.audiencePersonas.map((persona) => (
           <WizardPersonaCard
             key={persona.id}
@@ -52,10 +58,13 @@ export function WizardStep4Audience({ context, send }: WizardStep4AudienceProps)
         ))}
       </div>
 
-      {/* Selection count */}
+      {/* Selection hint */}
       {context.audiencePersonas.length > 0 && (
-        <p className="text-xs text-muted text-center mt-4">
-          {context.selectedAudienceIds.length} of {context.audiencePersonas.length} audience{context.audiencePersonas.length === 1 ? '' : 's'} selected
+        <p className="text-sm text-muted text-center">
+          Select at least one audience. These profiles will shape the difficulty and focus of your content.
+          <span className="block text-xs mt-1">
+            {context.selectedAudienceIds.length} of {context.audiencePersonas.length} audience{context.audiencePersonas.length === 1 ? '' : 's'} selected
+          </span>
         </p>
       )}
     </div>

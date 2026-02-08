@@ -439,7 +439,7 @@ export default function CourseWizardPage() {
       title="Create New Course"
       description="AI-powered instructional design wizard"
       backButton={{ label: 'Back to Dashboard', onClick: () => router.push('/dashboard') }}
-      maxWidth="5xl"
+      maxWidth="6xl"
     >
       {/* ===================== WIZARD PHASE ===================== */}
       {isWizardPhase && (

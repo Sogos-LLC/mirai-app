@@ -236,8 +236,12 @@ func (s *workflowStarter) ExecuteWizardStep(ctx context.Context, stepType string
 		return nil, fmt.Errorf("start wizard step workflow: %w", err)
 	}
 
+	// Use a longer timeout for blocking on AI generation results (HTTP context may be too short).
+	getCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
 	var result map[string]interface{}
-	if err := run.Get(ctx, &result); err != nil {
+	if err := run.Get(getCtx, &result); err != nil {
 		return nil, fmt.Errorf("wizard step workflow result: %w", err)
 	}
 
