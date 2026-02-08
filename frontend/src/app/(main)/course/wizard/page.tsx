@@ -396,7 +396,7 @@ export default function CourseWizardPage() {
   return (
     <PageShell
       title="Create New Course"
-      description="AI-powered instructional design wizard"
+      description="Let AI guide you through creating an engaging course in 5 simple steps"
       backButton={{ label: 'Back to Dashboard', onClick: () => router.push('/dashboard') }}
       maxWidth="6xl"
     >

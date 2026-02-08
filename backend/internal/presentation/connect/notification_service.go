@@ -318,6 +318,14 @@ func notificationTypeToProto(t valueobject.NotificationType) v1.NotificationType
 		return v1.NotificationType_NOTIFICATION_TYPE_GAP_TASK_ASSIGNED
 	case valueobject.NotificationTypeGapTaskCompleted:
 		return v1.NotificationType_NOTIFICATION_TYPE_GAP_TASK_COMPLETED
+	case valueobject.NotificationTypeGapTasksSubmitted:
+		return v1.NotificationType_NOTIFICATION_TYPE_GAP_TASKS_SUBMITTED
+	case valueobject.NotificationTypeSubmissionReadyForReview:
+		return v1.NotificationType_NOTIFICATION_TYPE_SUBMISSION_READY_FOR_REVIEW
+	case valueobject.NotificationTypeSubmissionApproved:
+		return v1.NotificationType_NOTIFICATION_TYPE_SUBMISSION_APPROVED
+	case valueobject.NotificationTypeChangesRequested:
+		return v1.NotificationType_NOTIFICATION_TYPE_CHANGES_REQUESTED
 	default:
 		return v1.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED
 	}

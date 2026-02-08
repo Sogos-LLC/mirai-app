@@ -26,15 +26,19 @@ const (
 type NotificationType int32
 
 const (
-	NotificationType_NOTIFICATION_TYPE_UNSPECIFIED         NotificationType = 0
-	NotificationType_NOTIFICATION_TYPE_OUTLINE_READY       NotificationType = 5  // Course outline generation complete
-	NotificationType_NOTIFICATION_TYPE_GENERATION_COMPLETE NotificationType = 6  // Course content generation complete
-	NotificationType_NOTIFICATION_TYPE_GENERATION_FAILED   NotificationType = 7  // Course generation failed
-	NotificationType_NOTIFICATION_TYPE_APPROVAL_REQUESTED  NotificationType = 8  // Content awaiting approval
-	NotificationType_NOTIFICATION_TYPE_EXPORT_COMPLETE     NotificationType = 9  // Course export complete, ready for download
-	NotificationType_NOTIFICATION_TYPE_EXPORT_FAILED       NotificationType = 10 // Course export failed
-	NotificationType_NOTIFICATION_TYPE_GAP_TASK_ASSIGNED   NotificationType = 11 // Knowledge gap task assigned to user
-	NotificationType_NOTIFICATION_TYPE_GAP_TASK_COMPLETED  NotificationType = 12 // Knowledge gap task completed by assignee
+	NotificationType_NOTIFICATION_TYPE_UNSPECIFIED                 NotificationType = 0
+	NotificationType_NOTIFICATION_TYPE_OUTLINE_READY               NotificationType = 5  // Course outline generation complete
+	NotificationType_NOTIFICATION_TYPE_GENERATION_COMPLETE         NotificationType = 6  // Course content generation complete
+	NotificationType_NOTIFICATION_TYPE_GENERATION_FAILED           NotificationType = 7  // Course generation failed
+	NotificationType_NOTIFICATION_TYPE_APPROVAL_REQUESTED          NotificationType = 8  // Content awaiting approval
+	NotificationType_NOTIFICATION_TYPE_EXPORT_COMPLETE             NotificationType = 9  // Course export complete, ready for download
+	NotificationType_NOTIFICATION_TYPE_EXPORT_FAILED               NotificationType = 10 // Course export failed
+	NotificationType_NOTIFICATION_TYPE_GAP_TASK_ASSIGNED           NotificationType = 11 // Knowledge gap task assigned to user
+	NotificationType_NOTIFICATION_TYPE_GAP_TASK_COMPLETED          NotificationType = 12 // Knowledge gap task completed by assignee
+	NotificationType_NOTIFICATION_TYPE_GAP_TASKS_SUBMITTED         NotificationType = 13 // All knowledge gap tasks submitted by assignee
+	NotificationType_NOTIFICATION_TYPE_SUBMISSION_READY_FOR_REVIEW NotificationType = 14 // Submission ready for review
+	NotificationType_NOTIFICATION_TYPE_SUBMISSION_APPROVED         NotificationType = 15 // Submission approved
+	NotificationType_NOTIFICATION_TYPE_CHANGES_REQUESTED           NotificationType = 16 // Changes requested on submission
 )
 
 // Enum value maps for NotificationType.
@@ -49,17 +53,25 @@ var (
 		10: "NOTIFICATION_TYPE_EXPORT_FAILED",
 		11: "NOTIFICATION_TYPE_GAP_TASK_ASSIGNED",
 		12: "NOTIFICATION_TYPE_GAP_TASK_COMPLETED",
+		13: "NOTIFICATION_TYPE_GAP_TASKS_SUBMITTED",
+		14: "NOTIFICATION_TYPE_SUBMISSION_READY_FOR_REVIEW",
+		15: "NOTIFICATION_TYPE_SUBMISSION_APPROVED",
+		16: "NOTIFICATION_TYPE_CHANGES_REQUESTED",
 	}
 	NotificationType_value = map[string]int32{
-		"NOTIFICATION_TYPE_UNSPECIFIED":         0,
-		"NOTIFICATION_TYPE_OUTLINE_READY":       5,
-		"NOTIFICATION_TYPE_GENERATION_COMPLETE": 6,
-		"NOTIFICATION_TYPE_GENERATION_FAILED":   7,
-		"NOTIFICATION_TYPE_APPROVAL_REQUESTED":  8,
-		"NOTIFICATION_TYPE_EXPORT_COMPLETE":     9,
-		"NOTIFICATION_TYPE_EXPORT_FAILED":       10,
-		"NOTIFICATION_TYPE_GAP_TASK_ASSIGNED":   11,
-		"NOTIFICATION_TYPE_GAP_TASK_COMPLETED":  12,
+		"NOTIFICATION_TYPE_UNSPECIFIED":                 0,
+		"NOTIFICATION_TYPE_OUTLINE_READY":               5,
+		"NOTIFICATION_TYPE_GENERATION_COMPLETE":         6,
+		"NOTIFICATION_TYPE_GENERATION_FAILED":           7,
+		"NOTIFICATION_TYPE_APPROVAL_REQUESTED":          8,
+		"NOTIFICATION_TYPE_EXPORT_COMPLETE":             9,
+		"NOTIFICATION_TYPE_EXPORT_FAILED":               10,
+		"NOTIFICATION_TYPE_GAP_TASK_ASSIGNED":           11,
+		"NOTIFICATION_TYPE_GAP_TASK_COMPLETED":          12,
+		"NOTIFICATION_TYPE_GAP_TASKS_SUBMITTED":         13,
+		"NOTIFICATION_TYPE_SUBMISSION_READY_FOR_REVIEW": 14,
+		"NOTIFICATION_TYPE_SUBMISSION_APPROVED":         15,
+		"NOTIFICATION_TYPE_CHANGES_REQUESTED":           16,
 	}
 )
 
@@ -982,7 +994,7 @@ const file_mirai_v1_notification_proto_rawDesc = "" +
 	"\fmarked_count\x18\x01 \x01(\x05R\vmarkedCount\"D\n" +
 	"\x19DeleteNotificationRequest\x12'\n" +
 	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\"\x1c\n" +
-	"\x1aDeleteNotificationResponse*\xf7\x02\n" +
+	"\x1aDeleteNotificationResponse*\xa9\x04\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fNOTIFICATION_TYPE_OUTLINE_READY\x10\x05\x12)\n" +
@@ -993,7 +1005,11 @@ const file_mirai_v1_notification_proto_rawDesc = "" +
 	"\x1fNOTIFICATION_TYPE_EXPORT_FAILED\x10\n" +
 	"\x12'\n" +
 	"#NOTIFICATION_TYPE_GAP_TASK_ASSIGNED\x10\v\x12(\n" +
-	"$NOTIFICATION_TYPE_GAP_TASK_COMPLETED\x10\f*\x9e\x01\n" +
+	"$NOTIFICATION_TYPE_GAP_TASK_COMPLETED\x10\f\x12)\n" +
+	"%NOTIFICATION_TYPE_GAP_TASKS_SUBMITTED\x10\r\x121\n" +
+	"-NOTIFICATION_TYPE_SUBMISSION_READY_FOR_REVIEW\x10\x0e\x12)\n" +
+	"%NOTIFICATION_TYPE_SUBMISSION_APPROVED\x10\x0f\x12'\n" +
+	"#NOTIFICATION_TYPE_CHANGES_REQUESTED\x10\x10*\x9e\x01\n" +
 	"\x14NotificationPriority\x12%\n" +
 	"!NOTIFICATION_PRIORITY_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19NOTIFICATION_PRIORITY_LOW\x10\x01\x12 \n" +
