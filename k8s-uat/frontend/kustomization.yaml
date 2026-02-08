@@ -80,4 +80,8 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-frontend
+<<<<<<< Updated upstream
   newTag: uat-9dd3eb9
+=======
+  newTag: uat-2f9ac9d
+>>>>>>> Stashed changes
