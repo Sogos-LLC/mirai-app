@@ -17,6 +17,9 @@ import {
   Hash,
   FileType,
   HardDrive,
+  ScanLine,
+  Save,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   useUploadKnowledge,
@@ -44,42 +47,39 @@ type ProcessingStage =
   | 'failed';
 
 interface KnowledgeUploadModalProps {
-  /** File to upload */
   file: File;
-  /** Optional team ID. If omitted, uploads to global knowledge. */
   teamId?: string;
-  /** Called when modal is closed (Save or Cancel) */
   onClose: () => void;
-  /** Called when upload completes successfully */
   onSuccess: () => void;
 }
 
-interface ProcessingStep {
+interface StepDef {
   stage: ProcessingStage;
   label: string;
-  description: string;
+  icon: LucideIcon;
 }
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const PROCESSING_STEPS: ProcessingStep[] = [
-  { stage: 'uploading', label: 'Uploading', description: 'Transferring file to server' },
-  { stage: 'reading', label: 'Reading', description: 'Extracting text content' },
-  { stage: 'chunking', label: 'Chunking', description: 'Splitting into semantic chunks & embedding' },
-  { stage: 'analyzing', label: 'Analyzing', description: 'Generating document summary' },
-  { stage: 'finalizing', label: 'Finalizing', description: 'Saving to knowledge base' },
+const STEPS: StepDef[] = [
+  { stage: 'uploading', label: 'Upload', icon: Upload },
+  { stage: 'reading', label: 'Read', icon: FileText },
+  { stage: 'chunking', label: 'Chunk', icon: Layers },
+  { stage: 'analyzing', label: 'Analyze', icon: ScanLine },
+  { stage: 'finalizing', label: 'Save', icon: Save },
 ];
 
-// Map workflow stages to display step stages
+const STEP_STAGES: ProcessingStage[] = STEPS.map((s) => s.stage);
+
 function mapToDisplayStage(stage: string): ProcessingStage {
   switch (stage) {
     case 'pending':
       return 'pending';
     case 'processing':
     case 'decrypting':
-      return 'uploading'; // Combine early stages into "uploading" display
+      return 'uploading';
     case 'reading':
       return 'reading';
     case 'chunking':
@@ -98,6 +98,84 @@ function mapToDisplayStage(stage: string): ProcessingStage {
 }
 
 // =============================================================================
+// Horizontal Stepper
+// =============================================================================
+
+function HorizontalStepper({
+  steps,
+  currentStage,
+  isComplete,
+}: {
+  steps: StepDef[];
+  currentStage: ProcessingStage;
+  isComplete: boolean;
+}) {
+  const currentIdx = STEP_STAGES.indexOf(currentStage);
+
+  return (
+    <div className="flex items-center w-full px-2">
+      {steps.map((step, idx) => {
+        const stepComplete = isComplete || idx < currentIdx;
+        const stepActive = !isComplete && step.stage === currentStage;
+        const Icon = step.icon;
+
+        return (
+          <React.Fragment key={step.stage}>
+            {/* Connector line */}
+            {idx > 0 && (
+              <div className="flex-1 h-0.5 mx-1 transition-colors duration-500">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    stepComplete || stepActive
+                      ? 'bg-primary-500 dark:bg-primary-400'
+                      : 'bg-gray-200 dark:bg-dark-100'
+                  }`}
+                />
+              </div>
+            )}
+
+            {/* Step node */}
+            <div className="flex flex-col items-center gap-1.5 relative">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${
+                  stepComplete
+                    ? 'bg-green-100 dark:bg-green-900/30'
+                    : stepActive
+                      ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-400/50 dark:ring-primary-500/50'
+                      : 'bg-gray-100 dark:bg-dark-100'
+                }`}
+              >
+                {stepComplete ? (
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                ) : stepActive ? (
+                  <div className="relative">
+                    <Icon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                    <Loader2 className="w-3 h-3 text-primary-500 dark:text-primary-400 animate-spin absolute -top-1 -right-1.5" />
+                  </div>
+                ) : (
+                  <Icon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                )}
+              </div>
+              <span
+                className={`text-[10px] font-medium transition-colors duration-300 ${
+                  stepComplete
+                    ? 'text-green-600 dark:text-green-400'
+                    : stepActive
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-400 dark:text-gray-500'
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -111,7 +189,7 @@ export function KnowledgeUploadModal({
   const [uploadComplete, setUploadComplete] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [sourceId, setSourceId] = useState<string | null>(null);
-  const [showContentPreview, setShowContentPreview] = useState(false);
+  const [showContentPreview, setShowContentPreview] = useState(true);
   const [filePreview, setFilePreview] = useState<string | null>(null);
 
   // Hooks
@@ -156,14 +234,13 @@ export function KnowledgeUploadModal({
     reader.readAsText(file.slice(0, 1000));
   }, [file]);
 
-  // Handle upload — enforce a minimum 5s "uploading" state so the modal
-  // doesn't flash when the upload completes near-instantly.
+  // Handle upload — enforce a minimum 2s "uploading" state so the stepper
+  // has time to render before jumping to backend stages.
   const handleUpload = useCallback(async () => {
     setUploadError(null);
     setUploadComplete(false);
 
-    const minDisplayMs = 5000;
-    const delay = new Promise((r) => setTimeout(r, minDisplayMs));
+    const delay = new Promise((r) => setTimeout(r, 2000));
 
     try {
       const [result] = await Promise.all([
@@ -187,13 +264,11 @@ export function KnowledgeUploadModal({
     handleUpload();
   }, []);
 
-  // Handle save (confirm)
   const handleSave = useCallback(() => {
     onSuccess();
     onClose();
   }, [onSuccess, onClose]);
 
-  // Handle retry
   const handleRetry = useCallback(() => {
     setUploadError(null);
     setSourceId(null);
@@ -201,7 +276,6 @@ export function KnowledgeUploadModal({
     handleUpload();
   }, [handleUpload]);
 
-  // Get file type label
   const getFileTypeLabel = (filename: string): string => {
     const ext = filename.split('.').pop()?.toLowerCase();
     switch (ext) {
@@ -222,27 +296,42 @@ export function KnowledgeUploadModal({
   const isComplete = currentStage === 'ready';
   const isFailed = currentStage === 'failed';
 
+  // Active step label for subtitle
+  const activeStep = STEPS.find((s) => s.stage === currentStage);
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-dark-surface rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-backdrop-in">
+      <div className="bg-white dark:bg-dark-surface rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-modal-in">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-              <Upload className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+            <div className={`p-2 rounded-lg transition-colors duration-500 ${
+              isComplete
+                ? 'bg-green-100 dark:bg-green-900/30'
+                : isFailed
+                  ? 'bg-red-100 dark:bg-red-900/30'
+                  : 'bg-primary-100 dark:bg-primary-900/30'
+            }`}>
+              {isComplete ? (
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+              ) : isFailed ? (
+                <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              ) : (
+                <Upload className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              )}
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {isComplete ? 'Upload Complete' : isProcessing ? 'Processing Document' : isFailed ? 'Upload Failed' : 'Uploading'}
+                {isComplete ? 'Upload Complete' : isFailed ? 'Upload Failed' : 'Processing Document'}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {isComplete
                   ? 'Document is ready for use'
-                  : isProcessing
-                    ? ingestionState.progressMessage || 'This may take a moment'
-                    : isFailed
-                      ? 'An error occurred'
-                      : 'Starting upload'}
+                  : isFailed
+                    ? 'An error occurred'
+                    : activeStep
+                      ? `${activeStep.label}ing...`
+                      : 'Preparing upload'}
               </p>
             </div>
           </div>
@@ -256,146 +345,79 @@ export function KnowledgeUploadModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* File Confirmation Section */}
-          <section>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-              File Information
-            </h3>
-            <div className="bg-gray-50 dark:bg-dark-50 rounded-xl p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <FileText className="w-10 h-10 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <FileType className="w-3.5 h-3.5" />
-                      {getFileTypeLabel(file.name)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <HardDrive className="w-3.5 h-3.5" />
-                      {formatFileSize(BigInt(file.size))}
-                    </span>
-                  </div>
+          {/* File Info — always visible */}
+          <div className="bg-gray-50 dark:bg-dark-50 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <FileText className="w-8 h-8 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <FileType className="w-3 h-3" />
+                    {getFileTypeLabel(file.name)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <HardDrive className="w-3 h-3" />
+                    {formatFileSize(BigInt(file.size))}
+                  </span>
                 </div>
-                {/* Status Badge */}
-                <div className="flex-shrink-0">
-                  {isComplete && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      Ready
-                    </span>
-                  )}
-                  {isProcessing && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Processing
-                    </span>
-                  )}
-                  {isFailed && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                      <XCircle className="w-3.5 h-3.5" />
-                      Failed
-                    </span>
-                  )}
+              </div>
+              {isComplete && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Ready
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Horizontal Stepper — always visible */}
+          <div className="py-2">
+            <HorizontalStepper
+              steps={STEPS}
+              currentStage={currentStage}
+              isComplete={isComplete}
+            />
+          </div>
+
+          {/* Indeterminate progress during processing */}
+          {isProcessing && (
+            <div className="w-full bg-gray-200 dark:bg-dark-100 rounded-full h-1.5 overflow-hidden">
+              {ingestionState.progressPercent > 0 ? (
+                <div
+                  className="bg-primary-600 dark:bg-primary-500 h-full rounded-full transition-all duration-700"
+                  style={{ width: `${ingestionState.progressPercent}%` }}
+                />
+              ) : (
+                <div className="h-full bg-primary-500/60 dark:bg-primary-400/60 rounded-full animate-pulse" style={{ width: '60%' }} />
+              )}
+            </div>
+          )}
+
+          {/* Error */}
+          {isFailed && error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-red-800 dark:text-red-300">Processing Failed</p>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
                 </div>
               </div>
             </div>
-          </section>
-
-          {/* Processing Status Section */}
-          {(isProcessing || isComplete) && (
-            <section>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-                Processing Status
-              </h3>
-              <div className="bg-gray-50 dark:bg-dark-50 rounded-xl p-4">
-                {/* Progress bar */}
-                {isProcessing && ingestionState.progressPercent > 0 && (
-                  <div className="mb-4">
-                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      <span>{ingestionState.progressMessage}</span>
-                      <span>{ingestionState.progressPercent}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-dark-100 rounded-full h-2">
-                      <div
-                        className="bg-primary-600 dark:bg-primary-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${ingestionState.progressPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-3">
-                  {PROCESSING_STEPS.map((step) => {
-                    const displayStage = currentStage;
-                    const stepStages: ProcessingStage[] = ['uploading', 'reading', 'chunking', 'analyzing', 'finalizing'];
-                    const currentIdx = stepStages.indexOf(displayStage);
-                    const stepIdx = stepStages.indexOf(step.stage);
-                    const isStepComplete = isComplete || stepIdx < currentIdx;
-                    const isStepActive = step.stage === displayStage;
-
-                    return (
-                      <div key={step.stage} className="flex items-center gap-3">
-                        <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            isStepComplete
-                              ? 'bg-green-100 dark:bg-green-900/30'
-                              : isStepActive
-                                ? 'bg-blue-100 dark:bg-blue-900/30'
-                                : 'bg-gray-200 dark:bg-dark-100'
-                          }`}
-                        >
-                          {isStepComplete ? (
-                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                          ) : isStepActive ? (
-                            <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
-                          ) : (
-                            <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p
-                            className={`font-medium ${
-                              isStepComplete || isStepActive
-                                ? 'text-gray-900 dark:text-white'
-                                : 'text-gray-400 dark:text-gray-500'
-                            }`}
-                          >
-                            {step.label}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{step.description}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </section>
           )}
 
-          {/* Error Section */}
-          {isFailed && error && (
-            <section>
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-red-800 dark:text-red-300">Processing Failed</p>
-                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Knowledge Base Metadata (when ready) */}
+          {/* ============================================================= */}
+          {/* Full Breakdown — revealed on completion                        */}
+          {/* ============================================================= */}
           {isComplete && source && (
-            <>
+            <div className="space-y-6 animate-fade-slide-up">
+              {/* Document Analysis */}
               <section>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
                   Document Analysis
                 </h3>
                 <div className="bg-gray-50 dark:bg-dark-50 rounded-xl p-4 space-y-4">
-                  {/* Title */}
                   {source.documentIndex?.title && (
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -407,7 +429,6 @@ export function KnowledgeUploadModal({
                     </div>
                   )}
 
-                  {/* Summary */}
                   {source.summary && (
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -417,7 +438,6 @@ export function KnowledgeUploadModal({
                     </div>
                   )}
 
-                  {/* Main Topics */}
                   {source.documentIndex?.mainTopics && source.documentIndex.mainTopics.length > 0 && (
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
@@ -436,7 +456,6 @@ export function KnowledgeUploadModal({
                     </div>
                   )}
 
-                  {/* Key Concepts */}
                   {source.documentIndex?.keyConcepts && source.documentIndex.keyConcepts.length > 0 && (
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
@@ -457,7 +476,7 @@ export function KnowledgeUploadModal({
                 </div>
               </section>
 
-              {/* Chunking Hints */}
+              {/* Chunking Statistics */}
               <section>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
                   Chunking Statistics
@@ -487,7 +506,7 @@ export function KnowledgeUploadModal({
                 </div>
               </section>
 
-              {/* Content Preview */}
+              {/* Content Preview — open by default */}
               <section>
                 <button
                   onClick={() => setShowContentPreview(!showContentPreview)}
@@ -546,11 +565,11 @@ export function KnowledgeUploadModal({
                   </div>
                 </section>
               )}
-            </>
+            </div>
           )}
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-50">
           {isFailed ? (
             <>

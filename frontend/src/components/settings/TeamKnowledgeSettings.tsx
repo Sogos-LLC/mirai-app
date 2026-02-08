@@ -359,7 +359,7 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
           isDragOver
             ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
             : 'border-gray-300 dark:border-dark-border hover:border-primary-400 dark:hover:border-primary-600'
-        } ${isCheckingDuplicate ? 'opacity-50 cursor-not-allowed' : ''}`}
+        }`}
       >
         <input
           ref={fileInputRef}
@@ -370,24 +370,13 @@ function UploadZone({ teamId, onSuccess }: UploadZoneProps) {
           disabled={isCheckingDuplicate}
         />
 
-        {isCheckingDuplicate ? (
-          <>
-            <Loader2 className="w-10 h-10 text-primary-600 dark:text-primary-400 mx-auto mb-3 animate-spin" />
-            <p className="font-medium text-gray-900 dark:text-white">
-              Checking for duplicates...
-            </p>
-          </>
-        ) : (
-          <>
-            <Upload className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
-            <p className="font-medium text-gray-900 dark:text-white mb-1">
-              Drop files here or click to upload
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Supports {acceptedTypes.join(', ')} files (max 5MB)
-            </p>
-          </>
-        )}
+        <Upload className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+        <p className="font-medium text-gray-900 dark:text-white mb-1">
+          Drop files here or click to upload
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Supports {acceptedTypes.join(', ')} files (max 5MB)
+        </p>
       </div>
 
       {uploadError && (
