@@ -8,6 +8,7 @@ import {
 } from '@/gen/mirai/v1/ai_generation_service-AIGenerationService_connectquery';
 import {
   GenerationJobStatus,
+  GenerationJobType,
   type GenerationJob,
 } from '@/gen/mirai/v1/ai_generation_types_pb';
 import {
@@ -53,6 +54,31 @@ export function useCancelJob() {
     },
     isLoading: mutation.isPending,
     error: mutation.error,
+  };
+}
+
+/**
+ * Hook to find the active COURSE_CREATION job for a specific course.
+ * Used when resuming from the "Course Not Ready" editor page which only has courseId.
+ */
+export function useGetActiveJobForCourse(courseId: string | undefined) {
+  const query = useQuery(
+    listJobs,
+    { courseId: courseId ?? '', type: GenerationJobType.COURSE_CREATION },
+    { enabled: !!courseId },
+  );
+
+  const activeJob = (query.data?.jobs ?? []).find(
+    (job: GenerationJob) =>
+      !job.parentJobId &&
+      (job.status === GenerationJobStatus.PROCESSING ||
+        job.status === GenerationJobStatus.AWAITING_APPROVAL)
+  );
+
+  return {
+    data: activeJob,
+    isLoading: query.isLoading,
+    error: query.error,
   };
 }
 

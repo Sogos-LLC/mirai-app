@@ -305,9 +305,10 @@ function CompletedTaskCard({
 interface GapTaskDetailModalProps {
   tasks: KnowledgeGapTask[];
   onClose: () => void;
+  onSubmitSuccess: () => void;
 }
 
-export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) {
+export function GapTaskDetailModal({ tasks, onClose, onSubmitSuccess }: GapTaskDetailModalProps) {
   const completeTask = useCompleteGapTask();
   const submitWork = useSubmitGapTaskWork();
 
@@ -365,10 +366,11 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
   const handleSubmitWork = useCallback(async () => {
     try {
       await submitWork.mutate();
+      onSubmitSuccess();
     } catch {
       // Error handled by hook
     }
-  }, [submitWork]);
+  }, [submitWork, onSubmitSuccess]);
 
   return (
     <>
@@ -401,30 +403,23 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
           ))}
         </div>
 
-        {/* Submit button — visible when all tasks are completed */}
-        {allCompleted && (
+        {/* Submit button — visible when all tasks are completed but not yet submitted */}
+        {allCompleted && !allSubmitted && (
           <div className="border-t mt-4 pt-4 px-1">
-            {allSubmitted ? (
-              <div className="flex items-center justify-center gap-2 py-2 text-sm text-green-700 dark:text-green-400">
-                <CheckCircle className="w-4 h-4" />
-                <span className="font-medium">Work submitted</span>
-              </div>
-            ) : (
-              <Button
-                variant="primary"
-                size="md"
-                onClick={handleSubmitWork}
-                disabled={submitWork.isPending}
-                className="w-full gap-2"
-              >
-                {submitWork.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-                Submit All Work
-              </Button>
-            )}
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleSubmitWork}
+              disabled={submitWork.isPending}
+              className="w-full gap-2"
+            >
+              {submitWork.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Submit All Work
+            </Button>
           </div>
         )}
       </ResponsiveModal>

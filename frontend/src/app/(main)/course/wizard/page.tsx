@@ -42,7 +42,7 @@ import {
   useWorkflowState,
 } from '@/hooks/useCourseCreation';
 import { useCreateCourse } from '@/hooks/useCourses';
-import { useGetJob } from '@/hooks/ai-generation/useJobs';
+import { useGetJob, useGetActiveJobForCourse } from '@/hooks/ai-generation/useJobs';
 import {
   useGenerateTitle,
   useGenerateOutcomes,
@@ -60,6 +60,7 @@ export default function CourseWizardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeJobId = searchParams.get('jobId') ?? undefined;
+  const resumeCourseId = searchParams.get('courseId') ?? undefined;
 
   // =========================================================================
   // Wizard hooks (Step collection phase)
@@ -173,21 +174,28 @@ export default function CourseWizardPage() {
 
   // Resume a specific job if jobId is provided via query param
   const { data: resumeJob } = useGetJob(resumeJobId);
+  // Resume by courseId — look up the active job for this course
+  const { data: courseJob } = useGetActiveJobForCourse(resumeCourseId);
 
   useEffect(() => {
-    if (!resumeJobId || !resumeJob || !workflowMachineState.matches('idle')) return;
-    const courseId = resumeJob.courseId;
+    if (!workflowMachineState.matches('idle')) return;
+
+    // Prefer explicit jobId, fall back to courseId lookup
+    const job = resumeJob ?? courseJob;
+    if (!job) return;
+
+    const courseId = job.courseId;
     if (!courseId) return;
 
     // Skip wizard, go straight to workflow phase with this specific job
     setPhase('workflow');
     workflowSend({
       type: 'RESUME',
-      jobId: resumeJob.id,
+      jobId: job.id,
       courseId,
-      status: resumeJob.status as GenerationJobStatus,
+      status: job.status as GenerationJobStatus,
     });
-  }, [resumeJobId, resumeJob, workflowMachineState, workflowSend]);
+  }, [resumeJob, courseJob, workflowMachineState, workflowSend]);
 
   // Poll Temporal workflow state
   const wfIsIdle = workflowMachineState.matches('idle');
