@@ -46,4 +46,4 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-marketing
   newName: ghcr.io/sogos-llc/mirai-app/mirai-marketing
-  newTag: uat-12166d2
+  newTag: uat-f52715d
