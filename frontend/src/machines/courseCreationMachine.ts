@@ -271,6 +271,8 @@ function stepStringToEnum(step: string): WorkflowStepType {
       return WorkflowStepType.SAMPLE_LESSON;
     case 'final_review':
       return WorkflowStepType.FINAL_REVIEW;
+    case 'combined_review':
+      return WorkflowStepType.COMBINED_REVIEW;
     default:
       return WorkflowStepType.UNSPECIFIED;
   }
@@ -278,16 +280,8 @@ function stepStringToEnum(step: string): WorkflowStepType {
 
 export function getWorkflowStepLabel(step: WorkflowStepType): string {
   switch (step) {
-    case WorkflowStepType.INTENT_ANALYSIS:
-      return 'Review Course Analysis';
-    case WorkflowStepType.DEFINE_SUCCESS:
-      return 'Review Learning Outcomes';
-    case WorkflowStepType.APPROVE_STRUCTURE:
-      return 'Review Course Structure';
-    case WorkflowStepType.SAMPLE_LESSON:
-      return 'Review Sample Lesson';
-    case WorkflowStepType.FINAL_REVIEW:
-      return 'Final Review & Export';
+    case WorkflowStepType.COMBINED_REVIEW:
+      return 'Review Course Plan';
     default:
       return 'Unknown Step';
   }
@@ -295,22 +289,14 @@ export function getWorkflowStepLabel(step: WorkflowStepType): string {
 
 export function getWorkflowStepNumber(step: WorkflowStepType): number {
   switch (step) {
-    case WorkflowStepType.INTENT_ANALYSIS:
+    case WorkflowStepType.COMBINED_REVIEW:
       return 1;
-    case WorkflowStepType.DEFINE_SUCCESS:
-      return 2;
-    case WorkflowStepType.APPROVE_STRUCTURE:
-      return 3;
-    case WorkflowStepType.SAMPLE_LESSON:
-      return 4;
-    case WorkflowStepType.FINAL_REVIEW:
-      return 5;
     default:
       return 0;
   }
 }
 
-export const TOTAL_WORKFLOW_STEPS = 5;
+export const TOTAL_WORKFLOW_STEPS = 1;
 
 export function parseStepData(stepDataJson: string | undefined): StepData | null {
   if (!stepDataJson) return null;

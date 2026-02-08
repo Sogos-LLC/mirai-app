@@ -73,6 +73,10 @@ export type WizardEvent =
   | { type: 'SET_DESCRIPTION'; value: string }
   | { type: 'TOGGLE_SME'; id: string }
   | { type: 'TOGGLE_AUDIENCE'; id: string }
+  | { type: 'UPDATE_SME_PERSONA'; persona: SMEPersona }
+  | { type: 'UPDATE_AUDIENCE_PERSONA'; persona: AudiencePersona }
+  | { type: 'ADD_SME_PERSONA'; persona: SMEPersona }
+  | { type: 'ADD_AUDIENCE_PERSONA'; persona: AudiencePersona }
   | { type: 'SET_TONE'; id: string }
   | { type: 'SET_ADDITIONAL_CONTEXT'; value: string }
   | { type: 'RESTORE_STATE'; state: Partial<WizardContext>; step: number }
@@ -193,6 +197,30 @@ export const wizardMachine = createMachine({
           context.selectedAudienceIds.includes(event.id)
             ? context.selectedAudienceIds.filter((id) => id !== event.id)
             : [...context.selectedAudienceIds, event.id],
+      }),
+    },
+    UPDATE_SME_PERSONA: {
+      actions: assign({
+        smePersonas: ({ context, event }) =>
+          context.smePersonas.map((p) => (p.id === event.persona.id ? event.persona : p)),
+      }),
+    },
+    UPDATE_AUDIENCE_PERSONA: {
+      actions: assign({
+        audiencePersonas: ({ context, event }) =>
+          context.audiencePersonas.map((p) => (p.id === event.persona.id ? event.persona : p)),
+      }),
+    },
+    ADD_SME_PERSONA: {
+      actions: assign({
+        smePersonas: ({ context, event }) => [...context.smePersonas, event.persona],
+        selectedSmeIds: ({ context, event }) => [...context.selectedSmeIds, event.persona.id],
+      }),
+    },
+    ADD_AUDIENCE_PERSONA: {
+      actions: assign({
+        audiencePersonas: ({ context, event }) => [...context.audiencePersonas, event.persona],
+        selectedAudienceIds: ({ context, event }) => [...context.selectedAudienceIds, event.persona.id],
       }),
     },
     RESTORE_STATE: {

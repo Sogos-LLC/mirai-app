@@ -1159,6 +1159,8 @@ func protoToWorkflowStepString(step v1.WorkflowStepType) string {
 		return "sample_lesson"
 	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_FINAL_REVIEW:
 		return "final_review"
+	case v1.WorkflowStepType_WORKFLOW_STEP_TYPE_COMBINED_REVIEW:
+		return "combined_review"
 	default:
 		return ""
 	}

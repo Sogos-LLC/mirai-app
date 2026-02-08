@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { Check, Edit2 } from 'lucide-react';
 
 interface WizardPersonaCardProps {
   id: string;
@@ -8,6 +8,7 @@ interface WizardPersonaCardProps {
   tags: string[];
   selected: boolean;
   onToggle: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
 export function WizardPersonaCard({
@@ -18,6 +19,7 @@ export function WizardPersonaCard({
   tags,
   selected,
   onToggle,
+  onEdit,
 }: WizardPersonaCardProps) {
   return (
     <div
@@ -30,19 +32,34 @@ export function WizardPersonaCard({
         }
       `}
     >
-      {/* Title + checkbox */}
+      {/* Title + edit + checkbox */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <h3 className="font-semibold text-primary leading-tight">{title}</h3>
-        <div
-          className={`
-            shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
-            ${selected
-              ? 'bg-indigo-600 border-indigo-600'
-              : 'border-gray-300 dark:border-gray-500'
-            }
-          `}
-        >
-          {selected && <Check className="w-3 h-3 text-white" />}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(id);
+              }}
+              className="p-1 rounded hover:bg-hover transition-colors"
+              title="Edit persona"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-muted" />
+            </button>
+          )}
+          <div
+            className={`
+              w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
+              ${selected
+                ? 'bg-indigo-600 border-indigo-600'
+                : 'border-gray-300 dark:border-gray-500'
+              }
+            `}
+          >
+            {selected && <Check className="w-3 h-3 text-white" />}
+          </div>
         </div>
       </div>
 

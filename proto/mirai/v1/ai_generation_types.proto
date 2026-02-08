@@ -307,5 +307,6 @@ enum WorkflowStepType {
   WORKFLOW_STEP_TYPE_DEFINE_SUCCESS = 2;      // Step 2: Define success → CourseOutcomes
   WORKFLOW_STEP_TYPE_APPROVE_STRUCTURE = 3;   // Step 3: Approve structure → CourseStructure
   WORKFLOW_STEP_TYPE_SAMPLE_LESSON = 4;       // Step 4: Approve sample lesson → Lesson pattern
-  WORKFLOW_STEP_TYPE_FINAL_REVIEW = 5;        // Step 5: Final QA review → ExportPackage
+  WORKFLOW_STEP_TYPE_FINAL_REVIEW = 5;        // Step 5: Final QA review → ExportPackage (legacy)
+  WORKFLOW_STEP_TYPE_COMBINED_REVIEW = 6;     // Combined review: all artifacts in tabbed view
 }

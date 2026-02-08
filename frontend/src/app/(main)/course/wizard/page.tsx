@@ -454,14 +454,8 @@ export default function CourseWizardPage() {
 
   const getApproveLabel = () => {
     if (!pendingStep) return 'Approve';
-    switch (pendingStep) {
-      case WorkflowStepType.INTENT_ANALYSIS: return 'Approve Analysis';
-      case WorkflowStepType.DEFINE_SUCCESS: return 'Approve Outcomes';
-      case WorkflowStepType.APPROVE_STRUCTURE: return 'Approve Structure';
-      case WorkflowStepType.SAMPLE_LESSON: return 'Approve Lesson';
-      case WorkflowStepType.FINAL_REVIEW: return 'Approve & Export';
-      default: return 'Approve';
-    }
+    if (pendingStep === WorkflowStepType.COMBINED_REVIEW) return 'Generate Course';
+    return 'Approve';
   };
 
   // =========================================================================
@@ -665,7 +659,7 @@ export default function CourseWizardPage() {
                     step={workflowMachineState.context.pendingStep}
                     data={workflowMachineState.context.stepData}
                     onModificationsChange={setPendingModifications}
-                    onAssignGaps={workflowMachineState.context.pendingStep === WorkflowStepType.INTENT_ANALYSIS ? handleAssignGaps : undefined}
+                    onAssignGaps={workflowMachineState.context.pendingStep === WorkflowStepType.COMBINED_REVIEW ? handleAssignGaps : undefined}
                   />
                 </CardContent>
               )}

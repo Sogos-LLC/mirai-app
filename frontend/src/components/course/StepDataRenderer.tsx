@@ -5,7 +5,6 @@ import {
   Target,
   ListTree,
   BookOpen,
-  CheckCircle,
   AlertTriangle,
   ChevronDown,
   ChevronRight,
@@ -102,18 +101,12 @@ interface LessonStepData {
   components?: PreviewComponent[];
 }
 
-interface QAStepData {
-  qa: {
-    outcome_coverage: Record<string, boolean>;
-    redundancy_flags: string[];
-    cognitive_load_flags: string[];
-    accessibility_flags: string[];
-  };
-  total_sections: number;
-  total_lessons: number;
-  total_blocks: number;
-  all_outcomes_covered: boolean;
-  has_issues: boolean;
+interface CombinedReviewData {
+  analysis: AnalysisStepData;
+  knowledge_coverage?: KnowledgeCoverage | null;
+  outcomes: OutcomesStepData;
+  structure: StructureStepData;
+  sample_lesson: LessonStepData;
 }
 
 // ============================================================
@@ -137,8 +130,14 @@ export function StepDataRenderer({ step, data, onModificationsChange, onAssignGa
       return <StructureStep data={data as unknown as StructureStepData} onModificationsChange={onModificationsChange} />;
     case WorkflowStepType.SAMPLE_LESSON:
       return <LessonStep data={data as unknown as LessonStepData} />;
-    case WorkflowStepType.FINAL_REVIEW:
-      return <FinalReviewStep data={data as unknown as QAStepData} />;
+    case WorkflowStepType.COMBINED_REVIEW:
+      return (
+        <CombinedReviewTabs
+          data={data as unknown as CombinedReviewData}
+          onModificationsChange={onModificationsChange}
+          onAssignGaps={onAssignGaps}
+        />
+      );
     default:
       return (
         <pre className="text-xs text-secondary font-mono whitespace-pre-wrap break-words">
@@ -684,109 +683,95 @@ function LessonStep({ data }: { data: LessonStepData }) {
 }
 
 // ============================================================
-// Step 5: Final Review
+// Combined Review Tabs (single approval gate)
 // ============================================================
 
-function FinalReviewStep({ data }: { data: QAStepData }) {
-  const qa = data.qa;
-  if (!qa) return null;
+function CombinedReviewTabs({
+  data,
+  onModificationsChange,
+  onAssignGaps,
+}: {
+  data: CombinedReviewData;
+  onModificationsChange?: (mods: Record<string, string>) => void;
+  onAssignGaps?: (gaps: string[]) => void;
+}) {
+  type TabId = 'analysis' | 'knowledge' | 'outcomes' | 'structure' | 'sample';
+  const hasKnowledge = !!data.knowledge_coverage;
+  const [activeTab, setActiveTab] = useState<TabId>('analysis');
+  const [analysisMods, setAnalysisMods] = useState<Record<string, string>>({});
+  const [structureMods, setStructureMods] = useState<Record<string, string>>({});
 
-  const coveredCount = Object.values(qa.outcome_coverage ?? {}).filter(Boolean).length;
-  const totalOutcomes = Object.keys(qa.outcome_coverage ?? {}).length;
+  // Merge analysis + structure modifications and propagate up
+  const handleAnalysisMods = useCallback((mods: Record<string, string>) => {
+    setAnalysisMods(mods);
+    onModificationsChange?.({ ...mods, ...structureMods });
+  }, [onModificationsChange, structureMods]);
 
-  return (
-    <div className="space-y-5">
-      {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border bg-page p-3 text-center">
-          <div className="text-2xl font-bold text-primary">{data.total_sections}</div>
-          <div className="text-xs text-muted">Sections</div>
-        </div>
-        <div className="rounded-lg border bg-page p-3 text-center">
-          <div className="text-2xl font-bold text-primary">{data.total_lessons}</div>
-          <div className="text-xs text-muted">Lessons</div>
-        </div>
-        <div className="rounded-lg border bg-page p-3 text-center">
-          <div className="text-2xl font-bold text-primary">{data.total_blocks}</div>
-          <div className="text-xs text-muted">Content Blocks</div>
-        </div>
-      </div>
+  const handleStructureMods = useCallback((mods: Record<string, string>) => {
+    setStructureMods(mods);
+    onModificationsChange?.({ ...analysisMods, ...mods });
+  }, [onModificationsChange, analysisMods]);
 
-      {/* Outcome coverage */}
-      <div>
-        <div className="flex items-center gap-2 text-xs font-medium mb-2">
-          {data.all_outcomes_covered ? (
-            <>
-              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-              <span className="text-green-600 dark:text-green-400">
-                All outcomes covered ({coveredCount}/{totalOutcomes})
-              </span>
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span className="text-amber-600 dark:text-amber-400">
-                Outcome coverage: {coveredCount}/{totalOutcomes}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="space-y-1">
-          {Object.entries(qa.outcome_coverage ?? {}).map(([outcome, covered]) => (
-            <div key={outcome} className="flex items-center gap-2 text-xs">
-              <span className={`h-2 w-2 rounded-full shrink-0 ${
-                covered ? 'bg-green-500' : 'bg-red-500'
-              }`} />
-              <span className={covered ? 'text-primary' : 'text-red-600 dark:text-red-400'}>
-                {outcome}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+  // Inject knowledge_coverage into analysis data for the AnalysisStep sub-component
+  const analysisData = useMemo(() => ({
+    ...data.analysis,
+    knowledge_coverage: data.knowledge_coverage ?? undefined,
+  }), [data.analysis, data.knowledge_coverage]);
 
-      {/* Issues */}
-      {data.has_issues && (
-        <div className="space-y-3">
-          {qa.redundancy_flags?.length > 0 && (
-            <IssueList title="Redundancy" items={qa.redundancy_flags} color="amber" />
-          )}
-          {qa.cognitive_load_flags?.length > 0 && (
-            <IssueList title="Cognitive Load" items={qa.cognitive_load_flags} color="purple" />
-          )}
-          {qa.accessibility_flags?.length > 0 && (
-            <IssueList title="Accessibility" items={qa.accessibility_flags} color="blue" />
-          )}
-        </div>
-      )}
-
-      {!data.has_issues && (
-        <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20 p-3 flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-          <span className="text-sm text-green-700 dark:text-green-400">
-            No quality issues detected. Course is ready for export.
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function IssueList({ title, items, color }: { title: string; items: string[]; color: string }) {
-  const colorMap: Record<string, string> = {
-    amber: 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400',
-    purple: 'border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400',
-    blue: 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400',
-  };
+  const tabs: { id: TabId; label: string; badge?: number; hidden?: boolean }[] = [
+    { id: 'analysis', label: 'Analysis' },
+    {
+      id: 'knowledge',
+      label: 'Knowledge',
+      badge: data.knowledge_coverage?.gaps?.length,
+      hidden: !hasKnowledge,
+    },
+    { id: 'outcomes', label: 'Outcomes' },
+    { id: 'structure', label: 'Structure' },
+    { id: 'sample', label: 'Sample Lesson' },
+  ];
 
   return (
-    <div className={`rounded-lg border p-2.5 ${colorMap[color] ?? colorMap.amber}`}>
-      <div className="text-xs font-medium mb-1">{title}</div>
-      <ul className="space-y-0.5">
-        {items.map((item, i) => (
-          <li key={i} className="text-xs">{item}</li>
+    <div className="space-y-4">
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b overflow-x-auto">
+        {tabs.filter((t) => !t.hidden).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === tab.id
+                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                : 'border-transparent text-muted hover:text-secondary'
+            }`}
+          >
+            {tab.label}
+            {tab.badge != null && tab.badge > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                {tab.badge}
+              </span>
+            )}
+          </button>
         ))}
-      </ul>
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'analysis' && (
+        <AnalysisStep data={analysisData} onModificationsChange={handleAnalysisMods} onAssignGaps={onAssignGaps} />
+      )}
+      {activeTab === 'knowledge' && data.knowledge_coverage && (
+        <KnowledgeCoveragePanel coverage={data.knowledge_coverage} onAssignGaps={onAssignGaps} />
+      )}
+      {activeTab === 'outcomes' && (
+        <OutcomesStep data={data.outcomes} />
+      )}
+      {activeTab === 'structure' && (
+        <StructureStep data={data.structure} onModificationsChange={handleStructureMods} />
+      )}
+      {activeTab === 'sample' && (
+        <LessonStep data={data.sample_lesson} />
+      )}
     </div>
   );
 }

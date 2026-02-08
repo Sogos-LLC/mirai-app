@@ -1,14 +1,14 @@
-"""Unified course creation workflow — 5-step instructional design with validated artifacts.
+"""Unified course creation workflow — single-gate instructional design with validated artifacts.
 
 Control flow:
-  Intent → Analysis → Approval
-  Goal → Outcomes → Approval
-  Outcomes → Structure → Approval (hidden: section outcomes)
-  Structure → Sample Lesson → Approval (hidden: template extraction)
-  Lesson Template → Full Course → QA → Approval → Export
+  Intent → Analysis (auto)
+  Goal → Outcomes (auto)
+  Outcomes → Structure (auto)
+  Structure → Sample Lesson (auto)
+  Combined Review → Approval (single gate)
+  Lesson Template → Full Course → QA → Export (auto)
 
 Each arrow is a Pydantic validated boundary.
-Hidden steps skip the approval gate.
 Validation failures trigger regeneration, not user prompts.
 
 AI work is done in Python activities on ai-tasks queue.
@@ -149,10 +149,11 @@ def _inject_missing_reference_links(
 
 @workflow.defn(sandboxed=False)
 class CourseCreationWorkflow:
-    """5-step instructional design workflow with update-based human-in-the-loop.
+    """Single-gate course creation workflow with update-based human-in-the-loop.
 
-    Each step produces a validated Pydantic artifact.
-    Artifacts are immutable once approved.
+    All 4 AI generation steps run automatically, then a single combined review
+    is presented. After approval, component generation, QA, and export run
+    without further approval gates.
     """
 
     def __init__(self) -> None:
@@ -210,7 +211,12 @@ class CourseCreationWorkflow:
 
     @workflow.run
     async def run(self, input: CourseCreationInput) -> CourseCreationOutput:
-        """Execute the full 5-step course creation pipeline."""
+        """Execute the single-gate course creation pipeline.
+
+        All 4 AI generation steps run automatically, a single combined review
+        is presented for approval, then component generation + QA + export
+        run without further gates.
+        """
         log.info(
             "course_creation_started",
             job_id=input.job_id,
@@ -235,13 +241,33 @@ class CourseCreationWorkflow:
         await self._orchestrator.check_health(api_key)
 
         # =============================================================
-        # STEP 1: Define Intent → CourseAnalysis
+        # AUTO-GENERATE: Run all 4 AI steps without approval
         # =============================================================
 
-        analysis = await self._step_intent_analysis(api_key, input)
+        analysis, knowledge_coverage = await self._generate_analysis(api_key, input)
+        outcomes = await self._generate_outcomes(api_key, input, analysis)
+        structure, section_outcomes = await self._generate_structure(api_key, input, outcomes)
+        sample_lesson, template, preview_components = await self._generate_sample(
+            api_key, input, outcomes, structure, section_outcomes,
+        )
+
+        # =============================================================
+        # COMBINED REVIEW: Single approval gate for all artifacts
+        # =============================================================
+
+        combined_data = self._build_combined_review_data(
+            analysis, knowledge_coverage, outcomes,
+            structure, section_outcomes, sample_lesson, preview_components,
+        )
+
+        approval = await self._publish_and_wait(
+            input, "combined_review",
+            json.dumps(combined_data),
+            55,
+        )
 
         # Handle deferral: user chose to assign gaps to SMEs and save draft
-        if analysis is None:
+        if approval and not approval.approved and approval.feedback == "__DEFERRED__":
             self._status = "deferred"
             self._progress = 10
             self._progress_message = "Saved as draft — waiting for knowledge gaps to be filled"
@@ -256,30 +282,100 @@ class CourseCreationWorkflow:
                 total_sections=0,
             )
 
-        # =============================================================
-        # STEP 2: Define Success → CourseOutcomes
-        # =============================================================
+        # Handle rejection: re-run ALL 4 generators with feedback
+        if approval and not approval.approved and approval.feedback:
+            feedback = approval.feedback
+            # Append feedback to audience for regeneration
+            feedback_input = CourseCreationInput(
+                job_id=input.job_id,
+                tenant_id=input.tenant_id,
+                course_id=input.course_id,
+                user_id=input.user_id,
+                topic=input.topic,
+                audience=f"{input.audience}\n\nFEEDBACK: {feedback}",
+                use_context=input.use_context,
+                enable_internal_knowledge=input.enable_internal_knowledge,
+                strict_knowledge_only=input.strict_knowledge_only,
+                enable_web_research=input.enable_web_research,
+                selected_team_doc_ids=input.selected_team_doc_ids,
+                selected_global_doc_ids=input.selected_global_doc_ids,
+            )
 
-        outcomes = await self._step_define_success(api_key, input, analysis)
+            analysis, knowledge_coverage = await self._generate_analysis(api_key, feedback_input)
+            outcomes = await self._generate_outcomes(api_key, feedback_input, analysis)
+            structure, section_outcomes = await self._generate_structure(
+                api_key, feedback_input, outcomes,
+            )
+            sample_lesson, template, preview_components = await self._generate_sample(
+                api_key, feedback_input, outcomes, structure, section_outcomes,
+            )
+
+            combined_data = self._build_combined_review_data(
+                analysis, knowledge_coverage, outcomes,
+                structure, section_outcomes, sample_lesson, preview_components,
+            )
+
+            approval = await self._publish_and_wait(
+                input, "combined_review",
+                json.dumps(combined_data),
+                55,
+            )
+
+            # Handle deferral after retry
+            if approval and not approval.approved and approval.feedback == "__DEFERRED__":
+                self._status = "deferred"
+                self._progress = 10
+                self._progress_message = "Saved as draft — waiting for knowledge gaps to be filled"
+                await self._update_job(
+                    input, "DEFERRED", 10,
+                    "Saved as draft — waiting for knowledge gaps to be filled",
+                )
+                await workflow.wait_condition(workflow.all_handlers_finished)
+                return CourseCreationOutput(
+                    course_id=input.course_id,
+                    total_lessons=0,
+                    total_sections=0,
+                )
+
+        # Apply user modifications from approval
+        if approval and approval.modifications:
+            # Apply purpose_statement modification to analysis
+            if "purpose_statement" in approval.modifications:
+                data = analysis.model_dump()
+                data["purpose_statement"] = approval.modifications["purpose_statement"]
+                analysis = CourseAnalysis(**data)
+
+            # Apply section_N_title modifications to structure + section_outcomes
+            sections_list = [s.model_dump() for s in structure.sections]
+            so_data = section_outcomes
+            modified_structure = False
+            for key, value in approval.modifications.items():
+                parts = key.split("_")
+                if len(parts) == 3 and parts[0] == "section" and parts[2] == "title":
+                    try:
+                        idx = int(parts[1])
+                    except ValueError:
+                        continue
+                    if 0 <= idx < len(sections_list):
+                        old_title = sections_list[idx]["title"]
+                        sections_list[idx]["title"] = value
+                        if old_title in so_data.section_outcomes:
+                            so_data.section_outcomes[value] = so_data.section_outcomes.pop(old_title)
+                        modified_structure = True
+            if modified_structure:
+                structure = CourseStructure(sections=[Section(**s) for s in sections_list])
+                section_outcomes = so_data
+
+        # Lock all artifacts
+        self._artifacts.analysis = analysis
+        self._artifacts.outcomes = outcomes
+        self._artifacts.structure = structure
+        self._artifacts.section_outcomes = section_outcomes
+        self._artifacts.sample_lesson = sample_lesson
+        self._artifacts.template = template
 
         # =============================================================
-        # STEP 3: Approve Structure → CourseStructure
-        # =============================================================
-
-        structure, section_outcomes = await self._step_approve_structure(
-            api_key, input, outcomes,
-        )
-
-        # =============================================================
-        # STEP 4: Approve Sample Lesson → Lesson pattern locked
-        # =============================================================
-
-        sample_lesson, template = await self._step_sample_lesson(
-            api_key, input, outcomes, structure, section_outcomes,
-        )
-
-        # =============================================================
-        # HIDDEN: Component Generation Pipeline (between Steps 4 and 5)
+        # AUTO-RUN: Component Generation Pipeline
         # =============================================================
 
         all_lesson_components = await self._generate_all_components(
@@ -288,21 +384,21 @@ class CourseCreationWorkflow:
         )
 
         # =============================================================
-        # STEP 5: Final Review → QA + Export
+        # AUTO-RUN: QA (informational, no approval gate)
         # =============================================================
 
         total_components = sum(
             len(lc.components) for lcs in all_lesson_components.values()
             for lc in lcs.values()
         )
-        await self._step_final_review_v2(
-            api_key, input, outcomes, structure,
-            all_lesson_components, total_components,
-        )
+        await self._run_qa(api_key, input, outcomes, structure, all_lesson_components, total_components)
 
         # =============================================================
-        # FINALIZE: Transform artifacts into S3CourseContent format
+        # AUTO-RUN: Export to S3
         # =============================================================
+
+        self._set_progress(95, "Exporting course content...")
+        await self._update_job(input, "PROCESSING", 95, "Exporting course content")
 
         course_content = self._build_s3_content_v2(
             input, analysis, outcomes, structure,
@@ -325,12 +421,13 @@ class CourseCreationWorkflow:
         )
 
     # -------------------------------------------------------------------
-    # Step 1: Intent Analysis
+    # Approval-free generators
     # -------------------------------------------------------------------
 
-    async def _step_intent_analysis(
+    async def _generate_analysis(
         self, api_key: str, input: CourseCreationInput,
-    ) -> CourseAnalysis | None:
+    ) -> tuple[CourseAnalysis, dict | None]:
+        """Run research + course analysis. Returns (analysis, knowledge_coverage)."""
         self._set_progress(5, "Analyzing course intent...")
         await self._update_job(input, "PROCESSING", 5, "Analyzing course intent")
 
@@ -339,10 +436,9 @@ class CourseCreationWorkflow:
         research = await self._orchestrator.research(
             f"{input.topic} {input.audience}", api_key,
         )
-        self._course_research = research  # Cache for Steps 2-4
+        self._course_research = research  # Cache for later steps
 
-        # Pass orchestrator research as rag_context; web research is now handled
-        # by the orchestrator, so disable the activity-level web research
+        # Pass orchestrator research as rag_context
         rag_context = research.formatted_context
         if research.research_text:
             rag_context = (
@@ -364,76 +460,21 @@ class CourseCreationWorkflow:
             GenerateAnalysisOutput,
         )
 
-        # Present to user for approval
-        step_data = analysis_result.analysis.model_dump()
+        # Build knowledge coverage if strict mode
+        knowledge_coverage = None
         if input.strict_knowledge_only:
-            coverage = self._build_knowledge_coverage()
-            if coverage:
-                step_data["knowledge_coverage"] = coverage
+            knowledge_coverage = self._build_knowledge_coverage()
 
-        approval = await self._publish_and_wait(
-            input, "intent_analysis",
-            json.dumps(step_data),
-            10,
-        )
+        return analysis_result.analysis, knowledge_coverage
 
-        # Check for deferred: user chose to assign gaps to SMEs
-        if approval and not approval.approved and approval.feedback == "__DEFERRED__":
-            return None
-
-        if approval and not approval.approved and approval.feedback:
-            # Regenerate with feedback
-            analysis_result = await self._run_ai_activity(
-                "generate_course_analysis",
-                GenerateAnalysisInput(
-                    api_key=api_key,
-                    topic=input.topic,
-                    audience=input.audience,
-                    use_context=input.use_context + f"\n\nFEEDBACK: {approval.feedback}",
-                    enable_web_research=False,
-                    rag_context=rag_context,
-                    strict_knowledge_only=input.strict_knowledge_only,
-                ),
-                GenerateAnalysisOutput,
-            )
-            # Re-present for approval (reuse same coverage — research is cached)
-            step_data = analysis_result.analysis.model_dump()
-            if input.strict_knowledge_only:
-                coverage = self._build_knowledge_coverage()
-                if coverage:
-                    step_data["knowledge_coverage"] = coverage
-
-            approval = await self._publish_and_wait(
-                input, "intent_analysis",
-                json.dumps(step_data),
-                10,
-            )
-
-            # Check for deferred after retry
-            if approval and not approval.approved and approval.feedback == "__DEFERRED__":
-                return None
-
-        # Apply user modifications if any
-        analysis = analysis_result.analysis
-        if approval and approval.modifications:
-            data = analysis.model_dump()
-            data.update(approval.modifications)
-            analysis = CourseAnalysis(**data)
-
-        self._artifacts.analysis = analysis
-        return analysis
-
-    # -------------------------------------------------------------------
-    # Step 2: Define Success
-    # -------------------------------------------------------------------
-
-    async def _step_define_success(
+    async def _generate_outcomes(
         self, api_key: str, input: CourseCreationInput, analysis: CourseAnalysis,
     ) -> CourseOutcomes:
-        self._set_progress(20, "Generating learning outcomes...")
-        await self._update_job(input, "PROCESSING", 20, "Generating learning outcomes")
+        """Generate learning outcomes from analysis. Returns CourseOutcomes."""
+        self._set_progress(15, "Generating learning outcomes...")
+        await self._update_job(input, "PROCESSING", 15, "Generating learning outcomes")
 
-        # Use cached course-level research from Step 1
+        # Use cached course-level research
         rag_context = self._course_research.formatted_context if self._course_research else ""
 
         outcomes_result: GenerateOutcomesOutput = await self._run_ai_activity(
@@ -451,83 +492,16 @@ class CourseCreationWorkflow:
             GenerateOutcomesOutput,
         )
 
-        # Present to user for approval
-        approval = await self._publish_and_wait(
-            input, "define_success",
-            json.dumps(outcomes_result.outcomes.model_dump()),
-            25,
-        )
-
-        if approval and not approval.approved and approval.feedback:
-            outcomes_result = await self._run_ai_activity(
-                "generate_course_outcomes",
-                GenerateOutcomesInput(
-                    api_key=api_key,
-                    topic=input.topic,
-                    audience=f"{input.audience}\n\nFEEDBACK: {approval.feedback}",
-                    purpose_statement=analysis.purpose_statement,
-                    learner_assumptions=analysis.learner_assumptions,
-                    constraints=analysis.constraints,
-                    rag_context=rag_context,
-                    strict_knowledge_only=input.strict_knowledge_only,
-                ),
-                GenerateOutcomesOutput,
-            )
-            approval = await self._publish_and_wait(
-                input, "define_success",
-                json.dumps(outcomes_result.outcomes.model_dump()),
-                25,
-            )
-
-        self._artifacts.outcomes = outcomes_result.outcomes
         return outcomes_result.outcomes
 
-    # -------------------------------------------------------------------
-    # Step 3: Approve Structure
-    # -------------------------------------------------------------------
-
-    def _compute_lesson_preview(
-        self,
-        structure: CourseStructure,
-        section_outcomes: SectionOutcomes,
-    ) -> dict:
-        """Compute deterministic lesson titles/objectives from section outcomes.
-
-        Replicates the algorithm used in _generate_all_components so users
-        can see the lesson breakdown before approving the structure.
-        """
-        enriched_sections = []
-        total_lessons = 0
-        for section in structure.sections:
-            section_sos = section_outcomes.section_outcomes.get(section.title, [])
-            num_lessons = max(1, min(3, len(section_sos)))
-            total_lessons += num_lessons
-            lessons = []
-            for i in range(num_lessons):
-                objective = (
-                    section_sos[i].description
-                    if i < len(section_sos)
-                    else f"Apply {section.title} concepts"
-                )
-                title = (
-                    f"{section.title}: Part {i + 1}"
-                    if num_lessons > 1
-                    else section.title
-                )
-                lessons.append({"title": title, "objective": objective})
-            enriched_sections.append({**section.model_dump(), "lessons": lessons})
-        return {"sections": enriched_sections, "total_lessons": total_lessons}
-
-    async def _step_approve_structure(
-        self,
-        api_key: str,
-        input: CourseCreationInput,
-        outcomes: CourseOutcomes,
+    async def _generate_structure(
+        self, api_key: str, input: CourseCreationInput, outcomes: CourseOutcomes,
     ) -> tuple[CourseStructure, SectionOutcomes]:
-        self._set_progress(35, "Designing course structure...")
-        await self._update_job(input, "PROCESSING", 35, "Designing course structure")
+        """Generate course structure + section outcomes. Returns (structure, section_outcomes)."""
+        self._set_progress(25, "Designing course structure...")
+        await self._update_job(input, "PROCESSING", 25, "Designing course structure")
 
-        # Use cached course-level research from Step 1
+        # Use cached course-level research
         rag_context = self._course_research.formatted_context if self._course_research else ""
 
         structure_result: GenerateStructureOutput = await self._run_ai_activity(
@@ -543,8 +517,8 @@ class CourseCreationWorkflow:
             GenerateStructureOutput,
         )
 
-        # Hidden: generate section outcomes before presenting
-        self._set_progress(40, "Mapping section outcomes...")
+        # Generate section outcomes
+        self._set_progress(30, "Mapping section outcomes...")
         section_outcomes_result: GenerateSectionOutcomesOutput = await self._run_ai_activity(
             "generate_section_outcomes",
             GenerateSectionOutcomesInput(
@@ -555,96 +529,30 @@ class CourseCreationWorkflow:
             GenerateSectionOutcomesOutput,
         )
 
-        # User sees structure enriched with lesson previews
-        lesson_preview = self._compute_lesson_preview(
-            structure_result.structure, section_outcomes_result.section_outcomes,
-        )
-        approval = await self._publish_and_wait(
-            input, "approve_structure",
-            json.dumps(lesson_preview),
-            45,
-        )
-
-        if approval and not approval.approved and approval.feedback:
-            structure_result = await self._run_ai_activity(
-                "generate_course_structure",
-                GenerateStructureInput(
-                    api_key=api_key,
-                    topic=input.topic,
-                    audience=f"{input.audience}\n\nFEEDBACK: {approval.feedback}",
-                    outcomes=outcomes,
-                    rag_context=rag_context,
-                    strict_knowledge_only=input.strict_knowledge_only,
-                ),
-                GenerateStructureOutput,
-            )
-            # Regenerate section outcomes for new structure
-            section_outcomes_result = await self._run_ai_activity(
-                "generate_section_outcomes",
-                GenerateSectionOutcomesInput(
-                    api_key=api_key,
-                    structure=structure_result.structure,
-                    outcomes=outcomes,
-                ),
-                GenerateSectionOutcomesOutput,
-            )
-            lesson_preview = self._compute_lesson_preview(
-                structure_result.structure, section_outcomes_result.section_outcomes,
-            )
-            approval = await self._publish_and_wait(
-                input, "approve_structure",
-                json.dumps(lesson_preview),
-                45,
-            )
-
-        # Apply section title modifications from the user
-        if approval and approval.approved and approval.modifications:
-            sections_list = [s.model_dump() for s in structure_result.structure.sections]
-            so_data = section_outcomes_result.section_outcomes
-            for key, value in approval.modifications.items():
-                parts = key.split("_")
-                if len(parts) == 3 and parts[0] == "section" and parts[2] == "title":
-                    try:
-                        idx = int(parts[1])
-                    except ValueError:
-                        continue
-                    if 0 <= idx < len(sections_list):
-                        old_title = sections_list[idx]["title"]
-                        sections_list[idx]["title"] = value
-                        if old_title in so_data.section_outcomes:
-                            so_data.section_outcomes[value] = so_data.section_outcomes.pop(old_title)
-            structure_result.structure = CourseStructure(sections=[Section(**s) for s in sections_list])
-            section_outcomes_result.section_outcomes = so_data
-
-        self._artifacts.structure = structure_result.structure
-        self._artifacts.section_outcomes = section_outcomes_result.section_outcomes
         return structure_result.structure, section_outcomes_result.section_outcomes
 
-    # -------------------------------------------------------------------
-    # Step 4: Sample Lesson
-    # -------------------------------------------------------------------
-
-    async def _step_sample_lesson(
+    async def _generate_sample(
         self,
         api_key: str,
         input: CourseCreationInput,
         outcomes: CourseOutcomes,
         structure: CourseStructure,
         section_outcomes: SectionOutcomes,
-    ) -> tuple[Lesson, LessonTemplate]:
-        self._set_progress(50, "Generating sample lesson...")
-        await self._update_job(input, "PROCESSING", 50, "Generating sample lesson")
+    ) -> tuple[Lesson, LessonTemplate, list]:
+        """Generate sample lesson + extract template. Returns (lesson, template, preview_components)."""
+        self._set_progress(40, "Generating sample lesson...")
+        await self._update_job(input, "PROCESSING", 40, "Generating sample lesson")
 
         # Select the first section as representative
         representative_section = structure.sections[0]
 
-        # Parse multimedia resources from user context for sample lesson
+        # Parse multimedia resources from user context
         resource_hints: list[ResourceHint] = []
         if input.use_context:
             parser = URLResourceParser()
             resource_hints = parser.parse(input.use_context)
 
-        # Use cached course-level research from Step 1
+        # Use cached course-level research
         rag_context = self._course_research.formatted_context if self._course_research else ""
 
         lesson_result: GenerateSampleLessonOutput = await self._run_ai_activity(
@@ -665,7 +573,7 @@ class CourseCreationWorkflow:
         )
 
         # Format the sample lesson through the component agent
-        self._set_progress(52, "Formatting sample lesson components...")
+        self._set_progress(45, "Formatting sample lesson components...")
         sample_ctx = ComponentContext(
             topic=input.topic,
             audience=input.audience,
@@ -715,73 +623,142 @@ class CourseCreationWorkflow:
             if ref_urls:
                 _inject_missing_reference_links(sample_components_result.components, ref_urls)
 
-        # Build step data with both lesson metadata and rendered components
-        sample_step_data = lesson_result.lesson.model_dump()
-        sample_step_data["components"] = self._components_to_preview(
-            sample_components_result.components,
-        )
+        # Build preview components for the combined review
+        preview_components = self._components_to_preview(sample_components_result.components)
 
-        # Present to user for approval (user can edit tone/depth)
-        approval = await self._publish_and_wait(
-            input, "sample_lesson",
-            json.dumps(sample_step_data),
-            55,
-        )
-
-        if approval and not approval.approved and approval.feedback:
-            lesson_result = await self._run_ai_activity(
-                "generate_sample_lesson",
-                GenerateSampleLessonInput(
-                    api_key=api_key,
-                    topic=input.topic,
-                    audience=f"{input.audience}\n\nFEEDBACK ON LESSON: {approval.feedback}",
-                    course_goal=outcomes.goal.goal_statement,
-                    section_title=representative_section.title,
-                    section_outcomes=section_outcomes,
-                    use_context=input.use_context,
-                    rag_context=rag_context,
-                    strict_knowledge_only=input.strict_knowledge_only,
-                ),
-                GenerateSampleLessonOutput,
-                timeout=AI_LESSON_TIMEOUT,
-            )
-            # Re-format components
-            sample_ctx.lesson_title = lesson_result.lesson.title
-            sample_ctx.lesson_objective = lesson_result.lesson.objective.description
-            sample_ctx.block_sequence = [b.type for b in lesson_result.lesson.sample_blocks]
-
-            sample_components_result = await self._run_ai_activity(
-                "generate_lesson_components",
-                GenerateComponentsInput(api_key=api_key, context=sample_ctx),
-                GenerateComponentsOutput,
-                timeout=AI_LESSON_TIMEOUT,
-            )
-            sample_step_data = lesson_result.lesson.model_dump()
-            sample_step_data["components"] = self._components_to_preview(
-                sample_components_result.components,
-            )
-            approval = await self._publish_and_wait(
-                input, "sample_lesson",
-                json.dumps(sample_step_data),
-                55,
-            )
-
-        lesson = lesson_result.lesson
-        self._artifacts.sample_lesson = lesson
-
-        # Hidden: extract template from approved lesson
-        self._set_progress(58, "Extracting lesson pattern...")
+        # Extract template from lesson
+        self._set_progress(50, "Extracting lesson pattern...")
         template_result: ExtractTemplateOutput = await self._run_ai_activity(
             "extract_lesson_template",
-            ExtractTemplateInput(api_key=api_key, lesson=lesson),
+            ExtractTemplateInput(api_key=api_key, lesson=lesson_result.lesson),
             ExtractTemplateOutput,
         )
 
-        self._artifacts.template = template_result.template
-        return lesson, template_result.template
+        return lesson_result.lesson, template_result.template, preview_components
 
     # -------------------------------------------------------------------
-    # Hidden: Component Generation Pipeline
+    # Combined review data builder
+    # -------------------------------------------------------------------
+
+    def _build_combined_review_data(
+        self,
+        analysis: CourseAnalysis,
+        knowledge_coverage: dict | None,
+        outcomes: CourseOutcomes,
+        structure: CourseStructure,
+        section_outcomes: SectionOutcomes,
+        sample_lesson: Lesson,
+        preview_components: list,
+    ) -> dict:
+        """Build the combined review JSON for the single approval gate."""
+        # Compute lesson preview for structure
+        lesson_preview = self._compute_lesson_preview(structure, section_outcomes)
+
+        # Build sample lesson data
+        sample_data = sample_lesson.model_dump()
+        sample_data["components"] = preview_components
+
+        combined = {
+            "analysis": {
+                "purpose_statement": analysis.purpose_statement,
+                "learner_assumptions": analysis.learner_assumptions,
+                "constraints": analysis.constraints,
+            },
+            "knowledge_coverage": knowledge_coverage,
+            "outcomes": {
+                "behavior_change": outcomes.behavior_change,
+                "goal": outcomes.goal.model_dump(),
+                "outcomes": [o.model_dump() for o in outcomes.outcomes],
+            },
+            "structure": {
+                "sections": lesson_preview["sections"],
+                "total_lessons": lesson_preview["total_lessons"],
+            },
+            "sample_lesson": sample_data,
+        }
+
+        return combined
+
+    def _compute_lesson_preview(
+        self,
+        structure: CourseStructure,
+        section_outcomes: SectionOutcomes,
+    ) -> dict:
+        """Compute deterministic lesson titles/objectives from section outcomes.
+
+        Replicates the algorithm used in _generate_all_components so users
+        can see the lesson breakdown before approving the structure.
+        """
+        enriched_sections = []
+        total_lessons = 0
+        for section in structure.sections:
+            section_sos = section_outcomes.section_outcomes.get(section.title, [])
+            num_lessons = max(1, min(3, len(section_sos)))
+            total_lessons += num_lessons
+            lessons = []
+            for i in range(num_lessons):
+                objective = (
+                    section_sos[i].description
+                    if i < len(section_sos)
+                    else f"Apply {section.title} concepts"
+                )
+                title = (
+                    f"{section.title}: Part {i + 1}"
+                    if num_lessons > 1
+                    else section.title
+                )
+                lessons.append({"title": title, "objective": objective})
+            enriched_sections.append({**section.model_dump(), "lessons": lessons})
+        return {"sections": enriched_sections, "total_lessons": total_lessons}
+
+    # -------------------------------------------------------------------
+    # Auto-run QA (informational, no approval gate)
+    # -------------------------------------------------------------------
+
+    async def _run_qa(
+        self,
+        api_key: str,
+        input: CourseCreationInput,
+        outcomes: CourseOutcomes,
+        structure: CourseStructure,
+        all_lesson_components: dict[str, dict[str, LessonComponents]],
+        total_components: int,
+    ) -> None:
+        """Run course-level QA checks. Informational only — no approval gate."""
+        self._set_progress(88, "Running quality checks...")
+        await self._update_job(input, "PROCESSING", 88, "Running quality checks")
+
+        all_lesson_titles = [
+            title
+            for section_lessons in all_lesson_components.values()
+            for title in section_lessons
+        ]
+
+        qa_result: RunQAOutput = await self._run_ai_activity(
+            "run_course_qa",
+            RunQAInput(
+                api_key=api_key,
+                outcomes=outcomes,
+                structure=structure,
+                lesson_titles=all_lesson_titles,
+                total_blocks=total_components,
+            ),
+            RunQAOutput,
+        )
+
+        self._artifacts.qa = qa_result.qa
+
+        log.info(
+            "qa_complete",
+            all_outcomes_covered=qa_result.qa.all_outcomes_covered,
+            has_issues=qa_result.qa.has_issues,
+            total_sections=len(structure.sections),
+            total_lessons=len(all_lesson_titles),
+            total_blocks=total_components,
+        )
+
+    # -------------------------------------------------------------------
+    # Component Generation Pipeline
     # -------------------------------------------------------------------
 
     async def _generate_all_components(
@@ -1001,61 +978,6 @@ class CourseCreationWorkflow:
         )
 
         return all_components
-
-    # -------------------------------------------------------------------
-    # Step 5: Final Review
-    # -------------------------------------------------------------------
-
-    async def _step_final_review_v2(
-        self,
-        api_key: str,
-        input: CourseCreationInput,
-        outcomes: CourseOutcomes,
-        structure: CourseStructure,
-        all_lesson_components: dict[str, dict[str, LessonComponents]],
-        total_components: int,
-    ) -> None:
-        self._set_progress(88, "Running quality checks...")
-        await self._update_job(input, "PROCESSING", 88, "Running quality checks")
-
-        all_lesson_titles = [
-            title
-            for section_lessons in all_lesson_components.values()
-            for title in section_lessons
-        ]
-
-        qa_result: RunQAOutput = await self._run_ai_activity(
-            "run_course_qa",
-            RunQAInput(
-                api_key=api_key,
-                outcomes=outcomes,
-                structure=structure,
-                lesson_titles=all_lesson_titles,
-                total_blocks=total_components,
-            ),
-            RunQAOutput,
-        )
-
-        self._artifacts.qa = qa_result.qa
-
-        # Present QA results + summary for final approval
-        qa_summary = {
-            "qa": qa_result.qa.model_dump(),
-            "total_sections": len(structure.sections),
-            "total_lessons": len(all_lesson_titles),
-            "total_blocks": total_components,
-            "all_outcomes_covered": qa_result.qa.all_outcomes_covered,
-            "has_issues": qa_result.qa.has_issues,
-        }
-
-        approval = await self._publish_and_wait(
-            input, "final_review",
-            json.dumps(qa_summary),
-            92,
-        )
-
-        # If rejected, user is just noting issues — we still proceed
-        # (the QA is informational, not blocking)
 
     # -------------------------------------------------------------------
     # S3 Content Builder
