@@ -34,6 +34,15 @@ SET status = 'completed',
 WHERE id = $1
 RETURNING *;
 
+-- name: SubmitGapTasksByUser :many
+UPDATE knowledge_gap_tasks
+SET submitted_at = NOW(),
+    updated_at = NOW()
+WHERE assigned_to_user_id = $1
+    AND status = 'completed'
+    AND submitted_at IS NULL
+RETURNING *;
+
 -- name: CountPendingGapTasksByCourse :one
 SELECT COUNT(*)::int as count
 FROM knowledge_gap_tasks

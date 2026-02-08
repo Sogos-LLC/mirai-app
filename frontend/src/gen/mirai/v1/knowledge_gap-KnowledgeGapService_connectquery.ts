@@ -31,3 +31,10 @@ export const listGapTasksForCourse = KnowledgeGapService.method.listGapTasksForC
  * @generated from rpc mirai.v1.KnowledgeGapService.CompleteGapTask
  */
 export const completeGapTask = KnowledgeGapService.method.completeGapTask;
+
+/**
+ * SubmitGapTaskWork submits all completed gap tasks back to the assigner(s).
+ *
+ * @generated from rpc mirai.v1.KnowledgeGapService.SubmitGapTaskWork
+ */
+export const submitGapTaskWork = KnowledgeGapService.method.submitGapTaskWork;

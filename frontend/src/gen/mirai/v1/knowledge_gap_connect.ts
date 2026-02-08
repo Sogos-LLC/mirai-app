@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CompleteGapTaskRequest, CompleteGapTaskResponse, CreateGapTasksRequest, CreateGapTasksResponse, ListGapTasksForCourseRequest, ListGapTasksForCourseResponse, ListGapTasksForUserRequest, ListGapTasksForUserResponse } from "./knowledge_gap_pb.js";
+import { CompleteGapTaskRequest, CompleteGapTaskResponse, CreateGapTasksRequest, CreateGapTasksResponse, ListGapTasksForCourseRequest, ListGapTasksForCourseResponse, ListGapTasksForUserRequest, ListGapTasksForUserResponse, SubmitGapTaskWorkRequest, SubmitGapTaskWorkResponse } from "./knowledge_gap_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -56,6 +56,17 @@ export const KnowledgeGapService = {
       name: "CompleteGapTask",
       I: CompleteGapTaskRequest,
       O: CompleteGapTaskResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * SubmitGapTaskWork submits all completed gap tasks back to the assigner(s).
+     *
+     * @generated from rpc mirai.v1.KnowledgeGapService.SubmitGapTaskWork
+     */
+    submitGapTaskWork: {
+      name: "SubmitGapTaskWork",
+      I: SubmitGapTaskWorkRequest,
+      O: SubmitGapTaskWorkResponse,
       kind: MethodKind.Unary,
     },
   }

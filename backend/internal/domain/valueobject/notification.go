@@ -21,6 +21,7 @@ const (
 	NotificationTypeExportFailed             NotificationType = "export_failed"
 	NotificationTypeGapTaskAssigned          NotificationType = "gap_task_assigned"
 	NotificationTypeGapTaskCompleted         NotificationType = "gap_task_completed"
+	NotificationTypeGapTasksSubmitted        NotificationType = "gap_tasks_submitted"
 )
 
 func (t NotificationType) String() string {
@@ -36,7 +37,8 @@ func (t NotificationType) IsValid() bool {
 		NotificationTypeSubmissionReadyForReview, NotificationTypeSubmissionApproved,
 		NotificationTypeChangesRequested, NotificationTypeExportComplete,
 		NotificationTypeExportFailed, NotificationTypeGapTaskAssigned,
-		NotificationTypeGapTaskCompleted:
+		NotificationTypeGapTaskCompleted,
+		NotificationTypeGapTasksSubmitted:
 		return true
 	}
 	return false

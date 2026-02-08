@@ -11,12 +11,13 @@ import {
   FileText,
   BookOpen,
   MessageSquare,
+  Send,
   X,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import { KnowledgeUploadModal } from '@/components/settings/KnowledgeUploadModal';
-import { useCompleteGapTask } from '@/hooks/useKnowledgeGapTasks';
+import { useCompleteGapTask, useSubmitGapTaskWork } from '@/hooks/useKnowledgeGapTasks';
 import { useListKnowledgeSources } from '@/hooks/useTeamKnowledge';
 import { KnowledgeGapTaskStatus, type KnowledgeGapTask } from '@/gen/mirai/v1/knowledge_gap_pb';
 import { KnowledgeSourceStatus } from '@/gen/mirai/v1/knowledge_source_pb';
@@ -251,7 +252,7 @@ function ActiveTaskCard({
 }
 
 // =============================================================================
-// Completed Task Card — read-only with completion info + upload option
+// Completed Task Card — green background, read-only with completion info
 // =============================================================================
 
 function CompletedTaskCard({
@@ -308,6 +309,7 @@ interface GapTaskDetailModalProps {
 
 export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) {
   const completeTask = useCompleteGapTask();
+  const submitWork = useSubmitGapTaskWork();
 
   const [uploadingTask, setUploadingTask] = useState<KnowledgeGapTask | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -318,6 +320,8 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
     (t) => t.status === KnowledgeGapTaskStatus.PENDING || t.status === KnowledgeGapTaskStatus.IN_PROGRESS
   );
   const completedTasks = tasks.filter((t) => t.status === KnowledgeGapTaskStatus.COMPLETED);
+  const allCompleted = activeTasks.length === 0 && completedTasks.length > 0;
+  const allSubmitted = allCompleted && completedTasks.every((t) => t.submittedAt);
 
   const handleFileSelect = useCallback((task: KnowledgeGapTask) => {
     setUploadingTask(task);
@@ -358,6 +362,14 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
     }
   }, [completeTask]);
 
+  const handleSubmitWork = useCallback(async () => {
+    try {
+      await submitWork.mutate();
+    } catch {
+      // Error handled by hook
+    }
+  }, [submitWork]);
+
   return (
     <>
       <ResponsiveModal
@@ -368,7 +380,7 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
         mobileHeight="full"
       >
         <div className="max-h-[60vh] overflow-y-auto space-y-3 p-1">
-          {/* Active tasks */}
+          {/* Single merged list — active tasks first, then completed with green bg */}
           {activeTasks.map((task) => (
             <ActiveTaskCard
               key={task.id}
@@ -380,28 +392,41 @@ export function GapTaskDetailModal({ tasks, onClose }: GapTaskDetailModalProps) 
             />
           ))}
 
-          {/* Completed tasks section */}
-          {completedTasks.length > 0 && (
-            <>
-              {activeTasks.length > 0 && (
-                <div className="flex items-center gap-2 pt-2">
-                  <div className="flex-1 border-t" />
-                  <span className="text-xs text-muted">
-                    {completedTasks.length} completed
-                  </span>
-                  <div className="flex-1 border-t" />
-                </div>
-              )}
-              {completedTasks.map((task) => (
-                <CompletedTaskCard
-                  key={task.id}
-                  task={task}
-                  onUpload={handleFileSelect}
-                />
-              ))}
-            </>
-          )}
+          {completedTasks.map((task) => (
+            <CompletedTaskCard
+              key={task.id}
+              task={task}
+              onUpload={handleFileSelect}
+            />
+          ))}
         </div>
+
+        {/* Submit button — visible when all tasks are completed */}
+        {allCompleted && (
+          <div className="border-t mt-4 pt-4 px-1">
+            {allSubmitted ? (
+              <div className="flex items-center justify-center gap-2 py-2 text-sm text-green-700 dark:text-green-400">
+                <CheckCircle className="w-4 h-4" />
+                <span className="font-medium">Work submitted</span>
+              </div>
+            ) : (
+              <Button
+                variant="primary"
+                size="md"
+                onClick={handleSubmitWork}
+                disabled={submitWork.isPending}
+                className="w-full gap-2"
+              >
+                {submitWork.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Submit All Work
+              </Button>
+            )}
+          </div>
+        )}
       </ResponsiveModal>
 
       {/* Hidden file input */}

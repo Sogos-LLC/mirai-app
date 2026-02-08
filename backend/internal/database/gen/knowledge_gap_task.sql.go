@@ -20,7 +20,7 @@ SET status = 'completed',
     completed_at = NOW(),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes
+RETURNING id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes, submitted_at
 `
 
 type CompleteGapTaskParams struct {
@@ -46,6 +46,7 @@ func (q *Queries) CompleteGapTask(ctx context.Context, arg CompleteGapTaskParams
 		&i.UpdatedAt,
 		&i.CompletedAt,
 		&i.CompletionNotes,
+		&i.SubmittedAt,
 	)
 	return i, err
 }
@@ -69,7 +70,7 @@ INSERT INTO knowledge_gap_tasks (
     tenant_id, course_id, gap_description,
     assigned_to_user_id, assigned_by_user_id, target_team_id, status
 ) VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-RETURNING id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes
+RETURNING id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes, submitted_at
 `
 
 type CreateGapTaskParams struct {
@@ -108,12 +109,13 @@ func (q *Queries) CreateGapTask(ctx context.Context, arg CreateGapTaskParams) (K
 		&i.UpdatedAt,
 		&i.CompletedAt,
 		&i.CompletionNotes,
+		&i.SubmittedAt,
 	)
 	return i, err
 }
 
 const getGapTaskByID = `-- name: GetGapTaskByID :one
-SELECT id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes FROM knowledge_gap_tasks
+SELECT id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes, submitted_at FROM knowledge_gap_tasks
 WHERE id = $1
 `
 
@@ -134,12 +136,13 @@ func (q *Queries) GetGapTaskByID(ctx context.Context, id uuid.UUID) (KnowledgeGa
 		&i.UpdatedAt,
 		&i.CompletedAt,
 		&i.CompletionNotes,
+		&i.SubmittedAt,
 	)
 	return i, err
 }
 
 const listGapTasksByCourse = `-- name: ListGapTasksByCourse :many
-SELECT id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes FROM knowledge_gap_tasks
+SELECT id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes, submitted_at FROM knowledge_gap_tasks
 WHERE course_id = $1
 ORDER BY created_at DESC
 `
@@ -167,6 +170,7 @@ func (q *Queries) ListGapTasksByCourse(ctx context.Context, courseID uuid.UUID) 
 			&i.UpdatedAt,
 			&i.CompletedAt,
 			&i.CompletionNotes,
+			&i.SubmittedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -182,7 +186,7 @@ func (q *Queries) ListGapTasksByCourse(ctx context.Context, courseID uuid.UUID) 
 }
 
 const listGapTasksByUser = `-- name: ListGapTasksByUser :many
-SELECT id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes FROM knowledge_gap_tasks
+SELECT id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes, submitted_at FROM knowledge_gap_tasks
 WHERE assigned_to_user_id = $1
     AND ($2::text IS NULL OR status = $2)
 ORDER BY created_at DESC
@@ -216,6 +220,55 @@ func (q *Queries) ListGapTasksByUser(ctx context.Context, arg ListGapTasksByUser
 			&i.UpdatedAt,
 			&i.CompletedAt,
 			&i.CompletionNotes,
+			&i.SubmittedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const submitGapTasksByUser = `-- name: SubmitGapTasksByUser :many
+UPDATE knowledge_gap_tasks
+SET submitted_at = NOW(),
+    updated_at = NOW()
+WHERE assigned_to_user_id = $1
+    AND status = 'completed'
+    AND submitted_at IS NULL
+RETURNING id, tenant_id, course_id, gap_description, assigned_to_user_id, assigned_by_user_id, target_team_id, status, knowledge_source_id, created_at, updated_at, completed_at, completion_notes, submitted_at
+`
+
+func (q *Queries) SubmitGapTasksByUser(ctx context.Context, assignedToUserID uuid.UUID) ([]KnowledgeGapTask, error) {
+	rows, err := q.db.QueryContext(ctx, submitGapTasksByUser, assignedToUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []KnowledgeGapTask{}
+	for rows.Next() {
+		var i KnowledgeGapTask
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.CourseID,
+			&i.GapDescription,
+			&i.AssignedToUserID,
+			&i.AssignedByUserID,
+			&i.TargetTeamID,
+			&i.Status,
+			&i.KnowledgeSourceID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CompletedAt,
+			&i.CompletionNotes,
+			&i.SubmittedAt,
 		); err != nil {
 			return nil, err
 		}

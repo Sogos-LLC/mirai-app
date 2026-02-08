@@ -91,10 +91,11 @@ type KnowledgeGapTask struct {
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	CompletedAt       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
 	// Read-only context fields populated at query time
-	CourseTitle     *string `protobuf:"bytes,13,opt,name=course_title,json=courseTitle,proto3,oneof" json:"course_title,omitempty"`
-	AssignedByName  *string `protobuf:"bytes,14,opt,name=assigned_by_name,json=assignedByName,proto3,oneof" json:"assigned_by_name,omitempty"`
-	TargetTeamName  *string `protobuf:"bytes,15,opt,name=target_team_name,json=targetTeamName,proto3,oneof" json:"target_team_name,omitempty"`
-	CompletionNotes *string `protobuf:"bytes,16,opt,name=completion_notes,json=completionNotes,proto3,oneof" json:"completion_notes,omitempty"`
+	CourseTitle     *string                `protobuf:"bytes,13,opt,name=course_title,json=courseTitle,proto3,oneof" json:"course_title,omitempty"`
+	AssignedByName  *string                `protobuf:"bytes,14,opt,name=assigned_by_name,json=assignedByName,proto3,oneof" json:"assigned_by_name,omitempty"`
+	TargetTeamName  *string                `protobuf:"bytes,15,opt,name=target_team_name,json=targetTeamName,proto3,oneof" json:"target_team_name,omitempty"`
+	CompletionNotes *string                `protobuf:"bytes,16,opt,name=completion_notes,json=completionNotes,proto3,oneof" json:"completion_notes,omitempty"`
+	SubmittedAt     *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=submitted_at,json=submittedAt,proto3,oneof" json:"submitted_at,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -239,6 +240,13 @@ func (x *KnowledgeGapTask) GetCompletionNotes() string {
 		return *x.CompletionNotes
 	}
 	return ""
+}
+
+func (x *KnowledgeGapTask) GetSubmittedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SubmittedAt
+	}
+	return nil
 }
 
 // GapTaskInput is used when creating gap tasks in bulk.
@@ -686,11 +694,93 @@ func (x *CompleteGapTaskResponse) GetTask() *KnowledgeGapTask {
 	return nil
 }
 
+// SubmitGapTaskWorkRequest submits all completed gap tasks for the current user.
+type SubmitGapTaskWorkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitGapTaskWorkRequest) Reset() {
+	*x = SubmitGapTaskWorkRequest{}
+	mi := &file_mirai_v1_knowledge_gap_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitGapTaskWorkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitGapTaskWorkRequest) ProtoMessage() {}
+
+func (x *SubmitGapTaskWorkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_knowledge_gap_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitGapTaskWorkRequest.ProtoReflect.Descriptor instead.
+func (*SubmitGapTaskWorkRequest) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_knowledge_gap_proto_rawDescGZIP(), []int{10}
+}
+
+// SubmitGapTaskWorkResponse contains the submitted gap tasks.
+type SubmitGapTaskWorkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tasks         []*KnowledgeGapTask    `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitGapTaskWorkResponse) Reset() {
+	*x = SubmitGapTaskWorkResponse{}
+	mi := &file_mirai_v1_knowledge_gap_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitGapTaskWorkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitGapTaskWorkResponse) ProtoMessage() {}
+
+func (x *SubmitGapTaskWorkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_knowledge_gap_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitGapTaskWorkResponse.ProtoReflect.Descriptor instead.
+func (*SubmitGapTaskWorkResponse) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_knowledge_gap_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SubmitGapTaskWorkResponse) GetTasks() []*KnowledgeGapTask {
+	if x != nil {
+		return x.Tasks
+	}
+	return nil
+}
+
 var File_mirai_v1_knowledge_gap_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_knowledge_gap_proto_rawDesc = "" +
 	"\n" +
-	"\x1cmirai/v1/knowledge_gap.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x94\a\n" +
+	"\x1cmirai/v1/knowledge_gap.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe9\a\n" +
 	"\x10KnowledgeGapTask\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12'\n" +
@@ -709,7 +799,8 @@ const file_mirai_v1_knowledge_gap_proto_rawDesc = "" +
 	"\fcourse_title\x18\r \x01(\tH\x04R\vcourseTitle\x88\x01\x01\x12-\n" +
 	"\x10assigned_by_name\x18\x0e \x01(\tH\x05R\x0eassignedByName\x88\x01\x01\x12-\n" +
 	"\x10target_team_name\x18\x0f \x01(\tH\x06R\x0etargetTeamName\x88\x01\x01\x12.\n" +
-	"\x10completion_notes\x18\x10 \x01(\tH\aR\x0fcompletionNotes\x88\x01\x01B\x16\n" +
+	"\x10completion_notes\x18\x10 \x01(\tH\aR\x0fcompletionNotes\x88\x01\x01\x12B\n" +
+	"\fsubmitted_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\bR\vsubmittedAt\x88\x01\x01B\x16\n" +
 	"\x14_knowledge_source_idB\x13\n" +
 	"\x11_assigned_to_nameB\x14\n" +
 	"\x12_assigned_to_emailB\x0f\n" +
@@ -717,7 +808,8 @@ const file_mirai_v1_knowledge_gap_proto_rawDesc = "" +
 	"\r_course_titleB\x13\n" +
 	"\x11_assigned_by_nameB\x13\n" +
 	"\x11_target_team_nameB\x13\n" +
-	"\x11_completion_notes\"f\n" +
+	"\x11_completion_notesB\x0f\n" +
+	"\r_submitted_at\"f\n" +
 	"\fGapTaskInput\x12'\n" +
 	"\x0fgap_description\x18\x01 \x01(\tR\x0egapDescription\x12-\n" +
 	"\x13assigned_to_user_id\x18\x02 \x01(\tR\x10assignedToUserId\"\x88\x01\n" +
@@ -743,17 +835,21 @@ const file_mirai_v1_knowledge_gap_proto_rawDesc = "" +
 	"\x14_knowledge_source_idB\x13\n" +
 	"\x11_completion_notes\"I\n" +
 	"\x17CompleteGapTaskResponse\x12.\n" +
-	"\x04task\x18\x01 \x01(\v2\x1a.mirai.v1.KnowledgeGapTaskR\x04task*\xbe\x01\n" +
+	"\x04task\x18\x01 \x01(\v2\x1a.mirai.v1.KnowledgeGapTaskR\x04task\"\x1a\n" +
+	"\x18SubmitGapTaskWorkRequest\"M\n" +
+	"\x19SubmitGapTaskWorkResponse\x120\n" +
+	"\x05tasks\x18\x01 \x03(\v2\x1a.mirai.v1.KnowledgeGapTaskR\x05tasks*\xbe\x01\n" +
 	"\x16KnowledgeGapTaskStatus\x12)\n" +
 	"%KNOWLEDGE_GAP_TASK_STATUS_UNSPECIFIED\x10\x00\x12%\n" +
 	"!KNOWLEDGE_GAP_TASK_STATUS_PENDING\x10\x01\x12)\n" +
 	"%KNOWLEDGE_GAP_TASK_STATUS_IN_PROGRESS\x10\x02\x12'\n" +
-	"#KNOWLEDGE_GAP_TASK_STATUS_COMPLETED\x10\x032\x90\x03\n" +
+	"#KNOWLEDGE_GAP_TASK_STATUS_COMPLETED\x10\x032\xee\x03\n" +
 	"\x13KnowledgeGapService\x12S\n" +
 	"\x0eCreateGapTasks\x12\x1f.mirai.v1.CreateGapTasksRequest\x1a .mirai.v1.CreateGapTasksResponse\x12b\n" +
 	"\x13ListGapTasksForUser\x12$.mirai.v1.ListGapTasksForUserRequest\x1a%.mirai.v1.ListGapTasksForUserResponse\x12h\n" +
 	"\x15ListGapTasksForCourse\x12&.mirai.v1.ListGapTasksForCourseRequest\x1a'.mirai.v1.ListGapTasksForCourseResponse\x12V\n" +
-	"\x0fCompleteGapTask\x12 .mirai.v1.CompleteGapTaskRequest\x1a!.mirai.v1.CompleteGapTaskResponseB\x97\x01\n" +
+	"\x0fCompleteGapTask\x12 .mirai.v1.CompleteGapTaskRequest\x1a!.mirai.v1.CompleteGapTaskResponse\x12\\\n" +
+	"\x11SubmitGapTaskWork\x12\".mirai.v1.SubmitGapTaskWorkRequest\x1a#.mirai.v1.SubmitGapTaskWorkResponseB\x97\x01\n" +
 	"\fcom.mirai.v1B\x11KnowledgeGapProtoP\x01Z3github.com/sogos/mirai-backend/gen/mirai/v1;miraiv1\xa2\x02\x03MXX\xaa\x02\bMirai.V1\xca\x02\bMirai\\V1\xe2\x02\x14Mirai\\V1\\GPBMetadata\xea\x02\tMirai::V1b\x06proto3"
 
 var (
@@ -769,7 +865,7 @@ func file_mirai_v1_knowledge_gap_proto_rawDescGZIP() []byte {
 }
 
 var file_mirai_v1_knowledge_gap_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_mirai_v1_knowledge_gap_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_mirai_v1_knowledge_gap_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_mirai_v1_knowledge_gap_proto_goTypes = []any{
 	(KnowledgeGapTaskStatus)(0),           // 0: mirai.v1.KnowledgeGapTaskStatus
 	(*KnowledgeGapTask)(nil),              // 1: mirai.v1.KnowledgeGapTask
@@ -782,31 +878,37 @@ var file_mirai_v1_knowledge_gap_proto_goTypes = []any{
 	(*ListGapTasksForCourseResponse)(nil), // 8: mirai.v1.ListGapTasksForCourseResponse
 	(*CompleteGapTaskRequest)(nil),        // 9: mirai.v1.CompleteGapTaskRequest
 	(*CompleteGapTaskResponse)(nil),       // 10: mirai.v1.CompleteGapTaskResponse
-	(*timestamppb.Timestamp)(nil),         // 11: google.protobuf.Timestamp
+	(*SubmitGapTaskWorkRequest)(nil),      // 11: mirai.v1.SubmitGapTaskWorkRequest
+	(*SubmitGapTaskWorkResponse)(nil),     // 12: mirai.v1.SubmitGapTaskWorkResponse
+	(*timestamppb.Timestamp)(nil),         // 13: google.protobuf.Timestamp
 }
 var file_mirai_v1_knowledge_gap_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.KnowledgeGapTask.status:type_name -> mirai.v1.KnowledgeGapTaskStatus
-	11, // 1: mirai.v1.KnowledgeGapTask.created_at:type_name -> google.protobuf.Timestamp
-	11, // 2: mirai.v1.KnowledgeGapTask.completed_at:type_name -> google.protobuf.Timestamp
-	2,  // 3: mirai.v1.CreateGapTasksRequest.tasks:type_name -> mirai.v1.GapTaskInput
-	1,  // 4: mirai.v1.CreateGapTasksResponse.tasks:type_name -> mirai.v1.KnowledgeGapTask
-	0,  // 5: mirai.v1.ListGapTasksForUserRequest.status:type_name -> mirai.v1.KnowledgeGapTaskStatus
-	1,  // 6: mirai.v1.ListGapTasksForUserResponse.tasks:type_name -> mirai.v1.KnowledgeGapTask
-	1,  // 7: mirai.v1.ListGapTasksForCourseResponse.tasks:type_name -> mirai.v1.KnowledgeGapTask
-	1,  // 8: mirai.v1.CompleteGapTaskResponse.task:type_name -> mirai.v1.KnowledgeGapTask
-	3,  // 9: mirai.v1.KnowledgeGapService.CreateGapTasks:input_type -> mirai.v1.CreateGapTasksRequest
-	5,  // 10: mirai.v1.KnowledgeGapService.ListGapTasksForUser:input_type -> mirai.v1.ListGapTasksForUserRequest
-	7,  // 11: mirai.v1.KnowledgeGapService.ListGapTasksForCourse:input_type -> mirai.v1.ListGapTasksForCourseRequest
-	9,  // 12: mirai.v1.KnowledgeGapService.CompleteGapTask:input_type -> mirai.v1.CompleteGapTaskRequest
-	4,  // 13: mirai.v1.KnowledgeGapService.CreateGapTasks:output_type -> mirai.v1.CreateGapTasksResponse
-	6,  // 14: mirai.v1.KnowledgeGapService.ListGapTasksForUser:output_type -> mirai.v1.ListGapTasksForUserResponse
-	8,  // 15: mirai.v1.KnowledgeGapService.ListGapTasksForCourse:output_type -> mirai.v1.ListGapTasksForCourseResponse
-	10, // 16: mirai.v1.KnowledgeGapService.CompleteGapTask:output_type -> mirai.v1.CompleteGapTaskResponse
-	13, // [13:17] is the sub-list for method output_type
-	9,  // [9:13] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	13, // 1: mirai.v1.KnowledgeGapTask.created_at:type_name -> google.protobuf.Timestamp
+	13, // 2: mirai.v1.KnowledgeGapTask.completed_at:type_name -> google.protobuf.Timestamp
+	13, // 3: mirai.v1.KnowledgeGapTask.submitted_at:type_name -> google.protobuf.Timestamp
+	2,  // 4: mirai.v1.CreateGapTasksRequest.tasks:type_name -> mirai.v1.GapTaskInput
+	1,  // 5: mirai.v1.CreateGapTasksResponse.tasks:type_name -> mirai.v1.KnowledgeGapTask
+	0,  // 6: mirai.v1.ListGapTasksForUserRequest.status:type_name -> mirai.v1.KnowledgeGapTaskStatus
+	1,  // 7: mirai.v1.ListGapTasksForUserResponse.tasks:type_name -> mirai.v1.KnowledgeGapTask
+	1,  // 8: mirai.v1.ListGapTasksForCourseResponse.tasks:type_name -> mirai.v1.KnowledgeGapTask
+	1,  // 9: mirai.v1.CompleteGapTaskResponse.task:type_name -> mirai.v1.KnowledgeGapTask
+	1,  // 10: mirai.v1.SubmitGapTaskWorkResponse.tasks:type_name -> mirai.v1.KnowledgeGapTask
+	3,  // 11: mirai.v1.KnowledgeGapService.CreateGapTasks:input_type -> mirai.v1.CreateGapTasksRequest
+	5,  // 12: mirai.v1.KnowledgeGapService.ListGapTasksForUser:input_type -> mirai.v1.ListGapTasksForUserRequest
+	7,  // 13: mirai.v1.KnowledgeGapService.ListGapTasksForCourse:input_type -> mirai.v1.ListGapTasksForCourseRequest
+	9,  // 14: mirai.v1.KnowledgeGapService.CompleteGapTask:input_type -> mirai.v1.CompleteGapTaskRequest
+	11, // 15: mirai.v1.KnowledgeGapService.SubmitGapTaskWork:input_type -> mirai.v1.SubmitGapTaskWorkRequest
+	4,  // 16: mirai.v1.KnowledgeGapService.CreateGapTasks:output_type -> mirai.v1.CreateGapTasksResponse
+	6,  // 17: mirai.v1.KnowledgeGapService.ListGapTasksForUser:output_type -> mirai.v1.ListGapTasksForUserResponse
+	8,  // 18: mirai.v1.KnowledgeGapService.ListGapTasksForCourse:output_type -> mirai.v1.ListGapTasksForCourseResponse
+	10, // 19: mirai.v1.KnowledgeGapService.CompleteGapTask:output_type -> mirai.v1.CompleteGapTaskResponse
+	12, // 20: mirai.v1.KnowledgeGapService.SubmitGapTaskWork:output_type -> mirai.v1.SubmitGapTaskWorkResponse
+	16, // [16:21] is the sub-list for method output_type
+	11, // [11:16] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_knowledge_gap_proto_init() }
@@ -823,7 +925,7 @@ func file_mirai_v1_knowledge_gap_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_knowledge_gap_proto_rawDesc), len(file_mirai_v1_knowledge_gap_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -119,6 +119,22 @@ func (r *KnowledgeGapTaskRepository) Complete(ctx context.Context, id uuid.UUID,
 	return toGapTaskEntity(&result), nil
 }
 
+// SubmitByUser marks all completed tasks for a user as submitted.
+func (r *KnowledgeGapTaskRepository) SubmitByUser(ctx context.Context, userID uuid.UUID) ([]*entity.KnowledgeGapTask, error) {
+	results, err := database.WithRLSSlice(ctx, r.db, func(q *gen.Queries) ([]gen.KnowledgeGapTask, error) {
+		return q.SubmitGapTasksByUser(ctx, userID)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to submit gap tasks: %w", err)
+	}
+
+	tasks := make([]*entity.KnowledgeGapTask, len(results))
+	for i := range results {
+		tasks[i] = toGapTaskEntity(&results[i])
+	}
+	return tasks, nil
+}
+
 // CountPendingByCourse counts non-completed gap tasks for a course.
 func (r *KnowledgeGapTaskRepository) CountPendingByCourse(ctx context.Context, courseID uuid.UUID) (int, error) {
 	count, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (int32, error) {
@@ -158,6 +174,9 @@ func toGapTaskEntity(t *gen.KnowledgeGapTask) *entity.KnowledgeGapTask {
 	}
 	if t.CompletionNotes.Valid {
 		task.CompletionNotes = &t.CompletionNotes.String
+	}
+	if t.SubmittedAt != nil {
+		task.SubmittedAt = *t.SubmittedAt
 	}
 
 	return task

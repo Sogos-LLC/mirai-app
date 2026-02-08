@@ -31,6 +31,7 @@ message KnowledgeGapTask {
   optional string assigned_by_name = 14;
   optional string target_team_name = 15;
   optional string completion_notes = 16;
+  optional google.protobuf.Timestamp submitted_at = 17;
 }
 
 // GapTaskInput is used when creating gap tasks in bulk.
@@ -52,6 +53,9 @@ service KnowledgeGapService {
 
   // CompleteGapTask marks a gap task as completed after knowledge upload.
   rpc CompleteGapTask(CompleteGapTaskRequest) returns (CompleteGapTaskResponse);
+
+  // SubmitGapTaskWork submits all completed gap tasks back to the assigner(s).
+  rpc SubmitGapTaskWork(SubmitGapTaskWorkRequest) returns (SubmitGapTaskWorkResponse);
 }
 
 // CreateGapTasksRequest contains the bulk gap task creation parameters.
@@ -96,4 +100,12 @@ message CompleteGapTaskRequest {
 // CompleteGapTaskResponse contains the updated gap task.
 message CompleteGapTaskResponse {
   KnowledgeGapTask task = 1;
+}
+
+// SubmitGapTaskWorkRequest submits all completed gap tasks for the current user.
+message SubmitGapTaskWorkRequest {}
+
+// SubmitGapTaskWorkResponse contains the submitted gap tasks.
+message SubmitGapTaskWorkResponse {
+  repeated KnowledgeGapTask tasks = 1;
 }

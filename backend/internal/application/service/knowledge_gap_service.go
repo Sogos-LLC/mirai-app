@@ -176,6 +176,58 @@ func (s *KnowledgeGapService) CompleteTask(ctx context.Context, kratosID uuid.UU
 	return task, nil
 }
 
+// SubmitWork marks all completed gap tasks for the user as submitted and notifies assigners.
+func (s *KnowledgeGapService) SubmitWork(ctx context.Context, kratosID uuid.UUID) ([]*entity.KnowledgeGapTask, error) {
+	log := s.logger.With("kratosID", kratosID)
+
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	tasks, err := s.gapTaskRepo.SubmitByUser(ctx, user.ID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+
+	if len(tasks) == 0 {
+		return tasks, nil
+	}
+
+	// Get submitter name for the notification
+	submitterName := "A team member"
+	identity, err := s.identity.GetIdentity(ctx, user.KratosID.String())
+	if err == nil && identity != nil {
+		submitterName = identity.FirstName + " " + identity.LastName
+	}
+
+	// Notify each unique assigner
+	notified := make(map[uuid.UUID]bool)
+	for _, task := range tasks {
+		if notified[task.AssignedByUserID] {
+			continue
+		}
+		notified[task.AssignedByUserID] = true
+
+		actionURL := fmt.Sprintf("/course/wizard?courseId=%s", task.CourseID.String())
+		if _, err := s.notificationService.CreateNotification(ctx, CreateNotificationRequest{
+			UserID:    task.AssignedByUserID,
+			Type:      valueobject.NotificationTypeGapTasksSubmitted,
+			Priority:  valueobject.NotificationPriorityNormal,
+			Title:     "Knowledge gap work submitted",
+			Message:   fmt.Sprintf("%s has submitted all assigned knowledge gap work", submitterName),
+			ActionURL: &actionURL,
+			CourseID:  &task.CourseID,
+		}); err != nil {
+			log.Warn("failed to send gap submit notification", "assigner", task.AssignedByUserID, "error", err)
+		}
+	}
+
+	s.enrichTasksWithIdentity(ctx, tasks)
+	log.Info("gap tasks submitted", "count", len(tasks))
+	return tasks, nil
+}
+
 // enrichTasksWithIdentity adds names/emails from Kratos and context from related entities.
 func (s *KnowledgeGapService) enrichTasksWithIdentity(ctx context.Context, tasks []*entity.KnowledgeGapTask) {
 	userCache := make(map[uuid.UUID]*entity.User)

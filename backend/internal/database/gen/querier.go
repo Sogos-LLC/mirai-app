@@ -213,6 +213,7 @@ type Querier interface {
 	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error
 	MarkNotificationsAsRead(ctx context.Context, arg MarkNotificationsAsReadParams) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
+	SubmitGapTasksByUser(ctx context.Context, assignedToUserID uuid.UUID) ([]KnowledgeGapTask, error)
 	// Sum token count for all ready sources in a team
 	SumTokenCountByTeam(ctx context.Context, teamID uuid.NullUUID) (int64, error)
 	// Sum token count for all ready global sources

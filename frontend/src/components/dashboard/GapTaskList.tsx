@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, Send } from 'lucide-react';
 import { useListGapTasksForUser } from '@/hooks/useKnowledgeGapTasks';
 import { KnowledgeGapTaskStatus } from '@/gen/mirai/v1/knowledge_gap_pb';
 import { GapTaskDetailModal } from './GapTaskDetailModal';
@@ -15,7 +15,11 @@ export function GapTaskList() {
       t.status === KnowledgeGapTaskStatus.PENDING ||
       t.status === KnowledgeGapTaskStatus.IN_PROGRESS
   );
+  const completedTasks = tasks.filter(
+    (t) => t.status === KnowledgeGapTaskStatus.COMPLETED
+  );
   const hasActive = activeTasks.length > 0;
+  const allSubmitted = !hasActive && completedTasks.length > 0 && completedTasks.every((t) => t.submittedAt);
 
   if (isLoading || tasks.length === 0) return null;
 
@@ -32,6 +36,8 @@ export function GapTaskList() {
       >
         {hasActive ? (
           <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+        ) : allSubmitted ? (
+          <Send className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
         ) : (
           <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
         )}
@@ -42,7 +48,9 @@ export function GapTaskList() {
         }`}>
           {hasActive
             ? `You have ${activeTasks.length} knowledge gap${activeTasks.length !== 1 ? ' tasks' : ' task'} assigned to you`
-            : `All ${tasks.length} knowledge gap${tasks.length !== 1 ? ' tasks' : ' task'} completed`}
+            : allSubmitted
+              ? `All ${tasks.length} knowledge gap${tasks.length !== 1 ? ' tasks' : ' task'} completed and submitted`
+              : `All ${tasks.length} knowledge gap${tasks.length !== 1 ? ' tasks' : ' task'} completed — ready to submit`}
         </span>
         <span className={`flex items-center gap-1 text-sm font-medium shrink-0 ${
           hasActive

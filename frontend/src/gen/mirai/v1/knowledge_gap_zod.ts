@@ -33,6 +33,7 @@ export const KnowledgeGapTaskSchema = z.object({
   assignedByName: z.string().optional(),
   targetTeamName: z.string().optional(),
   completionNotes: z.string().optional(),
+  submittedAt: z.string().datetime().optional(),
 });
 
 export type KnowledgeGapTask = z.infer<typeof KnowledgeGapTaskSchema>;
@@ -79,6 +80,15 @@ export const CompleteGapTaskRequestSchema = z.object({
 });
 
 export type CompleteGapTaskRequest = z.infer<typeof CompleteGapTaskRequestSchema>;
+
+/**
+ * Zod schema for SubmitGapTaskWorkRequest
+ * @generated from message mirai.v1.SubmitGapTaskWorkRequest
+ */
+export const SubmitGapTaskWorkRequestSchema = z.object({
+});
+
+export type SubmitGapTaskWorkRequest = z.infer<typeof SubmitGapTaskWorkRequestSchema>;
 
 /**
  * Zod schema for CreateGapTasksRequest

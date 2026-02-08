@@ -643,6 +643,7 @@ type KnowledgeGapTask struct {
 	UpdatedAt         time.Time      `db:"updated_at" json:"updated_at"`
 	CompletedAt       **time.Time    `db:"completed_at" json:"completed_at"`
 	CompletionNotes   sql.NullString `db:"completion_notes" json:"completion_notes"`
+	SubmittedAt       **time.Time    `db:"submitted_at" json:"submitted_at"`
 }
 
 // Knowledge sources can be scoped to: course (course_id), session (session_id), team (team_id), or global/tenant (all NULL)

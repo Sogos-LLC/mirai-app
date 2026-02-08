@@ -45,6 +45,9 @@ const (
 	// KnowledgeGapServiceCompleteGapTaskProcedure is the fully-qualified name of the
 	// KnowledgeGapService's CompleteGapTask RPC.
 	KnowledgeGapServiceCompleteGapTaskProcedure = "/mirai.v1.KnowledgeGapService/CompleteGapTask"
+	// KnowledgeGapServiceSubmitGapTaskWorkProcedure is the fully-qualified name of the
+	// KnowledgeGapService's SubmitGapTaskWork RPC.
+	KnowledgeGapServiceSubmitGapTaskWorkProcedure = "/mirai.v1.KnowledgeGapService/SubmitGapTaskWork"
 )
 
 // KnowledgeGapServiceClient is a client for the mirai.v1.KnowledgeGapService service.
@@ -57,6 +60,8 @@ type KnowledgeGapServiceClient interface {
 	ListGapTasksForCourse(context.Context, *connect.Request[v1.ListGapTasksForCourseRequest]) (*connect.Response[v1.ListGapTasksForCourseResponse], error)
 	// CompleteGapTask marks a gap task as completed after knowledge upload.
 	CompleteGapTask(context.Context, *connect.Request[v1.CompleteGapTaskRequest]) (*connect.Response[v1.CompleteGapTaskResponse], error)
+	// SubmitGapTaskWork submits all completed gap tasks back to the assigner(s).
+	SubmitGapTaskWork(context.Context, *connect.Request[v1.SubmitGapTaskWorkRequest]) (*connect.Response[v1.SubmitGapTaskWorkResponse], error)
 }
 
 // NewKnowledgeGapServiceClient constructs a client for the mirai.v1.KnowledgeGapService service. By
@@ -94,6 +99,12 @@ func NewKnowledgeGapServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(knowledgeGapServiceMethods.ByName("CompleteGapTask")),
 			connect.WithClientOptions(opts...),
 		),
+		submitGapTaskWork: connect.NewClient[v1.SubmitGapTaskWorkRequest, v1.SubmitGapTaskWorkResponse](
+			httpClient,
+			baseURL+KnowledgeGapServiceSubmitGapTaskWorkProcedure,
+			connect.WithSchema(knowledgeGapServiceMethods.ByName("SubmitGapTaskWork")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -103,6 +114,7 @@ type knowledgeGapServiceClient struct {
 	listGapTasksForUser   *connect.Client[v1.ListGapTasksForUserRequest, v1.ListGapTasksForUserResponse]
 	listGapTasksForCourse *connect.Client[v1.ListGapTasksForCourseRequest, v1.ListGapTasksForCourseResponse]
 	completeGapTask       *connect.Client[v1.CompleteGapTaskRequest, v1.CompleteGapTaskResponse]
+	submitGapTaskWork     *connect.Client[v1.SubmitGapTaskWorkRequest, v1.SubmitGapTaskWorkResponse]
 }
 
 // CreateGapTasks calls mirai.v1.KnowledgeGapService.CreateGapTasks.
@@ -125,6 +137,11 @@ func (c *knowledgeGapServiceClient) CompleteGapTask(ctx context.Context, req *co
 	return c.completeGapTask.CallUnary(ctx, req)
 }
 
+// SubmitGapTaskWork calls mirai.v1.KnowledgeGapService.SubmitGapTaskWork.
+func (c *knowledgeGapServiceClient) SubmitGapTaskWork(ctx context.Context, req *connect.Request[v1.SubmitGapTaskWorkRequest]) (*connect.Response[v1.SubmitGapTaskWorkResponse], error) {
+	return c.submitGapTaskWork.CallUnary(ctx, req)
+}
+
 // KnowledgeGapServiceHandler is an implementation of the mirai.v1.KnowledgeGapService service.
 type KnowledgeGapServiceHandler interface {
 	// CreateGapTasks creates gap tasks in bulk from Step 1 analysis gaps.
@@ -135,6 +152,8 @@ type KnowledgeGapServiceHandler interface {
 	ListGapTasksForCourse(context.Context, *connect.Request[v1.ListGapTasksForCourseRequest]) (*connect.Response[v1.ListGapTasksForCourseResponse], error)
 	// CompleteGapTask marks a gap task as completed after knowledge upload.
 	CompleteGapTask(context.Context, *connect.Request[v1.CompleteGapTaskRequest]) (*connect.Response[v1.CompleteGapTaskResponse], error)
+	// SubmitGapTaskWork submits all completed gap tasks back to the assigner(s).
+	SubmitGapTaskWork(context.Context, *connect.Request[v1.SubmitGapTaskWorkRequest]) (*connect.Response[v1.SubmitGapTaskWorkResponse], error)
 }
 
 // NewKnowledgeGapServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -168,6 +187,12 @@ func NewKnowledgeGapServiceHandler(svc KnowledgeGapServiceHandler, opts ...conne
 		connect.WithSchema(knowledgeGapServiceMethods.ByName("CompleteGapTask")),
 		connect.WithHandlerOptions(opts...),
 	)
+	knowledgeGapServiceSubmitGapTaskWorkHandler := connect.NewUnaryHandler(
+		KnowledgeGapServiceSubmitGapTaskWorkProcedure,
+		svc.SubmitGapTaskWork,
+		connect.WithSchema(knowledgeGapServiceMethods.ByName("SubmitGapTaskWork")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.KnowledgeGapService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KnowledgeGapServiceCreateGapTasksProcedure:
@@ -178,6 +203,8 @@ func NewKnowledgeGapServiceHandler(svc KnowledgeGapServiceHandler, opts ...conne
 			knowledgeGapServiceListGapTasksForCourseHandler.ServeHTTP(w, r)
 		case KnowledgeGapServiceCompleteGapTaskProcedure:
 			knowledgeGapServiceCompleteGapTaskHandler.ServeHTTP(w, r)
+		case KnowledgeGapServiceSubmitGapTaskWorkProcedure:
+			knowledgeGapServiceSubmitGapTaskWorkHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -201,4 +228,8 @@ func (UnimplementedKnowledgeGapServiceHandler) ListGapTasksForCourse(context.Con
 
 func (UnimplementedKnowledgeGapServiceHandler) CompleteGapTask(context.Context, *connect.Request[v1.CompleteGapTaskRequest]) (*connect.Response[v1.CompleteGapTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeGapService.CompleteGapTask is not implemented"))
+}
+
+func (UnimplementedKnowledgeGapServiceHandler) SubmitGapTaskWork(context.Context, *connect.Request[v1.SubmitGapTaskWorkRequest]) (*connect.Response[v1.SubmitGapTaskWorkResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.KnowledgeGapService.SubmitGapTaskWork is not implemented"))
 }

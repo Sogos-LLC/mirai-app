@@ -6,6 +6,7 @@
  * - Listing gap tasks for the current user (dashboard)
  * - Listing gap tasks for a course (assigner view)
  * - Completing a gap task after knowledge upload
+ * - Submitting all completed work back to assigners
  */
 
 import { useMutation, useQuery, createConnectQueryKey } from '@connectrpc/connect-query';
@@ -17,11 +18,13 @@ import {
   listGapTasksForUser,
   listGapTasksForCourse,
   completeGapTask,
+  submitGapTaskWork,
 } from '@/gen/mirai/v1/knowledge_gap-KnowledgeGapService_connectquery';
 
 import {
   CreateGapTasksRequestSchema,
   CompleteGapTaskRequestSchema,
+  SubmitGapTaskWorkRequestSchema,
   type GapTaskInput,
   GapTaskInputSchema,
 } from '@/gen/mirai/v1/knowledge_gap_pb';
@@ -132,5 +135,29 @@ export function useCompleteGapTask() {
     isPending: mutation.isPending,
     error: mutation.error,
     reset: mutation.reset,
+  };
+}
+
+// =============================================================================
+// Submit Gap Task Work
+// =============================================================================
+
+export function useSubmitGapTaskWork() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(submitGapTaskWork);
+
+  return {
+    mutate: async () => {
+      const request = create(SubmitGapTaskWorkRequestSchema, {});
+      const result = await mutation.mutateAsync(request);
+
+      void queryClient.invalidateQueries({
+        queryKey: createConnectQueryKey({ schema: listGapTasksForUser, cardinality: undefined }),
+      });
+
+      return result;
+    },
+    isPending: mutation.isPending,
+    error: mutation.error,
   };
 }

@@ -181,6 +181,34 @@ func (s *KnowledgeGapServiceServer) CompleteGapTask(
 	return connect.NewResponse(&v1.CompleteGapTaskResponse{Task: gapTaskToProto(task)}), nil
 }
 
+// SubmitGapTaskWork submits all completed gap tasks back to the assigner(s).
+func (s *KnowledgeGapServiceServer) SubmitGapTaskWork(
+	ctx context.Context,
+	req *connect.Request[v1.SubmitGapTaskWorkRequest],
+) (*connect.Response[v1.SubmitGapTaskWorkResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	tasks, err := s.gapService.SubmitWork(ctx, kratosID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	protoTasks := make([]*v1.KnowledgeGapTask, len(tasks))
+	for i, t := range tasks {
+		protoTasks[i] = gapTaskToProto(t)
+	}
+
+	return connect.NewResponse(&v1.SubmitGapTaskWorkResponse{Tasks: protoTasks}), nil
+}
+
 // =============================================================================
 // Proto Conversion Helpers
 // =============================================================================
@@ -227,6 +255,9 @@ func gapTaskToProto(t *entity.KnowledgeGapTask) *v1.KnowledgeGapTask {
 	}
 	if t.CompletionNotes != nil {
 		proto.CompletionNotes = t.CompletionNotes
+	}
+	if t.SubmittedAt != nil {
+		proto.SubmittedAt = timestamppb.New(*t.SubmittedAt)
 	}
 
 	return proto
