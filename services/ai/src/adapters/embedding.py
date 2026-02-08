@@ -7,12 +7,14 @@ as the generation models — no extra service needed.
 
 import structlog
 from pydantic_ai import Embedder
+from pydantic_ai.embeddings.google import GoogleEmbeddingModel
+from pydantic_ai.providers.google import GoogleProvider
 
 from src.config import settings
 
 log = structlog.get_logger()
 
-EMBEDDING_MODEL = "google-gla:gemini-embedding-001"
+EMBEDDING_MODEL_NAME = "gemini-embedding-001"
 
 
 class EmbeddingClient:
@@ -23,7 +25,11 @@ class EmbeddingClient:
     """
 
     def __init__(self, api_key: str) -> None:
-        self._embedder = Embedder(EMBEDDING_MODEL, api_key=api_key)
+        model = GoogleEmbeddingModel(
+            EMBEDDING_MODEL_NAME,
+            provider=GoogleProvider(api_key=api_key),
+        )
+        self._embedder = Embedder(model)
         self.batch_size = settings.embedding_batch_size
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
