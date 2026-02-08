@@ -666,7 +666,7 @@ class CourseCreationWorkflow:
             },
             "knowledge_coverage": knowledge_coverage,
             "outcomes": {
-                "behavior_change": outcomes.behavior_change,
+                "behavior_change": outcomes.behavior_change.model_dump(),
                 "goal": outcomes.goal.model_dump(),
                 "outcomes": [o.model_dump() for o in outcomes.outcomes],
             },
