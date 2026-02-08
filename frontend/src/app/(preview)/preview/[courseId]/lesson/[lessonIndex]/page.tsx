@@ -27,6 +27,10 @@ export default function LessonViewerPage() {
     if (newIndex > lessonIndex && currentLesson) {
       progress.markComplete(currentLesson.id);
     }
+    // If navigating beyond last lesson (from completion), stay on current page
+    if (newIndex >= preview.totalLessons) {
+      return;
+    }
     router.push(`/preview/${courseId}/lesson/${newIndex}`);
   };
 
@@ -77,6 +81,7 @@ export default function LessonViewerPage() {
       completedLessons={progress.completedLessons}
       progressPercent={progress.progressPercent}
       onNavigate={handleNavigate}
+      onResetProgress={progress.resetProgress}
     />
   );
 }

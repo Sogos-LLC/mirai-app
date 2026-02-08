@@ -74,6 +74,10 @@
   --sidebar-bg: #ffffff;
   --sidebar-border: #e5e7eb;
 
+  /* Link colors */
+  --text-link: #4f46e5;
+  --text-link-hover: #4338ca;
+
   /* Accent colors - light mode */
   --accent-primary: #8b5cf6;
   --accent-primary-hover: #7c3aed;
@@ -129,6 +133,10 @@
   /* Sidebar specific */
   --sidebar-bg: #0e0c16;
   --sidebar-border: #1f1d30;
+
+  /* Link colors */
+  --text-link: #818cf8;
+  --text-link-hover: #a5b4fc;
 
   /* Accent colors */
   --accent-primary: #a78bfa;
@@ -661,4 +669,18 @@
 .dark .bg-surface:-webkit-autofill:hover,
 .dark .bg-surface:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0px 1000px var(--bg-surface) inset !important;
+}
+
+/* ===================================
+   Prose Link Styling
+   =================================== */
+.prose a {
+  color: var(--text-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.prose a:hover {
+  color: var(--text-link-hover);
 }

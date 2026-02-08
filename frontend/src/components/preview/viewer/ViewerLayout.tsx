@@ -6,6 +6,7 @@ import { ViewerHeader } from './ViewerHeader';
 import { ViewerSidebar } from './ViewerSidebar';
 import { ViewerContent } from './ViewerContent';
 import { ViewerFooter } from './ViewerFooter';
+import { CourseCompleteModal } from './CourseCompleteModal';
 import type { PreviewData, FlattenedLesson } from '@/hooks/usePreviewData';
 
 interface ViewerLayoutProps {
@@ -15,6 +16,7 @@ interface ViewerLayoutProps {
   completedLessons: Set<string>;
   progressPercent: number;
   onNavigate: (index: number) => void;
+  onResetProgress: () => void;
 }
 
 export function ViewerLayout({
@@ -24,11 +26,14 @@ export function ViewerLayout({
   completedLessons,
   progressPercent,
   onNavigate,
+  onResetProgress,
 }: ViewerLayoutProps) {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex < preview.totalLessons - 1;
+  const isLastLesson = currentIndex === preview.totalLessons - 1;
 
   const handlePrevious = () => {
     if (hasPrevious) onNavigate(currentIndex - 1);
@@ -36,6 +41,17 @@ export function ViewerLayout({
 
   const handleNext = () => {
     if (hasNext) onNavigate(currentIndex + 1);
+  };
+
+  const handleComplete = () => {
+    // Mark the last lesson as complete by navigating forward (triggers markComplete in page)
+    onNavigate(currentIndex + 1);
+    setShowCompleteModal(true);
+  };
+
+  const handleRestart = () => {
+    onResetProgress();
+    onNavigate(0);
   };
 
   return (
@@ -74,6 +90,19 @@ export function ViewerLayout({
         onNext={handleNext}
         hasPrevious={hasPrevious}
         hasNext={hasNext}
+        isLastLesson={isLastLesson}
+        onComplete={handleComplete}
+      />
+
+      {/* Course completion modal */}
+      <CourseCompleteModal
+        isOpen={showCompleteModal}
+        onClose={() => setShowCompleteModal(false)}
+        courseId={preview.courseId}
+        courseTitle={preview.courseTitle}
+        totalLessons={preview.totalLessons}
+        totalSections={preview.sections.length}
+        onRestart={handleRestart}
       />
 
       {/* Mobile sidebar overlay */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Trophy } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
 interface ViewerFooterProps {
@@ -10,6 +10,8 @@ interface ViewerFooterProps {
   onNext: () => void;
   hasPrevious: boolean;
   hasNext: boolean;
+  isLastLesson: boolean;
+  onComplete: () => void;
 }
 
 export function ViewerFooter({
@@ -19,6 +21,8 @@ export function ViewerFooter({
   onNext,
   hasPrevious,
   hasNext,
+  isLastLesson,
+  onComplete,
 }: ViewerFooterProps) {
   return (
     <footer className="bg-surface border-t px-4 py-4">
@@ -39,16 +43,27 @@ export function ViewerFooter({
           Lesson {currentIndex + 1} of {totalLessons}
         </span>
 
-        {/* Next button */}
-        <Button
-          variant="primary"
-          onClick={onNext}
-          disabled={!hasNext}
-          className="min-w-[120px]"
-        >
-          Next
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
+        {/* Next / Complete button */}
+        {isLastLesson ? (
+          <Button
+            variant="primary"
+            onClick={onComplete}
+            className="min-w-[120px] bg-emerald-600 hover:bg-emerald-700"
+          >
+            <Trophy className="w-4 h-4 mr-2" />
+            Complete Course
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            onClick={onNext}
+            disabled={!hasNext}
+            className="min-w-[120px]"
+          >
+            Next
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        )}
       </div>
     </footer>
   );

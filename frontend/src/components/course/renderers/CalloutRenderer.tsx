@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
 import type { CalloutContent } from '@/gen/mirai/v1/component_content_zod';
+import { useExternalLinks } from '@/hooks/useExternalLinks';
 
 // Re-export for compatibility
 export type { CalloutContent };
@@ -76,6 +77,8 @@ const defaultConfig = styleConfig.info;
 
 export function CalloutRenderer({ content, isEditing = false, onEdit }: CalloutRendererProps) {
   const [editContent, setEditContent] = useState(content);
+  const contentRef = useRef<HTMLDivElement>(null);
+  useExternalLinks(contentRef, content.content);
 
   // Get config using string style (normalize to lowercase for safety)
   const styleKey = (content.style?.toLowerCase() || 'info') as CalloutStyleString;
@@ -131,7 +134,7 @@ export function CalloutRenderer({ content, isEditing = false, onEdit }: CalloutR
   }
 
   return (
-    <div className={`p-4 rounded-lg border-l-4 ${config.bgColor} ${config.borderColor}`}>
+    <div ref={contentRef} className={`p-4 rounded-lg border-l-4 ${config.bgColor} ${config.borderColor}`}>
       <div className="flex items-start gap-3">
         <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${config.iconColor}`} />
         <div className="flex-1 min-w-0">

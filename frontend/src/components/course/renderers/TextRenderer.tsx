@@ -1,6 +1,8 @@
 'use client';
 
+import { useRef } from 'react';
 import type { TextContent } from '@/gen/mirai/v1/component_content_zod';
+import { useExternalLinks } from '@/hooks/useExternalLinks';
 
 interface TextRendererProps {
   content: TextContent;
@@ -9,6 +11,9 @@ interface TextRendererProps {
 }
 
 export function TextRenderer({ content, isEditing = false, onEdit }: TextRendererProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  useExternalLinks(contentRef, content.textHtml);
+
   if (isEditing && onEdit) {
     return (
       <div className="border rounded-lg p-4 bg-white">
@@ -32,6 +37,7 @@ export function TextRenderer({ content, isEditing = false, onEdit }: TextRendere
 
   return (
     <div
+      ref={contentRef}
       className="prose prose-sm sm:prose lg:prose-lg max-w-none text-gray-700"
       dangerouslySetInnerHTML={{ __html: content.textHtml }}
     />

@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { ListContent } from '@/gen/mirai/v1/component_content_zod';
+import { useExternalLinks } from '@/hooks/useExternalLinks';
 
 interface ListRendererProps {
   content: ListContent | Record<string, unknown>;
@@ -13,6 +14,9 @@ interface ListRendererProps {
 export function ListRenderer({ content: rawContent, isEditing = false }: ListRendererProps) {
   const content = rawContent as ListContent;
   const [expandedItems, setExpandedItems] = React.useState<Set<number>>(new Set());
+  const contentRef = useRef<HTMLDivElement>(null);
+  const itemsDep = content.items?.map((i) => i.text + (i.description ?? '')).join('') ?? '';
+  useExternalLinks(contentRef, itemsDep);
 
   const toggleItem = (index: number) => {
     setExpandedItems((prev) => {
@@ -133,7 +137,7 @@ export function ListRenderer({ content: rawContent, isEditing = false }: ListRen
   };
 
   return (
-    <div className="my-6">
+    <div ref={contentRef} className="my-6">
       {content.title && (
         <h4 className="font-semibold text-primary mb-3">{content.title}</h4>
       )}

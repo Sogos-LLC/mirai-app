@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Lightbulb } from 'lucide-react';
 import type { StatementContent } from '@/gen/mirai/v1/component_content_zod';
+import { useExternalLinks } from '@/hooks/useExternalLinks';
 
 // Re-export for compatibility
 export type { StatementContent };
@@ -15,6 +16,8 @@ interface StatementRendererProps {
 
 export function StatementRenderer({ content, isEditing = false, onEdit }: StatementRendererProps) {
   const [editContent, setEditContent] = useState(content);
+  const contentRef = useRef<HTMLDivElement>(null);
+  useExternalLinks(contentRef, content.statementText + (content.statementSubtext ?? ''));
 
   if (isEditing && onEdit) {
     return (
@@ -52,7 +55,7 @@ export function StatementRenderer({ content, isEditing = false, onEdit }: Statem
   }
 
   return (
-    <div className="my-8 py-6 px-8 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-l-4 border-indigo-500 rounded-r-lg">
+    <div ref={contentRef} className="my-8 py-6 px-8 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-l-4 border-indigo-500 rounded-r-lg">
       <div className="flex items-start gap-3">
         <Lightbulb className="w-6 h-6 flex-shrink-0 text-indigo-500 mt-1" />
         <div className="flex-1">
