@@ -3,6 +3,7 @@
 import src.agents.reviewers  # noqa: F401
 import src.agents.wizard_agents  # noqa: F401
 import src.agents.course_design_agents  # noqa: F401
+import src.agents.knowledge_research_agent  # noqa: F401
 import src.agents.outline_agent  # noqa: F401
 import src.agents.lesson_agent  # noqa: F401
 import src.agents.component_generation_agent  # noqa: F401

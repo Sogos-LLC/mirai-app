@@ -176,6 +176,20 @@ class RunQAOutput:
     qa: CourseQA
 
 
+@dataclass
+class RunWebResearchInput:
+    api_key: str
+    topic: str
+    audience: str
+    query: str = ""
+
+
+@dataclass
+class RunWebResearchOutput:
+    research_text: str
+    web_sources: list[WebSourceData]
+
+
 # =============================================================================
 # Activities
 # =============================================================================
@@ -564,3 +578,20 @@ async def run_course_qa(input: RunQAInput) -> RunQAOutput:
     activity.heartbeat()
 
     return RunQAOutput(qa=result.output)
+
+
+@activity.defn
+async def run_web_research(input: RunWebResearchInput) -> RunWebResearchOutput:
+    """Standalone web research activity for the orchestrator.
+
+    Wraps _run_web_research() so it can be called as a Temporal activity
+    from the ResearchOrchestrator.
+    """
+    log.info("run_web_research_activity", topic=input.topic)
+    activity.heartbeat()
+
+    research_prompt = build_research_prompt(input.topic, input.audience)
+    text, sources = await _run_web_research(input.api_key, research_prompt)
+    activity.heartbeat()
+
+    return RunWebResearchOutput(research_text=text, web_sources=sources)

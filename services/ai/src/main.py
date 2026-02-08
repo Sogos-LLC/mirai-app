@@ -26,11 +26,14 @@ from src.activities.course_design import (
     extract_lesson_template,
     expand_lesson,
     run_course_qa,
+    run_web_research,
 )
 from src.activities.knowledge import (
     ingest_document,
     search_knowledge,
     delete_knowledge,
+    check_knowledge_health,
+    synthesize_knowledge,
 )
 from src.activities.visualization import get_graph_visualization
 from src.workflows.course_creation import CourseCreationWorkflow
@@ -132,6 +135,7 @@ async def run_worker() -> None:
             extract_lesson_template,
             expand_lesson,
             run_course_qa,
+            run_web_research,
             # Component generation activities
             generate_lesson_components,
             review_section_components,
@@ -139,6 +143,8 @@ async def run_worker() -> None:
             ingest_document,
             search_knowledge,
             delete_knowledge,
+            check_knowledge_health,
+            synthesize_knowledge,
             # Visualization
             get_graph_visualization,
         ],

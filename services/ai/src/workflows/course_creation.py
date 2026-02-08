@@ -33,10 +33,6 @@ with workflow.unsafe.imports_passed_through():
         ReviewSectionInput,
         ReviewSectionOutput,
     )
-    from src.activities.knowledge import (
-        SearchKnowledgeInput,
-        SearchKnowledgeOutput,
-    )
     from src.activities.course_design import (
         ExtractTemplateInput,
         ExtractTemplateOutput,
@@ -56,8 +52,6 @@ with workflow.unsafe.imports_passed_through():
     from src.agents.component_generation_agent import ComponentContext
     from src.models.attribution import (
         SourceReference,
-        WebSource,
-        format_source_context,
         resolve_component_provenance,
         resolve_lesson_provenance,
     )
@@ -77,8 +71,9 @@ with workflow.unsafe.imports_passed_through():
         LessonTemplate,
         SectionOutcomes,
     )
-    from src.models.knowledge import KnowledgeChunk
     from src.models.outcome_tracker import OutcomeTracker
+    from src.research.orchestrator import ResearchOrchestrator
+    from src.research.types import ResearchResult
     from src.workflows.types import (
         CourseCreationInput,
         CourseCreationOutput,
@@ -167,7 +162,8 @@ class CourseCreationWorkflow:
         self._progress: int = 0
         self._progress_message: str = ""
         self._artifacts = LockedArtifacts()
-        self._web_sources: list[WebSource] = []
+        self._orchestrator: ResearchOrchestrator | None = None
+        self._course_research: ResearchResult | None = None  # Cached top-level research
         self._section_source_refs: dict[str, list[SourceReference]] = {}  # section_title -> refs
 
     # ------------------------------------------------------------------
@@ -232,6 +228,10 @@ class CourseCreationWorkflow:
 
         # Decrypt API key (Go activity)
         api_key = await self._decrypt_api_key(input.tenant_id)
+
+        # Initialize research orchestrator + health check
+        self._orchestrator = ResearchOrchestrator.from_input(input)
+        await self._orchestrator.check_health(api_key)
 
         # =============================================================
         # STEP 1: Define Intent → CourseAnalysis
@@ -317,10 +317,21 @@ class CourseCreationWorkflow:
         self._set_progress(5, "Analyzing course intent...")
         await self._update_job(input, "PROCESSING", 5, "Analyzing course intent")
 
-        # RAG search for intent analysis context
-        _, rag_context, _ = await self._search_rag(
-            api_key, input, f"{input.topic} {input.audience}",
+        # Unified research: internal knowledge + web (run via orchestrator)
+        assert self._orchestrator is not None
+        research = await self._orchestrator.research(
+            f"{input.topic} {input.audience}", api_key,
         )
+        self._course_research = research  # Cache for Steps 2-4
+
+        # Pass orchestrator research as rag_context; web research is now handled
+        # by the orchestrator, so disable the activity-level web research
+        rag_context = research.formatted_context
+        if research.research_text:
+            rag_context = (
+                f"## Synthesized Research\n{research.research_text}\n\n"
+                f"{rag_context}"
+            )
 
         analysis_result: GenerateAnalysisOutput = await self._run_ai_activity(
             "generate_course_analysis",
@@ -329,7 +340,7 @@ class CourseCreationWorkflow:
                 topic=input.topic,
                 audience=input.audience,
                 use_context=input.use_context,
-                enable_web_research=input.enable_web_research,
+                enable_web_research=False,  # Orchestrator handles web research now
                 rag_context=rag_context,
                 strict_knowledge_only=input.strict_knowledge_only,
             ),
@@ -352,7 +363,7 @@ class CourseCreationWorkflow:
                     topic=input.topic,
                     audience=input.audience,
                     use_context=input.use_context + f"\n\nFEEDBACK: {approval.feedback}",
-                    enable_web_research=input.enable_web_research,
+                    enable_web_research=False,
                     rag_context=rag_context,
                     strict_knowledge_only=input.strict_knowledge_only,
                 ),
@@ -372,13 +383,6 @@ class CourseCreationWorkflow:
             data.update(approval.modifications)
             analysis = CourseAnalysis(**data)
 
-        # Capture web sources for provenance tracking
-        if analysis_result.web_sources:
-            self._web_sources = [
-                WebSource(title=ws.title, url=ws.url, snippet=ws.snippet, confidence=ws.confidence)
-                for ws in analysis_result.web_sources
-            ]
-
         self._artifacts.analysis = analysis
         return analysis
 
@@ -392,10 +396,8 @@ class CourseCreationWorkflow:
         self._set_progress(20, "Generating learning outcomes...")
         await self._update_job(input, "PROCESSING", 20, "Generating learning outcomes")
 
-        # RAG search for outcomes context
-        _, rag_context, _ = await self._search_rag(
-            api_key, input, f"{input.topic} learning outcomes {input.audience}",
-        )
+        # Use cached course-level research from Step 1
+        rag_context = self._course_research.formatted_context if self._course_research else ""
 
         outcomes_result: GenerateOutcomesOutput = await self._run_ai_activity(
             "generate_course_outcomes",
@@ -456,10 +458,8 @@ class CourseCreationWorkflow:
         self._set_progress(35, "Designing course structure...")
         await self._update_job(input, "PROCESSING", 35, "Designing course structure")
 
-        # RAG search for structure context
-        _, rag_context, _ = await self._search_rag(
-            api_key, input, f"{input.topic} course structure curriculum",
-        )
+        # Use cached course-level research from Step 1
+        rag_context = self._course_research.formatted_context if self._course_research else ""
 
         structure_result: GenerateStructureOutput = await self._run_ai_activity(
             "generate_course_structure",
@@ -550,11 +550,8 @@ class CourseCreationWorkflow:
             parser = URLResourceParser()
             resource_hints = parser.parse(input.use_context)
 
-        # RAG search for sample lesson context
-        _, rag_context, _ = await self._search_rag(
-            api_key, input,
-            f"{representative_section.title} {representative_section.description}",
-        )
+        # Use cached course-level research from Step 1
+        rag_context = self._course_research.formatted_context if self._course_research else ""
 
         lesson_result: GenerateSampleLessonOutput = await self._run_ai_activity(
             "generate_sample_lesson",
@@ -730,8 +727,7 @@ class CourseCreationWorkflow:
             total_lessons += max(1, min(3, len(section_sos)))
         completed_lessons = 0
 
-        # Collect web sources from workflow state (captured in Step 1)
-        web_sources = self._web_sources
+        assert self._orchestrator is not None
 
         for s_idx, section in enumerate(structure.sections):
             section_sos = section_outcomes.section_outcomes.get(section.title, [])
@@ -769,16 +765,19 @@ class CourseCreationWorkflow:
                     objective = sample_lesson.objective.description
                 lesson_metas.append((lesson_title, objective))
 
-            # RAG search for section context (if knowledge sources are selected)
-            rag_chunks, rag_context_text, source_references = await self._search_rag(
-                api_key, input, f"{section.title} {section.description}",
+            # Per-section research via orchestrator (internal + web, synthesized)
+            section_research = await self._orchestrator.research(
+                f"{section.title} {section.description}", api_key,
             )
+            rag_context_text = section_research.formatted_context
+            source_references = section_research.source_references
 
-            # Merge web sources into context if available
-            if web_sources and not rag_context_text:
-                rag_context_text, source_references = format_source_context([], web_sources)
-            elif web_sources and rag_chunks:
-                rag_context_text, source_references = format_source_context(rag_chunks, web_sources)
+            # Prepend synthesized research text for better context
+            if section_research.research_text:
+                rag_context_text = (
+                    f"## Synthesized Research\n{section_research.research_text}\n\n"
+                    f"{rag_context_text}"
+                )
 
             # Build component contexts for each lesson in this section
             lesson_contexts: list[GenerateComponentsInput] = []
@@ -1148,69 +1147,6 @@ class CourseCreationWorkflow:
     # -------------------------------------------------------------------
     # Helpers
     # -------------------------------------------------------------------
-
-    async def _search_rag(
-        self,
-        api_key: str,
-        input: CourseCreationInput,
-        query: str,
-        top_k: int = 10,
-    ) -> tuple[list[KnowledgeChunk], str, list[SourceReference]]:
-        """Search RAG if enable_internal_knowledge is True and docs are selected.
-
-        Returns (chunks, rag_context_text, source_references).
-        """
-        if not input.enable_internal_knowledge:
-            log.debug("rag_search_skipped", reason="internal_knowledge_disabled")
-            return [], "", []
-
-        all_ids = list(set(
-            (input.selected_team_doc_ids or [])
-            + (input.selected_global_doc_ids or [])
-        ))
-        if not all_ids:
-            log.warning("rag_search_skipped", reason="no_document_ids_selected")
-            return [], "", []
-
-        log.info(
-            "rag_search_starting",
-            query=query[:100],
-            source_ids=all_ids,
-            tenant_id=input.tenant_id,
-            top_k=top_k,
-        )
-
-        try:
-            search_result: SearchKnowledgeOutput = await self._run_ai_activity(
-                "search_knowledge",
-                SearchKnowledgeInput(
-                    query=query,
-                    api_key=api_key,
-                    source_ids=all_ids,
-                    tenant_id=input.tenant_id,
-                    top_k=top_k,
-                ),
-                SearchKnowledgeOutput,
-            )
-            chunks = search_result.chunks
-            log.info(
-                "rag_search_complete",
-                query=query[:100],
-                chunks_found=len(chunks),
-                source_ids=all_ids,
-            )
-            if not chunks:
-                log.warning(
-                    "rag_search_empty",
-                    query=query[:100],
-                    source_ids=all_ids,
-                    tenant_id=input.tenant_id,
-                )
-            rag_context_text, source_refs = format_source_context(chunks, [])
-            return chunks, rag_context_text, source_refs
-        except Exception:
-            log.error("rag_search_failed", query=query[:100], source_ids=all_ids, exc_info=True)
-            return [], "", []
 
     def _set_progress(self, percent: int, message: str) -> None:
         self._progress = percent

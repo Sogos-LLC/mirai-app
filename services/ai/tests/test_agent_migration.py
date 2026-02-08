@@ -17,9 +17,10 @@ EXPECTED_AGENTS = {
     "wizard-sme",
     "wizard-audience",
     "wizard-tone",
-    # Course design agents (10)
+    # Course design agents (11)
     "course-analysis",
     "course-web-research",
+    "knowledge-researcher",
     "course-outcomes",
     "course-structure",
     "structure-coverage-judge",
