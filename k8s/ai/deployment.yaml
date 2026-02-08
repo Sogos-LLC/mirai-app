@@ -51,10 +51,10 @@ spec:
               optional: true
         resources:
           requests:
-            memory: "512Mi"
+            memory: "768Mi"
             cpu: "250m"
           limits:
-            memory: "1Gi"
+            memory: "2Gi"
             cpu: "1000m"
         securityContext:
           runAsNonRoot: true

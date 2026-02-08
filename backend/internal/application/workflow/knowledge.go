@@ -52,8 +52,8 @@ func KnowledgeIngestionWorkflow(ctx workflow.Context, input KnowledgeIngestionIn
 
 	aiCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 		TaskQueue:           AITaskQueue,
-		StartToCloseTimeout: 5 * time.Minute,
-		HeartbeatTimeout:    90 * time.Second,
+		StartToCloseTimeout: 10 * time.Minute,
+		HeartbeatTimeout:    3 * time.Minute,
 		RetryPolicy: &temporal.RetryPolicy{
 			MaximumAttempts: 3,
 		},

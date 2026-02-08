@@ -36,19 +36,14 @@ class EmbeddingClient:
         """Generate embeddings for a list of texts (document mode).
 
         Uses RETRIEVAL_DOCUMENT task type for optimal indexing quality.
-        Handles batching automatically if texts exceed max batch size.
+        Caller is responsible for batching with heartbeats — this method
+        embeds all provided texts in a single API call.
         """
         if not texts:
             return []
 
-        all_embeddings: list[list[float]] = []
-
-        for i in range(0, len(texts), self.batch_size):
-            batch = texts[i : i + self.batch_size]
-            result = await self._embedder.embed_documents(batch)
-            all_embeddings.extend(result.embeddings)
-
-        return all_embeddings
+        result = await self._embedder.embed_documents(texts)
+        return result.embeddings
 
     async def embed_single(self, text: str) -> list[float]:
         """Generate embedding for a single search query.

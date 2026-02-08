@@ -59,11 +59,18 @@ async def ingest_document(
         chunk_count=len(structured_chunks),
     )
 
-    # Step 2: Generate embeddings
-    if heartbeat_fn:
-        heartbeat_fn(f"embedding {len(structured_chunks)} chunks")
+    # Step 2: Generate embeddings in sub-batches with heartbeats
     chunk_texts = [c.content for c in structured_chunks]
-    embeddings = await embedding_client.embed(chunk_texts)
+    embeddings: list[list[float]] = []
+    embed_batch_size = embedding_client.batch_size
+
+    for batch_start in range(0, len(chunk_texts), embed_batch_size):
+        batch_end = min(batch_start + embed_batch_size, len(chunk_texts))
+        if heartbeat_fn:
+            heartbeat_fn(f"embedding chunks {batch_start+1}-{batch_end}/{len(chunk_texts)}")
+        batch = chunk_texts[batch_start:batch_end]
+        batch_embeddings = await embedding_client.embed(batch)
+        embeddings.extend(batch_embeddings)
 
     # Step 3: Build Qdrant points with section heading metadata
     points = []

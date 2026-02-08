@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # Embedding (gemini-embedding-001 via pydantic-ai Embedder)
     embedding_dimensions: int = 3072
-    embedding_batch_size: int = 64
+    embedding_batch_size: int = 20
 
     # RAG defaults
     default_chunk_size: int = 500
