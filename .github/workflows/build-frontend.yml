@@ -96,61 +96,64 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    - name: Update Kustomization
+    - name: Install kustomize
       run: |
         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
         sudo mv kustomize /usr/local/bin/
-
-        cd ${{ steps.env-config.outputs.kustomize_path }}
-        kustomize edit set image ghcr.io/sogos-llc/mirai-app/mirai-frontend=${{ steps.version.outputs.full-tag }}
-
-        echo "Updated frontend kustomization.yaml (${{ steps.env-config.outputs.environment }}):"
-        cat kustomization.yaml | grep -A 2 "images:"
 
     - name: Commit and push changes
       run: |
         BRANCH=${{ steps.env-config.outputs.branch }}
         KUSTOMIZE_PATH=${{ steps.env-config.outputs.kustomize_path }}
+        FULL_TAG=${{ steps.version.outputs.full-tag }}
 
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
 
-        git stash --include-untracked
-        git pull origin ${BRANCH} --rebase
-        git stash pop || true
+        max_retries=5
+        retry_count=0
 
-        git add ${KUSTOMIZE_PATH}/kustomization.yaml
+        while [ $retry_count -lt $max_retries ]; do
+          # Pull latest changes first (clean working tree)
+          git pull origin ${BRANCH} --rebase || true
 
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
+          # Now run kustomize edit on the up-to-date file
+          cd ${KUSTOMIZE_PATH}
+          kustomize edit set image ghcr.io/sogos-llc/mirai-app/mirai-frontend=${FULL_TAG}
+
+          echo "Updated frontend kustomization.yaml (${{ steps.env-config.outputs.environment }}):"
+          grep -A 2 "images:" kustomization.yaml
+          cd -
+
+          git add ${KUSTOMIZE_PATH}/kustomization.yaml
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            break
+          fi
+
           git commit -m "chore: update frontend image to ${{ steps.version.outputs.version }}
 
-          Automated image update by GitHub Actions
-          - Image: ${{ steps.version.outputs.full-tag }}
-          - Commit: ${{ github.sha }}
-          - Environment: ${{ steps.env-config.outputs.environment }}
+        Automated image update by GitHub Actions
+        - Image: ${FULL_TAG}
+        - Commit: ${{ github.sha }}
+        - Environment: ${{ steps.env-config.outputs.environment }}
 
-          [skip ci]"
+        [skip ci]"
 
-          max_retries=3
-          retry_count=0
-
-          while [ $retry_count -lt $max_retries ]; do
-            if git push origin ${BRANCH}; then
-              echo "Successfully pushed changes"
-              break
-            else
-              echo "Push failed, pulling and retrying..."
-              git pull origin ${BRANCH} --rebase
-              ((retry_count++))
-            fi
-          done
-
-          if [ $retry_count -eq $max_retries ]; then
-            echo "Failed to push after $max_retries attempts"
-            exit 1
+          if git push origin ${BRANCH}; then
+            echo "Successfully pushed changes"
+            break
+          else
+            echo "Push failed (attempt $((retry_count+1))/$max_retries), resetting and retrying..."
+            git reset --soft HEAD~1
+            ((retry_count++))
           fi
+        done
+
+        if [ $retry_count -eq $max_retries ]; then
+          echo "Failed to push after $max_retries attempts"
+          exit 1
         fi
 
     - name: Create deployment summary
