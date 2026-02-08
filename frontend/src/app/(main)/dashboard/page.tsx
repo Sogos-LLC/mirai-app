@@ -123,7 +123,15 @@ export default function Dashboard() {
   const { inProgressJobs, inProgressCount } = useInProgressJobs();
   const deleteJobHook = useDeleteJob();
 
-  const filteredCourses = courses || [];
+  // Exclude courses that have in-progress jobs from course tabs (Recent/Drafts/Published)
+  const inProgressCourseIds = new Set(
+    inProgressJobs
+      .filter((j) => j.courseId)
+      .map((j) => j.courseId)
+  );
+  const filteredCourses = (courses || []).filter(
+    (course: LibraryEntry) => !inProgressCourseIds.has(course.id)
+  );
 
   const handleEditCourse = (courseId: string) => {
     router.push(`/course/${courseId}/editor`);

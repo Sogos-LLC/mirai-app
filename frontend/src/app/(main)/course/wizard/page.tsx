@@ -188,8 +188,9 @@ export default function CourseWizardPage() {
   // Look for a deferred job for this course (gap tasks assigned)
   const { data: deferredJob } = useGetDeferredJobForCourse(resumeCourseId);
 
-  // Gap task tracking for deferred courses
-  const { data: gapTasks, isLoading: isLoadingGapTasks } = useListGapTasksForCourse(resumeCourseId ?? '');
+  // Gap task tracking for deferred courses — use courseId from URL or from the resumed job
+  const gapTaskCourseId = resumeCourseId ?? resumeJob?.courseId ?? '';
+  const { data: gapTasks, isLoading: isLoadingGapTasks } = useListGapTasksForCourse(gapTaskCourseId);
   const [deferralInfo, setDeferralInfo] = useState<{
     totalTasks: number;
     completedTasks: number;
@@ -205,6 +206,9 @@ export default function CourseWizardPage() {
     const courseId = job.courseId;
     if (!courseId) return;
 
+    // If this is a deferred job, we need to call resumeDeferral first
+    if (job.status === GenerationJobStatus.DEFERRED) return;
+
     // Skip wizard, go straight to workflow phase with this specific job
     setPhase('workflow');
     workflowSend({
@@ -216,12 +220,21 @@ export default function CourseWizardPage() {
   }, [resumeJob, courseJob, workflowMachineState, workflowSend]);
 
   // Resume from deferral: send resume update to Temporal workflow
+  // Handles both ?courseId= (from editor "Resume Wizard") and ?jobId= (from "In Progress" tab)
   const [deferralRestored, setDeferralRestored] = useState(false);
   useEffect(() => {
     if (deferralRestored) return;
-    if (!resumeCourseId || !deferredJob) return;
-    // Don't restore if an active job was found (takes precedence)
-    if (resumeJob || courseJob) return;
+
+    // Find the deferred job — either from ?jobId= (resumeJob) or ?courseId= (deferredJob)
+    const jobToResume = (resumeJob?.status === GenerationJobStatus.DEFERRED ? resumeJob : null) ?? deferredJob;
+    if (!jobToResume) return;
+
+    // Don't restore if an active (non-deferred) job was found (takes precedence)
+    if (courseJob) return;
+
+    const courseId = jobToResume.courseId;
+    if (!courseId) return;
+
     if (isLoadingGapTasks) return;
 
     // Compute gap task counts for the banner
@@ -234,13 +247,13 @@ export default function CourseWizardPage() {
     // Send resume update to Temporal — wakes the workflow and re-enters combined review
     const resumeWorkflow = async () => {
       try {
-        await resumeDeferral.mutate(deferredJob.id);
+        await resumeDeferral.mutate(jobToResume.id);
         // Switch to workflow phase — polling will pick up the awaiting_approval state
         setPhase('workflow');
         workflowSend({
           type: 'RESUME',
-          jobId: deferredJob.id,
-          courseId: resumeCourseId,
+          jobId: jobToResume.id,
+          courseId,
           status: GenerationJobStatus.PROCESSING,
         });
       } catch (err) {
@@ -251,7 +264,7 @@ export default function CourseWizardPage() {
     setDeferralRestored(true);
     resumeWorkflow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deferredJob, resumeJob, courseJob, isLoadingGapTasks, deferralRestored, resumeCourseId, gapTasks]);
+  }, [deferredJob, resumeJob, courseJob, isLoadingGapTasks, deferralRestored, gapTasks]);
 
   // Poll Temporal workflow state
   const wfIsIdle = workflowMachineState.matches('idle');
@@ -654,6 +667,7 @@ export default function CourseWizardPage() {
                     data={workflowMachineState.context.stepData}
                     onModificationsChange={setPendingModifications}
                     onAssignGaps={workflowMachineState.context.pendingStep === WorkflowStepType.COMBINED_REVIEW ? handleAssignGaps : undefined}
+                    deferralInfo={deferralInfo}
                   />
                 </CardContent>
               )}

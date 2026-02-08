@@ -18,6 +18,7 @@ import {
 import { WorkflowStepType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { LessonComponentType } from '@/gen/mirai/v1/component_enums_pb';
 import { ComponentRenderer } from '@/components/course/renderers/ComponentRenderer';
+import { GapTaskResumeBanner } from '@/components/course/GapTaskResumeBanner';
 
 // ============================================================
 // Step Data Shape Interfaces
@@ -113,14 +114,20 @@ interface CombinedReviewData {
 // Main Component
 // ============================================================
 
+interface DeferralInfo {
+  totalTasks: number;
+  completedTasks: number;
+}
+
 interface StepDataRendererProps {
   step: WorkflowStepType;
   data: Record<string, unknown>;
   onModificationsChange?: (mods: Record<string, string>) => void;
   onAssignGaps?: (gaps: string[]) => void;
+  deferralInfo?: DeferralInfo | null;
 }
 
-export function StepDataRenderer({ step, data, onModificationsChange, onAssignGaps }: StepDataRendererProps) {
+export function StepDataRenderer({ step, data, onModificationsChange, onAssignGaps, deferralInfo }: StepDataRendererProps) {
   switch (step) {
     case WorkflowStepType.INTENT_ANALYSIS:
       return <AnalysisStep data={data as unknown as AnalysisStepData} onModificationsChange={onModificationsChange} />;
@@ -136,6 +143,7 @@ export function StepDataRenderer({ step, data, onModificationsChange, onAssignGa
           data={data as unknown as CombinedReviewData}
           onModificationsChange={onModificationsChange}
           onAssignGaps={onAssignGaps}
+          deferralInfo={deferralInfo}
         />
       );
     default:
@@ -682,10 +690,12 @@ function CombinedReviewTabs({
   data,
   onModificationsChange,
   onAssignGaps,
+  deferralInfo,
 }: {
   data: CombinedReviewData;
   onModificationsChange?: (mods: Record<string, string>) => void;
   onAssignGaps?: (gaps: string[]) => void;
+  deferralInfo?: DeferralInfo | null;
 }) {
   type TabId = 'outline' | 'analysis' | 'knowledge' | 'outcomes' | 'sample';
   const hasKnowledge = !!data.knowledge_coverage;
@@ -750,7 +760,15 @@ function CombinedReviewTabs({
         <AnalysisStep data={data.analysis} onModificationsChange={handleAnalysisMods} />
       )}
       {activeTab === 'knowledge' && data.knowledge_coverage && (
-        <KnowledgeCoveragePanel coverage={data.knowledge_coverage} onAssignGaps={onAssignGaps} />
+        <>
+          {deferralInfo && (
+            <GapTaskResumeBanner
+              totalTasks={deferralInfo.totalTasks}
+              completedTasks={deferralInfo.completedTasks}
+            />
+          )}
+          <KnowledgeCoveragePanel coverage={data.knowledge_coverage} onAssignGaps={onAssignGaps} />
+        </>
       )}
       {activeTab === 'outcomes' && (
         <OutcomesStep data={data.outcomes} />
