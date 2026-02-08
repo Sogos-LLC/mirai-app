@@ -100,11 +100,17 @@ func (r *KnowledgeGapTaskRepository) ListByCourse(ctx context.Context, courseID 
 }
 
 // Complete marks a gap task as completed.
-func (r *KnowledgeGapTaskRepository) Complete(ctx context.Context, id uuid.UUID, knowledgeSourceID *uuid.UUID) (*entity.KnowledgeGapTask, error) {
+func (r *KnowledgeGapTaskRepository) Complete(ctx context.Context, id uuid.UUID, knowledgeSourceID *uuid.UUID, completionNotes *string) (*entity.KnowledgeGapTask, error) {
+	var notes sql.NullString
+	if completionNotes != nil {
+		notes = sql.NullString{String: *completionNotes, Valid: true}
+	}
+
 	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.KnowledgeGapTask, error) {
 		return q.CompleteGapTask(ctx, gen.CompleteGapTaskParams{
 			ID:                id,
 			KnowledgeSourceID: toNullUUID(knowledgeSourceID),
+			CompletionNotes:   notes,
 		})
 	})
 	if err != nil {
@@ -149,6 +155,9 @@ func toGapTaskEntity(t *gen.KnowledgeGapTask) *entity.KnowledgeGapTask {
 	}
 	if t.CompletedAt != nil {
 		task.CompletedAt = *t.CompletedAt
+	}
+	if t.CompletionNotes.Valid {
+		task.CompletionNotes = &t.CompletionNotes.String
 	}
 
 	return task

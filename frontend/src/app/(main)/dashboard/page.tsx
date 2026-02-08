@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'recent' | 'draft' | 'published'>('recent');
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showGapsAssignedBanner, setShowGapsAssignedBanner] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -49,22 +50,26 @@ export default function Dashboard() {
     }, 200);
   }, []);
 
-  // Handle checkout success, welcome banners (auth_token handled by layout)
+  // Handle checkout success, welcome banners, gaps assigned (auth_token handled by layout)
   useEffect(() => {
     const isCheckoutSuccess = searchParams.get('checkout') === 'success';
     const isWelcome = searchParams.get('welcome') === 'true';
+    const isGapsAssigned = searchParams.get('gaps_assigned') === 'true';
 
     if (isCheckoutSuccess) {
       setShowSuccessBanner(true);
       fireConfetti();
-      // Clean up URL
       router.replace('/dashboard', { scroll: false });
     }
 
     if (isWelcome) {
       setShowWelcomeModal(true);
       fireConfetti();
-      // Clean up URL
+      router.replace('/dashboard', { scroll: false });
+    }
+
+    if (isGapsAssigned) {
+      setShowGapsAssignedBanner(true);
       router.replace('/dashboard', { scroll: false });
     }
   }, [searchParams, router, fireConfetti]);
@@ -72,12 +77,18 @@ export default function Dashboard() {
   // Auto-hide success banner after 30 seconds
   useEffect(() => {
     if (showSuccessBanner) {
-      const timer = setTimeout(() => {
-        setShowSuccessBanner(false);
-      }, 30000);
+      const timer = setTimeout(() => setShowSuccessBanner(false), 30000);
       return () => clearTimeout(timer);
     }
   }, [showSuccessBanner]);
+
+  // Auto-hide gaps assigned banner after 10 seconds
+  useEffect(() => {
+    if (showGapsAssignedBanner) {
+      const timer = setTimeout(() => setShowGapsAssignedBanner(false), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [showGapsAssignedBanner]);
 
   // Server-side filtering based on active tab
   const statusFilter = activeTab === 'draft'
@@ -159,6 +170,29 @@ export default function Dashboard() {
             <div>
               <h2 className="text-xl font-bold text-white">Payment Successful!</h2>
               <p className="text-white/90">Your subscription is now active. Start creating amazing courses!</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gaps Assigned Success Banner */}
+      {showGapsAssignedBanner && (
+        <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl p-5 mb-6 relative">
+          <button
+            onClick={() => setShowGapsAssignedBanner(false)}
+            className="absolute top-3 right-3 text-white/80 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 rounded-full p-2">
+              <CheckCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-white">Knowledge gaps assigned!</h3>
+              <p className="text-sm text-white/90">
+                Team members have been notified. Your course is saved as a draft and can be resumed once gaps are filled.
+              </p>
             </div>
           </div>
         </div>

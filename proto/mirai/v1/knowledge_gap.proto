@@ -26,6 +26,11 @@ message KnowledgeGapTask {
   optional string assigned_to_email = 10;
   google.protobuf.Timestamp created_at = 11;
   optional google.protobuf.Timestamp completed_at = 12;
+  // Read-only context fields populated at query time
+  optional string course_title = 13;
+  optional string assigned_by_name = 14;
+  optional string target_team_name = 15;
+  optional string completion_notes = 16;
 }
 
 // GapTaskInput is used when creating gap tasks in bulk.
@@ -85,6 +90,7 @@ message ListGapTasksForCourseResponse {
 message CompleteGapTaskRequest {
   string task_id = 1;
   optional string knowledge_source_id = 2;
+  optional string completion_notes = 3;
 }
 
 // CompleteGapTaskResponse contains the updated gap task.

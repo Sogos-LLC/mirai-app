@@ -29,6 +29,10 @@ export const KnowledgeGapTaskSchema = z.object({
   assignedToEmail: z.string().optional(),
   createdAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
+  courseTitle: z.string().optional(),
+  assignedByName: z.string().optional(),
+  targetTeamName: z.string().optional(),
+  completionNotes: z.string().optional(),
 });
 
 export type KnowledgeGapTask = z.infer<typeof KnowledgeGapTaskSchema>;
@@ -71,6 +75,7 @@ export type ListGapTasksForCourseRequest = z.infer<typeof ListGapTasksForCourseR
 export const CompleteGapTaskRequestSchema = z.object({
   taskId: z.string(),
   knowledgeSourceId: z.string().optional(),
+  completionNotes: z.string().optional(),
 });
 
 export type CompleteGapTaskRequest = z.infer<typeof CompleteGapTaskRequestSchema>;

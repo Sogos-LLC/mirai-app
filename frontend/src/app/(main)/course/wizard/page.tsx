@@ -220,11 +220,18 @@ export default function CourseWizardPage() {
     setShowGapAssignment(true);
   }, []);
 
-  // Defer workflow: send __DEFERRED__ rejection to save draft
+  // Defer workflow: fire-and-forget reject + redirect immediately
   const handleDefer = useCallback(() => {
     setShowGapAssignment(false);
-    send({ type: 'REJECT', feedback: '__DEFERRED__' });
-  }, [send]);
+    // Fire-and-forget: reject the workflow directly, don't wait for XState
+    rejectStep.mutate({
+      jobId: state.context.jobId!,
+      step: state.context.pendingStep!,
+      feedback: '__DEFERRED__',
+    });
+    // Redirect immediately — user doesn't need to watch the spinner
+    router.push('/dashboard?gaps_assigned=true');
+  }, [rejectStep, state.context, router]);
 
   // Step-specific labels for approval UI
   const pendingStep = state.context.pendingStep;

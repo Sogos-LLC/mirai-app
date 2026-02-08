@@ -21,7 +21,12 @@ type KnowledgeGapTask struct {
 	UpdatedAt         time.Time
 	CompletedAt       *time.Time
 
-	// Populated at read time from Kratos identity
+	CompletionNotes *string
+
+	// Populated at read time from Kratos identity or related entities
 	AssignedToName  string
 	AssignedToEmail string
+	CourseTitle     string
+	AssignedByName  string
+	TargetTeamName  string
 }

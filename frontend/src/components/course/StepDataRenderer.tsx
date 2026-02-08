@@ -179,14 +179,14 @@ function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: Knowledg
   const Icon = config.icon;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Assessment banner */}
-      <div className={`rounded-lg border p-3 ${config.borderColor} ${config.bgColor}`}>
-        <div className="flex items-center gap-2 mb-1">
-          <Icon className={`w-4 h-4 ${config.iconColor} shrink-0`} />
-          <span className={`text-sm font-medium ${config.textColor}`}>{config.label}</span>
+      <div className={`rounded-lg border p-4 ${config.borderColor} ${config.bgColor}`}>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Icon className={`w-5 h-5 ${config.iconColor} shrink-0`} />
+          <span className={`text-sm font-semibold ${config.textColor}`}>{config.label}</span>
         </div>
-        <p className={`text-xs ${config.textColor} ml-6`}>
+        <p className={`text-sm ${config.textColor} ml-7 leading-relaxed`}>
           {config.description} ({coverage.source_count} source{coverage.source_count !== 1 ? 's' : ''} analyzed)
         </p>
       </div>
@@ -194,14 +194,14 @@ function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: Knowledg
       {/* Key findings */}
       {coverage.key_findings.length > 0 && (
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-muted font-medium mb-1.5">
-            <Lightbulb className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1.5 text-sm text-muted font-semibold mb-2">
+            <Lightbulb className="w-4 h-4" />
             <span>What Your Sources Cover</span>
           </div>
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {coverage.key_findings.map((finding, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-primary">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+              <li key={i} className="flex items-start gap-2.5 text-sm text-primary leading-relaxed">
+                <span className="mt-2 h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
                 <span>{finding}</span>
               </li>
             ))}
@@ -212,14 +212,14 @@ function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: Knowledg
       {/* Gaps */}
       {coverage.gaps.length > 0 && (
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-muted font-medium mb-1.5">
-            <FileSearch className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1.5 text-sm text-muted font-semibold mb-2">
+            <FileSearch className="w-4 h-4" />
             <span>Knowledge Gaps</span>
           </div>
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {coverage.gaps.map((gap, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-primary">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+              <li key={i} className="flex items-start gap-2.5 text-sm text-primary leading-relaxed">
+                <span className="mt-2 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
                 <span>{gap}</span>
               </li>
             ))}
@@ -229,14 +229,14 @@ function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: Knowledg
 
       {/* Micro course recommendation */}
       {coverage.recommended_format === 'micro_course' && (
-        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3">
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-4">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-0.5">
+              <div className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
                 Consider a focused micro course
               </div>
-              <p className="text-xs text-amber-600 dark:text-amber-400">
+              <p className="text-sm text-amber-600 dark:text-amber-400 leading-relaxed">
                 With limited source coverage, a shorter, more focused course may produce higher-quality content.
                 You can still approve to proceed with a full course.
               </p>
@@ -250,9 +250,9 @@ function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: Knowledg
         <button
           type="button"
           onClick={() => onAssignGaps(coverage.gaps)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 transition-colors min-h-[36px]"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 transition-colors min-h-[44px]"
         >
-          <Users className="w-3.5 h-3.5" />
+          <Users className="w-4 h-4" />
           Assign Gaps to Team
         </button>
       )}
@@ -262,56 +262,100 @@ function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: Knowledg
 
 function AnalysisStep({ data, onModificationsChange, onAssignGaps }: { data: AnalysisStepData; onModificationsChange?: (mods: Record<string, string>) => void; onAssignGaps?: (gaps: string[]) => void }) {
   const [purpose, setPurpose] = useState(data.purpose_statement ?? '');
+  const [activeTab, setActiveTab] = useState<'analysis' | 'knowledge'>(
+    data.knowledge_coverage ? 'analysis' : 'analysis'
+  );
 
   const handlePurposeChange = useCallback((val: string) => {
     setPurpose(val);
     onModificationsChange?.({ purpose_statement: val });
   }, [onModificationsChange]);
 
+  const hasKnowledge = !!data.knowledge_coverage;
+
   return (
-    <div className="space-y-5">
-      {data.knowledge_coverage && (
-        <KnowledgeCoveragePanel coverage={data.knowledge_coverage} onAssignGaps={onAssignGaps} />
+    <div className="space-y-4">
+      {/* Tab buttons */}
+      <div className="flex gap-1 border-b">
+        <button
+          type="button"
+          onClick={() => setActiveTab('analysis')}
+          className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'analysis'
+              ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+              : 'border-transparent text-muted hover:text-secondary'
+          }`}
+        >
+          Analysis
+        </button>
+        {hasKnowledge && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('knowledge')}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
+              activeTab === 'knowledge'
+                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                : 'border-transparent text-muted hover:text-secondary'
+            }`}
+          >
+            Knowledge
+            {data.knowledge_coverage && data.knowledge_coverage.gaps.length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                {data.knowledge_coverage.gaps.length}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Analysis tab */}
+      {activeTab === 'analysis' && (
+        <div className="space-y-5">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-muted font-semibold mb-2">
+              <Target className="w-4 h-4" />
+              <span>Purpose Statement</span>
+            </div>
+            <textarea
+              value={purpose}
+              onChange={(e) => handlePurposeChange(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2.5 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none leading-relaxed"
+            />
+          </div>
+
+          <div>
+            <div className="text-sm text-muted font-semibold mb-2">Learner Assumptions</div>
+            <ul className="space-y-2">
+              {(data.learner_assumptions ?? []).map((assumption, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-primary leading-relaxed">
+                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />
+                  <span>{assumption}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <div className="text-sm text-muted font-semibold mb-2">Scope Constraints (Not Covered)</div>
+            <ul className="space-y-2">
+              {(data.constraints ?? []).map((constraint, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-secondary leading-relaxed">
+                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                  <span>{constraint}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="text-xs text-muted">Edit the purpose statement above, or approve as-is.</p>
+        </div>
       )}
 
-      <div>
-        <div className="flex items-center gap-2 text-xs text-muted mb-1.5">
-          <Target className="w-3.5 h-3.5" />
-          <span>Purpose Statement</span>
-        </div>
-        <textarea
-          value={purpose}
-          onChange={(e) => handlePurposeChange(e.target.value)}
-          rows={3}
-          className="w-full px-3 py-2 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none leading-relaxed"
-        />
-      </div>
-
-      <div>
-        <div className="text-xs text-muted font-medium mb-2">Learner Assumptions</div>
-        <ul className="space-y-1.5">
-          {(data.learner_assumptions ?? []).map((assumption, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-primary">
-              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />
-              <span>{assumption}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <div className="text-xs text-muted font-medium mb-2">Scope Constraints (Not Covered)</div>
-        <ul className="space-y-1.5">
-          {(data.constraints ?? []).map((constraint, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-secondary">
-              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-              <span>{constraint}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <p className="text-xs text-muted">Edit the purpose statement above, or approve as-is.</p>
+      {/* Knowledge tab */}
+      {activeTab === 'knowledge' && data.knowledge_coverage && (
+        <KnowledgeCoveragePanel coverage={data.knowledge_coverage} onAssignGaps={onAssignGaps} />
+      )}
     </div>
   );
 }

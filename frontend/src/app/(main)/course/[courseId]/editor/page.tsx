@@ -412,17 +412,24 @@ export default function CourseEditorPage() {
     );
   }
 
-  // No outline
+  // No outline — course exists in DB but has no generated content yet (e.g. deferred at Step 1)
   if (!outline) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
         <div className="text-center">
           <BookOpen className="w-16 h-16 text-muted mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-primary mb-2">Course Not Found</h2>
-          <p className="text-secondary mb-4">This course outline could not be loaded.</p>
-          <Button variant="primary" onClick={() => router.push('/content-library')}>
-            Back to Library
-          </Button>
+          <h2 className="text-xl font-semibold text-primary mb-2">Course Not Ready</h2>
+          <p className="text-secondary mb-4 max-w-md">
+            This course hasn&apos;t been generated yet. Resume the creation wizard to build your course content.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="secondary" onClick={() => router.push('/dashboard')}>
+              Back to Dashboard
+            </Button>
+            <Button variant="primary" onClick={() => router.push(`/course/wizard?courseId=${courseId}`)}>
+              Resume Wizard
+            </Button>
+          </div>
         </div>
       </div>
     );

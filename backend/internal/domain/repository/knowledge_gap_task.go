@@ -22,7 +22,7 @@ type KnowledgeGapTaskRepository interface {
 	ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.KnowledgeGapTask, error)
 
 	// Complete marks a gap task as completed.
-	Complete(ctx context.Context, id uuid.UUID, knowledgeSourceID *uuid.UUID) (*entity.KnowledgeGapTask, error)
+	Complete(ctx context.Context, id uuid.UUID, knowledgeSourceID *uuid.UUID, completionNotes *string) (*entity.KnowledgeGapTask, error)
 
 	// CountPendingByCourse counts non-completed gap tasks for a course.
 	CountPendingByCourse(ctx context.Context, courseID uuid.UUID) (int, error)

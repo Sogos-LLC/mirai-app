@@ -28,6 +28,7 @@ WHERE id = $1;
 UPDATE knowledge_gap_tasks
 SET status = 'completed',
     knowledge_source_id = $2,
+    completion_notes = $3,
     completed_at = NOW(),
     updated_at = NOW()
 WHERE id = $1

@@ -111,10 +111,11 @@ export function useCompleteGapTask() {
   const mutation = useMutation(completeGapTask);
 
   return {
-    mutate: async (params: { taskId: string; knowledgeSourceId?: string }) => {
+    mutate: async (params: { taskId: string; knowledgeSourceId?: string; completionNotes?: string }) => {
       const request = create(CompleteGapTaskRequestSchema, {
         taskId: params.taskId,
         knowledgeSourceId: params.knowledgeSourceId,
+        completionNotes: params.completionNotes,
       });
 
       const result = await mutation.mutateAsync(request);

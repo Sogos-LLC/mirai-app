@@ -287,7 +287,7 @@ func main() {
 	notificationService := service.NewNotificationService(userRepo, notificationRepo, kratosClient, emailClient, notificationPubSub, cfg.FrontendURL, logger)
 
 	// Knowledge gap service
-	knowledgeGapService := service.NewKnowledgeGapService(gapTaskRepo, userRepo, notificationService, kratosClient, logger)
+	knowledgeGapService := service.NewKnowledgeGapService(gapTaskRepo, userRepo, courseRepo, teamRepo, notificationService, kratosClient, logger)
 	logger.Info("knowledge gap service initialized")
 
 	// SCORM packager for course exports

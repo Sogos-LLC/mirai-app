@@ -168,7 +168,12 @@ func (s *KnowledgeGapServiceServer) CompleteGapTask(
 		knowledgeSourceID = &id
 	}
 
-	task, err := s.gapService.CompleteTask(ctx, kratosID, taskID, knowledgeSourceID)
+	var completionNotes *string
+	if req.Msg.CompletionNotes != nil {
+		completionNotes = req.Msg.CompletionNotes
+	}
+
+	task, err := s.gapService.CompleteTask(ctx, kratosID, taskID, knowledgeSourceID, completionNotes)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -210,6 +215,18 @@ func gapTaskToProto(t *entity.KnowledgeGapTask) *v1.KnowledgeGapTask {
 	}
 	if t.CompletedAt != nil {
 		proto.CompletedAt = timestamppb.New(*t.CompletedAt)
+	}
+	if t.CourseTitle != "" {
+		proto.CourseTitle = &t.CourseTitle
+	}
+	if t.AssignedByName != "" {
+		proto.AssignedByName = &t.AssignedByName
+	}
+	if t.TargetTeamName != "" {
+		proto.TargetTeamName = &t.TargetTeamName
+	}
+	if t.CompletionNotes != nil {
+		proto.CompletionNotes = t.CompletionNotes
 	}
 
 	return proto

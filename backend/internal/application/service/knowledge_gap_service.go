@@ -16,6 +16,8 @@ import (
 type KnowledgeGapService struct {
 	gapTaskRepo         repository.KnowledgeGapTaskRepository
 	userRepo            repository.UserRepository
+	courseRepo           repository.CourseRepository
+	teamRepo            repository.TeamRepository
 	notificationService *NotificationService
 	identity            service.IdentityProvider
 	logger              service.Logger
@@ -25,6 +27,8 @@ type KnowledgeGapService struct {
 func NewKnowledgeGapService(
 	gapTaskRepo repository.KnowledgeGapTaskRepository,
 	userRepo repository.UserRepository,
+	courseRepo repository.CourseRepository,
+	teamRepo repository.TeamRepository,
 	notificationService *NotificationService,
 	identity service.IdentityProvider,
 	logger service.Logger,
@@ -32,6 +36,8 @@ func NewKnowledgeGapService(
 	return &KnowledgeGapService{
 		gapTaskRepo:         gapTaskRepo,
 		userRepo:            userRepo,
+		courseRepo:           courseRepo,
+		teamRepo:            teamRepo,
 		notificationService: notificationService,
 		identity:            identity,
 		logger:              logger,
@@ -127,7 +133,7 @@ func (s *KnowledgeGapService) ListForCourse(ctx context.Context, courseID uuid.U
 }
 
 // CompleteTask marks a gap task as completed and notifies the assigner.
-func (s *KnowledgeGapService) CompleteTask(ctx context.Context, kratosID uuid.UUID, taskID uuid.UUID, knowledgeSourceID *uuid.UUID) (*entity.KnowledgeGapTask, error) {
+func (s *KnowledgeGapService) CompleteTask(ctx context.Context, kratosID uuid.UUID, taskID uuid.UUID, knowledgeSourceID *uuid.UUID, completionNotes *string) (*entity.KnowledgeGapTask, error) {
 	log := s.logger.With("taskID", taskID)
 
 	// Verify the user is the assignee
@@ -147,7 +153,7 @@ func (s *KnowledgeGapService) CompleteTask(ctx context.Context, kratosID uuid.UU
 		return nil, domainerrors.ErrForbidden
 	}
 
-	task, err := s.gapTaskRepo.Complete(ctx, taskID, knowledgeSourceID)
+	task, err := s.gapTaskRepo.Complete(ctx, taskID, knowledgeSourceID, completionNotes)
 	if err != nil {
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
@@ -170,12 +176,14 @@ func (s *KnowledgeGapService) CompleteTask(ctx context.Context, kratosID uuid.UU
 	return task, nil
 }
 
-// enrichTasksWithIdentity adds names/emails from Kratos to gap tasks.
+// enrichTasksWithIdentity adds names/emails from Kratos and context from related entities.
 func (s *KnowledgeGapService) enrichTasksWithIdentity(ctx context.Context, tasks []*entity.KnowledgeGapTask) {
-	// Collect unique user IDs to avoid redundant Kratos lookups
 	userCache := make(map[uuid.UUID]*entity.User)
+	courseCache := make(map[uuid.UUID]string)
+	teamCache := make(map[uuid.UUID]string)
 
 	for _, task := range tasks {
+		// Assignee name + email
 		user, ok := userCache[task.AssignedToUserID]
 		if !ok {
 			var err error
@@ -187,10 +195,48 @@ func (s *KnowledgeGapService) enrichTasksWithIdentity(ctx context.Context, tasks
 		}
 
 		identity, err := s.identity.GetIdentity(ctx, user.KratosID.String())
-		if err != nil || identity == nil {
-			continue
+		if err == nil && identity != nil {
+			task.AssignedToName = identity.FirstName + " " + identity.LastName
+			task.AssignedToEmail = identity.Email
 		}
-		task.AssignedToName = identity.FirstName + " " + identity.LastName
-		task.AssignedToEmail = identity.Email
+
+		// Assigner name
+		assigner, ok := userCache[task.AssignedByUserID]
+		if !ok {
+			assigner, err = s.userRepo.GetByID(ctx, task.AssignedByUserID)
+			if err == nil && assigner != nil {
+				userCache[task.AssignedByUserID] = assigner
+			}
+		}
+		if assigner != nil {
+			assignerIdentity, err := s.identity.GetIdentity(ctx, assigner.KratosID.String())
+			if err == nil && assignerIdentity != nil {
+				task.AssignedByName = assignerIdentity.FirstName + " " + assignerIdentity.LastName
+			}
+		}
+
+		// Course title
+		if title, ok := courseCache[task.CourseID]; ok {
+			task.CourseTitle = title
+		} else {
+			course, err := s.courseRepo.GetByID(ctx, task.CourseID)
+			if err == nil && course != nil {
+				courseCache[task.CourseID] = course.Title
+				task.CourseTitle = course.Title
+			}
+		}
+
+		// Target team name
+		if task.TargetTeamID != nil {
+			if name, ok := teamCache[*task.TargetTeamID]; ok {
+				task.TargetTeamName = name
+			} else {
+				team, err := s.teamRepo.GetByID(ctx, *task.TargetTeamID)
+				if err == nil && team != nil {
+					teamCache[*task.TargetTeamID] = team.Name
+					task.TargetTeamName = team.Name
+				}
+			}
+		}
 	}
 }

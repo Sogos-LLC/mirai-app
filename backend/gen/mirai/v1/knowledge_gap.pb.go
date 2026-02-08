@@ -90,8 +90,13 @@ type KnowledgeGapTask struct {
 	AssignedToEmail   *string                `protobuf:"bytes,10,opt,name=assigned_to_email,json=assignedToEmail,proto3,oneof" json:"assigned_to_email,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	CompletedAt       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Read-only context fields populated at query time
+	CourseTitle     *string `protobuf:"bytes,13,opt,name=course_title,json=courseTitle,proto3,oneof" json:"course_title,omitempty"`
+	AssignedByName  *string `protobuf:"bytes,14,opt,name=assigned_by_name,json=assignedByName,proto3,oneof" json:"assigned_by_name,omitempty"`
+	TargetTeamName  *string `protobuf:"bytes,15,opt,name=target_team_name,json=targetTeamName,proto3,oneof" json:"target_team_name,omitempty"`
+	CompletionNotes *string `protobuf:"bytes,16,opt,name=completion_notes,json=completionNotes,proto3,oneof" json:"completion_notes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *KnowledgeGapTask) Reset() {
@@ -206,6 +211,34 @@ func (x *KnowledgeGapTask) GetCompletedAt() *timestamppb.Timestamp {
 		return x.CompletedAt
 	}
 	return nil
+}
+
+func (x *KnowledgeGapTask) GetCourseTitle() string {
+	if x != nil && x.CourseTitle != nil {
+		return *x.CourseTitle
+	}
+	return ""
+}
+
+func (x *KnowledgeGapTask) GetAssignedByName() string {
+	if x != nil && x.AssignedByName != nil {
+		return *x.AssignedByName
+	}
+	return ""
+}
+
+func (x *KnowledgeGapTask) GetTargetTeamName() string {
+	if x != nil && x.TargetTeamName != nil {
+		return *x.TargetTeamName
+	}
+	return ""
+}
+
+func (x *KnowledgeGapTask) GetCompletionNotes() string {
+	if x != nil && x.CompletionNotes != nil {
+		return *x.CompletionNotes
+	}
+	return ""
 }
 
 // GapTaskInput is used when creating gap tasks in bulk.
@@ -552,6 +585,7 @@ type CompleteGapTaskRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	TaskId            string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	KnowledgeSourceId *string                `protobuf:"bytes,2,opt,name=knowledge_source_id,json=knowledgeSourceId,proto3,oneof" json:"knowledge_source_id,omitempty"`
+	CompletionNotes   *string                `protobuf:"bytes,3,opt,name=completion_notes,json=completionNotes,proto3,oneof" json:"completion_notes,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -596,6 +630,13 @@ func (x *CompleteGapTaskRequest) GetTaskId() string {
 func (x *CompleteGapTaskRequest) GetKnowledgeSourceId() string {
 	if x != nil && x.KnowledgeSourceId != nil {
 		return *x.KnowledgeSourceId
+	}
+	return ""
+}
+
+func (x *CompleteGapTaskRequest) GetCompletionNotes() string {
+	if x != nil && x.CompletionNotes != nil {
+		return *x.CompletionNotes
 	}
 	return ""
 }
@@ -649,7 +690,7 @@ var File_mirai_v1_knowledge_gap_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_knowledge_gap_proto_rawDesc = "" +
 	"\n" +
-	"\x1cmirai/v1/knowledge_gap.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8e\x05\n" +
+	"\x1cmirai/v1/knowledge_gap.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x94\a\n" +
 	"\x10KnowledgeGapTask\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12'\n" +
@@ -664,11 +705,19 @@ const file_mirai_v1_knowledge_gap_proto_rawDesc = "" +
 	" \x01(\tH\x02R\x0fassignedToEmail\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12B\n" +
-	"\fcompleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x03R\vcompletedAt\x88\x01\x01B\x16\n" +
+	"\fcompleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x03R\vcompletedAt\x88\x01\x01\x12&\n" +
+	"\fcourse_title\x18\r \x01(\tH\x04R\vcourseTitle\x88\x01\x01\x12-\n" +
+	"\x10assigned_by_name\x18\x0e \x01(\tH\x05R\x0eassignedByName\x88\x01\x01\x12-\n" +
+	"\x10target_team_name\x18\x0f \x01(\tH\x06R\x0etargetTeamName\x88\x01\x01\x12.\n" +
+	"\x10completion_notes\x18\x10 \x01(\tH\aR\x0fcompletionNotes\x88\x01\x01B\x16\n" +
 	"\x14_knowledge_source_idB\x13\n" +
 	"\x11_assigned_to_nameB\x14\n" +
 	"\x12_assigned_to_emailB\x0f\n" +
-	"\r_completed_at\"f\n" +
+	"\r_completed_atB\x0f\n" +
+	"\r_course_titleB\x13\n" +
+	"\x11_assigned_by_nameB\x13\n" +
+	"\x11_target_team_nameB\x13\n" +
+	"\x11_completion_notes\"f\n" +
 	"\fGapTaskInput\x12'\n" +
 	"\x0fgap_description\x18\x01 \x01(\tR\x0egapDescription\x12-\n" +
 	"\x13assigned_to_user_id\x18\x02 \x01(\tR\x10assignedToUserId\"\x88\x01\n" +
@@ -686,11 +735,13 @@ const file_mirai_v1_knowledge_gap_proto_rawDesc = "" +
 	"\x1cListGapTasksForCourseRequest\x12\x1b\n" +
 	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\"Q\n" +
 	"\x1dListGapTasksForCourseResponse\x120\n" +
-	"\x05tasks\x18\x01 \x03(\v2\x1a.mirai.v1.KnowledgeGapTaskR\x05tasks\"~\n" +
+	"\x05tasks\x18\x01 \x03(\v2\x1a.mirai.v1.KnowledgeGapTaskR\x05tasks\"\xc3\x01\n" +
 	"\x16CompleteGapTaskRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x123\n" +
-	"\x13knowledge_source_id\x18\x02 \x01(\tH\x00R\x11knowledgeSourceId\x88\x01\x01B\x16\n" +
-	"\x14_knowledge_source_id\"I\n" +
+	"\x13knowledge_source_id\x18\x02 \x01(\tH\x00R\x11knowledgeSourceId\x88\x01\x01\x12.\n" +
+	"\x10completion_notes\x18\x03 \x01(\tH\x01R\x0fcompletionNotes\x88\x01\x01B\x16\n" +
+	"\x14_knowledge_source_idB\x13\n" +
+	"\x11_completion_notes\"I\n" +
 	"\x17CompleteGapTaskResponse\x12.\n" +
 	"\x04task\x18\x01 \x01(\v2\x1a.mirai.v1.KnowledgeGapTaskR\x04task*\xbe\x01\n" +
 	"\x16KnowledgeGapTaskStatus\x12)\n" +
