@@ -36,6 +36,7 @@ import type { RealignParams, RealignResult, LearningObjective } from '@/componen
 const RealignmentModal = dynamic(() => import('@/components/course/modals/RealignmentModal').then(m => ({ default: m.RealignmentModal })));
 import { useCourseEditorStore, setOnSaveCallback, setOnPersistCallback, setOnPersistSuccessCallback } from '@/store/zustand/courseEditorStore';
 import type { LessonComponent, GeneratedLesson } from '@/gen/mirai/v1/ai_generation_types_pb';
+import { SourceType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
 import { SortableComponent, AddBetween, DragPreview } from '@/components/editor/SortableComponent';
 import { ExportModal } from '@/components/editor/ExportModal';
@@ -43,11 +44,17 @@ import { CourseEditorHeader } from '@/components/editor/CourseEditorHeader';
 import { OutlineSidebar } from '@/components/editor/OutlineSidebar';
 import { MobileOutlineSheet } from '@/components/editor/MobileOutlineSheet';
 import { ProvenanceBadge, ProvenancePanel } from '@/components/editor/ProvenancePanel';
-import { SourceModeOverlay } from '@/components/editor/SourceModeOverlay';
+import { SourceModeOverlay, computeEffectiveGrounding } from '@/components/editor/SourceModeOverlay';
 import { SourceSummaryBar } from '@/components/editor/SourceSummaryBar';
 import { useCourseEditorStore as useEditorStore } from '@/store/zustand/courseEditorStore';
 import { useExportWorkflow } from '@/hooks/useExportWorkflow';
 import { useAutoSave } from '@/hooks/useAutoSave';
+
+/** Check if a component is validatable (MODEL or unset source type) */
+function isComponentValidatable(component: LessonComponent): boolean {
+  const sourceType = component.provenance?.dominantSourceType;
+  return !sourceType || sourceType === SourceType.MODEL;
+}
 
 export default function CourseEditorPage() {
   const params = useParams();
@@ -176,6 +183,31 @@ export default function CourseEditorPage() {
     currentLessonRef.current = currentLesson;
   }, [currentLesson]);
 
+  // Compute effective grounding scores per lesson (uses localComponents for current, server data for others)
+  const effectiveGroundings = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const lesson of lessonsList) {
+      const gen = lesson.generated;
+      if (!gen?.aggregateProvenance) continue;
+
+      const prov = gen.aggregateProvenance;
+      const comps = lesson.id === selectedLessonId ? localComponents : gen.components ?? [];
+
+      const groundedTokens = (prov.teamTokens ?? 0) + (prov.globalTokens ?? 0) + (prov.courseTokens ?? 0);
+      const score = computeEffectiveGrounding(
+        comps,
+        prov.groundingScore ?? 0,
+        prov.totalTokens ?? 0,
+        groundedTokens,
+      );
+      map.set(lesson.id, score);
+    }
+    return map;
+  }, [lessonsList, localComponents, selectedLessonId]);
+
+  // Current lesson effective grounding
+  const currentEffectiveGrounding = selectedLessonId ? effectiveGroundings.get(selectedLessonId) : undefined;
+
   // Set up save callback for zustand store (updates local state)
   useEffect(() => {
     setOnSaveCallback((componentId: string, contentJson: string) => {
@@ -211,6 +243,7 @@ export default function CourseEditorPage() {
           type: c.type as LessonComponentType,
           order: c.order,
           contentJson: c.contentJson,
+          validated: c.validated,
           alignment: c.alignment
             ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
             : undefined,
@@ -255,6 +288,7 @@ export default function CourseEditorPage() {
         type: c.type as LessonComponentType,
         order: c.order,
         contentJson: c.contentJson,
+        validated: c.validated,
         alignment: c.alignment
           ? { learningObjectiveIds: c.alignment.learningObjectiveIds ?? [] }
           : undefined,
@@ -400,6 +434,16 @@ export default function CourseEditorPage() {
     setShowProvenance((prev) => !prev);
   }, []);
 
+  // Toggle validated state on a component
+  const handleToggleValidated = useCallback((componentId: string) => {
+    setLocalComponents((items) =>
+      items.map((item) =>
+        item.id === componentId ? { ...item, validated: !item.validated } : item
+      )
+    );
+    setHasChanges(true);
+  }, []);
+
   // Loading state
   if (outlineLoading || lessonsLoading) {
     return (
@@ -469,6 +513,7 @@ export default function CourseEditorPage() {
           selectedLessonId={selectedLessonId}
           onLessonSelect={setSelectedLessonId}
           onToggleSection={toggleSection}
+          effectiveGroundings={effectiveGroundings}
         />
 
         {/* Main content - Lesson editor */}
@@ -502,6 +547,7 @@ export default function CourseEditorPage() {
                         provenance={currentLesson.generated.aggregateProvenance}
                         isOpen={showProvenance}
                         onToggle={handleToggleProvenance}
+                        effectiveScore={currentEffectiveGrounding}
                       />
                     )}
                   </div>
@@ -521,7 +567,8 @@ export default function CourseEditorPage() {
                 {sourceMode && currentLesson.generated?.aggregateProvenance && (
                   <SourceSummaryBar
                     provenance={currentLesson.generated.aggregateProvenance}
-                    components={currentLesson.generated.components ?? []}
+                    components={localComponents}
+                    effectiveGroundingScore={currentEffectiveGrounding}
                   />
                 )}
 
@@ -547,6 +594,7 @@ export default function CourseEditorPage() {
                             (c) => c.id === component.id
                           );
                           const provenance = originalComponent?.provenance;
+                          const validatable = isComponentValidatable(component);
 
                           const sortable = (
                             <SortableComponent
@@ -565,7 +613,12 @@ export default function CourseEditorPage() {
                           return (
                             <React.Fragment key={component.id}>
                               {sourceMode ? (
-                                <SourceModeOverlay provenance={provenance}>
+                                <SourceModeOverlay
+                                  provenance={provenance}
+                                  validated={component.validated}
+                                  isValidatable={validatable}
+                                  onToggleValidated={() => handleToggleValidated(component.id)}
+                                >
                                   {sortable}
                                 </SourceModeOverlay>
                               ) : (

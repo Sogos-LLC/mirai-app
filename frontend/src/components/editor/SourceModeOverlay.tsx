@@ -5,6 +5,7 @@ import {
   BookOpen,
   Globe,
   Sparkles,
+  CheckCircle2,
   ExternalLink,
   FileText,
   X,
@@ -16,7 +17,7 @@ import type { ComponentProvenance, ProvenanceChunk } from '@/gen/mirai/v1/ai_gen
 // Source type utilities
 // =============================================================================
 
-type SourceTypeKey = 'internal' | 'web' | 'model';
+type SourceTypeKey = 'internal' | 'web' | 'model' | 'validated';
 
 const SOURCE_TYPE_CONFIG: Record<SourceTypeKey, {
   label: string;
@@ -50,9 +51,17 @@ const SOURCE_TYPE_CONFIG: Record<SourceTypeKey, {
     badgeBgVar: 'var(--source-model-badge)',
     badgeTextVar: 'var(--source-model-badge-text)',
   },
+  validated: {
+    label: 'AI Validated',
+    icon: CheckCircle2,
+    borderVar: 'var(--source-validated-border)',
+    bgVar: 'var(--source-validated-bg)',
+    badgeBgVar: 'var(--source-validated-badge)',
+    badgeTextVar: 'var(--source-validated-badge-text)',
+  },
 };
 
-export function getSourceTypeKey(sourceType: SourceType | undefined): SourceTypeKey {
+export function getSourceTypeKey(sourceType: SourceType | undefined, validated?: boolean): SourceTypeKey {
   switch (sourceType) {
     case SourceType.INTERNAL_KNOWLEDGE:
       return 'internal';
@@ -60,12 +69,43 @@ export function getSourceTypeKey(sourceType: SourceType | undefined): SourceType
       return 'web';
     case SourceType.MODEL:
     default:
-      return 'model';
+      return validated ? 'validated' : 'model';
   }
 }
 
-export function getSourceTypeConfig(sourceType: SourceType | undefined) {
-  return SOURCE_TYPE_CONFIG[getSourceTypeKey(sourceType)];
+export function getSourceTypeConfig(sourceType: SourceType | undefined, validated?: boolean) {
+  return SOURCE_TYPE_CONFIG[getSourceTypeKey(sourceType, validated)];
+}
+
+/**
+ * Computes effective grounding score that counts validated MODEL components as grounded.
+ * Returns a score between 0.0 and 1.0.
+ */
+export function computeEffectiveGrounding(
+  components: Array<{
+    provenance?: ComponentProvenance | undefined;
+    validated?: boolean;
+  }>,
+  originalGroundingScore: number,
+  totalTokenCount: number,
+  groundedTokenCount: number,
+): number {
+  if (totalTokenCount <= 0) return originalGroundingScore;
+
+  let validatedModelTokens = 0;
+  for (const comp of components) {
+    if (
+      comp.validated &&
+      (!comp.provenance?.dominantSourceType ||
+        comp.provenance.dominantSourceType === SourceType.MODEL)
+    ) {
+      validatedModelTokens += comp.provenance?.totalTokens ?? 0;
+    }
+  }
+
+  if (validatedModelTokens === 0) return originalGroundingScore;
+
+  return Math.min(1, (groundedTokenCount + validatedModelTokens) / totalTokenCount);
 }
 
 function getDisplayHostname(url: string, sourceName?: string): string {
@@ -86,13 +126,16 @@ function getDisplayHostname(url: string, sourceName?: string): string {
 
 interface SourceModeOverlayProps {
   provenance: ComponentProvenance | undefined;
+  validated?: boolean;
+  isValidatable?: boolean;
+  onToggleValidated?: () => void;
   children: React.ReactNode;
 }
 
-export function SourceModeOverlay({ provenance, children }: SourceModeOverlayProps) {
+export function SourceModeOverlay({ provenance, validated, isValidatable, onToggleValidated, children }: SourceModeOverlayProps) {
   const [showDetail, setShowDetail] = useState(false);
   const sourceType = provenance?.dominantSourceType ?? SourceType.MODEL;
-  const config = getSourceTypeConfig(sourceType);
+  const config = getSourceTypeConfig(sourceType, validated);
   const Icon = config.icon;
 
   return (
@@ -109,7 +152,32 @@ export function SourceModeOverlay({ provenance, children }: SourceModeOverlayPro
         style={{ backgroundColor: config.bgVar }}
       >
         {/* Source type badge - top right */}
-        <div className="flex justify-end mb-1">
+        <div className="flex justify-end mb-1 gap-1.5">
+          {isValidatable && onToggleValidated && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleValidated();
+              }}
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                validated
+                  ? 'opacity-60 hover:opacity-80'
+                  : 'hover:opacity-80'
+              }`}
+              style={{
+                backgroundColor: validated
+                  ? SOURCE_TYPE_CONFIG.validated.badgeBgVar
+                  : SOURCE_TYPE_CONFIG.model.badgeBgVar,
+                color: validated
+                  ? SOURCE_TYPE_CONFIG.validated.badgeTextVar
+                  : SOURCE_TYPE_CONFIG.model.badgeTextVar,
+              }}
+              title={validated ? 'Mark as unvalidated' : 'Mark as validated'}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              {validated ? 'Validated' : 'Validate'}
+            </button>
+          )}
           <div className="relative">
             <button
               onClick={(e) => {

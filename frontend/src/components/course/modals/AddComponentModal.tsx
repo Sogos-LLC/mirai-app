@@ -164,6 +164,7 @@ export function AddComponentModal({
       type,
       contentJson: getDefaultContentForType(type),
       order: insertAfterIndex + 1,
+      validated: false,
       $typeName: 'mirai.v1.LessonComponent',
     };
 

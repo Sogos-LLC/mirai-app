@@ -147,6 +147,7 @@ type LessonComponent struct {
 	CreatedAt            time.Time            `json:"createdAt"`
 	UpdatedAt            time.Time            `json:"updatedAt"`
 	Provenance           *ComponentProvenance `json:"provenance,omitempty"`
+	Validated            bool                 `json:"validated,omitempty"`
 }
 
 // componentTypeIntToString maps proto enum int values to string names.

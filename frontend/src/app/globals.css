@@ -103,6 +103,10 @@
   --source-model-bg: rgba(156, 163, 175, 0.08);
   --source-model-badge: #f3f4f6;
   --source-model-badge-text: #4b5563;
+  --source-validated-border: #10b981;
+  --source-validated-bg: rgba(16, 185, 129, 0.08);
+  --source-validated-badge: #d1fae5;
+  --source-validated-badge-text: #047857;
 }
 
 .dark {
@@ -163,6 +167,10 @@
   --source-model-bg: rgba(107, 114, 128, 0.1);
   --source-model-badge: rgba(107, 114, 128, 0.25);
   --source-model-badge-text: #9ca3af;
+  --source-validated-border: #34d399;
+  --source-validated-bg: rgba(52, 211, 153, 0.1);
+  --source-validated-badge: rgba(16, 185, 129, 0.25);
+  --source-validated-badge-text: #6ee7b7;
 }
 
 /* ===================================

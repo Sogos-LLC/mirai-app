@@ -464,6 +464,7 @@ func (s *AIGenerationServiceServer) UpdateLessonComponents(
 			Order:                c.Order,
 			ContentJSON:          []byte(c.ContentJson),
 			LearningObjectiveIDs: learningObjectiveIDs,
+			Validated:            c.Validated,
 		}
 	}
 
@@ -852,6 +853,7 @@ func lessonComponentToProto(comp *entity.LessonComponent) *v1.LessonComponent {
 		Type:        lessonComponentTypeToProto(comp.Type),
 		Order:       comp.Position,
 		ContentJson: string(comp.ContentJSON),
+		Validated:   comp.Validated,
 	}
 
 	if comp.SMEChunkIDs != nil || comp.LearningObjectiveIDs != nil {

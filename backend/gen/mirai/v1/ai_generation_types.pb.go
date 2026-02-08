@@ -1198,6 +1198,7 @@ type LessonComponent struct {
 	ContentJson   string                 `protobuf:"bytes,4,opt,name=content_json,json=contentJson,proto3" json:"content_json,omitempty"` // JSON string matching component_content.proto types
 	Alignment     *ComponentAlignment    `protobuf:"bytes,5,opt,name=alignment,proto3,oneof" json:"alignment,omitempty"`
 	Provenance    *ComponentProvenance   `protobuf:"bytes,6,opt,name=provenance,proto3,oneof" json:"provenance,omitempty"`
+	Validated     bool                   `protobuf:"varint,7,opt,name=validated,proto3" json:"validated,omitempty"` // User has reviewed and validated this AI-generated component
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1272,6 +1273,13 @@ func (x *LessonComponent) GetProvenance() *ComponentProvenance {
 		return x.Provenance
 	}
 	return nil
+}
+
+func (x *LessonComponent) GetValidated() bool {
+	if x != nil {
+		return x.Validated
+	}
+	return false
 }
 
 // ComponentAlignment tracks what knowledge/objectives a component addresses.
@@ -2326,7 +2334,7 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x11total_token_count\x18\f \x01(\x05R\x0ftotalTokenCount\x12R\n" +
 	"\x14aggregate_provenance\x18\r \x01(\v2\x1a.mirai.v1.LessonProvenanceH\x01R\x13aggregateProvenance\x88\x01\x01B\r\n" +
 	"\v_segue_textB\x17\n" +
-	"\x15_aggregate_provenance\"\xaf\x02\n" +
+	"\x15_aggregate_provenance\"\xcd\x02\n" +
 	"\x0fLessonComponent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1d.mirai.v1.LessonComponentTypeR\x04type\x12\x14\n" +
@@ -2335,7 +2343,8 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\talignment\x18\x05 \x01(\v2\x1c.mirai.v1.ComponentAlignmentH\x00R\talignment\x88\x01\x01\x12B\n" +
 	"\n" +
 	"provenance\x18\x06 \x01(\v2\x1d.mirai.v1.ComponentProvenanceH\x01R\n" +
-	"provenance\x88\x01\x01B\f\n" +
+	"provenance\x88\x01\x01\x12\x1c\n" +
+	"\tvalidated\x18\a \x01(\bR\tvalidatedB\f\n" +
 	"\n" +
 	"_alignmentB\r\n" +
 	"\v_provenance\"J\n" +

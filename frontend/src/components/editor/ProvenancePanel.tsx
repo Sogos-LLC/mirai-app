@@ -22,12 +22,14 @@ export function ProvenanceBadge({
   provenance,
   isOpen,
   onToggle,
+  effectiveScore,
 }: {
   provenance: LessonProvenance;
   isOpen: boolean;
   onToggle: () => void;
+  effectiveScore?: number;
 }) {
-  const score = provenance.groundingScore ?? 0;
+  const score = effectiveScore ?? provenance.groundingScore ?? 0;
 
   return (
     <button

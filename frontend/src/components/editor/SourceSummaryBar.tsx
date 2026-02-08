@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BookOpen, Globe, Sparkles, Info } from 'lucide-react';
+import { BookOpen, Globe, Sparkles, CheckCircle2, Info } from 'lucide-react';
 import { SourceType } from '@/gen/mirai/v1/ai_generation_types_pb';
 import type { LessonComponent, LessonProvenance } from '@/gen/mirai/v1/ai_generation_types_pb';
 import { getSourceTypeKey } from './SourceModeOverlay';
@@ -9,27 +9,31 @@ import { getSourceTypeKey } from './SourceModeOverlay';
 interface SourceSummaryBarProps {
   provenance: LessonProvenance;
   components: LessonComponent[];
+  effectiveGroundingScore?: number;
 }
 
-export function SourceSummaryBar({ provenance, components }: SourceSummaryBarProps) {
-  // Count components by dominant source type
+export function SourceSummaryBar({ provenance, components, effectiveGroundingScore }: SourceSummaryBarProps) {
+  // Count components by dominant source type, separating validated MODEL components
   let internalCount = 0;
   let webCount = 0;
   let modelCount = 0;
+  let validatedCount = 0;
 
   for (const comp of components) {
-    const key = getSourceTypeKey(comp.provenance?.dominantSourceType);
+    const key = getSourceTypeKey(comp.provenance?.dominantSourceType, comp.validated);
     if (key === 'internal') internalCount++;
     else if (key === 'web') webCount++;
+    else if (key === 'validated') validatedCount++;
     else modelCount++;
   }
 
-  const total = internalCount + webCount + modelCount;
+  const total = internalCount + webCount + modelCount + validatedCount;
   const internalPct = total > 0 ? (internalCount / total) * 100 : 0;
   const webPct = total > 0 ? (webCount / total) * 100 : 0;
+  const validatedPct = total > 0 ? (validatedCount / total) * 100 : 0;
   const modelPct = total > 0 ? (modelCount / total) * 100 : 0;
 
-  const groundingScore = provenance.groundingScore ?? 0;
+  const groundingScore = effectiveGroundingScore ?? provenance.groundingScore ?? 0;
   const sourceCount = provenance.sourceCount ?? 0;
 
   return (
@@ -73,6 +77,15 @@ export function SourceSummaryBar({ provenance, components }: SourceSummaryBarPro
             }}
           />
         )}
+        {validatedPct > 0 && (
+          <div
+            className="h-full transition-all"
+            style={{
+              width: `${validatedPct}%`,
+              backgroundColor: 'var(--source-validated-border)',
+            }}
+          />
+        )}
         {modelPct > 0 && (
           <div
             className="h-full transition-all"
@@ -96,6 +109,12 @@ export function SourceSummaryBar({ provenance, components }: SourceSummaryBarPro
           <div className="flex items-center gap-1">
             <Globe className="w-3 h-3" style={{ color: 'var(--source-web-border)' }} />
             <span>Web ({webCount})</span>
+          </div>
+        )}
+        {validatedCount > 0 && (
+          <div className="flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" style={{ color: 'var(--source-validated-border)' }} />
+            <span>Validated ({validatedCount})</span>
           </div>
         )}
         {modelCount > 0 && (

@@ -318,6 +318,7 @@ export const LessonComponentSchema = z.object({
   contentJson: z.string(),
   alignment: ComponentAlignmentSchema.optional(),
   provenance: ComponentProvenanceSchema.optional(),
+  validated: z.boolean(),
 });
 
 export type LessonComponent = z.infer<typeof LessonComponentSchema>;

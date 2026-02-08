@@ -564,6 +564,7 @@ func (s *AIGenerationService) ListGeneratedLessons(ctx context.Context, kratosID
 				Type:        valueobject.LessonComponentType(comp.Type),
 				Position:    comp.Order,
 				ContentJSON: comp.ContentJSON,
+				Validated:   comp.Validated,
 			}
 			if comp.Provenance != nil {
 				entComp.Provenance = s3ComponentProvenanceToEntity(comp.Provenance)
@@ -760,6 +761,7 @@ type UpdateComponentInput struct {
 	Order                int32
 	ContentJSON          json.RawMessage
 	LearningObjectiveIDs []string
+	Validated            bool
 }
 
 // UpdateLessonComponentsResult contains the updated lesson.
@@ -802,21 +804,24 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 				}
 			}
 
+			// Build a map of existing S3 components for fast lookup
+			existingMap := make(map[string]*S3LessonComponent, len(s3Lesson.Components))
+			for i := range s3Lesson.Components {
+				existingMap[s3Lesson.Components[i].ID] = &s3Lesson.Components[i]
+			}
+
 			// Build updated components
 			now := time.Now()
 			updatedComponents = make([]S3LessonComponent, len(req.Components))
 			for i, input := range req.Components {
 				compID := input.ID
 				createdAt := now
+				var existingProvenance *ComponentProvenance
 				if len(input.ID) > 5 && input.ID[:5] == "temp-" {
 					compID = uuid.New().String()
-				} else {
-					for _, existing := range s3Lesson.Components {
-						if existing.ID == input.ID {
-							createdAt = existing.CreatedAt
-							break
-						}
-					}
+				} else if existing, ok := existingMap[input.ID]; ok {
+					createdAt = existing.CreatedAt
+					existingProvenance = existing.Provenance
 				}
 
 				updatedComponents[i] = S3LessonComponent{
@@ -827,6 +832,8 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 					LearningObjectiveIDs: input.LearningObjectiveIDs,
 					CreatedAt:            createdAt,
 					UpdatedAt:            now,
+					Provenance:           existingProvenance,
+					Validated:            input.Validated,
 				}
 			}
 
@@ -850,14 +857,19 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 
 	for i, comp := range updatedComponents {
 		compID, _ := uuid.Parse(comp.ID)
-		lesson.Components[i] = entity.LessonComponent{
+		entComp := entity.LessonComponent{
 			ID:          compID,
 			TenantID:    tenantID,
 			LessonID:    lessonID,
 			Type:        valueobject.LessonComponentType(comp.Type),
 			Position:    comp.Order,
 			ContentJSON: comp.ContentJSON,
+			Validated:   comp.Validated,
 		}
+		if comp.Provenance != nil {
+			entComp.Provenance = s3ComponentProvenanceToEntity(comp.Provenance)
+		}
+		lesson.Components[i] = entComp
 	}
 
 	return &UpdateLessonComponentsResult{Lesson: lesson}, nil

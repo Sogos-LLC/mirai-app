@@ -170,6 +170,7 @@ message LessonComponent {
   string content_json = 4;  // JSON string matching component_content.proto types
   optional ComponentAlignment alignment = 5;
   optional ComponentProvenance provenance = 6;
+  bool validated = 7;  // User has reviewed and validated this AI-generated component
 }
 
 // ComponentAlignment tracks what knowledge/objectives a component addresses.

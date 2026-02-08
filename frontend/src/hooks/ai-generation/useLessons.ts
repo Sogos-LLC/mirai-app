@@ -159,6 +159,7 @@ export function useUpdateLessonComponents() {
         alignment?: {
           learningObjectiveIds?: string[];
         };
+        validated?: boolean;
       }>;
     }) => {
       const protoComponents = data.components.map((c) =>
@@ -167,6 +168,7 @@ export function useUpdateLessonComponents() {
           type: c.type,
           order: c.order,
           contentJson: c.contentJson,
+          validated: c.validated ?? false,
           alignment: c.alignment
             ? create(ComponentAlignmentSchema, {
                 learningObjectiveIds: c.alignment.learningObjectiveIds ?? [],

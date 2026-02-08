@@ -23,6 +23,7 @@ interface OutlineSidebarProps {
   selectedLessonId: string | null;
   onLessonSelect: (id: string) => void;
   onToggleSection: (idx: number) => void;
+  effectiveGroundings?: Map<string, number>;
 }
 
 export function OutlineSidebar({
@@ -32,6 +33,7 @@ export function OutlineSidebar({
   selectedLessonId,
   onLessonSelect,
   onToggleSection,
+  effectiveGroundings,
 }: OutlineSidebarProps) {
   return (
     <aside className="w-64 flex-shrink-0 hidden lg:block">
@@ -66,7 +68,9 @@ export function OutlineSidebar({
                       {sectionLessons.map((lesson) => {
                         const isActive = lesson.id === selectedLessonId;
                         const hasContent = !!lesson.generated;
-                        const gScore = lesson.generated?.groundingScore ?? 0;
+                        const gScore = effectiveGroundings?.get(lesson.id)
+                          ?? lesson.generated?.groundingScore
+                          ?? 0;
 
                         return (
                           <button

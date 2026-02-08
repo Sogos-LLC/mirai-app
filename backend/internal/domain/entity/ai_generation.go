@@ -269,6 +269,9 @@ type LessonComponent struct {
 	// Provenance tracking
 	Provenance *ComponentProvenance
 
+	// User validation
+	Validated bool
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
