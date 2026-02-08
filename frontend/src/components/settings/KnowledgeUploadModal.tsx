@@ -156,14 +156,20 @@ export function KnowledgeUploadModal({
     reader.readAsText(file.slice(0, 1000));
   }, [file]);
 
-  // Handle upload
+  // Handle upload — enforce a minimum 5s "uploading" state so the modal
+  // doesn't flash when the upload completes near-instantly.
   const handleUpload = useCallback(async () => {
     setUploadError(null);
     setUploadComplete(false);
 
+    const minDisplayMs = 5000;
+    const delay = new Promise((r) => setTimeout(r, minDisplayMs));
+
     try {
-      const hash = await computeFileHash(file);
-      const result = await uploadFile(file, hash);
+      const [result] = await Promise.all([
+        computeFileHash(file).then((hash) => uploadFile(file, hash)),
+        delay,
+      ]);
       const newSourceId = result.source?.id || null;
       setSourceId(newSourceId);
       setUploadComplete(true);
