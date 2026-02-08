@@ -25,6 +25,7 @@ import {
   computeFileHash,
   formatFileSize,
 } from '@/hooks/useTeamKnowledge';
+import { renderMarkdownHtml } from '@/components/knowledge/fileUploadUtils';
 
 // =============================================================================
 // Types
@@ -115,13 +116,20 @@ export function KnowledgeUploadModal({
 
   // Hooks
   const { mutate: uploadFile, isLoading: isUploading } = useUploadKnowledge(teamId);
-  const { data: source } = useGetTeamKnowledgeSource(sourceId || undefined);
+  const { data: source, refetch: refetchSource } = useGetTeamKnowledgeSource(sourceId || undefined);
 
   // Real progress from Temporal workflow
   const ingestionState = useKnowledgeIngestionState(
     sourceId,
     uploadComplete && !uploadError,
   );
+
+  // Refetch source data when ingestion completes (stats are stale from initial fetch)
+  useEffect(() => {
+    if (ingestionState.stage === 'ready' && sourceId) {
+      refetchSource();
+    }
+  }, [ingestionState.stage, sourceId, refetchSource]);
 
   // Derive current stage from workflow state
   const currentStage: ProcessingStage = uploadError
@@ -488,12 +496,22 @@ export function KnowledgeUploadModal({
                 </button>
                 {showContentPreview && filePreview && (
                   <div className="bg-gray-50 dark:bg-dark-50 rounded-xl p-4">
-                    <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono overflow-x-auto">
-                      {filePreview}
-                      {filePreview.length >= 500 && (
-                        <span className="text-gray-400 dark:text-gray-500">...</span>
-                      )}
-                    </pre>
+                    {file.name.endsWith('.md') ? (
+                      <div
+                        className="text-sm text-gray-700 dark:text-gray-300 overflow-x-auto [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-1 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1 [&_strong]:font-bold [&_em]:italic [&_code]:bg-gray-200 [&_code]:dark:bg-dark-100 [&_code]:px-1 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_li]:ml-4 [&_li]:list-disc [&_hr]:my-2 [&_hr]:border-gray-300 [&_hr]:dark:border-dark-border"
+                        dangerouslySetInnerHTML={{
+                          __html: renderMarkdownHtml(filePreview) +
+                            (filePreview.length >= 500 ? '<span style="opacity:0.5">...</span>' : ''),
+                        }}
+                      />
+                    ) : (
+                      <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono overflow-x-auto">
+                        {filePreview}
+                        {filePreview.length >= 500 && (
+                          <span className="text-gray-400 dark:text-gray-500">...</span>
+                        )}
+                      </pre>
+                    )}
                   </div>
                 )}
               </section>
