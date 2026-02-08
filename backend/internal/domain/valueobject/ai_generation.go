@@ -75,6 +75,7 @@ const (
 	GenerationJobStatusFailed            GenerationJobStatus = "failed"
 	GenerationJobStatusCancelled         GenerationJobStatus = "cancelled"
 	GenerationJobStatusAwaitingApproval  GenerationJobStatus = "awaiting_approval"
+	GenerationJobStatusDeferred          GenerationJobStatus = "deferred"
 )
 
 func (s GenerationJobStatus) String() string {
@@ -85,7 +86,7 @@ func (s GenerationJobStatus) IsValid() bool {
 	switch s {
 	case GenerationJobStatusQueued, GenerationJobStatusProcessing,
 		GenerationJobStatusCompleted, GenerationJobStatusFailed, GenerationJobStatusCancelled,
-		GenerationJobStatusAwaitingApproval:
+		GenerationJobStatusAwaitingApproval, GenerationJobStatusDeferred:
 		return true
 	}
 	return false

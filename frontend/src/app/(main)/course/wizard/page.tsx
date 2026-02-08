@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { StepDataRenderer } from '@/components/course/StepDataRenderer';
 import { GapAssignmentModal } from '@/components/course/GapAssignmentModal';
+import { GapTaskResumeBanner } from '@/components/course/GapTaskResumeBanner';
 import { PageShell } from '@/components/layout/PageShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -28,6 +29,7 @@ import { WizardStep5ToneContext } from '@/components/course/wizard/WizardStep5To
 import {
   wizardMachine,
   TOTAL_WIZARD_STEPS,
+  stepNameToNumber,
 } from '@/machines/wizardMachine';
 import {
   courseCreationMachine,
@@ -42,7 +44,7 @@ import {
   useWorkflowState,
 } from '@/hooks/useCourseCreation';
 import { useCreateCourse } from '@/hooks/useCourses';
-import { useGetJob, useGetActiveJobForCourse } from '@/hooks/ai-generation/useJobs';
+import { useGetJob, useGetActiveJobForCourse, useGetDeferredJobForCourse } from '@/hooks/ai-generation/useJobs';
 import {
   useGenerateTitle,
   useGenerateOutcomes,
@@ -50,7 +52,12 @@ import {
   useGenerateAudiencePersonas,
   useGenerateToneOptions,
   useDeleteWizardState,
+  useSaveWizardState,
+  useGetWizardState,
+  buildWizardStepData,
 } from '@/hooks/useCourseWizard';
+import { useListGapTasksForCourse } from '@/hooks/useKnowledgeGapTasks';
+import { KnowledgeGapTaskStatus } from '@/gen/mirai/v1/knowledge_gap_pb';
 import {
   GenerationJobStatus,
   WorkflowStepType,
@@ -71,6 +78,8 @@ export default function CourseWizardPage() {
   const genAudiencePersonas = useGenerateAudiencePersonas();
   const genToneOptions = useGenerateToneOptions();
   const deleteState = useDeleteWizardState();
+  const saveState = useSaveWizardState();
+  const { data: savedWizardState, isLoading: isLoadingWizardState } = useGetWizardState();
 
   // =========================================================================
   // Wizard XState Machine
@@ -176,6 +185,15 @@ export default function CourseWizardPage() {
   const { data: resumeJob } = useGetJob(resumeJobId);
   // Resume by courseId — look up the active job for this course
   const { data: courseJob } = useGetActiveJobForCourse(resumeCourseId);
+  // Look for a deferred job for this course (gap tasks assigned)
+  const { data: deferredJob } = useGetDeferredJobForCourse(resumeCourseId);
+
+  // Gap task tracking for deferred courses
+  const { data: gapTasks } = useListGapTasksForCourse(resumeCourseId ?? '');
+  const [deferralInfo, setDeferralInfo] = useState<{
+    totalTasks: number;
+    completedTasks: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!workflowMachineState.matches('idle')) return;
@@ -196,6 +214,53 @@ export default function CourseWizardPage() {
       status: job.status as GenerationJobStatus,
     });
   }, [resumeJob, courseJob, workflowMachineState, workflowSend]);
+
+  // Resume from deferral: restore wizard state when a deferred job is found
+  const [deferralRestored, setDeferralRestored] = useState(false);
+  useEffect(() => {
+    if (deferralRestored) return;
+    if (!resumeCourseId || !deferredJob) return;
+    // Don't restore if an active job was found (takes precedence)
+    if (resumeJob || courseJob) return;
+    if (isLoadingWizardState) return;
+
+    // Compute gap task counts
+    const total = gapTasks.length;
+    const completed = gapTasks.filter(
+      (t) => t.status === KnowledgeGapTaskStatus.COMPLETED
+    ).length;
+    setDeferralInfo({ totalTasks: total, completedTasks: completed });
+
+    // Restore wizard state if saved
+    if (savedWizardState?.data) {
+      const data = savedWizardState.data;
+      const step = stepNameToNumber(savedWizardState.currentStep);
+      wizardSend({
+        type: 'RESTORE_STATE',
+        state: {
+          courseName: data.courseName,
+          improvedTitle: data.improvedTitle,
+          description: data.description,
+          desiredOutcomes: data.desiredOutcomes,
+          smePersonas: [...data.smePersonas],
+          selectedSmeIds: [...data.selectedSmeIds],
+          audiencePersonas: [...data.audiencePersonas],
+          selectedAudienceIds: [...data.selectedAudienceIds],
+          toneOptions: [...data.toneOptions],
+          selectedToneId: data.selectedToneId,
+          additionalContext: data.additionalContext,
+          enableInternalKnowledge: data.selectedTeamDocIds.length > 0 || data.selectedGlobalDocIds.length > 0,
+          selectedTeamDocIds: [...data.selectedTeamDocIds],
+          selectedGlobalDocIds: [...data.selectedGlobalDocIds],
+          strictKnowledgeOnly: data.internalDataOnly,
+        },
+        step,
+      });
+    }
+
+    setDeferralRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deferredJob, resumeJob, courseJob, savedWizardState, isLoadingWizardState, deferralRestored, resumeCourseId, gapTasks]);
 
   // Poll Temporal workflow state
   const wfIsIdle = workflowMachineState.matches('idle');
@@ -233,6 +298,7 @@ export default function CourseWizardPage() {
     const startWorkflow = async () => {
       setPhase('starting');
       setStartError(null);
+      setDeferralInfo(null);
 
       try {
         const ctx = wizardState.context;
@@ -359,15 +425,23 @@ export default function CourseWizardPage() {
     setShowGapAssignment(true);
   }, []);
 
-  const handleDefer = useCallback(() => {
+  const handleDefer = useCallback(async () => {
     setShowGapAssignment(false);
+
+    // Save wizard state so it can be restored on resume
+    const stepData = buildWizardStepData(wizardState.context);
+    saveState.mutate({
+      currentStep: 'toneSelection', // save at last wizard step
+      data: stepData,
+    }).catch(() => {}); // fire-and-forget
+
     rejectStep.mutate({
       jobId: workflowMachineState.context.jobId!,
       step: workflowMachineState.context.pendingStep!,
       feedback: '__DEFERRED__',
     });
     router.push('/dashboard?gaps_assigned=true');
-  }, [rejectStep, workflowMachineState.context, router]);
+  }, [rejectStep, workflowMachineState.context, router, wizardState.context, saveState]);
 
   const pendingStep = workflowMachineState.context.pendingStep;
 
@@ -416,6 +490,15 @@ export default function CourseWizardPage() {
                 />
               ) : (
                 <>
+                  {/* Gap task resume banner */}
+                  {deferralInfo && (
+                    <GapTaskResumeBanner
+                      totalTasks={deferralInfo.totalTasks}
+                      completedTasks={deferralInfo.completedTasks}
+                      onDismiss={() => setDeferralInfo(null)}
+                    />
+                  )}
+
                   {/* Wizard error banner */}
                   {wizardCtx.error && (
                     <div className="mb-6 flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">

@@ -970,6 +970,8 @@ func generationJobStatusToProto(s valueobject.GenerationJobStatus) v1.Generation
 		return v1.GenerationJobStatus_GENERATION_JOB_STATUS_CANCELLED
 	case valueobject.GenerationJobStatusAwaitingApproval:
 		return v1.GenerationJobStatus_GENERATION_JOB_STATUS_AWAITING_APPROVAL
+	case valueobject.GenerationJobStatusDeferred:
+		return v1.GenerationJobStatus_GENERATION_JOB_STATUS_DEFERRED
 	default:
 		return v1.GenerationJobStatus_GENERATION_JOB_STATUS_UNSPECIFIED
 	}
@@ -989,6 +991,8 @@ func protoToGenerationJobStatus(s v1.GenerationJobStatus) valueobject.Generation
 		return valueobject.GenerationJobStatusCancelled
 	case v1.GenerationJobStatus_GENERATION_JOB_STATUS_AWAITING_APPROVAL:
 		return valueobject.GenerationJobStatusAwaitingApproval
+	case v1.GenerationJobStatus_GENERATION_JOB_STATUS_DEFERRED:
+		return valueobject.GenerationJobStatusDeferred
 	default:
 		return valueobject.GenerationJobStatusQueued
 	}

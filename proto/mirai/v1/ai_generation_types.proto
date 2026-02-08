@@ -34,6 +34,7 @@ enum GenerationJobStatus {
   GENERATION_JOB_STATUS_FAILED = 4;
   GENERATION_JOB_STATUS_CANCELLED = 5;
   GENERATION_JOB_STATUS_AWAITING_APPROVAL = 6;
+  GENERATION_JOB_STATUS_DEFERRED = 7;
 }
 
 // OutlineApprovalStatus for generated content review.

@@ -83,6 +83,30 @@ export function useGetActiveJobForCourse(courseId: string | undefined) {
 }
 
 /**
+ * Hook to find a deferred COURSE_CREATION job for a specific course.
+ * Used when resuming course creation after gap tasks are completed.
+ */
+export function useGetDeferredJobForCourse(courseId: string | undefined) {
+  const query = useQuery(
+    listJobs,
+    { courseId: courseId ?? '', type: GenerationJobType.COURSE_CREATION },
+    { enabled: !!courseId },
+  );
+
+  const deferredJob = (query.data?.jobs ?? []).find(
+    (job: GenerationJob) =>
+      !job.parentJobId &&
+      job.status === GenerationJobStatus.DEFERRED
+  );
+
+  return {
+    data: deferredJob,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
+}
+
+/**
  * Hook to get active generation jobs (queued or processing).
  * Fetches a generation job by ID with optional polling.
  * Only shows top-level jobs (course_outline, full_course) - not individual lesson jobs.

@@ -95,6 +95,7 @@ const (
 	GenerationJobStatus_GENERATION_JOB_STATUS_FAILED            GenerationJobStatus = 4
 	GenerationJobStatus_GENERATION_JOB_STATUS_CANCELLED         GenerationJobStatus = 5
 	GenerationJobStatus_GENERATION_JOB_STATUS_AWAITING_APPROVAL GenerationJobStatus = 6
+	GenerationJobStatus_GENERATION_JOB_STATUS_DEFERRED          GenerationJobStatus = 7
 )
 
 // Enum value maps for GenerationJobStatus.
@@ -107,6 +108,7 @@ var (
 		4: "GENERATION_JOB_STATUS_FAILED",
 		5: "GENERATION_JOB_STATUS_CANCELLED",
 		6: "GENERATION_JOB_STATUS_AWAITING_APPROVAL",
+		7: "GENERATION_JOB_STATUS_DEFERRED",
 	}
 	GenerationJobStatus_value = map[string]int32{
 		"GENERATION_JOB_STATUS_UNSPECIFIED":       0,
@@ -116,6 +118,7 @@ var (
 		"GENERATION_JOB_STATUS_FAILED":            4,
 		"GENERATION_JOB_STATUS_CANCELLED":         5,
 		"GENERATION_JOB_STATUS_AWAITING_APPROVAL": 6,
+		"GENERATION_JOB_STATUS_DEFERRED":          7,
 	}
 )
 
@@ -2436,7 +2439,7 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"#GENERATION_JOB_TYPE_COMPONENT_REGEN\x10\x04\x12#\n" +
 	"\x1fGENERATION_JOB_TYPE_FULL_COURSE\x10\x05\x12'\n" +
 	"#GENERATION_JOB_TYPE_COURSE_PLANNING\x10\x06\x12'\n" +
-	"#GENERATION_JOB_TYPE_COURSE_CREATION\x10\a*\x9d\x02\n" +
+	"#GENERATION_JOB_TYPE_COURSE_CREATION\x10\a*\xc1\x02\n" +
 	"\x13GenerationJobStatus\x12%\n" +
 	"!GENERATION_JOB_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cGENERATION_JOB_STATUS_QUEUED\x10\x01\x12$\n" +
@@ -2444,7 +2447,8 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x1fGENERATION_JOB_STATUS_COMPLETED\x10\x03\x12 \n" +
 	"\x1cGENERATION_JOB_STATUS_FAILED\x10\x04\x12#\n" +
 	"\x1fGENERATION_JOB_STATUS_CANCELLED\x10\x05\x12+\n" +
-	"'GENERATION_JOB_STATUS_AWAITING_APPROVAL\x10\x06*\xe8\x01\n" +
+	"'GENERATION_JOB_STATUS_AWAITING_APPROVAL\x10\x06\x12\"\n" +
+	"\x1eGENERATION_JOB_STATUS_DEFERRED\x10\a*\xe8\x01\n" +
 	"\x15OutlineApprovalStatus\x12'\n" +
 	"#OUTLINE_APPROVAL_STATUS_UNSPECIFIED\x10\x00\x12*\n" +
 	"&OUTLINE_APPROVAL_STATUS_PENDING_REVIEW\x10\x01\x12$\n" +
