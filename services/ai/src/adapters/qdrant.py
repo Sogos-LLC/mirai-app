@@ -34,19 +34,39 @@ class QdrantAdapter:
         return self._client
 
     async def ensure_collection(self) -> None:
-        """Create the collection if it doesn't exist."""
+        """Create or recreate the collection if dimensions don't match."""
         client = await self._get_client()
+        expected_dim = settings.embedding_dimensions
+
         collections = await client.get_collections()
         names = [c.name for c in collections.collections]
-        if self.collection not in names:
-            await client.create_collection(
-                collection_name=self.collection,
-                vectors_config=VectorParams(
-                    size=settings.embedding_dimensions,
-                    distance=Distance.COSINE,
-                ),
-            )
-            log.info("created qdrant collection", collection=self.collection)
+
+        if self.collection in names:
+            info = await client.get_collection(self.collection)
+            current_dim = info.config.params.vectors.size
+            if current_dim != expected_dim:
+                log.warn(
+                    "collection dimension mismatch, recreating",
+                    collection=self.collection,
+                    current=current_dim,
+                    expected=expected_dim,
+                )
+                await client.delete_collection(self.collection)
+            else:
+                return
+
+        await client.create_collection(
+            collection_name=self.collection,
+            vectors_config=VectorParams(
+                size=expected_dim,
+                distance=Distance.COSINE,
+            ),
+        )
+        log.info(
+            "created qdrant collection",
+            collection=self.collection,
+            dimensions=expected_dim,
+        )
 
     async def search(
         self,
