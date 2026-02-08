@@ -116,14 +116,7 @@ test.describe('Knowledge Document Upload', () => {
     await screenshot(page, 'stats-populated');
 
     // --- Fix 2: Verify markdown content preview renders as rich HTML ---
-    // Expand the Content Preview accordion
-    const contentPreviewToggle = modal.getByText('Content Preview');
-    await contentPreviewToggle.scrollIntoViewIfNeeded();
-    await contentPreviewToggle.click();
-    await page.waitForTimeout(500);
-
-    // The markdown file should render via dangerouslySetInnerHTML (not <pre>)
-    // For .md files, the preview uses a div with overflow-x-auto (not <pre>)
+    // Content Preview is open by default — scroll to it
     const previewDiv = modal.locator('div.overflow-x-auto').first();
     await previewDiv.scrollIntoViewIfNeeded();
     const previewHtml = await previewDiv.innerHTML();
