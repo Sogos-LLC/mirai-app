@@ -29,7 +29,6 @@ import { WizardStep5ToneContext } from '@/components/course/wizard/WizardStep5To
 import {
   wizardMachine,
   TOTAL_WIZARD_STEPS,
-  stepNameToNumber,
 } from '@/machines/wizardMachine';
 import {
   courseCreationMachine,
@@ -234,7 +233,6 @@ export default function CourseWizardPage() {
     // Restore wizard state if saved
     if (savedWizardState?.data) {
       const data = savedWizardState.data;
-      const step = stepNameToNumber(savedWizardState.currentStep);
       wizardSend({
         type: 'RESTORE_STATE',
         state: {
@@ -254,8 +252,10 @@ export default function CourseWizardPage() {
           selectedGlobalDocIds: [...data.selectedGlobalDocIds],
           strictKnowledgeOnly: data.internalDataOnly,
         },
-        step,
+        step: 5,
       });
+      // Wizard was already completed before deferral — skip straight to workflow
+      wizardSend({ type: 'COMPLETE' });
     }
 
     setDeferralRestored(true);
@@ -303,11 +303,14 @@ export default function CourseWizardPage() {
       try {
         const ctx = wizardState.context;
 
-        // 1. Create course record
-        const courseResult = await createCourse.mutate({
-          settings: { title: ctx.improvedTitle || ctx.courseName },
-        });
-        const courseId = courseResult.course?.id;
+        // 1. Use existing course (deferral resume) or create new one
+        let courseId = resumeCourseId;
+        if (!courseId) {
+          const courseResult = await createCourse.mutate({
+            settings: { title: ctx.improvedTitle || ctx.courseName },
+          });
+          courseId = courseResult.course?.id;
+        }
         if (!courseId) throw new Error('Failed to create course');
 
         // 2. Find the selected tone object
