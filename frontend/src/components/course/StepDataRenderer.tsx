@@ -5,7 +5,6 @@ import {
   Target,
   ListTree,
   BookOpen,
-  AlertTriangle,
   ChevronDown,
   ChevronRight,
   ShieldCheck,
@@ -123,11 +122,11 @@ interface StepDataRendererProps {
 export function StepDataRenderer({ step, data, onModificationsChange, onAssignGaps }: StepDataRendererProps) {
   switch (step) {
     case WorkflowStepType.INTENT_ANALYSIS:
-      return <AnalysisStep data={data as unknown as AnalysisStepData} onModificationsChange={onModificationsChange} onAssignGaps={onAssignGaps} />;
+      return <AnalysisStep data={data as unknown as AnalysisStepData} onModificationsChange={onModificationsChange} />;
     case WorkflowStepType.DEFINE_SUCCESS:
       return <OutcomesStep data={data as unknown as OutcomesStepData} />;
     case WorkflowStepType.APPROVE_STRUCTURE:
-      return <StructureStep data={data as unknown as StructureStepData} onModificationsChange={onModificationsChange} />;
+      return <OutlineStep data={data as unknown as StructureStepData} onModificationsChange={onModificationsChange} />;
     case WorkflowStepType.SAMPLE_LESSON:
       return <LessonStep data={data as unknown as LessonStepData} />;
     case WorkflowStepType.COMBINED_REVIEW:
@@ -234,24 +233,6 @@ function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: Knowledg
         </div>
       )}
 
-      {/* Micro course recommendation */}
-      {coverage.recommended_format === 'micro_course' && (
-        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-4">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <div className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
-                Consider a focused micro course
-              </div>
-              <p className="text-sm text-amber-600 dark:text-amber-400 leading-relaxed">
-                With limited source coverage, a shorter, more focused course may produce higher-quality content.
-                You can still approve to proceed with a full course.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Assign gaps button */}
       {coverage.gaps.length > 0 && onAssignGaps && coverage.coverage_assessment !== 'comprehensive' && (
         <button
@@ -267,102 +248,54 @@ function KnowledgeCoveragePanel({ coverage, onAssignGaps }: { coverage: Knowledg
   );
 }
 
-function AnalysisStep({ data, onModificationsChange, onAssignGaps }: { data: AnalysisStepData; onModificationsChange?: (mods: Record<string, string>) => void; onAssignGaps?: (gaps: string[]) => void }) {
+function AnalysisStep({ data, onModificationsChange }: { data: AnalysisStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
   const [purpose, setPurpose] = useState(data.purpose_statement ?? '');
-  const [activeTab, setActiveTab] = useState<'analysis' | 'knowledge'>(
-    data.knowledge_coverage ? 'analysis' : 'analysis'
-  );
 
   const handlePurposeChange = useCallback((val: string) => {
     setPurpose(val);
     onModificationsChange?.({ purpose_statement: val });
   }, [onModificationsChange]);
 
-  const hasKnowledge = !!data.knowledge_coverage;
-
   return (
-    <div className="space-y-4">
-      {/* Tab buttons */}
-      <div className="flex gap-1 border-b">
-        <button
-          type="button"
-          onClick={() => setActiveTab('analysis')}
-          className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-            activeTab === 'analysis'
-              ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-              : 'border-transparent text-muted hover:text-secondary'
-          }`}
-        >
-          Analysis
-        </button>
-        {hasKnowledge && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('knowledge')}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
-              activeTab === 'knowledge'
-                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                : 'border-transparent text-muted hover:text-secondary'
-            }`}
-          >
-            Knowledge
-            {data.knowledge_coverage && data.knowledge_coverage.gaps.length > 0 && (
-              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                {data.knowledge_coverage.gaps.length}
-              </span>
-            )}
-          </button>
-        )}
+    <div className="space-y-5">
+      <div>
+        <div className="flex items-center gap-2 text-sm text-muted font-semibold mb-2">
+          <Target className="w-4 h-4" />
+          <span>Purpose Statement</span>
+        </div>
+        <textarea
+          value={purpose}
+          onChange={(e) => handlePurposeChange(e.target.value)}
+          rows={4}
+          className="w-full px-3 py-2.5 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none leading-relaxed"
+        />
       </div>
 
-      {/* Analysis tab */}
-      {activeTab === 'analysis' && (
-        <div className="space-y-5">
-          <div>
-            <div className="flex items-center gap-2 text-sm text-muted font-semibold mb-2">
-              <Target className="w-4 h-4" />
-              <span>Purpose Statement</span>
-            </div>
-            <textarea
-              value={purpose}
-              onChange={(e) => handlePurposeChange(e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2.5 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none leading-relaxed"
-            />
-          </div>
+      <div>
+        <div className="text-sm text-muted font-semibold mb-2">Learner Assumptions</div>
+        <ul className="space-y-2">
+          {(data.learner_assumptions ?? []).map((assumption, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-sm text-primary leading-relaxed">
+              <span className="mt-2 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />
+              <span>{assumption}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-          <div>
-            <div className="text-sm text-muted font-semibold mb-2">Learner Assumptions</div>
-            <ul className="space-y-2">
-              {(data.learner_assumptions ?? []).map((assumption, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-primary leading-relaxed">
-                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />
-                  <span>{assumption}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <div>
+        <div className="text-sm text-muted font-semibold mb-2">Scope Constraints (Not Covered)</div>
+        <ul className="space-y-2">
+          {(data.constraints ?? []).map((constraint, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-sm text-secondary leading-relaxed">
+              <span className="mt-2 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span>{constraint}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-          <div>
-            <div className="text-sm text-muted font-semibold mb-2">Scope Constraints (Not Covered)</div>
-            <ul className="space-y-2">
-              {(data.constraints ?? []).map((constraint, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-secondary leading-relaxed">
-                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                  <span>{constraint}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <p className="text-xs text-muted">Edit the purpose statement above, or approve as-is.</p>
-        </div>
-      )}
-
-      {/* Knowledge tab */}
-      {activeTab === 'knowledge' && data.knowledge_coverage && (
-        <KnowledgeCoveragePanel coverage={data.knowledge_coverage} onAssignGaps={onAssignGaps} />
-      )}
+      <p className="text-xs text-muted">Edit the purpose statement above, or approve as-is.</p>
     </div>
   );
 }
@@ -415,15 +348,31 @@ function OutcomesStep({ data }: { data: OutcomesStepData }) {
 }
 
 // ============================================================
-// Step 3: Course Structure
+// Step 3: Course Outline (main branch design)
 // ============================================================
 
-function StructureStep({ data, onModificationsChange }: { data: StructureStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
+function OutlineStep({ data, onModificationsChange }: { data: StructureStepData; onModificationsChange?: (mods: Record<string, string>) => void }) {
   const sections = data.sections ?? [];
   const totalLessons = data.total_lessons ?? sections.reduce((sum, s) => sum + (s.lessons?.length ?? 0), 0);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(
+    () => new Set(sections.map((_, i) => i))
+  );
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
   const [titleOverrides, setTitleOverrides] = useState<Record<number, string>>({});
+
+  const toggleSection = useCallback((index: number) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
+
+  const getSectionTitle = useCallback((idx: number) => {
+    return titleOverrides[idx] ?? sections[idx]?.title ?? '';
+  }, [titleOverrides, sections]);
 
   const handleStartEdit = useCallback((idx: number, currentTitle: string) => {
     setEditingIdx(idx);
@@ -440,7 +389,6 @@ function StructureStep({ data, onModificationsChange }: { data: StructureStepDat
     setTitleOverrides(newOverrides);
     setEditingIdx(null);
 
-    // Convert to modification keys: section_0_title, section_1_title, etc.
     const mods: Record<string, string> = {};
     for (const [key, value] of Object.entries(newOverrides)) {
       mods[`section_${key}_title`] = value;
@@ -448,116 +396,133 @@ function StructureStep({ data, onModificationsChange }: { data: StructureStepDat
     onModificationsChange?.(mods);
   }, [editValue, titleOverrides, sections, onModificationsChange]);
 
-  const getSectionTitle = useCallback((idx: number) => {
-    return titleOverrides[idx] ?? sections[idx]?.title ?? '';
-  }, [titleOverrides, sections]);
-
   return (
-    <div className="space-y-3">
-      {/* Summary header */}
-      <div className="flex items-center gap-4 text-xs text-muted">
-        <div className="flex items-center gap-1.5">
-          <ListTree className="w-3.5 h-3.5" />
-          <span>{sections.length} sections</span>
-        </div>
-        {totalLessons > 0 && (
-          <div className="flex items-center gap-1.5">
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>{totalLessons} lessons</span>
-          </div>
-        )}
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="flex items-center gap-2 text-sm text-secondary">
+        <ListTree className="w-4 h-4" />
+        <span>{sections.length} sections</span>
+        <span className="text-muted">•</span>
+        <BookOpen className="w-4 h-4" />
+        <span>{totalLessons} lessons</span>
       </div>
 
-      <div className="space-y-2">
-        {sections.map((section, i) => {
-          const displayTitle = getSectionTitle(i);
-          const isEditing = editingIdx === i;
-          const hasLessons = section.lessons && section.lessons.length > 0;
+      {/* Accordion outline */}
+      <div className="border rounded-lg divide-y">
+        {sections.map((section, sectionIndex) => {
+          const isExpanded = expandedSections.has(sectionIndex);
+          const displayTitle = getSectionTitle(sectionIndex);
+          const isEditing = editingIdx === sectionIndex;
+          const lessonCount = section.lessons?.length ?? 0;
 
           return (
-            <CollapsibleSection key={i} title={`${i + 1}. ${displayTitle}`} defaultOpen={i === 0}>
-              {/* Section title edit */}
-              {onModificationsChange && (
-                <div className="mb-2">
-                  {isEditing ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveEdit(i);
-                          if (e.key === 'Escape') setEditingIdx(null);
-                        }}
-                        className="flex-1 px-2 py-1 text-sm bg-page border rounded text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveEdit(i)}
-                        className="px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded transition-colors"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingIdx(null)}
-                        className="px-2 py-1 text-xs text-muted hover:text-secondary transition-colors"
-                      >
-                        Cancel
-                      </button>
+            <div key={sectionIndex} className="bg-surface">
+              <button
+                type="button"
+                onClick={() => toggleSection(sectionIndex)}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-hover transition-colors text-left min-h-[44px]"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="w-5 h-5 text-muted shrink-0" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-muted shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted">
+                      Section {sectionIndex + 1}
+                    </span>
+                    <span className="text-xs text-muted">
+                      ({lessonCount} lesson{lessonCount !== 1 ? 's' : ''})
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-primary truncate">
+                    {displayTitle}
+                  </h3>
+                </div>
+                {onModificationsChange && (
+                  <Pencil
+                    className="w-4 h-4 text-muted shrink-0 opacity-0 group-hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStartEdit(sectionIndex, displayTitle);
+                    }}
+                  />
+                )}
+              </button>
+
+              {isExpanded && (
+                <div className="px-4 pb-3">
+                  {/* Inline title edit */}
+                  {onModificationsChange && (
+                    <div className="ml-8 mb-3">
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(sectionIndex);
+                              if (e.key === 'Escape') setEditingIdx(null);
+                            }}
+                            className="flex-1 px-2 py-1 text-sm bg-page border rounded text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(sectionIndex)}
+                            className="px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingIdx(null)}
+                            className="px-2 py-1 text-xs text-muted hover:text-secondary transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(sectionIndex, displayTitle)}
+                          className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>Edit title</span>
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleStartEdit(i, displayTitle)}
-                      className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-                    >
-                      <Pencil className="w-3 h-3" />
-                      <span>Edit title</span>
-                    </button>
+                  )}
+
+                  {/* Lessons */}
+                  {section.lessons && section.lessons.length > 0 && (
+                    <div className="ml-8 space-y-2">
+                      {section.lessons.map((lesson, lessonIndex) => (
+                        <div
+                          key={lessonIndex}
+                          className="flex items-start gap-3 p-2 rounded hover:bg-hover"
+                        >
+                          <BookOpen className="w-4 h-4 text-muted mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-primary">
+                              {lesson.title}
+                            </p>
+                            {lesson.objective && (
+                              <p className="text-xs text-secondary line-clamp-2">
+                                {lesson.objective}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
-
-              {section.description && (
-                <p className="text-xs text-secondary mb-2">{section.description}</p>
-              )}
-
-              {/* Lesson previews */}
-              {hasLessons && (
-                <div className="mb-2">
-                  <div className="text-[10px] text-muted font-medium mb-1.5">
-                    Lessons ({section.lessons!.length})
-                  </div>
-                  <div className="space-y-1.5">
-                    {section.lessons!.map((lesson, j) => (
-                      <div key={j} className="flex items-start gap-2 pl-2 border-l-2 border-indigo-200 dark:border-indigo-800">
-                        <div className="min-w-0">
-                          <div className="text-xs font-medium text-primary">{lesson.title}</div>
-                          <div className="text-[11px] text-secondary leading-relaxed">{lesson.objective}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Mapped outcomes */}
-              <div>
-                <div className="text-[10px] text-muted font-medium mb-1">Mapped Outcomes:</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(section.mapped_outcomes ?? []).map((outcome, j) => (
-                    <span
-                      key={j}
-                      className="px-2 py-0.5 text-[11px] rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400"
-                    >
-                      {outcome}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </CollapsibleSection>
+            </div>
           );
         })}
       </div>
@@ -695,30 +660,25 @@ function CombinedReviewTabs({
   onModificationsChange?: (mods: Record<string, string>) => void;
   onAssignGaps?: (gaps: string[]) => void;
 }) {
-  type TabId = 'analysis' | 'knowledge' | 'outcomes' | 'structure' | 'sample';
+  type TabId = 'outline' | 'analysis' | 'knowledge' | 'outcomes' | 'sample';
   const hasKnowledge = !!data.knowledge_coverage;
-  const [activeTab, setActiveTab] = useState<TabId>('analysis');
+  const [activeTab, setActiveTab] = useState<TabId>('outline');
   const [analysisMods, setAnalysisMods] = useState<Record<string, string>>({});
-  const [structureMods, setStructureMods] = useState<Record<string, string>>({});
+  const [outlineMods, setOutlineMods] = useState<Record<string, string>>({});
 
-  // Merge analysis + structure modifications and propagate up
+  // Merge analysis + outline modifications and propagate up
   const handleAnalysisMods = useCallback((mods: Record<string, string>) => {
     setAnalysisMods(mods);
-    onModificationsChange?.({ ...mods, ...structureMods });
-  }, [onModificationsChange, structureMods]);
+    onModificationsChange?.({ ...mods, ...outlineMods });
+  }, [onModificationsChange, outlineMods]);
 
-  const handleStructureMods = useCallback((mods: Record<string, string>) => {
-    setStructureMods(mods);
+  const handleOutlineMods = useCallback((mods: Record<string, string>) => {
+    setOutlineMods(mods);
     onModificationsChange?.({ ...analysisMods, ...mods });
   }, [onModificationsChange, analysisMods]);
 
-  // Inject knowledge_coverage into analysis data for the AnalysisStep sub-component
-  const analysisData = useMemo(() => ({
-    ...data.analysis,
-    knowledge_coverage: data.knowledge_coverage ?? undefined,
-  }), [data.analysis, data.knowledge_coverage]);
-
   const tabs: { id: TabId; label: string; badge?: number; hidden?: boolean }[] = [
+    { id: 'outline', label: 'Course Outline' },
     { id: 'analysis', label: 'Analysis' },
     {
       id: 'knowledge',
@@ -727,7 +687,6 @@ function CombinedReviewTabs({
       hidden: !hasKnowledge,
     },
     { id: 'outcomes', label: 'Outcomes' },
-    { id: 'structure', label: 'Structure' },
     { id: 'sample', label: 'Sample Lesson' },
   ];
 
@@ -757,17 +716,17 @@ function CombinedReviewTabs({
       </div>
 
       {/* Tab content */}
+      {activeTab === 'outline' && (
+        <OutlineStep data={data.structure} onModificationsChange={handleOutlineMods} />
+      )}
       {activeTab === 'analysis' && (
-        <AnalysisStep data={analysisData} onModificationsChange={handleAnalysisMods} onAssignGaps={onAssignGaps} />
+        <AnalysisStep data={data.analysis} onModificationsChange={handleAnalysisMods} />
       )}
       {activeTab === 'knowledge' && data.knowledge_coverage && (
         <KnowledgeCoveragePanel coverage={data.knowledge_coverage} onAssignGaps={onAssignGaps} />
       )}
       {activeTab === 'outcomes' && (
         <OutcomesStep data={data.outcomes} />
-      )}
-      {activeTab === 'structure' && (
-        <StructureStep data={data.structure} onModificationsChange={handleStructureMods} />
       )}
       {activeTab === 'sample' && (
         <LessonStep data={data.sample_lesson} />
