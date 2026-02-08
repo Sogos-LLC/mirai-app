@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, BookOpen, Globe, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, BookOpen, Globe, Lock } from 'lucide-react';
 import type { WizardContext, WizardEvent } from '@/machines/wizardMachine';
 import { KnowledgeSelectionModal } from '@/components/course/KnowledgeSelectionModal';
 
@@ -10,9 +10,6 @@ interface WizardStep1CourseNameProps {
 }
 
 export function WizardStep1CourseName({ context, send, isGeneratingOutcomes }: WizardStep1CourseNameProps) {
-  const [showAdvanced, setShowAdvanced] = useState(
-    context.enableInternalKnowledge || context.enableWebResearch
-  );
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
   const totalSelectedDocs = context.selectedTeamDocIds.length + context.selectedGlobalDocIds.length;
 
@@ -74,19 +71,12 @@ export function WizardStep1CourseName({ context, send, isGeneratingOutcomes }: W
         />
       </div>
 
-      {/* Advanced Settings (collapsible) */}
+      {/* Advanced Settings */}
       <div className="border rounded-lg">
-        <button
-          type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-secondary hover:text-primary transition-colors min-h-[44px]"
-        >
-          <span>Advanced Settings</span>
-          {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-
-        {showAdvanced && (
-          <div className="px-4 pb-4 space-y-3 border-t pt-3">
+        <div className="px-4 py-3 text-sm font-medium text-secondary">
+          Advanced Settings
+        </div>
+        <div className="px-4 pb-4 space-y-3 border-t pt-3">
             {/* Internal Knowledge */}
             <div>
               <label htmlFor="internalKnowledge" className="flex items-center gap-3 cursor-pointer select-none">
@@ -197,7 +187,7 @@ export function WizardStep1CourseName({ context, send, isGeneratingOutcomes }: W
               </div>
             </label>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Knowledge selection modal */}

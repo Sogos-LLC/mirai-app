@@ -85,7 +85,7 @@ export default function GroundingIndicator({
         type="button"
         onClick={onClick}
         disabled={!isClickable}
-        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${levelColors[level]} ${
+        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${levelColors[level]} ${
           isClickable
             ? 'cursor-pointer hover:opacity-80 transition-opacity'
             : 'cursor-help'
