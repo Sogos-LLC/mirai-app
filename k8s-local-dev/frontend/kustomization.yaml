@@ -80,4 +80,4 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-frontend
-  newTag: dev-a8c0a78
+  newTag: dev-b98e1d4
