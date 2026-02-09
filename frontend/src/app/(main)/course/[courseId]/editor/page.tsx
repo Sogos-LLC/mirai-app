@@ -50,7 +50,7 @@ import { useCourseEditorStore as useEditorStore } from '@/store/zustand/courseEd
 import { useExportWorkflow } from '@/hooks/useExportWorkflow';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
-import { useGetCourse } from '@/hooks/useCourses';
+import { useGetCourse, useUpdateCourse } from '@/hooks/useCourses';
 import { ShareModal } from '@/components/share/ShareModal';
 
 /** Check if a component is validatable (MODEL or unset source type) */
@@ -115,6 +115,15 @@ export default function CourseEditorPage() {
     startExport,
     downloadExport,
   } = useExportWorkflow(courseId);
+
+  // Course update hook
+  const { mutate: updateCourse } = useUpdateCourse();
+
+  const handleUpdateCourse = useCallback(async (title: string, description: string) => {
+    await updateCourse(courseId, {
+      settings: { title, desiredOutcome: description },
+    });
+  }, [courseId, updateCourse]);
 
   // Realignment hook
   const { mutate: regenerateComponent, isLoading: isRegenerating } = useRegenerateComponent();
@@ -496,11 +505,14 @@ export default function CourseEditorPage() {
       {/* Header */}
       <CourseEditorHeader
         courseId={courseId}
+        courseTitle={course?.settings?.title ?? ''}
+        courseDescription={course?.settings?.desiredOutcome ?? ''}
         saveStatus={saveStatus}
         onBack={() => router.push('/content-library')}
         onPreview={() => router.push(`/preview/${courseId}`)}
         onExport={openExportModal}
         onShare={() => setShowShareModal(true)}
+        onUpdateCourse={handleUpdateCourse}
       />
 
       {/* Mobile navigation FAB + BottomSheet */}
