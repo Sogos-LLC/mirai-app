@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Eye,
   Download,
+  Share2,
   Loader2,
   Cloud,
   CloudOff,
@@ -18,6 +19,7 @@ interface CourseEditorHeaderProps {
   onBack: () => void;
   onPreview: () => void;
   onExport: () => void;
+  onShare?: () => void;
 }
 
 export function CourseEditorHeader({
@@ -25,6 +27,7 @@ export function CourseEditorHeader({
   onBack,
   onPreview,
   onExport,
+  onShare,
 }: CourseEditorHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-6">
@@ -59,6 +62,16 @@ export function CourseEditorHeader({
         )}
       </div>
       <div className="flex items-center gap-2">
+        {onShare && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onShare}
+          >
+            <Share2 className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+        )}
         <Button
           variant="secondary"
           size="sm"

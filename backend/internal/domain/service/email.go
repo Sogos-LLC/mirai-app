@@ -36,6 +36,9 @@ type EmailProvider interface {
 
 	// SendExportReady sends an export ready notification email with download link.
 	SendExportReady(ctx context.Context, req SendExportReadyRequest) error
+
+	// SendShareVerificationCode sends a verification code for shared course access.
+	SendShareVerificationCode(ctx context.Context, req SendShareVerificationCodeRequest) error
 }
 
 // SendInvitationRequest contains data for sending an invitation email.
@@ -139,4 +142,11 @@ type SendExportReadyRequest struct {
 	Format      string // "SCORM 2004", etc.
 	DownloadURL string
 	ExpiresIn   string // Human readable expiry like "7 days"
+}
+
+// SendShareVerificationCodeRequest contains data for share verification code email.
+type SendShareVerificationCodeRequest struct {
+	To          string
+	Code        string
+	CourseTitle string
 }

@@ -50,6 +50,8 @@ import { useCourseEditorStore as useEditorStore } from '@/store/zustand/courseEd
 import { useExportWorkflow } from '@/hooks/useExportWorkflow';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
+import { useGetCourse } from '@/hooks/useCourses';
+import { ShareModal } from '@/components/share/ShareModal';
 
 /** Check if a component is validatable (MODEL or unset source type) */
 function isComponentValidatable(component: LessonComponent): boolean {
@@ -77,6 +79,9 @@ export default function CourseEditorPage() {
   const [realignmentComponent, setRealignmentComponent] = useState<LessonComponent | null>(null);
   const [isRealigning, setIsRealigning] = useState(false);
 
+  // Share state
+  const [showShareModal, setShowShareModal] = useState(false);
+
   // Provenance panel state
   const [showProvenance, setShowProvenance] = useState(false);
 
@@ -88,7 +93,8 @@ export default function CourseEditorPage() {
   // Feature toggles
   const showSourceGrounding = useFeatureTogglesStore((s) => s.showSourceGrounding);
 
-  // Fetch outline and lessons
+  // Fetch course, outline, and lessons
+  const { data: course } = useGetCourse(courseId);
   const { data: outline, wizardData, isLoading: outlineLoading } = useGetCourseOutline(courseId);
   const { data: generatedLessons, isLoading: lessonsLoading } = useListGeneratedLessons(courseId);
 
@@ -101,6 +107,7 @@ export default function CourseEditorPage() {
     exportModalState,
     exportError,
     exportProgress,
+    exportFormat,
     isStarting,
     isGettingDownload,
     openExportModal,
@@ -393,12 +400,13 @@ export default function CourseEditorPage() {
 
   // Export retry handler
   const handleExportRetry = useCallback(() => {
+    const lastFormat = exportFormat;
     closeExportModal();
     setTimeout(() => {
       openExportModal();
-      startExport();
+      if (lastFormat) startExport(lastFormat);
     }, 350);
-  }, [closeExportModal, openExportModal, startExport]);
+  }, [closeExportModal, openExportModal, startExport, exportFormat]);
 
   // Realignment handlers
   const handleOpenRealignment = useCallback((component: LessonComponent) => {
@@ -492,6 +500,7 @@ export default function CourseEditorPage() {
         onBack={() => router.push('/content-library')}
         onPreview={() => router.push(`/preview/${courseId}`)}
         onExport={openExportModal}
+        onShare={() => setShowShareModal(true)}
       />
 
       {/* Mobile navigation FAB + BottomSheet */}
@@ -740,6 +749,7 @@ export default function CourseEditorPage() {
         modalState={exportModalState}
         exportError={exportError}
         exportStatus={exportProgress}
+        exportFormat={exportFormat}
         isStarting={isStarting}
         isGettingDownload={isGettingDownload}
         onStartExport={startExport}
@@ -757,6 +767,14 @@ export default function CourseEditorPage() {
         learningObjectives={currentLessonLOs}
         onRealign={handleRealign}
         isLoading={isRealigning || isRegenerating}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        courseId={courseId}
+        courseTitle={course?.settings?.title ?? ''}
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
       />
     </div>
   );

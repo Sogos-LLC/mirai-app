@@ -79,6 +79,10 @@ type Querier interface {
 	// Pending Registration CRUD operations
 	// Schema: pending_registrations table (accessible only to superadmins)
 	CreatePendingRegistration(ctx context.Context, arg CreatePendingRegistrationParams) (PendingRegistration, error)
+	CreateReviewComment(ctx context.Context, arg CreateReviewCommentParams) (ShareReviewComment, error)
+	// Course Sharing CRUD operations
+	// Schema: course_share_links, share_verification_codes, share_review_comments
+	CreateShareLink(ctx context.Context, arg CreateShareLinkParams) (CourseShareLink, error)
 	// Team and TeamMember CRUD operations
 	// Schema: teams and team_members tables with RLS isolation by tenant_id
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
@@ -94,6 +98,8 @@ type Querier interface {
 	// User CRUD operations
 	// Schema: users table with RLS isolation by tenant_id
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateVerificationCode(ctx context.Context, arg CreateVerificationCodeParams) (ShareVerificationCode, error)
+	DeactivateShareLink(ctx context.Context, id uuid.UUID) error
 	DeleteCompany(ctx context.Context, id uuid.UUID) error
 	DeleteCourse(ctx context.Context, id uuid.UUID) error
 	DeleteExpiredPendingRegistrations(ctx context.Context) (int64, error)
@@ -155,6 +161,8 @@ type Querier interface {
 	GetReadySourcesBySession(ctx context.Context, sessionID sql.NullString) ([]KnowledgeSource, error)
 	// Get only ready sources for a team
 	GetReadySourcesByTeam(ctx context.Context, teamID uuid.NullUUID) ([]KnowledgeSource, error)
+	GetShareLinkByID(ctx context.Context, id uuid.UUID) (CourseShareLink, error)
+	GetShareLinkByToken(ctx context.Context, token string) (CourseShareLink, error)
 	GetSharedFolder(ctx context.Context, tenantID uuid.UUID) (Folder, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
 	// Get the first team for a tenant (most tenants have one team)
@@ -171,6 +179,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByKratosID(ctx context.Context, kratosID uuid.UUID) (User, error)
 	GetUserCRMContactID(ctx context.Context, id uuid.UUID) (sql.NullString, error)
+	GetVerificationCode(ctx context.Context, arg GetVerificationCodeParams) (ShareVerificationCode, error)
 	// Wizard state CRUD operations
 	// Schema: wizard_states table with RLS isolation by tenant_id
 	// Each user can have only one active wizard state at a time
@@ -205,8 +214,11 @@ type Querier interface {
 	ListPendingInvitationsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Invitation, error)
 	ListPendingKnowledgeSources(ctx context.Context, limit int32) ([]KnowledgeSource, error)
 	ListPendingRegistrationsByStatus(ctx context.Context, status string) ([]PendingRegistration, error)
+	ListReviewCommentsByCourse(ctx context.Context, courseID uuid.UUID) ([]ShareReviewComment, error)
+	ListReviewCommentsByLesson(ctx context.Context, arg ListReviewCommentsByLessonParams) ([]ShareReviewComment, error)
 	// Defense-in-depth: explicit tenant_id filter in addition to RLS
 	ListRootFolders(ctx context.Context, tenantID uuid.UUID) ([]Folder, error)
+	ListShareLinksByCourseID(ctx context.Context, courseID uuid.UUID) ([]CourseShareLink, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]TeamMember, error)
 	ListTeamsByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Team, error)
 	ListUnreadNotificationsByUserID(ctx context.Context, arg ListUnreadNotificationsByUserIDParams) ([]Notification, error)
@@ -215,6 +227,7 @@ type Querier interface {
 	ListWizardStatesByTenant(ctx context.Context, tenantID uuid.UUID) ([]WizardState, error)
 	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error
 	MarkNotificationsAsRead(ctx context.Context, arg MarkNotificationsAsReadParams) error
+	MarkVerificationCodeUsed(ctx context.Context, id uuid.UUID) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	SubmitGapTasksByUser(ctx context.Context, assignedToUserID uuid.UUID) ([]KnowledgeGapTask, error)
 	// Sum token count for all ready sources in a team
@@ -240,6 +253,7 @@ type Querier interface {
 	// Update status with RAG-generated summary and token count
 	UpdateKnowledgeSourceWithSummary(ctx context.Context, arg UpdateKnowledgeSourceWithSummaryParams) (KnowledgeSource, error)
 	UpdatePendingRegistration(ctx context.Context, arg UpdatePendingRegistrationParams) (PendingRegistration, error)
+	UpdateShareLinkEmails(ctx context.Context, arg UpdateShareLinkEmailsParams) (CourseShareLink, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateTenantAISettings(ctx context.Context, arg UpdateTenantAISettingsParams) (TenantAiSetting, error)

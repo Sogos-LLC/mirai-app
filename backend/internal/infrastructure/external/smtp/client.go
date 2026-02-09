@@ -953,3 +953,71 @@ func (c *Client) renderExportReadyEmail(req service.SendExportReadyRequest) (str
 
 	return buf.String(), nil
 }
+
+// SendShareVerificationCode sends a verification code for shared course access.
+func (c *Client) SendShareVerificationCode(ctx context.Context, req service.SendShareVerificationCodeRequest) error {
+	body, err := c.renderShareVerificationEmail(req)
+	if err != nil {
+		return fmt.Errorf("failed to render share verification email: %w", err)
+	}
+	subject := fmt.Sprintf("Your verification code for reviewing %s", req.CourseTitle)
+	return c.sendEmail(req.To, subject, body)
+}
+
+// renderShareVerificationEmail renders the share verification code email template.
+func (c *Client) renderShareVerificationEmail(req service.SendShareVerificationCodeRequest) (string, error) {
+	const emailTemplate = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #7c3aed, #6d28d9); padding: 32px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Verification Code</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                You've requested access to review a course. Enter the code below to continue:
+                            </p>
+                            <div style="text-align: center; margin: 32px 0;">
+                                <span style="display: inline-block; background-color: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 8px; padding: 16px 32px; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #1f2937; font-family: 'Courier New', monospace;">{{.Code}}</span>
+                            </div>
+                            <p style="margin: 0 0 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                <strong>Course:</strong> {{.CourseTitle}}
+                            </p>
+                            <p style="margin: 24px 0 0 0; color: #9ca3af; font-size: 14px;">
+                                This code expires in 10 minutes. If you didn't request this, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px 40px 40px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                                This is an automated notification from Mirai.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`
+
+	tmpl, err := template.New("share_verification").Parse(emailTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, req); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}

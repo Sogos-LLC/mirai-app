@@ -78,6 +78,9 @@ type Config struct {
 	TemporalAddress   string // Temporal server address (e.g., "temporal:7233")
 	TemporalNamespace string // Temporal namespace (e.g., "mirai")
 
+	// Course Sharing
+	ShareSessionSecret string // HMAC secret for share session tokens
+
 	// Observability
 	LogfireToken string // Logfire API token for OTLP trace export (optional)
 }
@@ -155,6 +158,8 @@ func Load() (*Config, error) {
 		// Temporal
 		TemporalAddress:   getEnv("TEMPORAL_ADDRESS", ""),
 		TemporalNamespace: getEnv("TEMPORAL_NAMESPACE", "default"),
+		// Course Sharing
+		ShareSessionSecret: getEnv("SHARE_SESSION_SECRET", "default-share-secret-change-in-production"),
 		// Observability
 		LogfireToken: getEnv("LOGFIRE_TOKEN", ""),
 	}

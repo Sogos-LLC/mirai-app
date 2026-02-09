@@ -9,6 +9,7 @@ import (
 
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	domainerrors "github.com/sogos/mirai-backend/internal/domain/errors"
+	"github.com/sogos/mirai-backend/internal/domain/pdf"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	"github.com/sogos/mirai-backend/internal/domain/scorm"
 	"github.com/sogos/mirai-backend/internal/domain/service"
@@ -38,15 +39,16 @@ type ExportStorage interface {
 // CourseExportService handles course export operations.
 // Reads course content from MinIO (no PostgreSQL dependencies for content).
 type CourseExportService struct {
-	userRepo       repository.UserRepository
-	courseRepo     repository.CourseRepository
-	exportRepo     repository.CourseExportRepository
-	scormPackager  *scorm.Packager
-	storage        ExportStorage
-	contentStorage *storage.TenantAwareStorage
+	userRepo        repository.UserRepository
+	courseRepo      repository.CourseRepository
+	exportRepo      repository.CourseExportRepository
+	scormPackager   *scorm.Packager
+	pdfGenerator    *pdf.Generator
+	storage         ExportStorage
+	contentStorage  *storage.TenantAwareStorage
 	workflowStarter ExportWorkflowStarter
-	notifier       ExportNotifier
-	logger         service.Logger
+	notifier        ExportNotifier
+	logger          service.Logger
 }
 
 // NewCourseExportService creates a new course export service.
@@ -55,6 +57,7 @@ func NewCourseExportService(
 	courseRepo repository.CourseRepository,
 	exportRepo repository.CourseExportRepository,
 	scormPackager *scorm.Packager,
+	pdfGenerator *pdf.Generator,
 	storage ExportStorage,
 	contentStorage *storage.TenantAwareStorage,
 	workflowStarter ExportWorkflowStarter,
@@ -62,15 +65,16 @@ func NewCourseExportService(
 	logger service.Logger,
 ) *CourseExportService {
 	return &CourseExportService{
-		userRepo:       userRepo,
-		courseRepo:     courseRepo,
-		exportRepo:     exportRepo,
-		scormPackager:  scormPackager,
-		storage:        storage,
-		contentStorage: contentStorage,
+		userRepo:        userRepo,
+		courseRepo:      courseRepo,
+		exportRepo:      exportRepo,
+		scormPackager:   scormPackager,
+		pdfGenerator:    pdfGenerator,
+		storage:         storage,
+		contentStorage:  contentStorage,
 		workflowStarter: workflowStarter,
-		notifier:       notifier,
-		logger:         logger,
+		notifier:        notifier,
+		logger:          logger,
 	}
 }
 
@@ -263,6 +267,8 @@ func (s *CourseExportService) ProcessExport(ctx context.Context, exportID uuid.U
 	switch export.Format {
 	case valueobject.ExportFormatSCORM2004:
 		return s.processSCORM2004Export(ctx, export)
+	case valueobject.ExportFormatPDF:
+		return s.processPDFExport(ctx, export)
 	default:
 		errMsg := fmt.Sprintf("unsupported export format: %s", export.Format)
 		log.Error(errMsg)
@@ -270,38 +276,28 @@ func (s *CourseExportService) ProcessExport(ctx context.Context, exportID uuid.U
 	}
 }
 
-// processSCORM2004Export handles SCORM 2004 export processing.
-// Reads all content from MinIO instead of PostgreSQL.
-func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export *entity.CourseExport) error {
+// buildCourseData loads course metadata and content from MinIO and builds a CourseData struct.
+// This is shared between SCORM and PDF export processing.
+func (s *CourseExportService) buildCourseData(ctx context.Context, export *entity.CourseExport) (*scorm.CourseData, *entity.Course, error) {
 	log := s.logger.With("exportID", export.ID, "courseID", export.CourseID)
 
 	// Load course metadata
 	course, err := s.courseRepo.GetByID(ctx, export.CourseID)
 	if err != nil || course == nil {
-		return s.failExport(ctx, export.ID, "failed to load course")
-	}
-
-	// Update progress: 10%
-	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 10, "Loading course content..."); err != nil {
-		log.Error("failed to update progress", "error", err)
+		return nil, nil, fmt.Errorf("failed to load course")
 	}
 
 	// Read course content from MinIO
 	content, err := s.readCourseContent(ctx, export.TenantID, export.CourseID)
 	if err != nil {
-		return s.failExport(ctx, export.ID, "failed to load course content from storage")
+		return nil, nil, fmt.Errorf("failed to load course content from storage")
 	}
 
 	if len(content.Content.Sections) == 0 {
-		return s.failExport(ctx, export.ID, "course has no outline")
+		return nil, nil, fmt.Errorf("course has no outline")
 	}
 
-	// Update progress: 20%
-	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 20, "Building export structure..."); err != nil {
-		log.Error("failed to update progress", "error", err)
-	}
-
-	// Build SCORM course data from MinIO content
+	// Build course data from MinIO content
 	courseData := scorm.CourseData{
 		ID:             export.CourseID.String(),
 		Title:          course.Title,
@@ -320,7 +316,7 @@ func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export
 		sectionID, _ := sectionData["id"].(string)
 		sectionTitle, _ := sectionData["title"].(string)
 
-		sectionSCORM := scorm.SectionData{
+		section := scorm.SectionData{
 			ID:    sectionID,
 			Title: sectionTitle,
 		}
@@ -346,28 +342,50 @@ func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export
 				continue
 			}
 
-			lessonSCORM := scorm.LessonData{
+			lesson := scorm.LessonData{
 				ID:    lessonID,
 				Title: lessonTitle,
 			}
 
 			if genLesson.SegueText != nil {
-				lessonSCORM.SegueText = *genLesson.SegueText
+				lesson.SegueText = *genLesson.SegueText
 			}
 
 			// Convert components
 			for _, comp := range genLesson.Components {
-				compSCORM := scorm.ComponentData{
+				lesson.Components = append(lesson.Components, scorm.ComponentData{
 					Type:        s.mapComponentType(valueobject.LessonComponentType(comp.Type)),
 					ContentJSON: string(comp.ContentJSON),
-				}
-				lessonSCORM.Components = append(lessonSCORM.Components, compSCORM)
+				})
 			}
 
-			sectionSCORM.Lessons = append(sectionSCORM.Lessons, lessonSCORM)
+			section.Lessons = append(section.Lessons, lesson)
 		}
 
-		courseData.Sections = append(courseData.Sections, sectionSCORM)
+		courseData.Sections = append(courseData.Sections, section)
+	}
+
+	return &courseData, course, nil
+}
+
+// processSCORM2004Export handles SCORM 2004 export processing.
+// Reads all content from MinIO instead of PostgreSQL.
+func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export *entity.CourseExport) error {
+	log := s.logger.With("exportID", export.ID, "courseID", export.CourseID)
+
+	// Update progress: 10%
+	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 10, "Loading course content..."); err != nil {
+		log.Error("failed to update progress", "error", err)
+	}
+
+	courseData, course, err := s.buildCourseData(ctx, export)
+	if err != nil {
+		return s.failExport(ctx, export.ID, err.Error())
+	}
+
+	// Update progress: 20%
+	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 20, "Building export structure..."); err != nil {
+		log.Error("failed to update progress", "error", err)
 	}
 
 	// Update progress: 50%
@@ -376,11 +394,49 @@ func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export
 	}
 
 	// Package the SCORM content
-	result, err := s.scormPackager.Package(courseData)
+	result, err := s.scormPackager.Package(*courseData)
 	if err != nil {
 		log.Error("failed to package SCORM content", "error", err)
 		return s.failExport(ctx, export.ID, fmt.Sprintf("failed to package SCORM: %v", err))
 	}
+
+	// Upload and finalize
+	return s.uploadAndFinalize(ctx, export, course, result.Data, result.Filename, result.Size, "application/zip", "SCORM 2004")
+}
+
+// processPDFExport handles PDF export processing.
+func (s *CourseExportService) processPDFExport(ctx context.Context, export *entity.CourseExport) error {
+	log := s.logger.With("exportID", export.ID, "courseID", export.CourseID)
+
+	// Update progress: 10%
+	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 10, "Loading course content..."); err != nil {
+		log.Error("failed to update progress", "error", err)
+	}
+
+	courseData, course, err := s.buildCourseData(ctx, export)
+	if err != nil {
+		return s.failExport(ctx, export.ID, err.Error())
+	}
+
+	// Update progress: 30%
+	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 30, "Generating PDF document..."); err != nil {
+		log.Error("failed to update progress", "error", err)
+	}
+
+	// Generate PDF
+	result, err := s.pdfGenerator.Generate(*courseData)
+	if err != nil {
+		log.Error("failed to generate PDF", "error", err)
+		return s.failExport(ctx, export.ID, fmt.Sprintf("failed to generate PDF: %v", err))
+	}
+
+	// Upload and finalize
+	return s.uploadAndFinalize(ctx, export, course, result.Data, result.Filename, result.Size, "application/pdf", "PDF")
+}
+
+// uploadAndFinalize uploads the export file to storage, marks it complete, and sends notification.
+func (s *CourseExportService) uploadAndFinalize(ctx context.Context, export *entity.CourseExport, course *entity.Course, data []byte, filename string, size int64, contentType string, formatDisplay string) error {
+	log := s.logger.With("exportID", export.ID, "courseID", export.CourseID)
 
 	// Update progress: 80%
 	if err := s.exportRepo.UpdateProgress(ctx, export.ID, 80, "Uploading export file..."); err != nil {
@@ -391,10 +447,10 @@ func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export
 	storagePath := fmt.Sprintf("tenants/%s/exports/%s/%s",
 		export.TenantID.String(),
 		export.ID.String(),
-		result.Filename,
+		filename,
 	)
 
-	if err := s.storage.PutContent(ctx, storagePath, result.Data, "application/zip"); err != nil {
+	if err := s.storage.PutContent(ctx, storagePath, data, contentType); err != nil {
 		log.Error("failed to upload export file", "error", err)
 		return s.failExport(ctx, export.ID, "failed to upload export file")
 	}
@@ -405,7 +461,7 @@ func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export
 	}
 
 	// Mark as completed
-	if err := s.exportRepo.MarkCompleted(ctx, export.ID, storagePath, result.Size); err != nil {
+	if err := s.exportRepo.MarkCompleted(ctx, export.ID, storagePath, size); err != nil {
 		log.Error("failed to mark export as completed", "error", err)
 		// Try to clean up uploaded file
 		_ = s.storage.Delete(ctx, storagePath)
@@ -422,13 +478,12 @@ func (s *CourseExportService) processSCORM2004Export(ctx context.Context, export
 			downloadURL = "" // Notification will still work, just without direct download link
 		}
 
-		formatDisplay := "SCORM 2004"
 		if err := s.notifier.NotifyExportComplete(ctx, export.CreatedByUserID, export.CourseID, export.ID, course.Title, formatDisplay, downloadURL); err != nil {
 			log.Warn("failed to send export completion notification", "error", err)
 		}
 	}
 
-	log.Info("export completed successfully", "filePath", storagePath, "fileSize", result.Size)
+	log.Info("export completed successfully", "filePath", storagePath, "fileSize", size)
 	return nil
 }
 
@@ -460,10 +515,12 @@ func (s *CourseExportService) ProcessNextPending(ctx context.Context) error {
 	)
 
 	// Process within tenant context (export already claimed, so ClaimByID will return nil)
-	// We call processSCORM2004Export directly since we already have the export
+	// We call the format-specific method directly since we already have the export
 	switch export.Format {
 	case valueobject.ExportFormatSCORM2004:
 		return s.processSCORM2004Export(tenantCtx, export)
+	case valueobject.ExportFormatPDF:
+		return s.processPDFExport(tenantCtx, export)
 	default:
 		errMsg := fmt.Sprintf("unsupported export format: %s", export.Format)
 		s.logger.Error(errMsg)
@@ -506,4 +563,92 @@ func (s *CourseExportService) readCourseContent(ctx context.Context, tenantID, c
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
 	return &content, nil
+}
+
+// BuildCourseDataForTenant builds CourseData for a given tenant and course.
+// Used by the share service for PDF exports without an export record.
+func (s *CourseExportService) BuildCourseDataForTenant(ctx context.Context, tenantID, courseID uuid.UUID) (*scorm.CourseData, error) {
+	course, err := s.courseRepo.GetByID(ctx, courseID)
+	if err != nil || course == nil {
+		return nil, fmt.Errorf("failed to load course")
+	}
+
+	content, err := s.readCourseContent(ctx, tenantID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load course content: %w", err)
+	}
+
+	if len(content.Content.Sections) == 0 {
+		return nil, fmt.Errorf("course has no outline")
+	}
+
+	courseData := scorm.CourseData{
+		ID:             courseID.String(),
+		Title:          course.Title,
+		DesiredOutcome: content.Settings.DesiredOutcome,
+		Sections:       make([]scorm.SectionData, 0, len(content.Content.Sections)),
+	}
+
+	lessonMap := make(map[string]S3GeneratedLesson)
+	for _, lesson := range content.GeneratedLessons {
+		lessonMap[lesson.ID] = lesson
+	}
+
+	for _, sectionData := range content.Content.Sections {
+		sectionID, _ := sectionData["id"].(string)
+		sectionTitle, _ := sectionData["title"].(string)
+
+		section := scorm.SectionData{
+			ID:    sectionID,
+			Title: sectionTitle,
+		}
+
+		var lessons []interface{}
+		if l, ok := sectionData["lessons"].([]interface{}); ok {
+			lessons = l
+		}
+
+		for _, lessonDataRaw := range lessons {
+			lessonData, ok := lessonDataRaw.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			lessonID, _ := lessonData["id"].(string)
+			lessonTitle, _ := lessonData["title"].(string)
+
+			genLesson, found := lessonMap[lessonID]
+			if !found {
+				continue
+			}
+
+			lesson := scorm.LessonData{
+				ID:    lessonID,
+				Title: lessonTitle,
+			}
+
+			if genLesson.SegueText != nil {
+				lesson.SegueText = *genLesson.SegueText
+			}
+
+			for _, comp := range genLesson.Components {
+				lesson.Components = append(lesson.Components, scorm.ComponentData{
+					Type:        s.mapComponentType(valueobject.LessonComponentType(comp.Type)),
+					ContentJSON: string(comp.ContentJSON),
+				})
+			}
+
+			section.Lessons = append(section.Lessons, lesson)
+		}
+
+		courseData.Sections = append(courseData.Sections, section)
+	}
+
+	return &courseData, nil
+}
+
+// GeneratePDF generates a PDF from CourseData.
+// Used by the share service for synchronous PDF exports.
+func (s *CourseExportService) GeneratePDF(data scorm.CourseData) (*pdf.Result, error) {
+	return s.pdfGenerator.Generate(data)
 }

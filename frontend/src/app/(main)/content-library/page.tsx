@@ -11,6 +11,7 @@ import { CourseCard } from '@/components/content-library/CourseCard';
 import { DeleteFolderModal } from '@/components/content-library/DeleteFolderModal';
 import { CourseDetailsModal } from '@/components/content-library/CourseDetailsModal';
 import FolderSelectionModal from '@/components/course/FolderSelectionModal';
+import { ShareModal } from '@/components/share/ShareModal';
 
 const MAX_FOLDER_DEPTH = 3;
 
@@ -44,6 +45,9 @@ export default function ContentLibrary() {
 
   // Course details state
   const [detailsCourseId, setDetailsCourseId] = useState<string | null>(null);
+
+  // Share state
+  const [shareCourseId, setShareCourseId] = useState<string | null>(null);
 
   // Move-to-folder state
   const [movingCourseId, setMovingCourseId] = useState<string | null>(null);
@@ -331,6 +335,7 @@ export default function ContentLibrary() {
                   onEdit={handleCourseClick}
                   onPreview={handleCoursePreview}
                   onDetails={setDetailsCourseId}
+                  onShare={setShareCourseId}
                   onMoveToFolder={handleMoveToFolder}
                   onDelete={handleDeleteCourse}
                 />
@@ -383,6 +388,14 @@ export default function ContentLibrary() {
       <CourseDetailsModal
         course={filteredCourses.find(c => c.id === detailsCourseId) ?? null}
         onClose={() => setDetailsCourseId(null)}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        courseId={shareCourseId ?? ''}
+        courseTitle={filteredCourses.find(c => c.id === shareCourseId)?.title ?? ''}
+        isOpen={!!shareCourseId}
+        onClose={() => setShareCourseId(null)}
       />
     </>
   );

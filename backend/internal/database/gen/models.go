@@ -588,6 +588,18 @@ type CourseModule struct {
 	UpdatedAt   time.Time      `db:"updated_at" json:"updated_at"`
 }
 
+type CourseShareLink struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	TenantID      uuid.UUID `db:"tenant_id" json:"tenant_id"`
+	CourseID      uuid.UUID `db:"course_id" json:"course_id"`
+	CreatedBy     uuid.UUID `db:"created_by" json:"created_by"`
+	Token         string    `db:"token" json:"token"`
+	AllowedEmails []string  `db:"allowed_emails" json:"allowed_emails"`
+	IsActive      bool      `db:"is_active" json:"is_active"`
+	CreatedAt     time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
+}
+
 type Folder struct {
 	ID        uuid.UUID     `db:"id" json:"id"`
 	TenantID  uuid.UUID     `db:"tenant_id" json:"tenant_id"`
@@ -748,6 +760,26 @@ type ScormPackage struct {
 	ErrorMessage    sql.NullString `db:"error_message" json:"error_message"`
 	CreatedAt       time.Time      `db:"created_at" json:"created_at"`
 	CompletedAt     **time.Time    `db:"completed_at" json:"completed_at"`
+}
+
+type ShareReviewComment struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	ShareLinkID   uuid.UUID `db:"share_link_id" json:"share_link_id"`
+	CourseID      uuid.UUID `db:"course_id" json:"course_id"`
+	LessonID      string    `db:"lesson_id" json:"lesson_id"`
+	ReviewerEmail string    `db:"reviewer_email" json:"reviewer_email"`
+	Comment       string    `db:"comment" json:"comment"`
+	CreatedAt     time.Time `db:"created_at" json:"created_at"`
+}
+
+type ShareVerificationCode struct {
+	ID          uuid.UUID   `db:"id" json:"id"`
+	ShareLinkID uuid.UUID   `db:"share_link_id" json:"share_link_id"`
+	Email       string      `db:"email" json:"email"`
+	Code        string      `db:"code" json:"code"`
+	ExpiresAt   time.Time   `db:"expires_at" json:"expires_at"`
+	VerifiedAt  **time.Time `db:"verified_at" json:"verified_at"`
+	CreatedAt   time.Time   `db:"created_at" json:"created_at"`
 }
 
 type Team struct {
