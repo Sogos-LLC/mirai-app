@@ -188,31 +188,25 @@ func mimeTypeFromPath(path string) string {
 
 // KnowledgeIngestionInput is defined in types.go (shared between starter and workflow).
 
-// CourseExportWorkflow handles course export to SCORM format.
-//
-// Flow:
-//  1. ReadCourseContent
-//  2. Package into SCORM format
-//  3. Upload export file
+// CourseExportWorkflow handles course export (PDF or SCORM).
+// Delegates to the ProcessCourseExport activity which loads content,
+// generates the export file, uploads to storage, and updates the DB record.
 func CourseExportWorkflow(ctx workflow.Context, input CourseExportInput) error {
 	logger := workflow.GetLogger(ctx)
 	logger.Info("starting course export", "exportID", input.ExportID)
 
 	goCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 2 * time.Minute,
+		StartToCloseTimeout: 5 * time.Minute,
 		RetryPolicy: &temporal.RetryPolicy{
-			MaximumAttempts: 3,
+			MaximumAttempts: 2,
 		},
 	})
 
-	// Read course content and package for export
-	// This stays entirely in Go since it doesn't need AI
-	var courseContent map[string]interface{}
-	if err := workflow.ExecuteActivity(goCtx, "ReadCourseContent", activities.ReadCourseContentInput{
+	if err := workflow.ExecuteActivity(goCtx, "ProcessCourseExport", activities.ProcessCourseExportInput{
+		ExportID: input.ExportID,
 		TenantID: input.TenantID,
-		CourseID: input.ExportID, // Export ID maps to course
-	}).Get(ctx, &courseContent); err != nil {
-		return fmt.Errorf("read content: %w", err)
+	}).Get(ctx, nil); err != nil {
+		return fmt.Errorf("process export: %w", err)
 	}
 
 	logger.Info("course export completed", "exportID", input.ExportID)

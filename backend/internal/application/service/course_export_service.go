@@ -536,7 +536,7 @@ func (s *CourseExportService) failExport(ctx context.Context, exportID uuid.UUID
 	return fmt.Errorf("%s", errMsg)
 }
 
-// mapComponentType converts domain component type to SCORM component type.
+// mapComponentType converts domain component type to SCORM/PDF component type.
 func (s *CourseExportService) mapComponentType(t valueobject.LessonComponentType) scorm.ComponentType {
 	switch t {
 	case valueobject.LessonComponentTypeText:
@@ -547,6 +547,24 @@ func (s *CourseExportService) mapComponentType(t valueobject.LessonComponentType
 		return scorm.ComponentTypeImage
 	case valueobject.LessonComponentTypeQuiz:
 		return scorm.ComponentTypeQuiz
+	case valueobject.LessonComponentTypeCode:
+		return scorm.ComponentTypeCode
+	case valueobject.LessonComponentTypeCallout:
+		return scorm.ComponentTypeCallout
+	case valueobject.LessonComponentTypeStatement:
+		return scorm.ComponentTypeStatement
+	case valueobject.LessonComponentTypeQuote:
+		return scorm.ComponentTypeQuote
+	case valueobject.LessonComponentTypeList:
+		return scorm.ComponentTypeList
+	case valueobject.LessonComponentTypeGallery:
+		return scorm.ComponentTypeGallery
+	case valueobject.LessonComponentTypeMultimedia:
+		return scorm.ComponentTypeMultimedia
+	case valueobject.LessonComponentTypeChart:
+		return scorm.ComponentTypeChart
+	case valueobject.LessonComponentTypeDivider:
+		return scorm.ComponentTypeDivider
 	default:
 		return scorm.ComponentTypeText
 	}

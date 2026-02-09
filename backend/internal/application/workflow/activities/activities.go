@@ -25,6 +25,11 @@ type APIKeyDecryptor interface {
 	DecryptAPIKey(ctx context.Context, tenantID uuid.UUID) (string, error)
 }
 
+// CourseExportProcessor processes course export jobs.
+type CourseExportProcessor interface {
+	ProcessExport(ctx context.Context, exportID uuid.UUID) error
+}
+
 // GoActivities holds all dependencies for Go-side Temporal activities.
 // Register this struct with the Temporal worker to make all methods available.
 type GoActivities struct {
@@ -32,6 +37,7 @@ type GoActivities struct {
 	KnowledgeRepo   repository.TeamKnowledgeRepository
 	ContentStorage  storage.StorageAdapter
 	KeyDecryptor    APIKeyDecryptor
+	ExportProcessor CourseExportProcessor
 	EmbeddingClient *gemini.EmbeddingClient
 	QdrantClient    *vectordb.QdrantClient
 	Logger          *slog.Logger
@@ -306,5 +312,37 @@ func (a *GoActivities) UpdateKnowledgeStatus(ctx context.Context, input UpdateKn
 		"sourceID", input.SourceID,
 		"status", input.Status,
 	)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Course Export Activities
+// ---------------------------------------------------------------------------
+
+// ProcessCourseExportInput is the input for the ProcessCourseExport activity.
+type ProcessCourseExportInput struct {
+	ExportID string `json:"export_id"`
+	TenantID string `json:"tenant_id"`
+}
+
+// ProcessCourseExport processes a course export job (PDF or SCORM).
+func (a *GoActivities) ProcessCourseExport(ctx context.Context, input ProcessCourseExportInput) error {
+	tenantID, err := uuid.Parse(input.TenantID)
+	if err != nil {
+		return fmt.Errorf("parse tenant ID: %w", err)
+	}
+	exportID, err := uuid.Parse(input.ExportID)
+	if err != nil {
+		return fmt.Errorf("parse export ID: %w", err)
+	}
+
+	// Set tenant context for RLS-scoped queries.
+	ctx = tenant.WithTenantID(ctx, tenantID)
+
+	if err := a.ExportProcessor.ProcessExport(ctx, exportID); err != nil {
+		return fmt.Errorf("process export: %w", err)
+	}
+
+	activity.GetLogger(ctx).Info("course export processed", "exportID", input.ExportID)
 	return nil
 }

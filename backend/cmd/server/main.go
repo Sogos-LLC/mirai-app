@@ -418,6 +418,9 @@ func main() {
 			goActivities.KeyDecryptor = temporalinfra.NewSettingsAPIKeyDecryptor(tenantSettingsService)
 		}
 
+		// Set up course export processor
+		goActivities.ExportProcessor = courseExportService
+
 		// OpsActivities: provisioning, cleanup, feedback sync
 		opsActivities := &activities.OpsActivities{
 			Provisioner: provisioningService,
