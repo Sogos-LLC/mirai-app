@@ -25,6 +25,7 @@ type CourseShareService struct {
 	verificationRepo repository.VerificationCodeRepository
 	commentRepo      repository.ReviewCommentRepository
 	courseRepo       repository.CourseRepository
+	userRepo         repository.UserRepository
 	contentStorage   *storage.TenantAwareStorage
 	exportService    *CourseExportService
 	sessionManager   *auth.ShareSessionManager
@@ -38,6 +39,7 @@ func NewCourseShareService(
 	verificationRepo repository.VerificationCodeRepository,
 	commentRepo repository.ReviewCommentRepository,
 	courseRepo repository.CourseRepository,
+	userRepo repository.UserRepository,
 	contentStorage *storage.TenantAwareStorage,
 	exportService *CourseExportService,
 	sessionManager *auth.ShareSessionManager,
@@ -49,6 +51,7 @@ func NewCourseShareService(
 		verificationRepo: verificationRepo,
 		commentRepo:      commentRepo,
 		courseRepo:       courseRepo,
+		userRepo:         userRepo,
 		contentStorage:   contentStorage,
 		exportService:    exportService,
 		sessionManager:   sessionManager,
@@ -64,15 +67,26 @@ func (s *CourseShareService) CreateShareLink(ctx context.Context, kratosID uuid.
 		return nil, "", fmt.Errorf("missing tenant context")
 	}
 
+	// Resolve kratosID to internal user ID (created_by FK references users.id)
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, "", fmt.Errorf("failed to resolve user: %w", err)
+	}
+
 	token, err := generateSecureShareToken()
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to generate token: %w", err)
 	}
 
+	// Ensure allowedEmails is never nil (postgres TEXT[] NOT NULL)
+	if allowedEmails == nil {
+		allowedEmails = []string{}
+	}
+
 	link := &entity.ShareLink{
 		TenantID:      tenantID,
 		CourseID:      courseID,
-		CreatedBy:     kratosID,
+		CreatedBy:     user.ID,
 		Token:         token,
 		AllowedEmails: allowedEmails,
 	}

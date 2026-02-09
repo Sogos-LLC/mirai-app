@@ -321,6 +321,7 @@ func main() {
 		verificationCodeRepo,
 		reviewCommentRepo,
 		courseRepo,
+		userRepo,
 		tenantStorage,
 		courseExportService,
 		shareSessionManager,
