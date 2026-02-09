@@ -69,7 +69,7 @@ func (s *CourseShareServiceServer) ListShareLinks(
 
 	protoLinks := make([]*v1.CourseShareLink, len(links))
 	for i, link := range links {
-		protoLinks[i] = shareLinkToProto(link, "")
+		protoLinks[i] = shareLinkToProto(link, s.shareService.BuildShareURL(link.Token))
 	}
 
 	return connect.NewResponse(&v1.ListShareLinksResponse{
@@ -93,7 +93,7 @@ func (s *CourseShareServiceServer) UpdateShareLinkEmails(
 	}
 
 	return connect.NewResponse(&v1.UpdateShareLinkEmailsResponse{
-		ShareLink: shareLinkToProto(link, ""),
+		ShareLink: shareLinkToProto(link, s.shareService.BuildShareURL(link.Token)),
 	}), nil
 }
 

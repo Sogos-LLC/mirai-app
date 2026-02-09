@@ -99,6 +99,11 @@ func (s *CourseShareService) CreateShareLink(ctx context.Context, kratosID uuid.
 	return link, shareURL, nil
 }
 
+// BuildShareURL constructs the public share URL for a given token.
+func (s *CourseShareService) BuildShareURL(token string) string {
+	return fmt.Sprintf("%s/shared/%s", s.frontendURL, token)
+}
+
 // ListShareLinks lists all share links for a course.
 func (s *CourseShareService) ListShareLinks(ctx context.Context, courseID uuid.UUID) ([]*entity.ShareLink, error) {
 	links, err := s.shareLinkRepo.ListByCourseID(ctx, courseID)

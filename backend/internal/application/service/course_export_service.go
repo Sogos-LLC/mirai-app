@@ -305,10 +305,11 @@ func (s *CourseExportService) buildCourseData(ctx context.Context, export *entit
 		Sections:       make([]scorm.SectionData, 0, len(content.Content.Sections)),
 	}
 
-	// Build a map of generated lessons by ID for quick lookup
+	// Build a map of generated lessons by outline lesson ID for quick lookup.
+	// GeneratedLesson.OutlineLessonID matches the lesson "id" in the outline sections.
 	lessonMap := make(map[string]S3GeneratedLesson)
 	for _, lesson := range content.GeneratedLessons {
-		lessonMap[lesson.ID] = lesson
+		lessonMap[lesson.OutlineLessonID] = lesson
 	}
 
 	// Build sections from outline
@@ -335,7 +336,7 @@ func (s *CourseExportService) buildCourseData(ctx context.Context, export *entit
 			lessonID, _ := lessonData["id"].(string)
 			lessonTitle, _ := lessonData["title"].(string)
 
-			// Find generated lesson content
+			// Find generated lesson content by outline lesson ID
 			genLesson, found := lessonMap[lessonID]
 			if !found {
 				log.Warn("generated content not found for lesson", "lessonID", lessonID)
@@ -609,7 +610,7 @@ func (s *CourseExportService) BuildCourseDataForTenant(ctx context.Context, tena
 
 	lessonMap := make(map[string]S3GeneratedLesson)
 	for _, lesson := range content.GeneratedLessons {
-		lessonMap[lesson.ID] = lesson
+		lessonMap[lesson.OutlineLessonID] = lesson
 	}
 
 	for _, sectionData := range content.Content.Sections {
