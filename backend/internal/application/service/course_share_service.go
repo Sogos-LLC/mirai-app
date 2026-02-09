@@ -283,20 +283,21 @@ func (s *CourseShareService) GetSharedCourse(ctx context.Context, sessionToken s
 			Sections []map[string]interface{} `json:"sections"`
 		} `json:"content"`
 		GeneratedLessons []struct {
-			ID         string          `json:"id"`
-			Components json.RawMessage `json:"components"`
+			ID              string          `json:"id"`
+			OutlineLessonID string          `json:"outlineLessonId"`
+			Components      json.RawMessage `json:"components"`
 		} `json:"generatedLessons"`
 	}
 	if err := s.contentStorage.ReadCourseContent(tenantCtx, claims.TenantID, claims.CourseID, &s3Content); err != nil {
 		return nil, fmt.Errorf("failed to read content: %w", err)
 	}
 
-	// Build lesson component counts
+	// Build lesson component counts keyed by outlineLessonId (what the outline references)
 	lessonComponentCounts := make(map[string]int)
 	for _, gl := range s3Content.GeneratedLessons {
 		var comps []interface{}
 		json.Unmarshal(gl.Components, &comps)
-		lessonComponentCounts[gl.ID] = len(comps)
+		lessonComponentCounts[gl.OutlineLessonID] = len(comps)
 	}
 
 	result := &SharedCourseData{
@@ -352,8 +353,9 @@ func (s *CourseShareService) GetSharedLesson(ctx context.Context, sessionToken, 
 	// Read S3 content
 	var s3Content struct {
 		GeneratedLessons []struct {
-			ID         string          `json:"id"`
-			Components json.RawMessage `json:"components"`
+			ID              string          `json:"id"`
+			OutlineLessonID string          `json:"outlineLessonId"`
+			Components      json.RawMessage `json:"components"`
 		} `json:"generatedLessons"`
 		Content struct {
 			Sections []map[string]interface{} `json:"sections"`
@@ -376,9 +378,9 @@ func (s *CourseShareService) GetSharedLesson(ctx context.Context, sessionToken, 
 		}
 	}
 
-	// Find lesson content
+	// Find lesson content by outlineLessonId (outline references this ID)
 	for _, gl := range s3Content.GeneratedLessons {
-		if gl.ID == lessonID {
+		if gl.OutlineLessonID == lessonID {
 			contentJSON = string(gl.Components)
 			break
 		}

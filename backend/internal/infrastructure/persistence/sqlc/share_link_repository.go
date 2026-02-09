@@ -9,6 +9,7 @@ import (
 	gen "github.com/sogos/mirai-backend/internal/database/gen"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
+	"github.com/sogos/mirai-backend/internal/domain/tenant"
 )
 
 // ShareLinkRepository implements repository.ShareLinkRepository with sqlc.
@@ -42,9 +43,11 @@ func (r *ShareLinkRepository) Create(ctx context.Context, link *entity.ShareLink
 }
 
 func (r *ShareLinkRepository) GetByToken(ctx context.Context, token string) (*entity.ShareLink, error) {
-	// Token lookup is cross-tenant (public access), use direct query
-	q := gen.New(r.db)
-	result, err := q.GetShareLinkByToken(ctx, token)
+	// Token lookup is cross-tenant (public access), use superadmin bypass for RLS
+	ctx = tenant.WithSuperAdmin(ctx, true)
+	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.CourseShareLink, error) {
+		return q.GetShareLinkByToken(ctx, token)
+	})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

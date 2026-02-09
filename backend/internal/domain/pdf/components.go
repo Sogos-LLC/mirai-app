@@ -45,13 +45,40 @@ func renderComponent(p *fpdf.Fpdf, comp ComponentData, contentWidth float64) {
 	}
 }
 
+// textContentJSON represents the JSON structure for text components.
+type textContentJSON struct {
+	TextHTML string `json:"textHtml"`
+}
+
+// headingContentJSON represents the JSON structure for heading components.
+type headingContentJSON struct {
+	HeadingLevel int    `json:"headingLevel"`
+	HeadingText  string `json:"headingText"`
+}
+
 // renderText renders a text component.
 func renderText(p *fpdf.Fpdf, contentJSON string, contentWidth float64) {
-	text := stripHTML(contentJSON)
-	if text == "" {
+	// Parse the JSON to extract the textHtml field
+	var content textContentJSON
+	if err := json.Unmarshal([]byte(contentJSON), &content); err != nil || content.TextHTML == "" {
+		// Fallback: treat contentJSON as raw HTML/text
+		text := stripHTML(contentJSON)
+		if text == "" {
+			return
+		}
+		renderTextContent(p, text, contentWidth)
 		return
 	}
 
+	text := stripHTML(content.TextHTML)
+	if text == "" {
+		return
+	}
+	renderTextContent(p, text, contentWidth)
+}
+
+// renderTextContent renders plain text to the PDF with paragraph splitting.
+func renderTextContent(p *fpdf.Fpdf, text string, contentWidth float64) {
 	setFont(p, fontFamily, "", fontSizeBody)
 	setColor(p, colorDarkGray)
 
@@ -72,7 +99,15 @@ func renderText(p *fpdf.Fpdf, contentJSON string, contentWidth float64) {
 
 // renderHeading renders a heading component.
 func renderHeading(p *fpdf.Fpdf, contentJSON string, contentWidth float64) {
-	text := stripHTML(contentJSON)
+	// Parse the JSON to extract the headingText field
+	var content headingContentJSON
+	var text string
+	if err := json.Unmarshal([]byte(contentJSON), &content); err == nil && content.HeadingText != "" {
+		text = stripHTML(content.HeadingText)
+	} else {
+		// Fallback: treat contentJSON as raw HTML/text
+		text = stripHTML(contentJSON)
+	}
 	if text == "" {
 		return
 	}

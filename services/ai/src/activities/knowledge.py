@@ -3,6 +3,8 @@
 Document ingestion has been moved to Go (backend/internal/application/workflow/activities/ingest.go).
 """
 
+from dataclasses import dataclass
+
 from pydantic import BaseModel
 
 import structlog
