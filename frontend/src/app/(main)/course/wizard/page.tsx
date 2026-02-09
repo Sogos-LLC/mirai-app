@@ -547,6 +547,7 @@ export default function CourseWizardPage() {
                     <Button
                       variant="primary"
                       onClick={() => wizardSend({ type: 'COMPLETE' })}
+                      disabled={!canGoNext}
                       className="gap-1.5"
                     >
                       Create Course
