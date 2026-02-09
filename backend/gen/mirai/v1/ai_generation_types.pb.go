@@ -2230,6 +2230,176 @@ func (x *PlannedLesson) GetLearningGoals() []string {
 	return nil
 }
 
+// GenerationPhaseUsage tracks token usage for one phase/activity of generation.
+type GenerationPhaseUsage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PhaseName     string                 `protobuf:"bytes,1,opt,name=phase_name,json=phaseName,proto3" json:"phase_name,omitempty"`
+	InputTokens   int64                  `protobuf:"varint,2,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens  int64                  `protobuf:"varint,3,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	TotalTokens   int64                  `protobuf:"varint,4,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	Requests      int32                  `protobuf:"varint,5,opt,name=requests,proto3" json:"requests,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerationPhaseUsage) Reset() {
+	*x = GenerationPhaseUsage{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerationPhaseUsage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerationPhaseUsage) ProtoMessage() {}
+
+func (x *GenerationPhaseUsage) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerationPhaseUsage.ProtoReflect.Descriptor instead.
+func (*GenerationPhaseUsage) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GenerationPhaseUsage) GetPhaseName() string {
+	if x != nil {
+		return x.PhaseName
+	}
+	return ""
+}
+
+func (x *GenerationPhaseUsage) GetInputTokens() int64 {
+	if x != nil {
+		return x.InputTokens
+	}
+	return 0
+}
+
+func (x *GenerationPhaseUsage) GetOutputTokens() int64 {
+	if x != nil {
+		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *GenerationPhaseUsage) GetTotalTokens() int64 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *GenerationPhaseUsage) GetRequests() int32 {
+	if x != nil {
+		return x.Requests
+	}
+	return 0
+}
+
+// GenerationCostReport aggregates token usage across all generation phases.
+type GenerationCostReport struct {
+	state             protoimpl.MessageState  `protogen:"open.v1"`
+	TotalInputTokens  int64                   `protobuf:"varint,1,opt,name=total_input_tokens,json=totalInputTokens,proto3" json:"total_input_tokens,omitempty"`
+	TotalOutputTokens int64                   `protobuf:"varint,2,opt,name=total_output_tokens,json=totalOutputTokens,proto3" json:"total_output_tokens,omitempty"`
+	TotalTokens       int64                   `protobuf:"varint,3,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	TotalRequests     int32                   `protobuf:"varint,4,opt,name=total_requests,json=totalRequests,proto3" json:"total_requests,omitempty"`
+	EstimatedCostUsd  float64                 `protobuf:"fixed64,5,opt,name=estimated_cost_usd,json=estimatedCostUsd,proto3" json:"estimated_cost_usd,omitempty"`
+	ModelName         string                  `protobuf:"bytes,6,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	Phases            []*GenerationPhaseUsage `protobuf:"bytes,7,rep,name=phases,proto3" json:"phases,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GenerationCostReport) Reset() {
+	*x = GenerationCostReport{}
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerationCostReport) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerationCostReport) ProtoMessage() {}
+
+func (x *GenerationCostReport) ProtoReflect() protoreflect.Message {
+	mi := &file_mirai_v1_ai_generation_types_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerationCostReport.ProtoReflect.Descriptor instead.
+func (*GenerationCostReport) Descriptor() ([]byte, []int) {
+	return file_mirai_v1_ai_generation_types_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GenerationCostReport) GetTotalInputTokens() int64 {
+	if x != nil {
+		return x.TotalInputTokens
+	}
+	return 0
+}
+
+func (x *GenerationCostReport) GetTotalOutputTokens() int64 {
+	if x != nil {
+		return x.TotalOutputTokens
+	}
+	return 0
+}
+
+func (x *GenerationCostReport) GetTotalTokens() int64 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *GenerationCostReport) GetTotalRequests() int32 {
+	if x != nil {
+		return x.TotalRequests
+	}
+	return 0
+}
+
+func (x *GenerationCostReport) GetEstimatedCostUsd() float64 {
+	if x != nil {
+		return x.EstimatedCostUsd
+	}
+	return 0
+}
+
+func (x *GenerationCostReport) GetModelName() string {
+	if x != nil {
+		return x.ModelName
+	}
+	return ""
+}
+
+func (x *GenerationCostReport) GetPhases() []*GenerationPhaseUsage {
+	if x != nil {
+		return x.Phases
+	}
+	return nil
+}
+
 var File_mirai_v1_ai_generation_types_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
@@ -2443,7 +2613,23 @@ const file_mirai_v1_ai_generation_types_proto_rawDesc = "" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12!\n" +
 	"\fsearch_terms\x18\x03 \x03(\tR\vsearchTerms\x12%\n" +
-	"\x0elearning_goals\x18\x04 \x03(\tR\rlearningGoals*\xa8\x02\n" +
+	"\x0elearning_goals\x18\x04 \x03(\tR\rlearningGoals\"\xbc\x01\n" +
+	"\x14GenerationPhaseUsage\x12\x1d\n" +
+	"\n" +
+	"phase_name\x18\x01 \x01(\tR\tphaseName\x12!\n" +
+	"\finput_tokens\x18\x02 \x01(\x03R\vinputTokens\x12#\n" +
+	"\routput_tokens\x18\x03 \x01(\x03R\foutputTokens\x12!\n" +
+	"\ftotal_tokens\x18\x04 \x01(\x03R\vtotalTokens\x12\x1a\n" +
+	"\brequests\x18\x05 \x01(\x05R\brequests\"\xc3\x02\n" +
+	"\x14GenerationCostReport\x12,\n" +
+	"\x12total_input_tokens\x18\x01 \x01(\x03R\x10totalInputTokens\x12.\n" +
+	"\x13total_output_tokens\x18\x02 \x01(\x03R\x11totalOutputTokens\x12!\n" +
+	"\ftotal_tokens\x18\x03 \x01(\x03R\vtotalTokens\x12%\n" +
+	"\x0etotal_requests\x18\x04 \x01(\x05R\rtotalRequests\x12,\n" +
+	"\x12estimated_cost_usd\x18\x05 \x01(\x01R\x10estimatedCostUsd\x12\x1d\n" +
+	"\n" +
+	"model_name\x18\x06 \x01(\tR\tmodelName\x126\n" +
+	"\x06phases\x18\a \x03(\v2\x1e.mirai.v1.GenerationPhaseUsageR\x06phases*\xa8\x02\n" +
 	"\x11GenerationJobType\x12#\n" +
 	"\x1fGENERATION_JOB_TYPE_UNSPECIFIED\x10\x00\x12&\n" +
 	"\"GENERATION_JOB_TYPE_COURSE_OUTLINE\x10\x02\x12&\n" +
@@ -2511,7 +2697,7 @@ func file_mirai_v1_ai_generation_types_proto_rawDescGZIP() []byte {
 }
 
 var file_mirai_v1_ai_generation_types_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_mirai_v1_ai_generation_types_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_mirai_v1_ai_generation_types_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_mirai_v1_ai_generation_types_proto_goTypes = []any{
 	(GenerationJobType)(0),            // 0: mirai.v1.GenerationJobType
 	(GenerationJobStatus)(0),          // 1: mirai.v1.GenerationJobStatus
@@ -2539,47 +2725,50 @@ var file_mirai_v1_ai_generation_types_proto_goTypes = []any{
 	(*SectionHint)(nil),               // 23: mirai.v1.SectionHint
 	(*PlannedSection)(nil),            // 24: mirai.v1.PlannedSection
 	(*PlannedLesson)(nil),             // 25: mirai.v1.PlannedLesson
-	(*timestamppb.Timestamp)(nil),     // 26: google.protobuf.Timestamp
-	(*KnowledgeCitation)(nil),         // 27: mirai.v1.KnowledgeCitation
-	(LessonComponentType)(0),          // 28: mirai.v1.LessonComponentType
+	(*GenerationPhaseUsage)(nil),      // 26: mirai.v1.GenerationPhaseUsage
+	(*GenerationCostReport)(nil),      // 27: mirai.v1.GenerationCostReport
+	(*timestamppb.Timestamp)(nil),     // 28: google.protobuf.Timestamp
+	(*KnowledgeCitation)(nil),         // 29: mirai.v1.KnowledgeCitation
+	(LessonComponentType)(0),          // 30: mirai.v1.LessonComponentType
 }
 var file_mirai_v1_ai_generation_types_proto_depIdxs = []int32{
 	0,  // 0: mirai.v1.GenerationJob.type:type_name -> mirai.v1.GenerationJobType
 	1,  // 1: mirai.v1.GenerationJob.status:type_name -> mirai.v1.GenerationJobStatus
-	26, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
-	26, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
-	26, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
+	28, // 2: mirai.v1.GenerationJob.created_at:type_name -> google.protobuf.Timestamp
+	28, // 3: mirai.v1.GenerationJob.started_at:type_name -> google.protobuf.Timestamp
+	28, // 4: mirai.v1.GenerationJob.completed_at:type_name -> google.protobuf.Timestamp
 	10, // 5: mirai.v1.CourseOutline.sections:type_name -> mirai.v1.OutlineSection
 	2,  // 6: mirai.v1.CourseOutline.approval_status:type_name -> mirai.v1.OutlineApprovalStatus
-	26, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
-	26, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
+	28, // 7: mirai.v1.CourseOutline.generated_at:type_name -> google.protobuf.Timestamp
+	28, // 8: mirai.v1.CourseOutline.approved_at:type_name -> google.protobuf.Timestamp
 	11, // 9: mirai.v1.OutlineSection.lessons:type_name -> mirai.v1.OutlineLesson
 	3,  // 10: mirai.v1.OutlineSection.level:type_name -> mirai.v1.SectionLevel
 	4,  // 11: mirai.v1.OutlineSection.intent:type_name -> mirai.v1.SectionIntent
 	5,  // 12: mirai.v1.OutlineSection.emphasis:type_name -> mirai.v1.SectionEmphasis
-	27, // 13: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
+	29, // 13: mirai.v1.OutlineLesson.citations:type_name -> mirai.v1.KnowledgeCitation
 	13, // 14: mirai.v1.GeneratedLesson.components:type_name -> mirai.v1.LessonComponent
-	26, // 15: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
+	28, // 15: mirai.v1.GeneratedLesson.generated_at:type_name -> google.protobuf.Timestamp
 	18, // 16: mirai.v1.GeneratedLesson.aggregate_provenance:type_name -> mirai.v1.LessonProvenance
-	28, // 17: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
+	30, // 17: mirai.v1.LessonComponent.type:type_name -> mirai.v1.LessonComponentType
 	14, // 18: mirai.v1.LessonComponent.alignment:type_name -> mirai.v1.ComponentAlignment
 	16, // 19: mirai.v1.LessonComponent.provenance:type_name -> mirai.v1.ComponentProvenance
 	17, // 20: mirai.v1.ComponentProvenance.source_chunks:type_name -> mirai.v1.ProvenanceChunk
-	26, // 21: mirai.v1.ComponentProvenance.generated_at:type_name -> google.protobuf.Timestamp
+	28, // 21: mirai.v1.ComponentProvenance.generated_at:type_name -> google.protobuf.Timestamp
 	6,  // 22: mirai.v1.ComponentProvenance.dominant_source_type:type_name -> mirai.v1.SourceType
 	15, // 23: mirai.v1.ComponentProvenance.paragraphs:type_name -> mirai.v1.AnnotatedParagraph
 	6,  // 24: mirai.v1.ProvenanceChunk.source_type:type_name -> mirai.v1.SourceType
 	22, // 25: mirai.v1.CoursePlan.document_analyses:type_name -> mirai.v1.DocumentAnalysis
 	24, // 26: mirai.v1.CoursePlan.planned_sections:type_name -> mirai.v1.PlannedSection
-	26, // 27: mirai.v1.CoursePlan.generated_at:type_name -> google.protobuf.Timestamp
-	26, // 28: mirai.v1.CoursePlan.approved_at:type_name -> google.protobuf.Timestamp
+	28, // 27: mirai.v1.CoursePlan.generated_at:type_name -> google.protobuf.Timestamp
+	28, // 28: mirai.v1.CoursePlan.approved_at:type_name -> google.protobuf.Timestamp
 	23, // 29: mirai.v1.DocumentAnalysis.section_hints:type_name -> mirai.v1.SectionHint
 	25, // 30: mirai.v1.PlannedSection.lessons:type_name -> mirai.v1.PlannedLesson
-	31, // [31:31] is the sub-list for method output_type
-	31, // [31:31] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	26, // 31: mirai.v1.GenerationCostReport.phases:type_name -> mirai.v1.GenerationPhaseUsage
+	32, // [32:32] is the sub-list for method output_type
+	32, // [32:32] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_ai_generation_types_proto_init() }
@@ -2601,7 +2790,7 @@ func file_mirai_v1_ai_generation_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_ai_generation_types_proto_rawDesc), len(file_mirai_v1_ai_generation_types_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

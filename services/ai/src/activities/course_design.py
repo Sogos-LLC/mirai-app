@@ -34,8 +34,26 @@ from src.models.course_design import (
     ExpandedLesson,
     CourseQA,
 )
+from src.workflows.types import ActivityUsage
 
 log = structlog.get_logger()
+
+
+def _extract_usage(result: object, activity_name: str) -> ActivityUsage:
+    """Extract ActivityUsage from a pydantic-ai RunResult."""
+    try:
+        run_usage = result.usage()  # type: ignore[union-attr]
+        return ActivityUsage(
+            activity_name=activity_name,
+            input_tokens=run_usage.input_tokens or 0,
+            output_tokens=run_usage.output_tokens or 0,
+            cache_read_tokens=run_usage.cache_read_tokens or 0,
+            cache_write_tokens=run_usage.cache_write_tokens or 0,
+            requests=run_usage.requests or 0,
+            total_tokens=(run_usage.input_tokens or 0) + (run_usage.output_tokens or 0),
+        )
+    except Exception:
+        return ActivityUsage(activity_name=activity_name)
 
 MAX_VALIDATION_RETRIES = 2
 
@@ -69,6 +87,7 @@ class WebSourceData:
 class GenerateAnalysisOutput:
     analysis: CourseAnalysis
     web_sources: list[WebSourceData] | None = None
+    usage: ActivityUsage | None = None
 
 
 @dataclass
@@ -87,6 +106,7 @@ class GenerateOutcomesInput:
 @dataclass
 class GenerateOutcomesOutput:
     outcomes: CourseOutcomes
+    usage: ActivityUsage | None = None
 
 
 @dataclass
@@ -103,6 +123,7 @@ class GenerateStructureInput:
 @dataclass
 class GenerateStructureOutput:
     structure: CourseStructure
+    usage: ActivityUsage | None = None
 
 
 @dataclass
@@ -134,6 +155,7 @@ class GenerateSampleLessonInput:
 @dataclass
 class GenerateSampleLessonOutput:
     lesson: Lesson
+    usage: ActivityUsage | None = None
 
 
 @dataclass
@@ -178,6 +200,7 @@ class RunQAInput:
 @dataclass
 class RunQAOutput:
     qa: CourseQA
+    usage: ActivityUsage | None = None
 
 
 @dataclass
@@ -241,6 +264,7 @@ async def generate_course_analysis(input: GenerateAnalysisInput) -> GenerateAnal
     return GenerateAnalysisOutput(
         analysis=result.output,
         web_sources=web_sources if web_sources else None,
+        usage=_extract_usage(result, "generate_course_analysis"),
     )
 
 
@@ -394,7 +418,10 @@ async def generate_course_outcomes(input: GenerateOutcomesInput) -> GenerateOutc
             activity.heartbeat()
             # Additional validation: check outcome quality
             _validate_outcomes(result.output)
-            return GenerateOutcomesOutput(outcomes=result.output)
+            return GenerateOutcomesOutput(
+                outcomes=result.output,
+                usage=_extract_usage(result, "generate_course_outcomes"),
+            )
         except Exception as e:
             last_error = str(e)
             log.warning("outcome_validation_failed", attempt=attempt, error=last_error)
@@ -445,7 +472,10 @@ async def generate_course_structure(input: GenerateStructureInput) -> GenerateSt
             # LLM judge: semantic coverage check (no exact string matching)
             await _validate_structure_coverage(result.output, input.outcomes, model)
             activity.heartbeat()
-            return GenerateStructureOutput(structure=result.output)
+            return GenerateStructureOutput(
+                structure=result.output,
+                usage=_extract_usage(result, "generate_course_structure"),
+            )
         except Exception as e:
             last_error = str(e)
             log.warning("structure_validation_failed", attempt=attempt, error=last_error)
@@ -525,7 +555,10 @@ async def generate_sample_lesson(input: GenerateSampleLessonInput) -> GenerateSa
     result = await AgentRegistry.get("sample-lesson").run(prompt, model=model)
     activity.heartbeat()
 
-    return GenerateSampleLessonOutput(lesson=result.output)
+    return GenerateSampleLessonOutput(
+        lesson=result.output,
+        usage=_extract_usage(result, "generate_sample_lesson"),
+    )
 
 
 @activity.defn
@@ -585,7 +618,10 @@ async def run_course_qa(input: RunQAInput) -> RunQAOutput:
     result = await AgentRegistry.get("course-qa").run(prompt, model=model)
     activity.heartbeat()
 
-    return RunQAOutput(qa=result.output)
+    return RunQAOutput(
+        qa=result.output,
+        usage=_extract_usage(result, "run_course_qa"),
+    )
 
 
 @activity.defn

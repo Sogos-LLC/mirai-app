@@ -1421,6 +1421,64 @@ func (s *AIGenerationServiceServer) ResumeWorkflowDeferral(
 	return connect.NewResponse(&v1.ResumeWorkflowDeferralResponse{}), nil
 }
 
+// GetCourseGenerationDetails returns generation cost and token usage for a course.
+func (s *AIGenerationServiceServer) GetCourseGenerationDetails(
+	ctx context.Context,
+	req *connect.Request[v1.GetCourseGenerationDetailsRequest],
+) (*connect.Response[v1.GetCourseGenerationDetailsResponse], error) {
+	kratosIDStr, ok := ctx.Value(kratosIDKey{}).(string)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errUnauthenticated)
+	}
+
+	kratosID, err := parseUUID(kratosIDStr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	courseID, err := parseUUID(req.Msg.GetCourseId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	result, err := s.aiService.GetCourseGenerationDetails(ctx, kratosID, courseID)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	resp := &v1.GetCourseGenerationDetailsResponse{
+		Job: generationJobToProto(result.Job),
+	}
+
+	if result.GeneratedAt != nil {
+		resp.GeneratedAt = timestamppb.New(*result.GeneratedAt)
+	}
+
+	if result.GenerationMetadata != nil {
+		meta := result.GenerationMetadata
+		costReport := &v1.GenerationCostReport{
+			TotalInputTokens:  meta.TotalInputTokens,
+			TotalOutputTokens: meta.TotalOutputTokens,
+			TotalTokens:       meta.TotalTokens,
+			TotalRequests:     meta.TotalRequests,
+			EstimatedCostUsd:  meta.EstimatedCostUsd,
+			ModelName:         meta.ModelName,
+		}
+		for _, phase := range meta.Phases {
+			costReport.Phases = append(costReport.Phases, &v1.GenerationPhaseUsage{
+				PhaseName:    phase.PhaseName,
+				InputTokens:  phase.InputTokens,
+				OutputTokens: phase.OutputTokens,
+				TotalTokens:  phase.TotalTokens,
+				Requests:     phase.Requests,
+			})
+		}
+		resp.CostReport = costReport
+	}
+
+	return connect.NewResponse(resp), nil
+}
+
 // GetGraphVisualization returns the mermaid diagram for the course creation graph.
 func (s *AIGenerationServiceServer) GetGraphVisualization(
 	ctx context.Context,

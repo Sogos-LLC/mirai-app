@@ -139,6 +139,7 @@ type Querier interface {
 	GetKnowledgeSourceByID(ctx context.Context, id uuid.UUID) (KnowledgeSource, error)
 	// Get a knowledge source by ID (used for team knowledge operations)
 	GetKnowledgeSourceByIDForTeam(ctx context.Context, id uuid.UUID) (KnowledgeSource, error)
+	GetLatestCourseCreationJob(ctx context.Context, courseID uuid.NullUUID) (GenerationJob, error)
 	GetNotificationByID(ctx context.Context, id uuid.UUID) (Notification, error)
 	// Note: This looks for 'admin' role instead of deprecated 'owner'
 	GetOwnerByCompanyID(ctx context.Context, companyID uuid.NullUUID) (User, error)

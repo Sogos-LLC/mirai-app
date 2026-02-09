@@ -69,7 +69,7 @@ export default function CourseWizardPage() {
   const resumeJobId = searchParams.get('jobId') ?? undefined;
   const resumeCourseId = searchParams.get('courseId') ?? undefined;
 
-  const { showQAChecks, showWizardTutorial } = useFeatureTogglesStore();
+  const { showQAChecks, showWizardTutorial, showWebResearch, showStrictKnowledge } = useFeatureTogglesStore();
 
   // =========================================================================
   // Wizard hooks (Step collection phase)
@@ -299,7 +299,8 @@ export default function CourseWizardPage() {
           additionalContext: ctx.contextText,
           enableInternalKnowledge: contextDocIds.length > 0,
           selectedGlobalDocIds: contextDocIds,
-          enableWebResearch: hasUrls,
+          enableWebResearch: showWebResearch ? hasUrls : false,
+          strictKnowledgeOnly: showStrictKnowledge && contextDocIds.length > 0,
           skipQa: !showQAChecks,
         });
 

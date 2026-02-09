@@ -217,6 +217,20 @@ export const PlannedLessonSchema = z.object({
 export type PlannedLesson = z.infer<typeof PlannedLessonSchema>;
 
 /**
+ * Zod schema for GenerationPhaseUsage
+ * @generated from message mirai.v1.GenerationPhaseUsage
+ */
+export const GenerationPhaseUsageSchema = z.object({
+  phaseName: z.string(),
+  inputTokens: z.number().int(),
+  outputTokens: z.number().int(),
+  totalTokens: z.number().int(),
+  requests: z.number().int(),
+});
+
+export type GenerationPhaseUsage = z.infer<typeof GenerationPhaseUsageSchema>;
+
+/**
  * Zod schema for OutlineSection
  * @generated from message mirai.v1.OutlineSection
  */
@@ -288,6 +302,22 @@ export const PlannedSectionSchema = z.object({
 });
 
 export type PlannedSection = z.infer<typeof PlannedSectionSchema>;
+
+/**
+ * Zod schema for GenerationCostReport
+ * @generated from message mirai.v1.GenerationCostReport
+ */
+export const GenerationCostReportSchema = z.object({
+  totalInputTokens: z.number().int(),
+  totalOutputTokens: z.number().int(),
+  totalTokens: z.number().int(),
+  totalRequests: z.number().int(),
+  estimatedCostUsd: z.number(),
+  modelName: z.string(),
+  phases: z.array(GenerationPhaseUsageSchema),
+});
+
+export type GenerationCostReport = z.infer<typeof GenerationCostReportSchema>;
 
 /**
  * Zod schema for CourseOutline

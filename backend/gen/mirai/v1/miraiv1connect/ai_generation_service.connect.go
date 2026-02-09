@@ -96,6 +96,9 @@ const (
 	// AIGenerationServiceResumeWorkflowDeferralProcedure is the fully-qualified name of the
 	// AIGenerationService's ResumeWorkflowDeferral RPC.
 	AIGenerationServiceResumeWorkflowDeferralProcedure = "/mirai.v1.AIGenerationService/ResumeWorkflowDeferral"
+	// AIGenerationServiceGetCourseGenerationDetailsProcedure is the fully-qualified name of the
+	// AIGenerationService's GetCourseGenerationDetails RPC.
+	AIGenerationServiceGetCourseGenerationDetailsProcedure = "/mirai.v1.AIGenerationService/GetCourseGenerationDetails"
 )
 
 // AIGenerationServiceClient is a client for the mirai.v1.AIGenerationService service.
@@ -122,6 +125,8 @@ type AIGenerationServiceClient interface {
 	GetGraphVisualization(context.Context, *connect.Request[v1.GetGraphVisualizationRequest]) (*connect.Response[v1.GetGraphVisualizationResponse], error)
 	GetWorkflowState(context.Context, *connect.Request[v1.GetWorkflowStateRequest]) (*connect.Response[v1.GetWorkflowStateResponse], error)
 	ResumeWorkflowDeferral(context.Context, *connect.Request[v1.ResumeWorkflowDeferralRequest]) (*connect.Response[v1.ResumeWorkflowDeferralResponse], error)
+	// Cost tracking
+	GetCourseGenerationDetails(context.Context, *connect.Request[v1.GetCourseGenerationDetailsRequest]) (*connect.Response[v1.GetCourseGenerationDetailsResponse], error)
 }
 
 // NewAIGenerationServiceClient constructs a client for the mirai.v1.AIGenerationService service. By
@@ -261,32 +266,39 @@ func NewAIGenerationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(aIGenerationServiceMethods.ByName("ResumeWorkflowDeferral")),
 			connect.WithClientOptions(opts...),
 		),
+		getCourseGenerationDetails: connect.NewClient[v1.GetCourseGenerationDetailsRequest, v1.GetCourseGenerationDetailsResponse](
+			httpClient,
+			baseURL+AIGenerationServiceGetCourseGenerationDetailsProcedure,
+			connect.WithSchema(aIGenerationServiceMethods.ByName("GetCourseGenerationDetails")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // aIGenerationServiceClient implements AIGenerationServiceClient.
 type aIGenerationServiceClient struct {
-	generateCourseOutline  *connect.Client[v1.GenerateCourseOutlineRequest, v1.GenerateCourseOutlineResponse]
-	getCourseOutline       *connect.Client[v1.GetCourseOutlineRequest, v1.GetCourseOutlineResponse]
-	updateCourseOutline    *connect.Client[v1.UpdateCourseOutlineRequest, v1.UpdateCourseOutlineResponse]
-	generateAllLessons     *connect.Client[v1.GenerateAllLessonsRequest, v1.GenerateAllLessonsResponse]
-	regenerateComponent    *connect.Client[v1.RegenerateComponentRequest, v1.RegenerateComponentResponse]
-	getJob                 *connect.Client[v1.GetJobRequest, v1.GetJobResponse]
-	listJobs               *connect.Client[v1.ListJobsRequest, v1.ListJobsResponse]
-	cancelJob              *connect.Client[v1.CancelJobRequest, v1.CancelJobResponse]
-	deleteJob              *connect.Client[v1.DeleteJobRequest, v1.DeleteJobResponse]
-	getGeneratedLesson     *connect.Client[v1.GetGeneratedLessonRequest, v1.GetGeneratedLessonResponse]
-	listGeneratedLessons   *connect.Client[v1.ListGeneratedLessonsRequest, v1.ListGeneratedLessonsResponse]
-	generateComponentImage *connect.Client[v1.GenerateComponentImageRequest, v1.GenerateComponentImageResponse]
-	updateLessonComponents *connect.Client[v1.UpdateLessonComponentsRequest, v1.UpdateLessonComponentsResponse]
-	getCoursePlan          *connect.Client[v1.GetCoursePlanRequest, v1.GetCoursePlanResponse]
-	approveCoursePlan      *connect.Client[v1.ApproveCoursePlanRequest, v1.ApproveCoursePlanResponse]
-	startCourseCreation    *connect.Client[v1.StartCourseCreationRequest, v1.StartCourseCreationResponse]
-	approveWorkflowStep    *connect.Client[v1.ApproveWorkflowStepRequest, v1.ApproveWorkflowStepResponse]
-	rejectWorkflowStep     *connect.Client[v1.RejectWorkflowStepRequest, v1.RejectWorkflowStepResponse]
-	getGraphVisualization  *connect.Client[v1.GetGraphVisualizationRequest, v1.GetGraphVisualizationResponse]
-	getWorkflowState       *connect.Client[v1.GetWorkflowStateRequest, v1.GetWorkflowStateResponse]
-	resumeWorkflowDeferral *connect.Client[v1.ResumeWorkflowDeferralRequest, v1.ResumeWorkflowDeferralResponse]
+	generateCourseOutline      *connect.Client[v1.GenerateCourseOutlineRequest, v1.GenerateCourseOutlineResponse]
+	getCourseOutline           *connect.Client[v1.GetCourseOutlineRequest, v1.GetCourseOutlineResponse]
+	updateCourseOutline        *connect.Client[v1.UpdateCourseOutlineRequest, v1.UpdateCourseOutlineResponse]
+	generateAllLessons         *connect.Client[v1.GenerateAllLessonsRequest, v1.GenerateAllLessonsResponse]
+	regenerateComponent        *connect.Client[v1.RegenerateComponentRequest, v1.RegenerateComponentResponse]
+	getJob                     *connect.Client[v1.GetJobRequest, v1.GetJobResponse]
+	listJobs                   *connect.Client[v1.ListJobsRequest, v1.ListJobsResponse]
+	cancelJob                  *connect.Client[v1.CancelJobRequest, v1.CancelJobResponse]
+	deleteJob                  *connect.Client[v1.DeleteJobRequest, v1.DeleteJobResponse]
+	getGeneratedLesson         *connect.Client[v1.GetGeneratedLessonRequest, v1.GetGeneratedLessonResponse]
+	listGeneratedLessons       *connect.Client[v1.ListGeneratedLessonsRequest, v1.ListGeneratedLessonsResponse]
+	generateComponentImage     *connect.Client[v1.GenerateComponentImageRequest, v1.GenerateComponentImageResponse]
+	updateLessonComponents     *connect.Client[v1.UpdateLessonComponentsRequest, v1.UpdateLessonComponentsResponse]
+	getCoursePlan              *connect.Client[v1.GetCoursePlanRequest, v1.GetCoursePlanResponse]
+	approveCoursePlan          *connect.Client[v1.ApproveCoursePlanRequest, v1.ApproveCoursePlanResponse]
+	startCourseCreation        *connect.Client[v1.StartCourseCreationRequest, v1.StartCourseCreationResponse]
+	approveWorkflowStep        *connect.Client[v1.ApproveWorkflowStepRequest, v1.ApproveWorkflowStepResponse]
+	rejectWorkflowStep         *connect.Client[v1.RejectWorkflowStepRequest, v1.RejectWorkflowStepResponse]
+	getGraphVisualization      *connect.Client[v1.GetGraphVisualizationRequest, v1.GetGraphVisualizationResponse]
+	getWorkflowState           *connect.Client[v1.GetWorkflowStateRequest, v1.GetWorkflowStateResponse]
+	resumeWorkflowDeferral     *connect.Client[v1.ResumeWorkflowDeferralRequest, v1.ResumeWorkflowDeferralResponse]
+	getCourseGenerationDetails *connect.Client[v1.GetCourseGenerationDetailsRequest, v1.GetCourseGenerationDetailsResponse]
 }
 
 // GenerateCourseOutline calls mirai.v1.AIGenerationService.GenerateCourseOutline.
@@ -394,6 +406,11 @@ func (c *aIGenerationServiceClient) ResumeWorkflowDeferral(ctx context.Context, 
 	return c.resumeWorkflowDeferral.CallUnary(ctx, req)
 }
 
+// GetCourseGenerationDetails calls mirai.v1.AIGenerationService.GetCourseGenerationDetails.
+func (c *aIGenerationServiceClient) GetCourseGenerationDetails(ctx context.Context, req *connect.Request[v1.GetCourseGenerationDetailsRequest]) (*connect.Response[v1.GetCourseGenerationDetailsResponse], error) {
+	return c.getCourseGenerationDetails.CallUnary(ctx, req)
+}
+
 // AIGenerationServiceHandler is an implementation of the mirai.v1.AIGenerationService service.
 type AIGenerationServiceHandler interface {
 	GenerateCourseOutline(context.Context, *connect.Request[v1.GenerateCourseOutlineRequest]) (*connect.Response[v1.GenerateCourseOutlineResponse], error)
@@ -418,6 +435,8 @@ type AIGenerationServiceHandler interface {
 	GetGraphVisualization(context.Context, *connect.Request[v1.GetGraphVisualizationRequest]) (*connect.Response[v1.GetGraphVisualizationResponse], error)
 	GetWorkflowState(context.Context, *connect.Request[v1.GetWorkflowStateRequest]) (*connect.Response[v1.GetWorkflowStateResponse], error)
 	ResumeWorkflowDeferral(context.Context, *connect.Request[v1.ResumeWorkflowDeferralRequest]) (*connect.Response[v1.ResumeWorkflowDeferralResponse], error)
+	// Cost tracking
+	GetCourseGenerationDetails(context.Context, *connect.Request[v1.GetCourseGenerationDetailsRequest]) (*connect.Response[v1.GetCourseGenerationDetailsResponse], error)
 }
 
 // NewAIGenerationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -553,6 +572,12 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 		connect.WithSchema(aIGenerationServiceMethods.ByName("ResumeWorkflowDeferral")),
 		connect.WithHandlerOptions(opts...),
 	)
+	aIGenerationServiceGetCourseGenerationDetailsHandler := connect.NewUnaryHandler(
+		AIGenerationServiceGetCourseGenerationDetailsProcedure,
+		svc.GetCourseGenerationDetails,
+		connect.WithSchema(aIGenerationServiceMethods.ByName("GetCourseGenerationDetails")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mirai.v1.AIGenerationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AIGenerationServiceGenerateCourseOutlineProcedure:
@@ -597,6 +622,8 @@ func NewAIGenerationServiceHandler(svc AIGenerationServiceHandler, opts ...conne
 			aIGenerationServiceGetWorkflowStateHandler.ServeHTTP(w, r)
 		case AIGenerationServiceResumeWorkflowDeferralProcedure:
 			aIGenerationServiceResumeWorkflowDeferralHandler.ServeHTTP(w, r)
+		case AIGenerationServiceGetCourseGenerationDetailsProcedure:
+			aIGenerationServiceGetCourseGenerationDetailsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -688,4 +715,8 @@ func (UnimplementedAIGenerationServiceHandler) GetWorkflowState(context.Context,
 
 func (UnimplementedAIGenerationServiceHandler) ResumeWorkflowDeferral(context.Context, *connect.Request[v1.ResumeWorkflowDeferralRequest]) (*connect.Response[v1.ResumeWorkflowDeferralResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.ResumeWorkflowDeferral is not implemented"))
+}
+
+func (UnimplementedAIGenerationServiceHandler) GetCourseGenerationDetails(context.Context, *connect.Request[v1.GetCourseGenerationDetailsRequest]) (*connect.Response[v1.GetCourseGenerationDetailsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mirai.v1.AIGenerationService.GetCourseGenerationDetails is not implemented"))
 }

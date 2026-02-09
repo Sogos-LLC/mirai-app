@@ -41,6 +41,8 @@ type LessonProvenance = content.LessonProvenance
 type OutlineProvenance = content.OutlineProvenance
 type CourseContent = content.CourseContent
 type CourseSettings = content.CourseSettings
+type GenerationMetadata = content.GenerationMetadata
+type GenerationPhaseUsage = content.GenerationPhaseUsage
 
 // CourseService handles course and library operations.
 // Uses a hybrid model: metadata in PostgreSQL, content in S3.

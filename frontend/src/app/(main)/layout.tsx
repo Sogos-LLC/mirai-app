@@ -14,6 +14,7 @@ import Header from '@/components/layout/Header';
 import BottomTabNav from '@/components/layout/BottomTabNav';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { useIsMobile } from '@/hooks/useBreakpoint';
+import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
 
 /**
  * Route layout for all pages in the (main) folder.
@@ -57,15 +58,20 @@ export default function Layout({
   }, [checkSession, tokenProcessed, searchParams]);
 
   const queryClient = useQueryClient();
+  const toggleStore = useFeatureTogglesStore();
 
   // Prefetch routes and dashboard data AFTER auth is initialized
   useEffect(() => {
     if (!isAuthInitialized) return;
 
-    // Prefetch all sidebar routes for instant navigation
+    // Prefetch only visible (toggle-enabled) sidebar routes
+    const visibleMenuPaths = menuItems
+      .filter((item) => !item.featureToggle || toggleStore[item.featureToggle])
+      .map((item) => item.path);
+
     const allPaths = [
       '/dashboard',
-      ...menuItems.map((item) => item.path),
+      ...visibleMenuPaths,
       ...bottomItems.map((item) => item.path),
     ];
 
@@ -84,7 +90,8 @@ export default function Layout({
       queryKey: createConnectQueryKey({ schema: listCourses, input, cardinality: "finite" }),
       queryFn: () => callUnaryMethod(transport, listCourses, input),
     });
-  }, [router, queryClient, isAuthInitialized]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, queryClient, isAuthInitialized, toggleStore.showTemplates, toggleStore.showTutorials, toggleStore.showTeams]);
 
   // Desktop: sidebar margin based on collapsed/expanded state
   // Mobile: no margin (sidebar is a drawer overlay)

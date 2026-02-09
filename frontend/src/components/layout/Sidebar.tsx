@@ -15,13 +15,19 @@ import {
   ChevronRight,
   Building2,
 } from 'lucide-react';
+import { useFeatureTogglesStore, type FeatureToggleKey } from '@/store/zustand/useFeatureTogglesStore';
 
 // Navigation items
-export const menuItems = [
+export const menuItems: {
+  icon: typeof LayoutDashboard;
+  label: string;
+  path: string;
+  featureToggle?: FeatureToggleKey;
+}[] = [
   { icon: LayoutDashboard, label: 'Content Library', path: '/content-library' },
-  { icon: FileText, label: 'Templates', path: '/templates' },
-  { icon: BookOpen, label: 'Tutorials', path: '/tutorials' },
-  { icon: Building2, label: 'Teams', path: '/teams' },
+  { icon: FileText, label: 'Templates', path: '/templates', featureToggle: 'showTemplates' },
+  { icon: BookOpen, label: 'Tutorials', path: '/tutorials', featureToggle: 'showTutorials' },
+  { icon: Building2, label: 'Teams', path: '/teams', featureToggle: 'showTeams' },
 ];
 
 export const bottomItems = [
@@ -57,6 +63,11 @@ export default function Sidebar() {
   const closeMobileSidebar = useUIStore((s) => s.closeMobileSidebar);
   const [showText, setShowText] = useState(sidebarOpen);
   const isMobile = useIsMobile();
+  const toggleStore = useFeatureTogglesStore();
+
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.featureToggle || toggleStore[item.featureToggle]
+  );
 
   useEffect(() => {
     if (sidebarOpen) {
@@ -119,7 +130,7 @@ export default function Sidebar() {
         </button>
 
         <nav className="sidebar-menu">
-          {menuItems.map((item) => (
+          {visibleMenuItems.map((item) => (
             <NavLink key={item.path} item={item} isActive={pathname === item.path} showText={showText} />
           ))}
         </nav>

@@ -19,6 +19,28 @@ type S3CourseContent struct {
 	CurriculumMap      *CurriculumMap       `json:"curriculumMap,omitempty"`
 	OutlineProvenance  *OutlineProvenance   `json:"outlineProvenance,omitempty"`
 	CoursePlan         *CoursePlan          `json:"coursePlan,omitempty"`
+	GenerationMetadata *GenerationMetadata  `json:"generationMetadata,omitempty"`
+}
+
+// GenerationMetadata holds token usage and cost tracking for course generation.
+type GenerationMetadata struct {
+	GeneratedAt      string                    `json:"generatedAt"`
+	ModelName        string                    `json:"modelName,omitempty"`
+	TotalInputTokens  int64                   `json:"totalInputTokens"`
+	TotalOutputTokens int64                   `json:"totalOutputTokens"`
+	TotalTokens       int64                   `json:"totalTokens"`
+	TotalRequests     int32                   `json:"totalRequests"`
+	EstimatedCostUsd  float64                 `json:"estimatedCostUsd"`
+	Phases            []GenerationPhaseUsage  `json:"phases,omitempty"`
+}
+
+// GenerationPhaseUsage tracks token usage for one generation phase/activity.
+type GenerationPhaseUsage struct {
+	PhaseName    string `json:"phaseName"`
+	InputTokens  int64  `json:"inputTokens"`
+	OutputTokens int64  `json:"outputTokens"`
+	TotalTokens  int64  `json:"totalTokens"`
+	Requests     int32  `json:"requests"`
 }
 
 // CourseContent represents the course content structure.

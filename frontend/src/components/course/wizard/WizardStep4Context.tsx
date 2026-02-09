@@ -9,6 +9,7 @@ import {
   useDeleteKnowledgeSource,
   useKnowledgeIngestionState,
 } from '@/hooks/useTeamKnowledge';
+import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
 
 const ACCEPTED_EXTENSIONS = ['.txt', '.md', '.pdf', '.docx', '.pptx'];
 const ACCEPTED_MIME_TYPES = [
@@ -30,6 +31,7 @@ interface WizardStep4ContextProps {
 export function WizardStep4Context({ context, send }: WizardStep4ContextProps) {
   const uploadKnowledge = useUploadKnowledge();
   const deleteSource = useDeleteKnowledgeSource();
+  const { showWebResearch, showStrictKnowledge } = useFeatureTogglesStore();
 
   // Poll ingestion progress while uploading/processing
   const ingestion = useKnowledgeIngestionState(
@@ -143,7 +145,7 @@ export function WizardStep4Context({ context, send }: WizardStep4ContextProps) {
         />
 
         {/* URL detection indicator */}
-        {urlCount > 0 && (
+        {urlCount > 0 && showWebResearch && (
           <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
             <Globe className="w-4 h-4 text-blue-500 shrink-0" />
             <p className="text-xs text-blue-600 dark:text-blue-400">
@@ -196,7 +198,10 @@ export function WizardStep4Context({ context, send }: WizardStep4ContextProps) {
           {context.contextUploadStatus === 'ready' && (
             <div className="mt-3 flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-              <span className="text-xs text-green-600 dark:text-green-400">File processed — content will be used for course generation</span>
+              <span className="text-xs text-green-600 dark:text-green-400">
+                File processed — content will be used for course generation
+                {showStrictKnowledge && ' (strict mode: AI will only use this document)'}
+              </span>
             </div>
           )}
           {context.contextUploadStatus === 'error' && (

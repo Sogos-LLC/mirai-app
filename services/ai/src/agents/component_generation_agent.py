@@ -12,6 +12,11 @@ from dataclasses import dataclass, field
 from src.agents.registry import AgentCategory, AgentRegistry, AgentSpec
 from src.models.attribution import SourceReference
 from src.models.component_content import LessonComponents
+from src.models.component_schema import (
+    format_component_reference,
+    format_component_selection_table,
+    format_variety_rules,
+)
 from src.models.outcome_tracker import OutcomeCoverage
 from src.models.resource_hint import ResourceHint
 
@@ -72,6 +77,9 @@ class ComponentContext:
     # Creator's additional instructions (e.g. "focus on practical examples")
     additional_context: str = ""
 
+    # Component hints from structure agent (per-section suggestions)
+    component_hints: list[str] = field(default_factory=list)
+
     def __post_init__(self) -> None:
         if self.resource_hints is None:
             self.resource_hints = []
@@ -81,68 +89,35 @@ class ComponentContext:
 # Agent Definition
 # =============================================================================
 
-COMPONENT_SYSTEM = """\
+COMPONENT_SYSTEM = f"""\
 You are an expert instructional content creator. You generate lesson content as
 structured components that render directly in a learning platform.
 
-## Component Types Available
-- **text**: Rich HTML content (use <p>, <strong>, <em>, <ul>, <ol>, <li>, <a href="URL"> tags)
-- **heading**: Section headers (levels 2-4, never level 1)
-- **quiz**: Multiple-choice questions with 3-4 options, correct answer, and explanation
-- **code**: Code snippets with language specification
-- **callout**: Info/warning/tip/success boxes for key points
-- **statement**: Key takeaways — bold, memorable statements
-- **quote**: Expert quotes with attribution
-- **list**: Structured lists with a style field:
-  - bulleted: simple bullet points
-  - numbered: ordered/sequential items
-  - icon: items with emoji/icon identifiers
-  - process: step-by-step workflows
-  - accordion: expandable term/definition pairs — use for concepts, tools,
-    comparisons, or any content where each item has a short label (text) and
-    a longer explanation (description). Perfect for "X: description" patterns.
-- **multimedia**: Video, audio, or interactive media embed. ONLY use when a specific
-  media resource URL (video/audio/interactive) is provided in Available Resources.
-  Fields: mediaType (video/audio/interactive), url, title, optional description,
-  optional provider (youtube/vimeo/soundcloud/etc.).
-  NEVER invent URLs — only use URLs explicitly listed in the Available Resources section.
-- **image**: Image descriptions for AI generation (no URL needed)
-- **divider**: Visual separators between major sections
-- **task_list**: Interactive checklist for hands-on practice exercises. Has a title,
-  optional emoji, and items with rich HTML content. Use for "try it yourself" prompts.
+{format_component_reference()}
+
+{format_component_selection_table()}
+
+{format_variety_rules()}
 
 ## Content Guidelines
 1. Write REAL, educational content — not placeholders or summaries
 2. Use HTML in text components: <p> for paragraphs, <strong> for emphasis,
    <ul>/<ol>/<li> for inline lists, <code> for inline code,
    <a href="URL"> for hyperlinks to external resources
-3. Every lesson MUST have at least one quiz component
-4. Vary component types — don't use 5 text blocks in a row
-5. Heading levels: use 2 for major sections, 3 for subsections, 4 for minor points
-6. Quiz questions should test understanding, not recall — use application/analysis level
-7. Each quiz must have 3-4 options with exactly one correct answer (a, b, c, or d)
-8. Statement components are for short, punchy takeaways — NO inline code or HTML.
+3. Heading levels: use 2 for major sections, 3 for subsections, 4 for minor points
+4. Quiz questions should test understanding, not recall — use application/analysis level
+5. Each quiz must have 3-4 options with exactly one correct answer (a, b, c, or d)
+6. Statement components are for short, punchy takeaways — NO inline code or HTML.
    If the takeaway mentions code/commands, use a callout instead.
 
-## Component Selection Rules (CRITICAL — choose the right type)
-Use a **text** component ONLY for prose paragraphs that flow as narrative. If the content
-has any of these structures, use the matching component instead:
-
-| Content Pattern | Correct Component | Style |
-|----------------|-------------------|-------|
-| "Term: explanation" pairs (tools, categories, definitions) | list | accordion |
-| Sequential steps ("Step 1… Step 2…", "First… Then… Finally…") | list | process |
-| Bulleted or numbered items | list | bulleted / numbered |
-| Items with icons or labels | list | icon |
-| A key takeaway, insight, or rule (1-2 sentences) | statement | — |
-| Important warning, tip, or note | callout | info/warning/tip |
-| A notable quote with attribution | quote | — |
-| Code example or command | code | — |
-| Hands-on exercise, practice prompt, "try it yourself" | task_list | — |
-| External video, audio, or interactive embed (URL provided) | multimedia | — |
-
-A **text** block containing bold labels followed by descriptions is WRONG — convert it
-to the appropriate list type. Text components should read like paragraphs, not lists.
+## Image Style Selection
+When creating an **image** component, always set imageStyle to the most appropriate style:
+- **diagram**: For architecture, system flows, relationships, processes with boxes/arrows
+- **chart**: For data comparisons, trends, distributions with axes and legends
+- **infographic**: For summaries, overviews with icons, short text, visual hierarchy
+- **photograph**: For real-world examples, case studies, people in context
+- **illustration**: For abstract concepts, analogies, metaphors, conceptual art
+- **screenshot**: For software tutorials, UI walkthroughs, annotated interfaces
 
 ## Positional Awareness
 - If this is the FIRST lesson of the FIRST section: include a welcoming introduction
@@ -196,6 +171,21 @@ The following headings, quiz questions, statements, and terms have already been 
 in earlier sections. Do NOT create components that cover the same topic or ask the same
 questions — find a new angle or skip the topic entirely.
 {digest_str}
+
+"""
+
+
+def _build_component_hints_section(hints: list[str]) -> str:
+    """Build the 'Suggested Component Types' prompt section from structure-level hints."""
+    if not hints:
+        return ""
+    hints_str = "\n".join(f"- {h}" for h in hints)
+    return f"""\
+## Suggested Component Types for This Section
+The course structure recommends using these component types for this section's content:
+{hints_str}
+
+Use these as guidance, but also include other types to ensure variety.
 
 """
 
@@ -326,8 +316,11 @@ Quality and accuracy over quantity. Every claim must be traceable to the source 
 {resources_str}
 {ctx.rag_context}
 {_build_prior_content_section(ctx.prior_content_digest)}
+{_build_component_hints_section(ctx.component_hints)}
 ## Instructions
-Generate 5-15 structured components for this lesson. Follow the template guidelines
+Generate 8-15 structured components for this lesson. Use at least 5 different component
+types. Every lesson MUST include at least 1 image (with appropriate imageStyle) and at
+least 1 interactive element (quiz, task_list, or code). Follow the template guidelines
 but adapt as needed for the content. Write REAL, detailed educational content.
 Every text component should contain substantial HTML paragraphs — not one-liners.
-Include at least one quiz. Report which outcome keys you introduced or practiced."""
+Report which outcome keys you introduced or practiced."""

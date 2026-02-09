@@ -1,18 +1,19 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FileText, MoreVertical, Edit2, FolderInput, Trash2 } from 'lucide-react';
+import { FileText, MoreVertical, Edit2, FolderInput, Trash2, Info } from 'lucide-react';
 import { type LibraryEntry } from '@/hooks/useCourses';
 
 export interface CourseCardProps {
   course: LibraryEntry;
   onEdit: (courseId: string) => void;
   onPreview: (courseId: string) => void;
+  onDetails?: (courseId: string) => void;
   onMoveToFolder?: (courseId: string) => void;
   onDelete?: (courseId: string) => void;
 }
 
-export function CourseCard({ course, onEdit, onPreview, onMoveToFolder, onDelete }: CourseCardProps) {
+export function CourseCard({ course, onEdit, onPreview, onDetails, onMoveToFolder, onDelete }: CourseCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +67,19 @@ export function CourseCard({ course, onEdit, onPreview, onMoveToFolder, onDelete
                 <Edit2 className="w-4 h-4" />
                 Edit
               </button>
+              {onDetails && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onDetails(course.id);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-hover transition-colors min-h-[40px]"
+                >
+                  <Info className="w-4 h-4" />
+                  Details
+                </button>
+              )}
               {onMoveToFolder && (
                 <button
                   onClick={(e) => {

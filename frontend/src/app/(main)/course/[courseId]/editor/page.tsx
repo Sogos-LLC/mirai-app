@@ -49,6 +49,7 @@ import { SourceSummaryBar } from '@/components/editor/SourceSummaryBar';
 import { useCourseEditorStore as useEditorStore } from '@/store/zustand/courseEditorStore';
 import { useExportWorkflow } from '@/hooks/useExportWorkflow';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
 
 /** Check if a component is validatable (MODEL or unset source type) */
 function isComponentValidatable(component: LessonComponent): boolean {
@@ -83,6 +84,9 @@ export default function CourseEditorPage() {
   const openEditModal = useCourseEditorStore((s) => s.openEditModal);
   const sourceMode = useEditorStore((s) => s.sourceMode);
   const toggleSourceMode = useEditorStore((s) => s.toggleSourceMode);
+
+  // Feature toggles
+  const showSourceGrounding = useFeatureTogglesStore((s) => s.showSourceGrounding);
 
   // Fetch outline and lessons
   const { data: outline, wizardData, isLoading: outlineLoading } = useGetCourseOutline(courseId);
@@ -529,20 +533,22 @@ export default function CourseEditorPage() {
                 <div className="flex items-center justify-between gap-4">
                   <CardTitle as="h2">{currentLesson.title}</CardTitle>
                   <div className="flex items-center gap-2">
-                    {/* Source Mode Toggle */}
-                    <button
-                      onClick={toggleSourceMode}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        sourceMode
-                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                          : 'bg-hover text-muted hover:text-secondary'
-                      }`}
-                      title="Toggle source attribution view"
-                    >
-                      <FileSearch className="w-3.5 h-3.5" />
-                      Sources
-                    </button>
-                    {currentLesson.generated?.aggregateProvenance && (
+                    {/* Source Mode Toggle - gated by feature toggle */}
+                    {showSourceGrounding && (
+                      <button
+                        onClick={toggleSourceMode}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          sourceMode
+                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+                            : 'bg-hover text-muted hover:text-secondary'
+                        }`}
+                        title="Toggle source attribution view"
+                      >
+                        <FileSearch className="w-3.5 h-3.5" />
+                        Sources
+                      </button>
+                    )}
+                    {showSourceGrounding && currentLesson.generated?.aggregateProvenance && (
                       <ProvenanceBadge
                         provenance={currentLesson.generated.aggregateProvenance}
                         isOpen={showProvenance}
@@ -553,7 +559,7 @@ export default function CourseEditorPage() {
                   </div>
                 </div>
                 {/* Provenance detail panel */}
-                {currentLesson.generated?.aggregateProvenance && (
+                {showSourceGrounding && currentLesson.generated?.aggregateProvenance && (
                   <ProvenancePanel
                     provenance={currentLesson.generated.aggregateProvenance}
                     components={currentLesson.generated.components ?? []}
@@ -564,7 +570,7 @@ export default function CourseEditorPage() {
               </CardHeader>
               <CardContent className="py-6">
                 {/* Source summary bar - only visible in source mode */}
-                {sourceMode && currentLesson.generated?.aggregateProvenance && (
+                {showSourceGrounding && sourceMode && currentLesson.generated?.aggregateProvenance && (
                   <SourceSummaryBar
                     provenance={currentLesson.generated.aggregateProvenance}
                     components={localComponents}
@@ -612,7 +618,7 @@ export default function CourseEditorPage() {
 
                           return (
                             <React.Fragment key={component.id}>
-                              {sourceMode ? (
+                              {showSourceGrounding && sourceMode ? (
                                 <SourceModeOverlay
                                   provenance={provenance}
                                   validated={component.validated}

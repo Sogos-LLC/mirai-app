@@ -364,6 +364,20 @@ func (r *GenerationJobRepository) FinalizeParentJob(ctx context.Context, parentI
 	})
 }
 
+// GetLatestCourseCreationJob returns the most recent course_creation job for a course.
+func (r *GenerationJobRepository) GetLatestCourseCreationJob(ctx context.Context, courseID uuid.UUID) (*entity.GenerationJob, error) {
+	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.GenerationJob, error) {
+		return q.GetLatestCourseCreationJob(ctx, uuid.NullUUID{UUID: courseID, Valid: true})
+	})
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest course creation job: %w", err)
+	}
+	return toGenerationJobEntity(&result)
+}
+
 // =============================================================================
 // Type Conversion Helpers
 // =============================================================================
