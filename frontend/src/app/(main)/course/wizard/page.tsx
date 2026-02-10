@@ -547,9 +547,6 @@ export default function CourseWizardPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted">
-                    Step {wizardCtx.currentStep} of {TOTAL_WIZARD_STEPS}
-                  </span>
                   {wizardCtx.currentStep < TOTAL_WIZARD_STEPS ? (
                     <Button
                       variant="primary"
