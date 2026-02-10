@@ -254,6 +254,7 @@ type Querier interface {
 	UpdateKnowledgeSourceWithSummary(ctx context.Context, arg UpdateKnowledgeSourceWithSummaryParams) (KnowledgeSource, error)
 	UpdatePendingRegistration(ctx context.Context, arg UpdatePendingRegistrationParams) (PendingRegistration, error)
 	UpdateShareLinkEmails(ctx context.Context, arg UpdateShareLinkEmailsParams) (CourseShareLink, error)
+	UpdateShareLinkStatus(ctx context.Context, arg UpdateShareLinkStatusParams) error
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateTenantAISettings(ctx context.Context, arg UpdateTenantAISettingsParams) (TenantAiSetting, error)

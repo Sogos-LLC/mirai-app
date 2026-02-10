@@ -964,6 +964,149 @@ func (c *Client) SendShareVerificationCode(ctx context.Context, req service.Send
 	return c.sendEmail(req.To, subject, body)
 }
 
+// SendShareInvitation sends an invitation email to a reviewer with the share link.
+func (c *Client) SendShareInvitation(ctx context.Context, req service.SendShareInvitationRequest) error {
+	body, err := c.renderShareInvitationEmail(req)
+	if err != nil {
+		return fmt.Errorf("failed to render share invitation email: %w", err)
+	}
+	subject := fmt.Sprintf("You're invited to review: %s", req.CourseTitle)
+	return c.sendEmail(req.To, subject, body)
+}
+
+func (c *Client) renderShareInvitationEmail(req service.SendShareInvitationRequest) (string, error) {
+	const emailTemplate = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #7c3aed, #6d28d9); padding: 32px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Course Review Invitation</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                <strong>{{.CreatorName}}</strong> has invited you to review their course:
+                            </p>
+                            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                                <h2 style="margin: 0; color: #1f2937; font-size: 20px; font-weight: 600;">{{.CourseTitle}}</h2>
+                            </div>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="padding: 20px 0; text-align: center;">
+                                        <a href="{{.ShareURL}}" style="display: inline-block; padding: 14px 32px; background-color: #7c3aed; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px;">Review Course</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 24px 0 0 0; color: #9ca3af; font-size: 14px;">
+                                You'll need to verify your email address to access the course.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px 40px 40px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                                This is an automated notification from Mirai.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`
+
+	tmpl, err := template.New("share_invitation").Parse(emailTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, req); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+// SendShareConfirmation sends a confirmation email to the course creator.
+func (c *Client) SendShareConfirmation(ctx context.Context, req service.SendShareConfirmationRequest) error {
+	body, err := c.renderShareConfirmationEmail(req)
+	if err != nil {
+		return fmt.Errorf("failed to render share confirmation email: %w", err)
+	}
+	subject := fmt.Sprintf("Share link ready: %s", req.CourseTitle)
+	return c.sendEmail(req.To, subject, body)
+}
+
+func (c *Client) renderShareConfirmationEmail(req service.SendShareConfirmationRequest) (string, error) {
+	const emailTemplate = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #7c3aed, #6d28d9); padding: 32px 40px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Share Link Ready</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Your share link for <strong>{{.CourseTitle}}</strong> is ready. A snapshot of your course has been created for reviewers.
+                            </p>
+                            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <h3 style="margin: 0 0 10px 0; color: #1f2937; font-size: 14px; font-weight: 600;">Shared with:</h3>
+                                {{range .AllowedEmails}}<p style="margin: 4px 0; color: #4b5563; font-size: 14px;">{{.}}</p>{{end}}
+                            </div>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="padding: 20px 0; text-align: center;">
+                                        <a href="{{.ShareURL}}" style="display: inline-block; padding: 14px 32px; background-color: #7c3aed; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px;">View Share Link</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 24px 0 0 0; color: #9ca3af; font-size: 14px;">
+                                Reviewers will see this frozen snapshot. Edits you make to the course won't affect the shared version.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 40px 40px 40px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                                This is an automated notification from Mirai.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`
+
+	tmpl, err := template.New("share_confirmation").Parse(emailTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, req); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
 // renderShareVerificationEmail renders the share verification code email template.
 func (c *Client) renderShareVerificationEmail(req service.SendShareVerificationCodeRequest) (string, error) {
 	const emailTemplate = `<!DOCTYPE html>

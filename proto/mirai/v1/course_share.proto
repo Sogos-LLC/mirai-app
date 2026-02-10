@@ -3,6 +3,16 @@ syntax = "proto3";
 package mirai.v1;
 
 import "google/protobuf/timestamp.proto";
+import "mirai/v1/ai_generation_types.proto";
+
+// ShareLinkStatus indicates the readiness state of a share link.
+enum ShareLinkStatus {
+  SHARE_LINK_STATUS_UNSPECIFIED = 0;
+  SHARE_LINK_STATUS_PENDING = 1;
+  SHARE_LINK_STATUS_SNAPSHOTTING = 2;
+  SHARE_LINK_STATUS_READY = 3;
+  SHARE_LINK_STATUS_FAILED = 4;
+}
 
 // CourseShareLink represents a share link for external course review.
 message CourseShareLink {
@@ -14,6 +24,7 @@ message CourseShareLink {
   string share_url = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+  ShareLinkStatus status = 9;
 }
 
 // ReviewComment represents a review comment from an external reviewer.
@@ -145,9 +156,7 @@ message VerifyShareTokenRequest {
 message VerifyShareTokenResponse {
   bool valid = 1;
   string course_title = 2;
-  bool requires_email = 3;
-  // Session token returned when requires_email is false (open share links).
-  string session_token = 4;
+  ShareLinkStatus status = 3;
 }
 
 message SendVerificationCodeRequest {
@@ -186,7 +195,7 @@ message GetSharedLessonRequest {
 message GetSharedLessonResponse {
   string lesson_id = 1;
   string title = 2;
-  string content_json = 3;
+  repeated LessonComponent components = 3;
   repeated ReviewComment comments = 4;
 }
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sogos/mirai-backend/internal/application/workflow"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	"github.com/sogos/mirai-backend/internal/domain/repository"
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
@@ -18,6 +19,12 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/auth"
 	"github.com/sogos/mirai-backend/internal/infrastructure/storage"
 )
+
+// ShareContentStarter abstracts starting the share content workflow.
+// Defined locally to avoid a circular import with the temporal package.
+type ShareContentStarter interface {
+	StartShareContent(ctx context.Context, input workflow.ShareContentInput) (string, error)
+}
 
 // CourseShareService handles course sharing operations.
 type CourseShareService struct {
@@ -30,6 +37,7 @@ type CourseShareService struct {
 	exportService    *CourseExportService
 	sessionManager   *auth.ShareSessionManager
 	emailProvider    domainservice.EmailProvider
+	workflowStarter  ShareContentStarter
 	frontendURL      string
 }
 
@@ -44,6 +52,7 @@ func NewCourseShareService(
 	exportService *CourseExportService,
 	sessionManager *auth.ShareSessionManager,
 	emailProvider domainservice.EmailProvider,
+	workflowStarter ShareContentStarter,
 	frontendURL string,
 ) *CourseShareService {
 	return &CourseShareService{
@@ -56,12 +65,20 @@ func NewCourseShareService(
 		exportService:    exportService,
 		sessionManager:   sessionManager,
 		emailProvider:    emailProvider,
+		workflowStarter:  workflowStarter,
 		frontendURL:      frontendURL,
 	}
 }
 
 // CreateShareLink creates a new share link for a course.
-func (s *CourseShareService) CreateShareLink(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID, allowedEmails []string) (*entity.ShareLink, string, error) {
+// Emails are required — returns InvalidArgument if empty.
+// Creates the link with status "pending" and starts a background workflow
+// to snapshot content and send emails.
+func (s *CourseShareService) CreateShareLink(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID, allowedEmails []string, creatorEmail string) (*entity.ShareLink, string, error) {
+	if len(allowedEmails) == 0 {
+		return nil, "", fmt.Errorf("at least one reviewer email is required")
+	}
+
 	tenantID, ok := tenant.FromContext(ctx)
 	if !ok {
 		return nil, "", fmt.Errorf("missing tenant context")
@@ -78,9 +95,10 @@ func (s *CourseShareService) CreateShareLink(ctx context.Context, kratosID uuid.
 		return nil, "", fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	// Ensure allowedEmails is never nil (postgres TEXT[] NOT NULL)
-	if allowedEmails == nil {
-		allowedEmails = []string{}
+	// Look up course title for emails
+	course, err := s.courseRepo.GetByID(ctx, courseID)
+	if err != nil || course == nil {
+		return nil, "", fmt.Errorf("course not found")
 	}
 
 	link := &entity.ShareLink{
@@ -89,6 +107,7 @@ func (s *CourseShareService) CreateShareLink(ctx context.Context, kratosID uuid.
 		CreatedBy:     user.ID,
 		Token:         token,
 		AllowedEmails: allowedEmails,
+		Status:        "pending",
 	}
 
 	if err := s.shareLinkRepo.Create(ctx, link); err != nil {
@@ -96,6 +115,32 @@ func (s *CourseShareService) CreateShareLink(ctx context.Context, kratosID uuid.
 	}
 
 	shareURL := fmt.Sprintf("%s/shared/%s", s.frontendURL, token)
+
+	// Start background workflow to snapshot content + send emails
+	if s.workflowStarter != nil {
+		// Use email prefix as creator name fallback
+		creatorName := creatorEmail
+		if idx := strings.Index(creatorEmail, "@"); idx > 0 {
+			creatorName = creatorEmail[:idx]
+		}
+
+		_, err := s.workflowStarter.StartShareContent(ctx, workflow.ShareContentInput{
+			ShareLinkID:   link.ID.String(),
+			TenantID:      tenantID.String(),
+			CourseID:      courseID.String(),
+			CreatorEmail:  creatorEmail,
+			CreatorName:   creatorName,
+			CourseTitle:   course.Title,
+			AllowedEmails: allowedEmails,
+			ShareURL:      shareURL,
+		})
+		if err != nil {
+			// Non-fatal: link is created, workflow just didn't start
+			// Status will remain "pending"
+			_ = err
+		}
+	}
+
 	return link, shareURL, nil
 }
 
@@ -131,33 +176,24 @@ func (s *CourseShareService) DeactivateShareLink(ctx context.Context, shareLinkI
 }
 
 // VerifyShareToken checks if a share token is valid and active.
-func (s *CourseShareService) VerifyShareToken(ctx context.Context, token string) (valid bool, courseTitle string, requiresEmail bool, sessionToken string, err error) {
+// Returns the link status so the frontend can show "pending" spinner or email form.
+func (s *CourseShareService) VerifyShareToken(ctx context.Context, token string) (valid bool, courseTitle string, status string, err error) {
 	link, err := s.shareLinkRepo.GetByToken(ctx, normalizeShareToken(token))
 	if err != nil {
-		return false, "", false, "", fmt.Errorf("failed to look up token: %w", err)
+		return false, "", "", fmt.Errorf("failed to look up token: %w", err)
 	}
 	if link == nil || !link.IsActive {
-		return false, "", false, "", nil
+		return false, "", "", nil
 	}
 
 	// Load course title using tenant context
 	tenantCtx := tenant.WithTenantID(ctx, link.TenantID)
 	course, err := s.courseRepo.GetByID(tenantCtx, link.CourseID)
 	if err != nil || course == nil {
-		return false, "", false, "", nil
+		return false, "", "", nil
 	}
 
-	requiresEmail = len(link.AllowedEmails) > 0
-
-	// For open share links (no email restriction), issue a session token immediately
-	if !requiresEmail {
-		sessionToken, err = s.sessionManager.CreateToken(link.ID, link.TenantID, link.CourseID, "")
-		if err != nil {
-			return false, "", false, "", fmt.Errorf("failed to create session: %w", err)
-		}
-	}
-
-	return true, course.Title, requiresEmail, sessionToken, nil
+	return true, course.Title, link.Status, nil
 }
 
 // SendVerificationCode sends a 6-digit code to the email if on the allowed list.
@@ -283,6 +319,14 @@ func (s *CourseShareService) GetSharedCourse(ctx context.Context, sessionToken s
 		return nil, fmt.Errorf("course not found")
 	}
 
+	// Determine content path: prefer snapshot, fall back to live
+	contentPath := s.contentStorage.CoursePath(claims.TenantID, claims.CourseID)
+	saCtx := tenant.WithSuperAdmin(ctx, true)
+	link, linkErr := s.shareLinkRepo.GetByID(saCtx, claims.ShareLinkID)
+	if linkErr == nil && link != nil && link.SnapshotPath != "" {
+		contentPath = link.SnapshotPath
+	}
+
 	// Read S3 content
 	var s3Content struct {
 		Settings struct {
@@ -297,7 +341,7 @@ func (s *CourseShareService) GetSharedCourse(ctx context.Context, sessionToken s
 			Components      json.RawMessage `json:"components"`
 		} `json:"generatedLessons"`
 	}
-	if err := s.contentStorage.ReadCourseContent(tenantCtx, claims.TenantID, claims.CourseID, &s3Content); err != nil {
+	if err := s.contentStorage.Inner().ReadJSON(ctx, contentPath, &s3Content); err != nil {
 		return nil, fmt.Errorf("failed to read content: %w", err)
 	}
 
@@ -350,28 +394,48 @@ func (s *CourseShareService) GetSharedCourse(ctx context.Context, sessionToken s
 	return result, nil
 }
 
+// LessonComponentData represents a single component in a generated lesson.
+type LessonComponentData struct {
+	ID          string          `json:"id"`
+	Type        string          `json:"type"`
+	Order       int             `json:"order"`
+	ContentJSON json.RawMessage `json:"contentJson"`
+	Alignment   json.RawMessage `json:"alignment,omitempty"`
+	Provenance  json.RawMessage `json:"provenance,omitempty"`
+	Validated   bool            `json:"validated,omitempty"`
+}
+
 // GetSharedLesson returns lesson content and comments for a shared viewer.
-func (s *CourseShareService) GetSharedLesson(ctx context.Context, sessionToken, lessonID string) (title string, contentJSON string, comments []*entity.ReviewComment, err error) {
+// Reads from the snapshot path if available, otherwise falls back to live content.
+func (s *CourseShareService) GetSharedLesson(ctx context.Context, sessionToken, lessonID string) (title string, components []LessonComponentData, comments []*entity.ReviewComment, err error) {
 	claims, err := s.sessionManager.ValidateToken(sessionToken)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("invalid session: %w", err)
+		return "", nil, nil, fmt.Errorf("invalid session: %w", err)
 	}
 
-	tenantCtx := tenant.WithTenantID(ctx, claims.TenantID)
+	// Determine content path: prefer snapshot, fall back to live
+	contentPath := s.contentStorage.CoursePath(claims.TenantID, claims.CourseID)
 
-	// Read S3 content
+	// Look up the share link to check for snapshot path (cross-tenant public access)
+	saCtx := tenant.WithSuperAdmin(ctx, true)
+	link, linkErr := s.shareLinkRepo.GetByID(saCtx, claims.ShareLinkID)
+	if linkErr == nil && link != nil && link.SnapshotPath != "" {
+		contentPath = link.SnapshotPath
+	}
+
+	// Read content
 	var s3Content struct {
 		GeneratedLessons []struct {
-			ID              string          `json:"id"`
-			OutlineLessonID string          `json:"outlineLessonId"`
-			Components      json.RawMessage `json:"components"`
+			ID              string                `json:"id"`
+			OutlineLessonID string                `json:"outlineLessonId"`
+			Components      []LessonComponentData `json:"components"`
 		} `json:"generatedLessons"`
 		Content struct {
 			Sections []map[string]interface{} `json:"sections"`
 		} `json:"content"`
 	}
-	if err := s.contentStorage.ReadCourseContent(tenantCtx, claims.TenantID, claims.CourseID, &s3Content); err != nil {
-		return "", "", nil, fmt.Errorf("failed to read content: %w", err)
+	if err := s.contentStorage.Inner().ReadJSON(ctx, contentPath, &s3Content); err != nil {
+		return "", nil, nil, fmt.Errorf("failed to read content: %w", err)
 	}
 
 	// Find lesson title from outline
@@ -387,25 +451,25 @@ func (s *CourseShareService) GetSharedLesson(ctx context.Context, sessionToken, 
 		}
 	}
 
-	// Find lesson content by outlineLessonId (outline references this ID)
+	// Find lesson content by outlineLessonId
 	for _, gl := range s3Content.GeneratedLessons {
 		if gl.OutlineLessonID == lessonID {
-			contentJSON = string(gl.Components)
+			components = gl.Components
 			break
 		}
 	}
 
-	if contentJSON == "" {
-		return "", "", nil, fmt.Errorf("lesson not found")
+	if components == nil {
+		return "", nil, nil, fmt.Errorf("lesson not found")
 	}
 
 	// Get comments
 	comments, err = s.commentRepo.ListByLesson(ctx, claims.CourseID, lessonID)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("failed to load comments: %w", err)
+		return "", nil, nil, fmt.Errorf("failed to load comments: %w", err)
 	}
 
-	return title, contentJSON, comments, nil
+	return title, components, comments, nil
 }
 
 // AddReviewComment adds a review comment to a lesson.
@@ -518,9 +582,6 @@ func generateVerificationCode() (string, error) {
 
 // isEmailAllowed checks if an email is on the allowed list (case-insensitive).
 func (s *CourseShareService) isEmailAllowed(link *entity.ShareLink, email string) bool {
-	if len(link.AllowedEmails) == 0 {
-		return true
-	}
 	for _, allowed := range link.AllowedEmails {
 		if strings.EqualFold(allowed, email) {
 			return true

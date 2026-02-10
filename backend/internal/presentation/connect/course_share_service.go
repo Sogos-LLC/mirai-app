@@ -42,7 +42,10 @@ func (s *CourseShareServiceServer) CreateShareLink(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	link, shareURL, err := s.shareService.CreateShareLink(ctx, kratosID, courseID, req.Msg.GetAllowedEmails())
+	// Extract email from context (set by auth interceptor)
+	creatorEmail, _ := ctx.Value(emailKey{}).(string)
+
+	link, shareURL, err := s.shareService.CreateShareLink(ctx, kratosID, courseID, req.Msg.GetAllowedEmails(), creatorEmail)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -139,16 +142,15 @@ func (s *CourseShareServiceServer) VerifyShareToken(
 	ctx context.Context,
 	req *connect.Request[v1.VerifyShareTokenRequest],
 ) (*connect.Response[v1.VerifyShareTokenResponse], error) {
-	valid, courseTitle, requiresEmail, sessionToken, err := s.shareService.VerifyShareToken(ctx, req.Msg.GetToken())
+	valid, courseTitle, status, err := s.shareService.VerifyShareToken(ctx, req.Msg.GetToken())
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
 	return connect.NewResponse(&v1.VerifyShareTokenResponse{
-		Valid:         valid,
-		CourseTitle:   courseTitle,
-		RequiresEmail: requiresEmail,
-		SessionToken:  sessionToken,
+		Valid:       valid,
+		CourseTitle: courseTitle,
+		Status:      shareLinkStatusToProto(status),
 	}), nil
 }
 
@@ -225,16 +227,26 @@ func (s *CourseShareServiceServer) GetSharedLesson(
 	ctx context.Context,
 	req *connect.Request[v1.GetSharedLessonRequest],
 ) (*connect.Response[v1.GetSharedLessonResponse], error) {
-	title, contentJSON, comments, err := s.shareService.GetSharedLesson(ctx, req.Msg.GetSessionToken(), req.Msg.GetLessonId())
+	title, components, comments, err := s.shareService.GetSharedLesson(ctx, req.Msg.GetSessionToken(), req.Msg.GetLessonId())
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
+	protoComponents := make([]*v1.LessonComponent, len(components))
+	for i, c := range components {
+		protoComponents[i] = &v1.LessonComponent{
+			Id:          c.ID,
+			Type:        componentTypeStringToProto(c.Type),
+			Order:       int32(c.Order),
+			ContentJson: string(c.ContentJSON),
+		}
+	}
+
 	return connect.NewResponse(&v1.GetSharedLessonResponse{
-		LessonId:    req.Msg.GetLessonId(),
-		Title:       title,
-		ContentJson: contentJSON,
-		Comments:    reviewCommentsToProto(comments),
+		LessonId:   req.Msg.GetLessonId(),
+		Title:      title,
+		Components: protoComponents,
+		Comments:   reviewCommentsToProto(comments),
 	}), nil
 }
 
@@ -294,6 +306,59 @@ func shareLinkToProto(link *entity.ShareLink, shareURL string) *v1.CourseShareLi
 		ShareUrl:      shareURL,
 		CreatedAt:     timestamppb.New(link.CreatedAt),
 		UpdatedAt:     timestamppb.New(link.UpdatedAt),
+		Status:        shareLinkStatusToProto(link.Status),
+	}
+}
+
+// shareLinkStatusToProto maps a status string to the proto enum.
+func shareLinkStatusToProto(status string) v1.ShareLinkStatus {
+	switch status {
+	case "pending":
+		return v1.ShareLinkStatus_SHARE_LINK_STATUS_PENDING
+	case "snapshotting":
+		return v1.ShareLinkStatus_SHARE_LINK_STATUS_SNAPSHOTTING
+	case "ready":
+		return v1.ShareLinkStatus_SHARE_LINK_STATUS_READY
+	case "failed":
+		return v1.ShareLinkStatus_SHARE_LINK_STATUS_FAILED
+	default:
+		return v1.ShareLinkStatus_SHARE_LINK_STATUS_UNSPECIFIED
+	}
+}
+
+// componentTypeStringToProto maps a component type string (from S3 JSON) to the proto enum.
+func componentTypeStringToProto(t string) v1.LessonComponentType {
+	switch t {
+	case "text":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_TEXT
+	case "heading":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_HEADING
+	case "image":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_IMAGE
+	case "quiz":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_QUIZ
+	case "code":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CODE
+	case "callout":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CALLOUT
+	case "statement":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_STATEMENT
+	case "quote":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_QUOTE
+	case "list":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_LIST
+	case "divider":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_DIVIDER
+	case "task_list":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_TASK_LIST
+	case "gallery":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_GALLERY
+	case "multimedia":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_MULTIMEDIA
+	case "chart":
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_CHART
+	default:
+		return v1.LessonComponentType_LESSON_COMPONENT_TYPE_UNSPECIFIED
 	}
 }
 

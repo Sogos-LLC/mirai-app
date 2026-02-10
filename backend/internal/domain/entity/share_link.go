@@ -15,6 +15,8 @@ type ShareLink struct {
 	Token         string
 	AllowedEmails []string
 	IsActive      bool
+	Status        string
+	SnapshotPath  string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }

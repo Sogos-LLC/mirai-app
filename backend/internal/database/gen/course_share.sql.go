@@ -7,6 +7,7 @@ package gen
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,9 +51,9 @@ func (q *Queries) CreateReviewComment(ctx context.Context, arg CreateReviewComme
 
 const createShareLink = `-- name: CreateShareLink :one
 
-INSERT INTO course_share_links (tenant_id, course_id, created_by, token, allowed_emails)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at
+INSERT INTO course_share_links (tenant_id, course_id, created_by, token, allowed_emails, status)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at, status, snapshot_path
 `
 
 type CreateShareLinkParams struct {
@@ -61,6 +62,7 @@ type CreateShareLinkParams struct {
 	CreatedBy     uuid.UUID `db:"created_by" json:"created_by"`
 	Token         string    `db:"token" json:"token"`
 	AllowedEmails []string  `db:"allowed_emails" json:"allowed_emails"`
+	Status        string    `db:"status" json:"status"`
 }
 
 // Course Sharing CRUD operations
@@ -72,6 +74,7 @@ func (q *Queries) CreateShareLink(ctx context.Context, arg CreateShareLinkParams
 		arg.CreatedBy,
 		arg.Token,
 		pq.Array(arg.AllowedEmails),
+		arg.Status,
 	)
 	var i CourseShareLink
 	err := row.Scan(
@@ -84,6 +87,8 @@ func (q *Queries) CreateShareLink(ctx context.Context, arg CreateShareLinkParams
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.SnapshotPath,
 	)
 	return i, err
 }
@@ -133,7 +138,7 @@ func (q *Queries) DeactivateShareLink(ctx context.Context, id uuid.UUID) error {
 }
 
 const getShareLinkByID = `-- name: GetShareLinkByID :one
-SELECT id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at FROM course_share_links WHERE id = $1
+SELECT id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at, status, snapshot_path FROM course_share_links WHERE id = $1
 `
 
 func (q *Queries) GetShareLinkByID(ctx context.Context, id uuid.UUID) (CourseShareLink, error) {
@@ -149,12 +154,14 @@ func (q *Queries) GetShareLinkByID(ctx context.Context, id uuid.UUID) (CourseSha
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.SnapshotPath,
 	)
 	return i, err
 }
 
 const getShareLinkByToken = `-- name: GetShareLinkByToken :one
-SELECT id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at FROM course_share_links WHERE token = $1
+SELECT id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at, status, snapshot_path FROM course_share_links WHERE token = $1
 `
 
 func (q *Queries) GetShareLinkByToken(ctx context.Context, token string) (CourseShareLink, error) {
@@ -170,6 +177,8 @@ func (q *Queries) GetShareLinkByToken(ctx context.Context, token string) (Course
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.SnapshotPath,
 	)
 	return i, err
 }
@@ -286,7 +295,7 @@ func (q *Queries) ListReviewCommentsByLesson(ctx context.Context, arg ListReview
 }
 
 const listShareLinksByCourseID = `-- name: ListShareLinksByCourseID :many
-SELECT id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at FROM course_share_links
+SELECT id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at, status, snapshot_path FROM course_share_links
 WHERE course_id = $1
 ORDER BY created_at DESC
 `
@@ -310,6 +319,8 @@ func (q *Queries) ListShareLinksByCourseID(ctx context.Context, courseID uuid.UU
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Status,
+			&i.SnapshotPath,
 		); err != nil {
 			return nil, err
 		}
@@ -339,7 +350,7 @@ const updateShareLinkEmails = `-- name: UpdateShareLinkEmails :one
 UPDATE course_share_links
 SET allowed_emails = $1, updated_at = now()
 WHERE id = $2
-RETURNING id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at
+RETURNING id, tenant_id, course_id, created_by, token, allowed_emails, is_active, created_at, updated_at, status, snapshot_path
 `
 
 type UpdateShareLinkEmailsParams struct {
@@ -360,6 +371,25 @@ func (q *Queries) UpdateShareLinkEmails(ctx context.Context, arg UpdateShareLink
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.SnapshotPath,
 	)
 	return i, err
+}
+
+const updateShareLinkStatus = `-- name: UpdateShareLinkStatus :exec
+UPDATE course_share_links
+SET status = $1, snapshot_path = $2, updated_at = now()
+WHERE id = $3
+`
+
+type UpdateShareLinkStatusParams struct {
+	Status       string         `db:"status" json:"status"`
+	SnapshotPath sql.NullString `db:"snapshot_path" json:"snapshot_path"`
+	ID           uuid.UUID      `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateShareLinkStatus(ctx context.Context, arg UpdateShareLinkStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateShareLinkStatus, arg.Status, arg.SnapshotPath, arg.ID)
+	return err
 }

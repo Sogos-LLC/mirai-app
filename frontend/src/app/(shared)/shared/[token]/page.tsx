@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Shield, Mail, KeyRound, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, Mail, KeyRound, Loader2, AlertCircle, Clock } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import {
   useVerifyShareToken,
@@ -10,8 +10,9 @@ import {
   useVerifyEmailCode,
 } from '@/hooks/useShareViewer';
 import { useShareSession } from '@/store/zustand/shareSession';
+import { ShareLinkStatus } from '@/gen/mirai/v1/course_share_pb';
 
-type Step = 'loading' | 'invalid' | 'email' | 'code' | 'verified';
+type Step = 'loading' | 'invalid' | 'pending' | 'failed' | 'email' | 'code' | 'verified';
 
 export default function ShareVerificationPage() {
   const params = useParams();
@@ -22,31 +23,53 @@ export default function ShareVerificationPage() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { setSession } = useShareSession();
-  const { data: tokenData, isLoading: tokenLoading } =
+  const { data: tokenData, isLoading: tokenLoading, refetch } =
     useVerifyShareToken(token);
   const sendCode = useSendVerificationCode();
   const verifyCode = useVerifyEmailCode();
 
   // Determine step from token verification
   useEffect(() => {
-    if (!tokenLoading && step === 'loading') {
-      if (!tokenData?.valid) {
-        setStep('invalid');
-      } else if (tokenData.requiresEmail) {
-        setStep('email');
-      } else if (tokenData.sessionToken) {
-        // No email required - set session and go straight to viewer
-        setSession(tokenData.sessionToken, '', tokenData.courseTitle || '');
-        setStep('verified');
-        router.push(`/shared/${token}/view`);
-      } else {
-        // Fallback: token valid but no session token returned
-        setStep('invalid');
-      }
+    if (tokenLoading) return;
+
+    if (!tokenData?.valid) {
+      setStep('invalid');
+      return;
     }
-  }, [tokenLoading, tokenData, step, token, router]);
+
+    const status = tokenData.status;
+    if (status === ShareLinkStatus.PENDING || status === ShareLinkStatus.SNAPSHOTTING) {
+      setStep('pending');
+    } else if (status === ShareLinkStatus.READY) {
+      setStep('email');
+    } else if (status === ShareLinkStatus.FAILED) {
+      setStep('failed');
+    } else {
+      setStep('invalid');
+    }
+  }, [tokenLoading, tokenData]);
+
+  // Poll while pending
+  useEffect(() => {
+    if (step === 'pending') {
+      pollRef.current = setInterval(() => {
+        refetch();
+      }, 3000);
+    } else if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [step, refetch]);
 
   const handleSendCode = async () => {
     setError('');
@@ -96,6 +119,41 @@ export default function ShareVerificationPage() {
             This share link is no longer valid. Please contact the course owner
             for a new link.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'failed') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="max-w-md text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <h1 className="text-xl font-semibold text-primary mb-2">
+            Share Link Unavailable
+          </h1>
+          <p className="text-secondary">
+            This share link failed to prepare. Please contact the course owner
+            to create a new link.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'pending') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="max-w-md text-center">
+          <Clock className="mx-auto h-12 w-12 text-indigo-500 mb-4 animate-pulse" />
+          <h1 className="text-xl font-semibold text-primary mb-2">
+            Preparing Your Review
+          </h1>
+          <p className="text-secondary mb-4">
+            The course content is being prepared for review. This usually takes
+            just a few seconds.
+          </p>
+          <Loader2 className="mx-auto h-5 w-5 animate-spin text-indigo-500" />
         </div>
       </div>
     );

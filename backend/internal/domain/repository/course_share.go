@@ -14,6 +14,7 @@ type ShareLinkRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.ShareLink, error)
 	ListByCourseID(ctx context.Context, courseID uuid.UUID) ([]*entity.ShareLink, error)
 	UpdateEmails(ctx context.Context, id uuid.UUID, emails []string) (*entity.ShareLink, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string, snapshotPath string) error
 	Deactivate(ctx context.Context, id uuid.UUID) error
 }
 

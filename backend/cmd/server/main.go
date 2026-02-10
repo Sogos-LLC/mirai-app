@@ -326,6 +326,7 @@ func main() {
 		courseExportService,
 		shareSessionManager,
 		emailClient,
+		workflowStarter,
 		cfg.FrontendURL,
 	)
 	logger.Info("course share service initialized")
@@ -420,6 +421,10 @@ func main() {
 
 		// Set up course export processor
 		goActivities.ExportProcessor = courseExportService
+
+		// Set up share link dependencies
+		goActivities.ShareLinkRepo = shareLinkRepo
+		goActivities.EmailProvider = emailClient
 
 		// OpsActivities: provisioning, cleanup, feedback sync
 		opsActivities := &activities.OpsActivities{

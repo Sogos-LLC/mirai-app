@@ -23,6 +23,10 @@ func NewShareLinkRepository(db *sql.DB) repository.ShareLinkRepository {
 }
 
 func (r *ShareLinkRepository) Create(ctx context.Context, link *entity.ShareLink) error {
+	status := link.Status
+	if status == "" {
+		status = "pending"
+	}
 	result, err := database.WithRLS(ctx, r.db, func(q *gen.Queries) (gen.CourseShareLink, error) {
 		return q.CreateShareLink(ctx, gen.CreateShareLinkParams{
 			TenantID:      link.TenantID,
@@ -30,6 +34,7 @@ func (r *ShareLinkRepository) Create(ctx context.Context, link *entity.ShareLink
 			CreatedBy:     link.CreatedBy,
 			Token:         link.Token,
 			AllowedEmails: link.AllowedEmails,
+			Status:        status,
 		})
 	})
 	if err != nil {
@@ -37,6 +42,7 @@ func (r *ShareLinkRepository) Create(ctx context.Context, link *entity.ShareLink
 	}
 	link.ID = result.ID
 	link.IsActive = result.IsActive
+	link.Status = result.Status
 	link.CreatedAt = result.CreatedAt
 	link.UpdatedAt = result.UpdatedAt
 	return nil
@@ -97,6 +103,21 @@ func (r *ShareLinkRepository) UpdateEmails(ctx context.Context, id uuid.UUID, em
 	return mapShareLink(result), nil
 }
 
+func (r *ShareLinkRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, snapshotPath string) error {
+	// Status updates happen from Temporal activities (cross-tenant), use superadmin bypass
+	ctx = tenant.WithSuperAdmin(ctx, true)
+	return database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
+		return q.UpdateShareLinkStatus(ctx, gen.UpdateShareLinkStatusParams{
+			ID:     id,
+			Status: status,
+			SnapshotPath: sql.NullString{
+				String: snapshotPath,
+				Valid:  snapshotPath != "",
+			},
+		})
+	})
+}
+
 func (r *ShareLinkRepository) Deactivate(ctx context.Context, id uuid.UUID) error {
 	return database.WithRLSExec(ctx, r.db, func(q *gen.Queries) error {
 		return q.DeactivateShareLink(ctx, id)
@@ -112,6 +133,8 @@ func mapShareLink(row gen.CourseShareLink) *entity.ShareLink {
 		Token:         row.Token,
 		AllowedEmails: row.AllowedEmails,
 		IsActive:      row.IsActive,
+		Status:        row.Status,
+		SnapshotPath:  row.SnapshotPath.String,
 		CreatedAt:     row.CreatedAt,
 		UpdatedAt:     row.UpdatedAt,
 	}

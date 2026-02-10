@@ -589,15 +589,17 @@ type CourseModule struct {
 }
 
 type CourseShareLink struct {
-	ID            uuid.UUID `db:"id" json:"id"`
-	TenantID      uuid.UUID `db:"tenant_id" json:"tenant_id"`
-	CourseID      uuid.UUID `db:"course_id" json:"course_id"`
-	CreatedBy     uuid.UUID `db:"created_by" json:"created_by"`
-	Token         string    `db:"token" json:"token"`
-	AllowedEmails []string  `db:"allowed_emails" json:"allowed_emails"`
-	IsActive      bool      `db:"is_active" json:"is_active"`
-	CreatedAt     time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
+	ID            uuid.UUID      `db:"id" json:"id"`
+	TenantID      uuid.UUID      `db:"tenant_id" json:"tenant_id"`
+	CourseID      uuid.UUID      `db:"course_id" json:"course_id"`
+	CreatedBy     uuid.UUID      `db:"created_by" json:"created_by"`
+	Token         string         `db:"token" json:"token"`
+	AllowedEmails []string       `db:"allowed_emails" json:"allowed_emails"`
+	IsActive      bool           `db:"is_active" json:"is_active"`
+	CreatedAt     time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt     time.Time      `db:"updated_at" json:"updated_at"`
+	Status        string         `db:"status" json:"status"`
+	SnapshotPath  sql.NullString `db:"snapshot_path" json:"snapshot_path"`
 }
 
 type Folder struct {

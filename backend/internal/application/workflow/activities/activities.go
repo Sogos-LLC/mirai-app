@@ -13,6 +13,7 @@ import (
 	"go.temporal.io/sdk/activity"
 
 	"github.com/sogos/mirai-backend/internal/domain/repository"
+	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/gemini"
@@ -40,6 +41,8 @@ type GoActivities struct {
 	ExportProcessor CourseExportProcessor
 	EmbeddingClient *gemini.EmbeddingClient
 	QdrantClient    *vectordb.QdrantClient
+	ShareLinkRepo   repository.ShareLinkRepository
+	EmailProvider   domainservice.EmailProvider
 	Logger          *slog.Logger
 }
 

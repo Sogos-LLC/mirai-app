@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { X, Copy, Check, Share2, Trash2, Plus, Mail } from 'lucide-react';
+import { X, Copy, Check, Share2, Trash2, Plus, Mail, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import {
   useCreateShareLink,
@@ -10,6 +10,7 @@ import {
   useDeactivateShareLink,
   useListCourseReviewComments,
 } from '@/hooks/useShareLinks';
+import { ShareLinkStatus } from '@/gen/mirai/v1/course_share_pb';
 import type { CourseShareLink, ReviewComment } from '@/gen/mirai/v1/course_share_pb';
 
 interface ShareModalProps {
@@ -17,6 +18,33 @@ interface ShareModalProps {
   courseTitle: string;
   isOpen: boolean;
   onClose: () => void;
+}
+
+function StatusBadge({ status }: { status: ShareLinkStatus }) {
+  switch (status) {
+    case ShareLinkStatus.PENDING:
+    case ShareLinkStatus.SNAPSHOTTING:
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 text-xs text-yellow-700 dark:text-yellow-300">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Preparing
+        </span>
+      );
+    case ShareLinkStatus.READY:
+      return (
+        <span className="inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs text-green-700 dark:text-green-300">
+          Ready
+        </span>
+      );
+    case ShareLinkStatus.FAILED:
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-50 dark:bg-red-900/20 px-2 py-0.5 text-xs text-red-700 dark:text-red-300">
+          Failed
+        </span>
+      );
+    default:
+      return null;
+  }
 }
 
 export function ShareModal({
@@ -95,8 +123,8 @@ export function ShareModal({
               Create Share Link
             </h3>
             <p className="text-sm text-secondary mb-3">
-              Add allowed reviewer emails (optional). Leave empty to allow
-              anyone with the link.
+              Add reviewer emails who will receive an invitation to review this
+              course.
             </p>
             <div className="flex gap-2 mb-2">
               <input
@@ -137,7 +165,7 @@ export function ShareModal({
             <Button
               variant="primary"
               onClick={handleCreateLink}
-              disabled={createShareLink.isLoading}
+              disabled={emails.length === 0 || createShareLink.isLoading}
               className="w-full"
             >
               {createShareLink.isLoading
@@ -161,14 +189,18 @@ export function ShareModal({
                       className="rounded-md border bg-page p-3"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <code className="text-xs text-secondary truncate max-w-[280px]">
-                          {link.shareUrl}
-                        </code>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs text-secondary truncate max-w-[220px]">
+                            {link.shareUrl}
+                          </code>
+                          <StatusBadge status={link.status} />
+                        </div>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => handleCopyLink(link)}
-                            className="rounded p-1 hover:bg-hover text-muted hover:text-primary"
-                            title="Copy link"
+                            className="rounded p-1 hover:bg-hover text-muted hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={link.status === ShareLinkStatus.READY ? 'Copy link' : 'Link not ready yet'}
+                            disabled={link.status !== ShareLinkStatus.READY}
                           >
                             {copiedId === link.id ? (
                               <Check className="h-4 w-4 text-green-500" />

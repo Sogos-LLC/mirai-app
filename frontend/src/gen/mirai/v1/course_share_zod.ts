@@ -3,6 +3,14 @@
 /* eslint-disable */
 
 import { z } from "zod";
+import { ShareLinkStatus } from "./course_share_pb";
+
+/**
+ * Zod schema for ShareLinkStatus enum
+ * @generated from enum mirai.v1.ShareLinkStatus
+ */
+export const ShareLinkStatusSchema = z.nativeEnum(ShareLinkStatus);
+export type ShareLinkStatusType = z.infer<typeof ShareLinkStatusSchema>;
 
 /**
  * Zod schema for CourseShareLink
@@ -17,6 +25,7 @@ export const CourseShareLinkSchema = z.object({
   shareUrl: z.string(),
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
+  status: z.nativeEnum(ShareLinkStatus),
 });
 
 export type CourseShareLink = z.infer<typeof CourseShareLinkSchema>;

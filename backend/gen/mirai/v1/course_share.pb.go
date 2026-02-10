@@ -22,6 +22,62 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ShareLinkStatus indicates the readiness state of a share link.
+type ShareLinkStatus int32
+
+const (
+	ShareLinkStatus_SHARE_LINK_STATUS_UNSPECIFIED  ShareLinkStatus = 0
+	ShareLinkStatus_SHARE_LINK_STATUS_PENDING      ShareLinkStatus = 1
+	ShareLinkStatus_SHARE_LINK_STATUS_SNAPSHOTTING ShareLinkStatus = 2
+	ShareLinkStatus_SHARE_LINK_STATUS_READY        ShareLinkStatus = 3
+	ShareLinkStatus_SHARE_LINK_STATUS_FAILED       ShareLinkStatus = 4
+)
+
+// Enum value maps for ShareLinkStatus.
+var (
+	ShareLinkStatus_name = map[int32]string{
+		0: "SHARE_LINK_STATUS_UNSPECIFIED",
+		1: "SHARE_LINK_STATUS_PENDING",
+		2: "SHARE_LINK_STATUS_SNAPSHOTTING",
+		3: "SHARE_LINK_STATUS_READY",
+		4: "SHARE_LINK_STATUS_FAILED",
+	}
+	ShareLinkStatus_value = map[string]int32{
+		"SHARE_LINK_STATUS_UNSPECIFIED":  0,
+		"SHARE_LINK_STATUS_PENDING":      1,
+		"SHARE_LINK_STATUS_SNAPSHOTTING": 2,
+		"SHARE_LINK_STATUS_READY":        3,
+		"SHARE_LINK_STATUS_FAILED":       4,
+	}
+)
+
+func (x ShareLinkStatus) Enum() *ShareLinkStatus {
+	p := new(ShareLinkStatus)
+	*p = x
+	return p
+}
+
+func (x ShareLinkStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ShareLinkStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_mirai_v1_course_share_proto_enumTypes[0].Descriptor()
+}
+
+func (ShareLinkStatus) Type() protoreflect.EnumType {
+	return &file_mirai_v1_course_share_proto_enumTypes[0]
+}
+
+func (x ShareLinkStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ShareLinkStatus.Descriptor instead.
+func (ShareLinkStatus) EnumDescriptor() ([]byte, []int) {
+	return file_mirai_v1_course_share_proto_rawDescGZIP(), []int{0}
+}
+
 // CourseShareLink represents a share link for external course review.
 type CourseShareLink struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -33,6 +89,7 @@ type CourseShareLink struct {
 	ShareUrl      string                 `protobuf:"bytes,6,opt,name=share_url,json=shareUrl,proto3" json:"share_url,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Status        ShareLinkStatus        `protobuf:"varint,9,opt,name=status,proto3,enum=mirai.v1.ShareLinkStatus" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -121,6 +178,13 @@ func (x *CourseShareLink) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *CourseShareLink) GetStatus() ShareLinkStatus {
+	if x != nil {
+		return x.Status
+	}
+	return ShareLinkStatus_SHARE_LINK_STATUS_UNSPECIFIED
 }
 
 // ReviewComment represents a review comment from an external reviewer.
@@ -895,9 +959,7 @@ type VerifyShareTokenResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Valid         bool                   `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
 	CourseTitle   string                 `protobuf:"bytes,2,opt,name=course_title,json=courseTitle,proto3" json:"course_title,omitempty"`
-	RequiresEmail bool                   `protobuf:"varint,3,opt,name=requires_email,json=requiresEmail,proto3" json:"requires_email,omitempty"`
-	// Session token returned when requires_email is false (open share links).
-	SessionToken  string `protobuf:"bytes,4,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	Status        ShareLinkStatus        `protobuf:"varint,3,opt,name=status,proto3,enum=mirai.v1.ShareLinkStatus" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -946,18 +1008,11 @@ func (x *VerifyShareTokenResponse) GetCourseTitle() string {
 	return ""
 }
 
-func (x *VerifyShareTokenResponse) GetRequiresEmail() bool {
+func (x *VerifyShareTokenResponse) GetStatus() ShareLinkStatus {
 	if x != nil {
-		return x.RequiresEmail
+		return x.Status
 	}
-	return false
-}
-
-func (x *VerifyShareTokenResponse) GetSessionToken() string {
-	if x != nil {
-		return x.SessionToken
-	}
-	return ""
+	return ShareLinkStatus_SHARE_LINK_STATUS_UNSPECIFIED
 }
 
 type SendVerificationCodeRequest struct {
@@ -1312,7 +1367,7 @@ type GetSharedLessonResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LessonId      string                 `protobuf:"bytes,1,opt,name=lesson_id,json=lessonId,proto3" json:"lesson_id,omitempty"`
 	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	ContentJson   string                 `protobuf:"bytes,3,opt,name=content_json,json=contentJson,proto3" json:"content_json,omitempty"`
+	Components    []*LessonComponent     `protobuf:"bytes,3,rep,name=components,proto3" json:"components,omitempty"`
 	Comments      []*ReviewComment       `protobuf:"bytes,4,rep,name=comments,proto3" json:"comments,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1362,11 +1417,11 @@ func (x *GetSharedLessonResponse) GetTitle() string {
 	return ""
 }
 
-func (x *GetSharedLessonResponse) GetContentJson() string {
+func (x *GetSharedLessonResponse) GetComponents() []*LessonComponent {
 	if x != nil {
-		return x.ContentJson
+		return x.Components
 	}
-	return ""
+	return nil
 }
 
 func (x *GetSharedLessonResponse) GetComments() []*ReviewComment {
@@ -1668,7 +1723,7 @@ var File_mirai_v1_course_share_proto protoreflect.FileDescriptor
 
 const file_mirai_v1_course_share_proto_rawDesc = "" +
 	"\n" +
-	"\x1bmirai/v1/course_share.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xab\x02\n" +
+	"\x1bmirai/v1/course_share.proto\x12\bmirai.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\"mirai/v1/ai_generation_types.proto\"\xde\x02\n" +
 	"\x0fCourseShareLink\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12\x14\n" +
@@ -1679,7 +1734,8 @@ const file_mirai_v1_course_share_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd5\x01\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x121\n" +
+	"\x06status\x18\t \x01(\x0e2\x19.mirai.v1.ShareLinkStatusR\x06status\"\xd5\x01\n" +
 	"\rReviewComment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tcourse_id\x18\x02 \x01(\tR\bcourseId\x12\x1b\n" +
@@ -1726,12 +1782,11 @@ const file_mirai_v1_course_share_proto_rawDesc = "" +
 	" ListCourseReviewCommentsResponse\x123\n" +
 	"\bcomments\x18\x01 \x03(\v2\x17.mirai.v1.ReviewCommentR\bcomments\"/\n" +
 	"\x17VerifyShareTokenRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"\x9f\x01\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"\x86\x01\n" +
 	"\x18VerifyShareTokenResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12!\n" +
-	"\fcourse_title\x18\x02 \x01(\tR\vcourseTitle\x12%\n" +
-	"\x0erequires_email\x18\x03 \x01(\bR\rrequiresEmail\x12#\n" +
-	"\rsession_token\x18\x04 \x01(\tR\fsessionToken\"I\n" +
+	"\fcourse_title\x18\x02 \x01(\tR\vcourseTitle\x121\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x19.mirai.v1.ShareLinkStatusR\x06status\"I\n" +
 	"\x1bSendVerificationCodeRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\"2\n" +
@@ -1750,11 +1805,13 @@ const file_mirai_v1_course_share_proto_rawDesc = "" +
 	"\x06course\x18\x01 \x01(\v2\x1a.mirai.v1.SharedCourseDataR\x06course\"Z\n" +
 	"\x16GetSharedLessonRequest\x12#\n" +
 	"\rsession_token\x18\x01 \x01(\tR\fsessionToken\x12\x1b\n" +
-	"\tlesson_id\x18\x02 \x01(\tR\blessonId\"\xa4\x01\n" +
+	"\tlesson_id\x18\x02 \x01(\tR\blessonId\"\xbc\x01\n" +
 	"\x17GetSharedLessonResponse\x12\x1b\n" +
 	"\tlesson_id\x18\x01 \x01(\tR\blessonId\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title\x12!\n" +
-	"\fcontent_json\x18\x03 \x01(\tR\vcontentJson\x123\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x129\n" +
+	"\n" +
+	"components\x18\x03 \x03(\v2\x19.mirai.v1.LessonComponentR\n" +
+	"components\x123\n" +
 	"\bcomments\x18\x04 \x03(\v2\x17.mirai.v1.ReviewCommentR\bcomments\"u\n" +
 	"\x17AddReviewCommentRequest\x12#\n" +
 	"\rsession_token\x18\x01 \x01(\tR\fsessionToken\x12\x1b\n" +
@@ -1770,7 +1827,13 @@ const file_mirai_v1_course_share_proto_rawDesc = "" +
 	"\x1cExportSharedCoursePDFRequest\x12#\n" +
 	"\rsession_token\x18\x01 \x01(\tR\fsessionToken\"B\n" +
 	"\x1dExportSharedCoursePDFResponse\x12!\n" +
-	"\fdownload_url\x18\x01 \x01(\tR\vdownloadUrl2\x84\n" +
+	"\fdownload_url\x18\x01 \x01(\tR\vdownloadUrl*\xb2\x01\n" +
+	"\x0fShareLinkStatus\x12!\n" +
+	"\x1dSHARE_LINK_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19SHARE_LINK_STATUS_PENDING\x10\x01\x12\"\n" +
+	"\x1eSHARE_LINK_STATUS_SNAPSHOTTING\x10\x02\x12\x1b\n" +
+	"\x17SHARE_LINK_STATUS_READY\x10\x03\x12\x1c\n" +
+	"\x18SHARE_LINK_STATUS_FAILED\x10\x042\x84\n" +
 	"\n" +
 	"\x12CourseShareService\x12V\n" +
 	"\x0fCreateShareLink\x12 .mirai.v1.CreateShareLinkRequest\x1a!.mirai.v1.CreateShareLinkResponse\x12S\n" +
@@ -1800,86 +1863,92 @@ func file_mirai_v1_course_share_proto_rawDescGZIP() []byte {
 	return file_mirai_v1_course_share_proto_rawDescData
 }
 
+var file_mirai_v1_course_share_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_mirai_v1_course_share_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_mirai_v1_course_share_proto_goTypes = []any{
-	(*CourseShareLink)(nil),                  // 0: mirai.v1.CourseShareLink
-	(*ReviewComment)(nil),                    // 1: mirai.v1.ReviewComment
-	(*SharedCourseData)(nil),                 // 2: mirai.v1.SharedCourseData
-	(*SharedSection)(nil),                    // 3: mirai.v1.SharedSection
-	(*SharedLesson)(nil),                     // 4: mirai.v1.SharedLesson
-	(*CreateShareLinkRequest)(nil),           // 5: mirai.v1.CreateShareLinkRequest
-	(*CreateShareLinkResponse)(nil),          // 6: mirai.v1.CreateShareLinkResponse
-	(*ListShareLinksRequest)(nil),            // 7: mirai.v1.ListShareLinksRequest
-	(*ListShareLinksResponse)(nil),           // 8: mirai.v1.ListShareLinksResponse
-	(*UpdateShareLinkEmailsRequest)(nil),     // 9: mirai.v1.UpdateShareLinkEmailsRequest
-	(*UpdateShareLinkEmailsResponse)(nil),    // 10: mirai.v1.UpdateShareLinkEmailsResponse
-	(*DeactivateShareLinkRequest)(nil),       // 11: mirai.v1.DeactivateShareLinkRequest
-	(*DeactivateShareLinkResponse)(nil),      // 12: mirai.v1.DeactivateShareLinkResponse
-	(*ListCourseReviewCommentsRequest)(nil),  // 13: mirai.v1.ListCourseReviewCommentsRequest
-	(*ListCourseReviewCommentsResponse)(nil), // 14: mirai.v1.ListCourseReviewCommentsResponse
-	(*VerifyShareTokenRequest)(nil),          // 15: mirai.v1.VerifyShareTokenRequest
-	(*VerifyShareTokenResponse)(nil),         // 16: mirai.v1.VerifyShareTokenResponse
-	(*SendVerificationCodeRequest)(nil),      // 17: mirai.v1.SendVerificationCodeRequest
-	(*SendVerificationCodeResponse)(nil),     // 18: mirai.v1.SendVerificationCodeResponse
-	(*VerifyEmailCodeRequest)(nil),           // 19: mirai.v1.VerifyEmailCodeRequest
-	(*VerifyEmailCodeResponse)(nil),          // 20: mirai.v1.VerifyEmailCodeResponse
-	(*GetSharedCourseRequest)(nil),           // 21: mirai.v1.GetSharedCourseRequest
-	(*GetSharedCourseResponse)(nil),          // 22: mirai.v1.GetSharedCourseResponse
-	(*GetSharedLessonRequest)(nil),           // 23: mirai.v1.GetSharedLessonRequest
-	(*GetSharedLessonResponse)(nil),          // 24: mirai.v1.GetSharedLessonResponse
-	(*AddReviewCommentRequest)(nil),          // 25: mirai.v1.AddReviewCommentRequest
-	(*AddReviewCommentResponse)(nil),         // 26: mirai.v1.AddReviewCommentResponse
-	(*ListLessonReviewCommentsRequest)(nil),  // 27: mirai.v1.ListLessonReviewCommentsRequest
-	(*ListLessonReviewCommentsResponse)(nil), // 28: mirai.v1.ListLessonReviewCommentsResponse
-	(*ExportSharedCoursePDFRequest)(nil),     // 29: mirai.v1.ExportSharedCoursePDFRequest
-	(*ExportSharedCoursePDFResponse)(nil),    // 30: mirai.v1.ExportSharedCoursePDFResponse
-	(*timestamppb.Timestamp)(nil),            // 31: google.protobuf.Timestamp
+	(ShareLinkStatus)(0),                     // 0: mirai.v1.ShareLinkStatus
+	(*CourseShareLink)(nil),                  // 1: mirai.v1.CourseShareLink
+	(*ReviewComment)(nil),                    // 2: mirai.v1.ReviewComment
+	(*SharedCourseData)(nil),                 // 3: mirai.v1.SharedCourseData
+	(*SharedSection)(nil),                    // 4: mirai.v1.SharedSection
+	(*SharedLesson)(nil),                     // 5: mirai.v1.SharedLesson
+	(*CreateShareLinkRequest)(nil),           // 6: mirai.v1.CreateShareLinkRequest
+	(*CreateShareLinkResponse)(nil),          // 7: mirai.v1.CreateShareLinkResponse
+	(*ListShareLinksRequest)(nil),            // 8: mirai.v1.ListShareLinksRequest
+	(*ListShareLinksResponse)(nil),           // 9: mirai.v1.ListShareLinksResponse
+	(*UpdateShareLinkEmailsRequest)(nil),     // 10: mirai.v1.UpdateShareLinkEmailsRequest
+	(*UpdateShareLinkEmailsResponse)(nil),    // 11: mirai.v1.UpdateShareLinkEmailsResponse
+	(*DeactivateShareLinkRequest)(nil),       // 12: mirai.v1.DeactivateShareLinkRequest
+	(*DeactivateShareLinkResponse)(nil),      // 13: mirai.v1.DeactivateShareLinkResponse
+	(*ListCourseReviewCommentsRequest)(nil),  // 14: mirai.v1.ListCourseReviewCommentsRequest
+	(*ListCourseReviewCommentsResponse)(nil), // 15: mirai.v1.ListCourseReviewCommentsResponse
+	(*VerifyShareTokenRequest)(nil),          // 16: mirai.v1.VerifyShareTokenRequest
+	(*VerifyShareTokenResponse)(nil),         // 17: mirai.v1.VerifyShareTokenResponse
+	(*SendVerificationCodeRequest)(nil),      // 18: mirai.v1.SendVerificationCodeRequest
+	(*SendVerificationCodeResponse)(nil),     // 19: mirai.v1.SendVerificationCodeResponse
+	(*VerifyEmailCodeRequest)(nil),           // 20: mirai.v1.VerifyEmailCodeRequest
+	(*VerifyEmailCodeResponse)(nil),          // 21: mirai.v1.VerifyEmailCodeResponse
+	(*GetSharedCourseRequest)(nil),           // 22: mirai.v1.GetSharedCourseRequest
+	(*GetSharedCourseResponse)(nil),          // 23: mirai.v1.GetSharedCourseResponse
+	(*GetSharedLessonRequest)(nil),           // 24: mirai.v1.GetSharedLessonRequest
+	(*GetSharedLessonResponse)(nil),          // 25: mirai.v1.GetSharedLessonResponse
+	(*AddReviewCommentRequest)(nil),          // 26: mirai.v1.AddReviewCommentRequest
+	(*AddReviewCommentResponse)(nil),         // 27: mirai.v1.AddReviewCommentResponse
+	(*ListLessonReviewCommentsRequest)(nil),  // 28: mirai.v1.ListLessonReviewCommentsRequest
+	(*ListLessonReviewCommentsResponse)(nil), // 29: mirai.v1.ListLessonReviewCommentsResponse
+	(*ExportSharedCoursePDFRequest)(nil),     // 30: mirai.v1.ExportSharedCoursePDFRequest
+	(*ExportSharedCoursePDFResponse)(nil),    // 31: mirai.v1.ExportSharedCoursePDFResponse
+	(*timestamppb.Timestamp)(nil),            // 32: google.protobuf.Timestamp
+	(*LessonComponent)(nil),                  // 33: mirai.v1.LessonComponent
 }
 var file_mirai_v1_course_share_proto_depIdxs = []int32{
-	31, // 0: mirai.v1.CourseShareLink.created_at:type_name -> google.protobuf.Timestamp
-	31, // 1: mirai.v1.CourseShareLink.updated_at:type_name -> google.protobuf.Timestamp
-	31, // 2: mirai.v1.ReviewComment.created_at:type_name -> google.protobuf.Timestamp
-	3,  // 3: mirai.v1.SharedCourseData.sections:type_name -> mirai.v1.SharedSection
-	4,  // 4: mirai.v1.SharedSection.lessons:type_name -> mirai.v1.SharedLesson
-	0,  // 5: mirai.v1.CreateShareLinkResponse.share_link:type_name -> mirai.v1.CourseShareLink
-	0,  // 6: mirai.v1.ListShareLinksResponse.share_links:type_name -> mirai.v1.CourseShareLink
-	0,  // 7: mirai.v1.UpdateShareLinkEmailsResponse.share_link:type_name -> mirai.v1.CourseShareLink
-	1,  // 8: mirai.v1.ListCourseReviewCommentsResponse.comments:type_name -> mirai.v1.ReviewComment
-	2,  // 9: mirai.v1.GetSharedCourseResponse.course:type_name -> mirai.v1.SharedCourseData
-	1,  // 10: mirai.v1.GetSharedLessonResponse.comments:type_name -> mirai.v1.ReviewComment
-	1,  // 11: mirai.v1.AddReviewCommentResponse.comment:type_name -> mirai.v1.ReviewComment
-	1,  // 12: mirai.v1.ListLessonReviewCommentsResponse.comments:type_name -> mirai.v1.ReviewComment
-	5,  // 13: mirai.v1.CourseShareService.CreateShareLink:input_type -> mirai.v1.CreateShareLinkRequest
-	7,  // 14: mirai.v1.CourseShareService.ListShareLinks:input_type -> mirai.v1.ListShareLinksRequest
-	9,  // 15: mirai.v1.CourseShareService.UpdateShareLinkEmails:input_type -> mirai.v1.UpdateShareLinkEmailsRequest
-	11, // 16: mirai.v1.CourseShareService.DeactivateShareLink:input_type -> mirai.v1.DeactivateShareLinkRequest
-	13, // 17: mirai.v1.CourseShareService.ListCourseReviewComments:input_type -> mirai.v1.ListCourseReviewCommentsRequest
-	15, // 18: mirai.v1.CourseShareService.VerifyShareToken:input_type -> mirai.v1.VerifyShareTokenRequest
-	17, // 19: mirai.v1.CourseShareService.SendVerificationCode:input_type -> mirai.v1.SendVerificationCodeRequest
-	19, // 20: mirai.v1.CourseShareService.VerifyEmailCode:input_type -> mirai.v1.VerifyEmailCodeRequest
-	21, // 21: mirai.v1.CourseShareService.GetSharedCourse:input_type -> mirai.v1.GetSharedCourseRequest
-	23, // 22: mirai.v1.CourseShareService.GetSharedLesson:input_type -> mirai.v1.GetSharedLessonRequest
-	25, // 23: mirai.v1.CourseShareService.AddReviewComment:input_type -> mirai.v1.AddReviewCommentRequest
-	27, // 24: mirai.v1.CourseShareService.ListLessonReviewComments:input_type -> mirai.v1.ListLessonReviewCommentsRequest
-	29, // 25: mirai.v1.CourseShareService.ExportSharedCoursePDF:input_type -> mirai.v1.ExportSharedCoursePDFRequest
-	6,  // 26: mirai.v1.CourseShareService.CreateShareLink:output_type -> mirai.v1.CreateShareLinkResponse
-	8,  // 27: mirai.v1.CourseShareService.ListShareLinks:output_type -> mirai.v1.ListShareLinksResponse
-	10, // 28: mirai.v1.CourseShareService.UpdateShareLinkEmails:output_type -> mirai.v1.UpdateShareLinkEmailsResponse
-	12, // 29: mirai.v1.CourseShareService.DeactivateShareLink:output_type -> mirai.v1.DeactivateShareLinkResponse
-	14, // 30: mirai.v1.CourseShareService.ListCourseReviewComments:output_type -> mirai.v1.ListCourseReviewCommentsResponse
-	16, // 31: mirai.v1.CourseShareService.VerifyShareToken:output_type -> mirai.v1.VerifyShareTokenResponse
-	18, // 32: mirai.v1.CourseShareService.SendVerificationCode:output_type -> mirai.v1.SendVerificationCodeResponse
-	20, // 33: mirai.v1.CourseShareService.VerifyEmailCode:output_type -> mirai.v1.VerifyEmailCodeResponse
-	22, // 34: mirai.v1.CourseShareService.GetSharedCourse:output_type -> mirai.v1.GetSharedCourseResponse
-	24, // 35: mirai.v1.CourseShareService.GetSharedLesson:output_type -> mirai.v1.GetSharedLessonResponse
-	26, // 36: mirai.v1.CourseShareService.AddReviewComment:output_type -> mirai.v1.AddReviewCommentResponse
-	28, // 37: mirai.v1.CourseShareService.ListLessonReviewComments:output_type -> mirai.v1.ListLessonReviewCommentsResponse
-	30, // 38: mirai.v1.CourseShareService.ExportSharedCoursePDF:output_type -> mirai.v1.ExportSharedCoursePDFResponse
-	26, // [26:39] is the sub-list for method output_type
-	13, // [13:26] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	32, // 0: mirai.v1.CourseShareLink.created_at:type_name -> google.protobuf.Timestamp
+	32, // 1: mirai.v1.CourseShareLink.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 2: mirai.v1.CourseShareLink.status:type_name -> mirai.v1.ShareLinkStatus
+	32, // 3: mirai.v1.ReviewComment.created_at:type_name -> google.protobuf.Timestamp
+	4,  // 4: mirai.v1.SharedCourseData.sections:type_name -> mirai.v1.SharedSection
+	5,  // 5: mirai.v1.SharedSection.lessons:type_name -> mirai.v1.SharedLesson
+	1,  // 6: mirai.v1.CreateShareLinkResponse.share_link:type_name -> mirai.v1.CourseShareLink
+	1,  // 7: mirai.v1.ListShareLinksResponse.share_links:type_name -> mirai.v1.CourseShareLink
+	1,  // 8: mirai.v1.UpdateShareLinkEmailsResponse.share_link:type_name -> mirai.v1.CourseShareLink
+	2,  // 9: mirai.v1.ListCourseReviewCommentsResponse.comments:type_name -> mirai.v1.ReviewComment
+	0,  // 10: mirai.v1.VerifyShareTokenResponse.status:type_name -> mirai.v1.ShareLinkStatus
+	3,  // 11: mirai.v1.GetSharedCourseResponse.course:type_name -> mirai.v1.SharedCourseData
+	33, // 12: mirai.v1.GetSharedLessonResponse.components:type_name -> mirai.v1.LessonComponent
+	2,  // 13: mirai.v1.GetSharedLessonResponse.comments:type_name -> mirai.v1.ReviewComment
+	2,  // 14: mirai.v1.AddReviewCommentResponse.comment:type_name -> mirai.v1.ReviewComment
+	2,  // 15: mirai.v1.ListLessonReviewCommentsResponse.comments:type_name -> mirai.v1.ReviewComment
+	6,  // 16: mirai.v1.CourseShareService.CreateShareLink:input_type -> mirai.v1.CreateShareLinkRequest
+	8,  // 17: mirai.v1.CourseShareService.ListShareLinks:input_type -> mirai.v1.ListShareLinksRequest
+	10, // 18: mirai.v1.CourseShareService.UpdateShareLinkEmails:input_type -> mirai.v1.UpdateShareLinkEmailsRequest
+	12, // 19: mirai.v1.CourseShareService.DeactivateShareLink:input_type -> mirai.v1.DeactivateShareLinkRequest
+	14, // 20: mirai.v1.CourseShareService.ListCourseReviewComments:input_type -> mirai.v1.ListCourseReviewCommentsRequest
+	16, // 21: mirai.v1.CourseShareService.VerifyShareToken:input_type -> mirai.v1.VerifyShareTokenRequest
+	18, // 22: mirai.v1.CourseShareService.SendVerificationCode:input_type -> mirai.v1.SendVerificationCodeRequest
+	20, // 23: mirai.v1.CourseShareService.VerifyEmailCode:input_type -> mirai.v1.VerifyEmailCodeRequest
+	22, // 24: mirai.v1.CourseShareService.GetSharedCourse:input_type -> mirai.v1.GetSharedCourseRequest
+	24, // 25: mirai.v1.CourseShareService.GetSharedLesson:input_type -> mirai.v1.GetSharedLessonRequest
+	26, // 26: mirai.v1.CourseShareService.AddReviewComment:input_type -> mirai.v1.AddReviewCommentRequest
+	28, // 27: mirai.v1.CourseShareService.ListLessonReviewComments:input_type -> mirai.v1.ListLessonReviewCommentsRequest
+	30, // 28: mirai.v1.CourseShareService.ExportSharedCoursePDF:input_type -> mirai.v1.ExportSharedCoursePDFRequest
+	7,  // 29: mirai.v1.CourseShareService.CreateShareLink:output_type -> mirai.v1.CreateShareLinkResponse
+	9,  // 30: mirai.v1.CourseShareService.ListShareLinks:output_type -> mirai.v1.ListShareLinksResponse
+	11, // 31: mirai.v1.CourseShareService.UpdateShareLinkEmails:output_type -> mirai.v1.UpdateShareLinkEmailsResponse
+	13, // 32: mirai.v1.CourseShareService.DeactivateShareLink:output_type -> mirai.v1.DeactivateShareLinkResponse
+	15, // 33: mirai.v1.CourseShareService.ListCourseReviewComments:output_type -> mirai.v1.ListCourseReviewCommentsResponse
+	17, // 34: mirai.v1.CourseShareService.VerifyShareToken:output_type -> mirai.v1.VerifyShareTokenResponse
+	19, // 35: mirai.v1.CourseShareService.SendVerificationCode:output_type -> mirai.v1.SendVerificationCodeResponse
+	21, // 36: mirai.v1.CourseShareService.VerifyEmailCode:output_type -> mirai.v1.VerifyEmailCodeResponse
+	23, // 37: mirai.v1.CourseShareService.GetSharedCourse:output_type -> mirai.v1.GetSharedCourseResponse
+	25, // 38: mirai.v1.CourseShareService.GetSharedLesson:output_type -> mirai.v1.GetSharedLessonResponse
+	27, // 39: mirai.v1.CourseShareService.AddReviewComment:output_type -> mirai.v1.AddReviewCommentResponse
+	29, // 40: mirai.v1.CourseShareService.ListLessonReviewComments:output_type -> mirai.v1.ListLessonReviewCommentsResponse
+	31, // 41: mirai.v1.CourseShareService.ExportSharedCoursePDF:output_type -> mirai.v1.ExportSharedCoursePDFResponse
+	29, // [29:42] is the sub-list for method output_type
+	16, // [16:29] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_mirai_v1_course_share_proto_init() }
@@ -1887,18 +1956,20 @@ func file_mirai_v1_course_share_proto_init() {
 	if File_mirai_v1_course_share_proto != nil {
 		return
 	}
+	file_mirai_v1_ai_generation_types_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mirai_v1_course_share_proto_rawDesc), len(file_mirai_v1_course_share_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_mirai_v1_course_share_proto_goTypes,
 		DependencyIndexes: file_mirai_v1_course_share_proto_depIdxs,
+		EnumInfos:         file_mirai_v1_course_share_proto_enumTypes,
 		MessageInfos:      file_mirai_v1_course_share_proto_msgTypes,
 	}.Build()
 	File_mirai_v1_course_share_proto = out.File

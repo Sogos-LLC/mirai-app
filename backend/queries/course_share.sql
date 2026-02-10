@@ -2,8 +2,8 @@
 -- Schema: course_share_links, share_verification_codes, share_review_comments
 
 -- name: CreateShareLink :one
-INSERT INTO course_share_links (tenant_id, course_id, created_by, token, allowed_emails)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO course_share_links (tenant_id, course_id, created_by, token, allowed_emails, status)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetShareLinkByToken :one
@@ -27,6 +27,11 @@ RETURNING *;
 UPDATE course_share_links
 SET is_active = false, updated_at = now()
 WHERE id = $1;
+
+-- name: UpdateShareLinkStatus :exec
+UPDATE course_share_links
+SET status = $1, snapshot_path = $2, updated_at = now()
+WHERE id = $3;
 
 -- name: CreateVerificationCode :one
 INSERT INTO share_verification_codes (share_link_id, email, code, expires_at)
