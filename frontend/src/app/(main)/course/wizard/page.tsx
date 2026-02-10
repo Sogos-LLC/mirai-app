@@ -46,6 +46,7 @@ import {
 import { useCreateCourse } from '@/hooks/useCourses';
 import { useGetJob, useGetActiveJobForCourse, useGetDeferredJobForCourse } from '@/hooks/ai-generation/useJobs';
 import {
+  useGenerateTitle,
   useGenerateOutcomes,
   useGenerateSMEPersonas,
   useGenerateAudiencePersonas,
@@ -74,6 +75,7 @@ export default function CourseWizardPage() {
   // =========================================================================
   // Wizard hooks (Step collection phase)
   // =========================================================================
+  const genTitle = useGenerateTitle();
   const genOutcomes = useGenerateOutcomes();
   const genSMEPersonas = useGenerateSMEPersonas();
   const genAudiencePersonas = useGenerateAudiencePersonas();
@@ -86,10 +88,25 @@ export default function CourseWizardPage() {
     wizardMachine.provide({
       actors: {
         generateOutcomesActor: fromPromise(async ({ input }) => {
-          const result = await genOutcomes.mutate({
-            courseName: input.courseTitle,
-          });
-          return result.outcomes;
+          const [outcomesResult, titleResult] = await Promise.allSettled([
+            genOutcomes.mutate({ courseName: input.courseTitle }),
+            genTitle.mutate({ courseName: input.courseTitle }),
+          ]);
+
+          // Outcomes failure is fatal
+          if (outcomesResult.status === 'rejected') {
+            throw outcomesResult.reason;
+          }
+
+          // Title failure is silent — fall back to original
+          const suggestedTitle = titleResult.status === 'fulfilled'
+            ? titleResult.value.improvedTitle
+            : input.courseTitle;
+
+          return {
+            outcomes: outcomesResult.value.outcomes,
+            suggestedTitle,
+          };
         }),
         generatePersonasActor: fromPromise(async ({ input }) => {
           // Generate teacher (SME) and student (audience) in parallel
@@ -265,7 +282,7 @@ export default function CourseWizardPage() {
         let courseId = resumeCourseId;
         if (!courseId) {
           const courseResult = await createCourse.mutate({
-            settings: { title: ctx.courseTitle },
+            settings: { title: ctx.suggestedTitle || ctx.courseTitle },
           });
           courseId = courseResult.course?.id;
         }
@@ -290,7 +307,7 @@ export default function CourseWizardPage() {
           topic: ctx.courseTitle,
           audience: ctx.student?.role ?? '',
           desiredOutcomes: ctx.outcomes,
-          improvedTitle: ctx.courseTitle,
+          improvedTitle: ctx.suggestedTitle || ctx.courseTitle,
           description: ctx.outcomes,
           smePersonas,
           selectedSmeIds,
@@ -345,7 +362,7 @@ export default function CourseWizardPage() {
 
   const getLoadingProps = () => {
     if (wizardState.matches('generatingOutcomes')) {
-      return { title: 'Generating Outcomes', messages: outcomesMessages };
+      return { title: 'Generating Title & Outcomes', messages: outcomesMessages };
     }
     if (wizardState.matches('generatingPersonas')) {
       return { title: 'Creating Teacher & Student', messages: personaMessages };
@@ -383,7 +400,7 @@ export default function CourseWizardPage() {
     setShowGapAssignment(false);
     const stepData = buildWizardStepData({
       courseName: wizardState.context.courseTitle,
-      improvedTitle: wizardState.context.courseTitle,
+      improvedTitle: wizardState.context.suggestedTitle || wizardState.context.courseTitle,
       description: wizardState.context.outcomes,
       desiredOutcomes: wizardState.context.outcomes,
       smePersonas: wizardState.context.teacher ? [wizardState.context.teacher] : [],

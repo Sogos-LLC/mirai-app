@@ -1,6 +1,6 @@
 'use client';
 
-import { Target } from 'lucide-react';
+import { Target, Pencil } from 'lucide-react';
 import type { WizardContext, WizardEvent } from '@/machines/wizardMachine';
 
 interface WizardStep2OutcomesProps {
@@ -20,10 +20,29 @@ export function WizardStep2Outcomes({ context, send }: WizardStep2OutcomesProps)
           Learning Outcomes
         </h2>
         <p className="text-sm text-secondary max-w-lg">
-          AI has suggested outcomes for <span className="font-medium text-primary">&ldquo;{context.courseTitle}&rdquo;</span>.
-          Edit them to match your vision.
+          AI has generated outcomes and an improved title. Edit them to match your vision.
         </p>
       </div>
+
+      {/* Suggested title */}
+      {context.suggestedTitle && (
+        <div className="mb-6">
+          <label htmlFor="suggestedTitle" className="flex items-center gap-1.5 text-sm font-semibold text-primary mb-2">
+            <Pencil className="w-3.5 h-3.5" />
+            Suggested Title
+          </label>
+          <input
+            id="suggestedTitle"
+            type="text"
+            value={context.suggestedTitle}
+            onChange={(e) => send({ type: 'SET_SUGGESTED_TITLE', value: e.target.value })}
+            className="w-full px-4 py-3 bg-page border rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+          <p className="text-xs text-muted mt-1.5">
+            AI improved your title. Edit it or keep the original.
+          </p>
+        </div>
+      )}
 
       {/* Editable outcomes */}
       <div>

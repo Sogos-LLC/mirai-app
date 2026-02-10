@@ -26,6 +26,7 @@ export type ContextUploadStatus = 'idle' | 'uploading' | 'processing' | 'ready' 
 export interface WizardContext {
   // Step 1
   courseTitle: string;
+  suggestedTitle: string;
 
   // Step 2 (generated + editable)
   outcomes: string;
@@ -53,6 +54,7 @@ export interface WizardContext {
 
 export type WizardEvent =
   | { type: 'SET_COURSE_TITLE'; value: string }
+  | { type: 'SET_SUGGESTED_TITLE'; value: string }
   | { type: 'SET_OUTCOMES'; value: string }
   | { type: 'SET_TEACHER'; teacher: SMEPersona }
   | { type: 'SET_STUDENT'; student: AudiencePersona }
@@ -74,6 +76,7 @@ export type WizardEvent =
 
 export const initialWizardContext: WizardContext = {
   courseTitle: '',
+  suggestedTitle: '',
   outcomes: '',
   teacher: null,
   student: null,
@@ -91,7 +94,7 @@ export const initialWizardContext: WizardContext = {
 // Actor stubs (provided by component via .provide())
 // ============================================================
 
-export const generateOutcomesActor = fromPromise<string, { courseTitle: string }>(
+export const generateOutcomesActor = fromPromise<{ outcomes: string; suggestedTitle: string }, { courseTitle: string }>(
   async () => { throw new Error('generateOutcomesActor must be provided'); }
 );
 
@@ -118,6 +121,9 @@ export const wizardMachine = createMachine({
     },
     SET_COURSE_TITLE: {
       actions: assign({ courseTitle: ({ event }) => event.value }),
+    },
+    SET_SUGGESTED_TITLE: {
+      actions: assign({ suggestedTitle: ({ event }) => event.value }),
     },
     SET_OUTCOMES: {
       actions: assign({ outcomes: ({ event }) => event.value }),
@@ -186,7 +192,8 @@ export const wizardMachine = createMachine({
         onDone: {
           target: 'step2_outcomes',
           actions: assign({
-            outcomes: ({ event }) => event.output,
+            outcomes: ({ event }) => event.output.outcomes,
+            suggestedTitle: ({ event }) => event.output.suggestedTitle,
             currentStep: 2,
           }),
         },
