@@ -179,4 +179,4 @@ patches:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/mirai-backend
   newName: ghcr.io/sogos-llc/mirai-app/mirai-backend
-  newTag: dev-f9678bd
+  newTag: dev-96d2c5e
