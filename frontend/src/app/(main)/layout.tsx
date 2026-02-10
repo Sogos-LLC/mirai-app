@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts';
 import { useUIStore } from '@/store/zustand';
 import { setSessionTokenCookie } from '@/lib/auth.config';
 import { transport } from '@/lib/connect';
-import { listCourses } from '@/gen/mirai/v1/course-CourseService_connectquery';
+import { listCourses, getFolderHierarchy } from '@/gen/mirai/v1/course-CourseService_connectquery';
 import Sidebar, { menuItems, bottomItems } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomTabNav from '@/components/layout/BottomTabNav';
@@ -84,11 +84,19 @@ export default function Layout({
     }
     allPaths.forEach((path) => router.prefetch(path));
 
-    // Prefetch course list so the dashboard is instant
-    const input = { tags: [], limit: 20, offset: 0 };
+    // Prefetch course list so the dashboard is instant.
+    // Include all fields that useListCourses({}) produces so the cache key matches exactly.
+    const coursesInput = { status: undefined, folder: undefined, tags: [], limit: 20, offset: 0 };
     queryClient.prefetchQuery({
-      queryKey: createConnectQueryKey({ schema: listCourses, input, cardinality: "finite" }),
-      queryFn: () => callUnaryMethod(transport, listCourses, input),
+      queryKey: createConnectQueryKey({ schema: listCourses, input: coursesInput, cardinality: "finite" }),
+      queryFn: () => callUnaryMethod(transport, listCourses, coursesInput),
+    });
+
+    // Prefetch folder hierarchy so the content library loads instantly
+    const foldersInput = { includeCourseCounts: true };
+    queryClient.prefetchQuery({
+      queryKey: createConnectQueryKey({ schema: getFolderHierarchy, input: foldersInput, cardinality: "finite" }),
+      queryFn: () => callUnaryMethod(transport, getFolderHierarchy, foldersInput),
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, queryClient, isAuthInitialized, toggleStore.showTemplates, toggleStore.showTutorials, toggleStore.showTeams]);

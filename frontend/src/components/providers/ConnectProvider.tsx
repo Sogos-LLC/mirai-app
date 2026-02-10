@@ -17,7 +17,7 @@ export function ConnectProvider({ children }: ConnectProviderProps) {
         defaultOptions: {
           queries: {
             staleTime: 5 * 60 * 1000, // 5 minutes - mutations invalidate queries, so freshness is handled explicitly
-            gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
+            gcTime: 30 * 60 * 1000, // 30 minutes — keeps stale data for instant display while refetching in background
             refetchOnWindowFocus: false, // Disabled globally; SSE streams handle updates
             refetchOnReconnect: true, // Refetch when network reconnects
             retry: 1, // Retry once on failure
