@@ -132,7 +132,7 @@ func (s *CourseShareService) DeactivateShareLink(ctx context.Context, shareLinkI
 
 // VerifyShareToken checks if a share token is valid and active.
 func (s *CourseShareService) VerifyShareToken(ctx context.Context, token string) (valid bool, courseTitle string, requiresEmail bool, err error) {
-	link, err := s.shareLinkRepo.GetByToken(ctx, token)
+	link, err := s.shareLinkRepo.GetByToken(ctx, normalizeShareToken(token))
 	if err != nil {
 		return false, "", false, fmt.Errorf("failed to look up token: %w", err)
 	}
@@ -153,7 +153,7 @@ func (s *CourseShareService) VerifyShareToken(ctx context.Context, token string)
 
 // SendVerificationCode sends a 6-digit code to the email if on the allowed list.
 func (s *CourseShareService) SendVerificationCode(ctx context.Context, token, email string) (bool, error) {
-	link, err := s.shareLinkRepo.GetByToken(ctx, token)
+	link, err := s.shareLinkRepo.GetByToken(ctx, normalizeShareToken(token))
 	if err != nil || link == nil || !link.IsActive {
 		return false, nil
 	}
@@ -203,7 +203,7 @@ func (s *CourseShareService) SendVerificationCode(ctx context.Context, token, em
 
 // VerifyEmailCode validates the code and returns a session token.
 func (s *CourseShareService) VerifyEmailCode(ctx context.Context, token, email, code string) (sessionToken, courseTitle string, err error) {
-	link, err := s.shareLinkRepo.GetByToken(ctx, token)
+	link, err := s.shareLinkRepo.GetByToken(ctx, normalizeShareToken(token))
 	if err != nil || link == nil || !link.IsActive {
 		return "", "", fmt.Errorf("invalid share link")
 	}
@@ -482,13 +482,19 @@ func (s *CourseShareService) ExportSharedCoursePDF(ctx context.Context, sessionT
 	return downloadURL, nil
 }
 
+// normalizeShareToken strips base64 padding from a share token for consistent lookup.
+// Tokens were previously generated with padding (=), but padding chars cause issues in URLs.
+func normalizeShareToken(token string) string {
+	return strings.TrimRight(token, "=")
+}
+
 // generateSecureShareToken generates a URL-safe token for share links.
 func generateSecureShareToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(b), nil
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 // generateVerificationCode generates a 6-digit verification code.
