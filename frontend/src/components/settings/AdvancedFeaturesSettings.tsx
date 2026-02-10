@@ -61,6 +61,11 @@ const TOGGLE_ITEMS: ToggleItem[] = [
     description: 'Show the step-by-step guided tour each time you create a new course.',
   },
   {
+    key: 'showDashboardTour',
+    label: 'Dashboard Tour',
+    description: 'Show the onboarding tour on the dashboard for first-time visitors.',
+  },
+  {
     key: 'showTutorials',
     label: 'Tutorials',
     description: 'Show built-in tutorials and help guides in the interface.',

@@ -14,6 +14,7 @@ const defaultToggles = {
   showQAChecks: false,
   showToneSelection: false,
   showWizardTutorial: true,
+  showDashboardTour: true,
 } as const;
 
 export type FeatureToggleKey = keyof typeof defaultToggles;
@@ -31,6 +32,7 @@ interface FeatureTogglesState {
   showQAChecks: boolean;
   showToneSelection: boolean;
   showWizardTutorial: boolean;
+  showDashboardTour: boolean;
 
   setToggle: (key: FeatureToggleKey, value: boolean) => void;
   resetAll: () => void;
