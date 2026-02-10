@@ -36,10 +36,14 @@ export default function ShareVerificationPage() {
         setStep('invalid');
       } else if (tokenData.requiresEmail) {
         setStep('email');
-      } else {
-        // No email required - go straight to viewer
+      } else if (tokenData.sessionToken) {
+        // No email required - set session and go straight to viewer
+        setSession(tokenData.sessionToken, '', tokenData.courseTitle || '');
         setStep('verified');
         router.push(`/shared/${token}/view`);
+      } else {
+        // Fallback: token valid but no session token returned
+        setStep('invalid');
       }
     }
   }, [tokenLoading, tokenData, step, token, router]);

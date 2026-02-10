@@ -896,6 +896,8 @@ type VerifyShareTokenResponse struct {
 	Valid         bool                   `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
 	CourseTitle   string                 `protobuf:"bytes,2,opt,name=course_title,json=courseTitle,proto3" json:"course_title,omitempty"`
 	RequiresEmail bool                   `protobuf:"varint,3,opt,name=requires_email,json=requiresEmail,proto3" json:"requires_email,omitempty"`
+	// Session token returned when requires_email is false (open share links).
+	SessionToken  string `protobuf:"bytes,4,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -949,6 +951,13 @@ func (x *VerifyShareTokenResponse) GetRequiresEmail() bool {
 		return x.RequiresEmail
 	}
 	return false
+}
+
+func (x *VerifyShareTokenResponse) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
 }
 
 type SendVerificationCodeRequest struct {
@@ -1717,11 +1726,12 @@ const file_mirai_v1_course_share_proto_rawDesc = "" +
 	" ListCourseReviewCommentsResponse\x123\n" +
 	"\bcomments\x18\x01 \x03(\v2\x17.mirai.v1.ReviewCommentR\bcomments\"/\n" +
 	"\x17VerifyShareTokenRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"z\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"\x9f\x01\n" +
 	"\x18VerifyShareTokenResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12!\n" +
 	"\fcourse_title\x18\x02 \x01(\tR\vcourseTitle\x12%\n" +
-	"\x0erequires_email\x18\x03 \x01(\bR\rrequiresEmail\"I\n" +
+	"\x0erequires_email\x18\x03 \x01(\bR\rrequiresEmail\x12#\n" +
+	"\rsession_token\x18\x04 \x01(\tR\fsessionToken\"I\n" +
 	"\x1bSendVerificationCodeRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\"2\n" +

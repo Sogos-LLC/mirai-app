@@ -131,24 +131,33 @@ func (s *CourseShareService) DeactivateShareLink(ctx context.Context, shareLinkI
 }
 
 // VerifyShareToken checks if a share token is valid and active.
-func (s *CourseShareService) VerifyShareToken(ctx context.Context, token string) (valid bool, courseTitle string, requiresEmail bool, err error) {
+func (s *CourseShareService) VerifyShareToken(ctx context.Context, token string) (valid bool, courseTitle string, requiresEmail bool, sessionToken string, err error) {
 	link, err := s.shareLinkRepo.GetByToken(ctx, normalizeShareToken(token))
 	if err != nil {
-		return false, "", false, fmt.Errorf("failed to look up token: %w", err)
+		return false, "", false, "", fmt.Errorf("failed to look up token: %w", err)
 	}
 	if link == nil || !link.IsActive {
-		return false, "", false, nil
+		return false, "", false, "", nil
 	}
 
 	// Load course title using tenant context
 	tenantCtx := tenant.WithTenantID(ctx, link.TenantID)
 	course, err := s.courseRepo.GetByID(tenantCtx, link.CourseID)
 	if err != nil || course == nil {
-		return false, "", false, nil
+		return false, "", false, "", nil
 	}
 
 	requiresEmail = len(link.AllowedEmails) > 0
-	return true, course.Title, requiresEmail, nil
+
+	// For open share links (no email restriction), issue a session token immediately
+	if !requiresEmail {
+		sessionToken, err = s.sessionManager.CreateToken(link.ID, link.TenantID, link.CourseID, "")
+		if err != nil {
+			return false, "", false, "", fmt.Errorf("failed to create session: %w", err)
+		}
+	}
+
+	return true, course.Title, requiresEmail, sessionToken, nil
 }
 
 // SendVerificationCode sends a 6-digit code to the email if on the allowed list.

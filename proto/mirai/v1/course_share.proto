@@ -146,6 +146,8 @@ message VerifyShareTokenResponse {
   bool valid = 1;
   string course_title = 2;
   bool requires_email = 3;
+  // Session token returned when requires_email is false (open share links).
+  string session_token = 4;
 }
 
 message SendVerificationCodeRequest {

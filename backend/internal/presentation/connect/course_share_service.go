@@ -139,7 +139,7 @@ func (s *CourseShareServiceServer) VerifyShareToken(
 	ctx context.Context,
 	req *connect.Request[v1.VerifyShareTokenRequest],
 ) (*connect.Response[v1.VerifyShareTokenResponse], error) {
-	valid, courseTitle, requiresEmail, err := s.shareService.VerifyShareToken(ctx, req.Msg.GetToken())
+	valid, courseTitle, requiresEmail, sessionToken, err := s.shareService.VerifyShareToken(ctx, req.Msg.GetToken())
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -148,6 +148,7 @@ func (s *CourseShareServiceServer) VerifyShareToken(
 		Valid:         valid,
 		CourseTitle:   courseTitle,
 		RequiresEmail: requiresEmail,
+		SessionToken:  sessionToken,
 	}), nil
 }
 
