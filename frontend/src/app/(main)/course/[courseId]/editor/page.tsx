@@ -28,7 +28,7 @@ import {
 } from '@dnd-kit/sortable';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, LessonComponentType } from '@/hooks/useAIGeneration';
+import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, useUpdateCourseOutline, LessonComponentType } from '@/hooks/useAIGeneration';
 import { EditModal } from '@/components/course/modals/EditModal';
 import { AddComponentModal } from '@/components/course/modals/AddComponentModal';
 import dynamic from 'next/dynamic';
@@ -119,11 +119,33 @@ export default function CourseEditorPage() {
   // Course update hook
   const { mutate: updateCourse } = useUpdateCourse();
 
+  // Outline update hook (for renaming sections/lessons)
+  const { mutate: updateOutline } = useUpdateCourseOutline();
+
   const handleUpdateCourse = useCallback(async (title: string, description: string) => {
     await updateCourse(courseId, {
       settings: { title, desiredOutcome: description },
     });
   }, [courseId, updateCourse]);
+
+  const handleRenameSection = useCallback((sectionId: string, newTitle: string) => {
+    if (!outline?.sections || !outline.id) return;
+    const updated = outline.sections.map((s) =>
+      s.id === sectionId ? { ...s, title: newTitle } : s
+    );
+    void updateOutline(courseId, outline.id, updated);
+  }, [outline, courseId, updateOutline]);
+
+  const handleRenameLesson = useCallback((lessonId: string, newTitle: string) => {
+    if (!outline?.sections || !outline.id) return;
+    const updated = outline.sections.map((s) => ({
+      ...s,
+      lessons: s.lessons?.map((l) =>
+        l.id === lessonId ? { ...l, title: newTitle } : l
+      ),
+    }));
+    void updateOutline(courseId, outline.id, updated);
+  }, [outline, courseId, updateOutline]);
 
   // Realignment hook
   const { mutate: regenerateComponent, isLoading: isRegenerating } = useRegenerateComponent();
@@ -526,6 +548,8 @@ export default function CourseEditorPage() {
         selectedLessonId={selectedLessonId}
         onLessonSelect={setSelectedLessonId}
         onToggleSection={toggleSection}
+        onRenameSection={handleRenameSection}
+        onRenameLesson={handleRenameLesson}
       />
 
       {/* Editor layout */}
@@ -539,6 +563,8 @@ export default function CourseEditorPage() {
           onLessonSelect={setSelectedLessonId}
           onToggleSection={toggleSection}
           effectiveGroundings={effectiveGroundings}
+          onRenameSection={handleRenameSection}
+          onRenameLesson={handleRenameLesson}
         />
 
         {/* Main content - Lesson editor */}
