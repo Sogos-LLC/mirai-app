@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import {
   useAddReviewComment,
@@ -12,15 +12,11 @@ import type { ReviewComment } from '@/gen/mirai/v1/course_share_pb';
 interface ReviewCommentsPanelProps {
   sessionToken: string;
   lessonId: string;
-  isOpen: boolean;
-  onToggle: () => void;
 }
 
 export function ReviewCommentsPanel({
   sessionToken,
   lessonId,
-  isOpen,
-  onToggle,
 }: ReviewCommentsPanelProps) {
   const [commentText, setCommentText] = useState('');
   const { data: comments } = useListLessonReviewComments(sessionToken, lessonId);
@@ -40,18 +36,30 @@ export function ReviewCommentsPanel({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="w-80 border-l bg-surface min-h-[calc(100vh-49px)] flex flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
+    <div className="w-80 border-l bg-surface flex flex-col h-full overflow-hidden">
+      <div className="border-b px-4 py-3">
         <h3 className="text-sm font-medium text-primary">Review Comments</h3>
-        <button
-          onClick={onToggle}
-          className="text-muted hover:text-primary"
+      </div>
+
+      {/* Add comment - at top so it's always visible */}
+      <div className="border-b p-4">
+        <textarea
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          placeholder="Leave a comment..."
+          rows={2}
+          className="w-full rounded-md border bg-page px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+        />
+        <Button
+          variant="primary"
+          onClick={handleAddComment}
+          disabled={!commentText.trim() || addComment.isLoading}
+          className="w-full mt-2"
         >
-          <X className="h-4 w-4" />
-        </button>
+          <Send className="h-3 w-3 mr-1" />
+          {addComment.isLoading ? 'Sending...' : 'Add Comment'}
+        </Button>
       </div>
 
       {/* Comment list */}
@@ -71,28 +79,6 @@ export function ReviewCommentsPanel({
             <p className="text-sm text-primary">{comment.comment}</p>
           </div>
         ))}
-      </div>
-
-      {/* Add comment */}
-      <div className="border-t p-4">
-        <div className="flex gap-2">
-          <textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Leave a comment..."
-            rows={2}
-            className="flex-1 rounded-md border bg-page px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-          />
-        </div>
-        <Button
-          variant="primary"
-          onClick={handleAddComment}
-          disabled={!commentText.trim() || addComment.isLoading}
-          className="w-full mt-2"
-        >
-          <Send className="h-3 w-3 mr-1" />
-          {addComment.isLoading ? 'Sending...' : 'Add Comment'}
-        </Button>
       </div>
     </div>
   );
