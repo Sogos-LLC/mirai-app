@@ -52,6 +52,7 @@ import { useAutoSave } from '@/hooks/useAutoSave';
 import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
 import { useGetCourse, useUpdateCourse } from '@/hooks/useCourses';
 import { ShareModal } from '@/components/share/ShareModal';
+import { CourseDetailsModal } from '@/components/content-library/CourseDetailsModal';
 
 /** Check if a component is validatable (MODEL or unset source type) */
 function isComponentValidatable(component: LessonComponent): boolean {
@@ -81,6 +82,9 @@ export default function CourseEditorPage() {
 
   // Share state
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Details modal state
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   // Provenance panel state
   const [showProvenance, setShowProvenance] = useState(false);
@@ -534,6 +538,7 @@ export default function CourseEditorPage() {
         onPreview={() => router.push(`/preview/${courseId}`)}
         onExport={openExportModal}
         onShare={() => setShowShareModal(true)}
+        onDetails={() => setShowDetailsModal(true)}
         onUpdateCourse={handleUpdateCourse}
       />
 
@@ -813,6 +818,17 @@ export default function CourseEditorPage() {
         courseTitle={course?.settings?.title ?? ''}
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
+      />
+
+      {/* Details Modal */}
+      <CourseDetailsModal
+        course={showDetailsModal ? {
+          id: courseId,
+          title: course?.settings?.title ?? 'Untitled Course',
+          createdAt: course?.metadata?.createdAt,
+          modifiedAt: course?.metadata?.modifiedAt,
+        } : null}
+        onClose={() => setShowDetailsModal(false)}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import {
   Cloud,
   CloudOff,
   Pencil,
+  Info,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import type { SaveStatus } from '@/hooks/useAutoSave';
@@ -23,6 +24,7 @@ interface CourseEditorHeaderProps {
   onPreview: () => void;
   onExport: () => void;
   onShare?: () => void;
+  onDetails?: () => void;
   onUpdateCourse: (title: string, description: string) => Promise<void>;
 }
 
@@ -34,6 +36,7 @@ export function CourseEditorHeader({
   onPreview,
   onExport,
   onShare,
+  onDetails,
   onUpdateCourse,
 }: CourseEditorHeaderProps) {
   const [editingTitle, setEditingTitle] = useState(false);
@@ -161,6 +164,16 @@ export function CourseEditorHeader({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {onDetails && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onDetails}
+            >
+              <Info className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Details</span>
+            </Button>
+          )}
           {onShare && (
             <Button
               variant="secondary"

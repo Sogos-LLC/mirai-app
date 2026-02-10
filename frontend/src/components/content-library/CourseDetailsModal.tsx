@@ -3,7 +3,13 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { useCourseGenerationDetails } from '@/hooks/course/useCourseGenerationDetails';
-import type { LibraryEntry } from '@/hooks/useCourses';
+
+export interface CourseDetailsInfo {
+  id: string;
+  title: string;
+  createdAt?: { seconds: bigint };
+  modifiedAt?: { seconds: bigint };
+}
 
 const PHASE_LABELS: Record<string, string> = {
   generate_course_analysis: 'Research & Analysis',
@@ -22,7 +28,7 @@ function formatTokens(n: number): string {
 }
 
 interface CourseDetailsModalProps {
-  course: LibraryEntry | null;
+  course: CourseDetailsInfo | null;
   onClose: () => void;
 }
 
