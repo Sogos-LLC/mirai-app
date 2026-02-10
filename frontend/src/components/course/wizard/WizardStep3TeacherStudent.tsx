@@ -5,7 +5,6 @@ import { GraduationCap, BookOpen, Pencil, X } from 'lucide-react';
 import { create } from '@bufbuild/protobuf';
 import Button from '@/components/ui/Button';
 import type { WizardContext, WizardEvent } from '@/machines/wizardMachine';
-import type { SMEPersona, AudiencePersona } from '@/gen/mirai/v1/course_wizard_pb';
 import { SMEPersonaSchema, AudiencePersonaSchema } from '@/gen/mirai/v1/course_wizard_pb';
 
 interface WizardStep3TeacherStudentProps {
@@ -24,8 +23,8 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
   const [teacherVoice, setTeacherVoice] = useState(context.teacher?.voice ?? '');
 
   // Local edit state for student
-  const [studentName, setStudentName] = useState(context.student?.name ?? '');
   const [studentRole, setStudentRole] = useState(context.student?.role ?? '');
+  const [studentDesc, setStudentDesc] = useState(context.student?.description ?? '');
   const [studentGoals, setStudentGoals] = useState(context.student?.goals?.join(', ') ?? '');
 
   // Sync local state when opening modal
@@ -35,8 +34,8 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
       setTeacherDesc(context.teacher?.description ?? '');
       setTeacherVoice(context.teacher?.voice ?? '');
     } else if (editTarget === 'student') {
-      setStudentName(context.student?.name ?? '');
       setStudentRole(context.student?.role ?? '');
+      setStudentDesc(context.student?.description ?? '');
       setStudentGoals(context.student?.goals?.join(', ') ?? '');
     }
   }, [editTarget, context.teacher, context.student]);
@@ -56,9 +55,8 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
   const saveStudent = () => {
     const updated = create(AudiencePersonaSchema, {
       id: context.student?.id ?? 'student-1',
-      name: studentName,
       role: studentRole,
-      description: context.student?.description ?? '',
+      description: studentDesc,
       goals: studentGoals.split(',').map((g) => g.trim()).filter(Boolean),
     });
     send({ type: 'SET_STUDENT', student: updated });
@@ -126,8 +124,8 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
             </span>
           </div>
           <div className="space-y-2">
-            <h3 className="font-semibold text-primary">{context.student?.name ?? 'Learner'}</h3>
-            <p className="text-sm text-secondary">{context.student?.role ?? 'Target learner'}</p>
+            <h3 className="font-semibold text-primary">{context.student?.role ?? 'Target Learner'}</h3>
+            <p className="text-sm text-secondary line-clamp-3">{context.student?.description ?? 'AI-generated learner profile'}</p>
             {context.student?.goals && context.student.goals.length > 0 && (
               <ul className="text-xs text-muted space-y-1">
                 {context.student.goals.map((goal, i) => (
@@ -212,19 +210,20 @@ export function WizardStep3TeacherStudent({ context, send }: WizardStep3TeacherS
               ) : (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-secondary mb-1.5">Name</label>
-                    <input
-                      value={studentName}
-                      onChange={(e) => setStudentName(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-secondary mb-1.5">Role</label>
                     <input
                       value={studentRole}
                       onChange={(e) => setStudentRole(e.target.value)}
                       className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary mb-1.5">Background</label>
+                    <textarea
+                      value={studentDesc}
+                      onChange={(e) => setStudentDesc(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2.5 bg-page border rounded-lg text-sm text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                     />
                   </div>
                   <div>

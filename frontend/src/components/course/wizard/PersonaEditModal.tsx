@@ -35,7 +35,6 @@ interface SMEEditForm {
 }
 
 interface AudienceEditForm {
-  name: string;
   role: string;
   description: string;
   goals: string[];
@@ -52,7 +51,6 @@ export function PersonaEditModal(props: PersonaEditModalProps) {
   });
 
   const [audienceForm, setAudienceForm] = useState<AudienceEditForm>({
-    name: '',
     role: '',
     description: '',
     goals: [],
@@ -73,7 +71,6 @@ export function PersonaEditModal(props: PersonaEditModalProps) {
     } else if (personaType === 'audience' && persona) {
       const audiencePersona = persona as AudiencePersona;
       setAudienceForm({
-        name: audiencePersona.name || '',
         role: audiencePersona.role || '',
         description: audiencePersona.description || '',
         goals: [...(audiencePersona.goals || [])],
@@ -97,7 +94,6 @@ export function PersonaEditModal(props: PersonaEditModalProps) {
       const audienceProps = props as AudiencePersonaEditModalProps;
       audienceProps.onSave({
         ...persona,
-        name: audienceForm.name,
         role: audienceForm.role,
         description: audienceForm.description,
         goals: audienceForm.goals,
@@ -138,7 +134,7 @@ export function PersonaEditModal(props: PersonaEditModalProps) {
   const isValid =
     personaType === 'sme'
       ? smeForm.jobTitle.trim() && smeForm.description.trim()
-      : audienceForm.name.trim() && audienceForm.role.trim();
+      : audienceForm.role.trim();
 
   const title = personaType === 'sme' ? 'Edit Expert' : 'Edit Audience';
 
@@ -241,13 +237,6 @@ export function PersonaEditModal(props: PersonaEditModalProps) {
           </>
         ) : (
           <>
-            <Input
-              label="Name"
-              value={audienceForm.name}
-              onChange={(e) => setAudienceForm({ ...audienceForm, name: e.target.value })}
-              placeholder="e.g., Junior Developer"
-            />
-
             <Input
               label="Role"
               value={audienceForm.role}

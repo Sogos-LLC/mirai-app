@@ -159,7 +159,6 @@ func (x *SMEPersona) GetVoice() string {
 type AudiencePersona struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
 	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	Goals         []string               `protobuf:"bytes,5,rep,name=goals,proto3" json:"goals,omitempty"`
@@ -200,13 +199,6 @@ func (*AudiencePersona) Descriptor() ([]byte, []int) {
 func (x *AudiencePersona) GetId() string {
 	if x != nil {
 		return x.Id
-	}
-	return ""
-}
-
-func (x *AudiencePersona) GetName() string {
-	if x != nil {
-		return x.Name
 	}
 	return ""
 }
@@ -1726,15 +1718,14 @@ const file_mirai_v1_course_wizard_proto_rawDesc = "" +
 	"\x06skills\x18\x04 \x03(\tB\n" +
 	"\xbaH\a\x92\x01\x04\b\x01\x10\n" +
 	"R\x06skills\x12\x1d\n" +
-	"\x05voice\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05voice\"\xa8\x01\n" +
+	"\x05voice\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05voice\"\x97\x01\n" +
 	"\x0fAudiencePersona\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x1b\n" +
 	"\x04role\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04role\x12)\n" +
 	"\vdescription\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vdescription\x12 \n" +
 	"\x05goals\x18\x05 \x03(\tB\n" +
 	"\xbaH\a\x92\x01\x04\b\x01\x10\n" +
-	"R\x05goals\"\xb1\x01\n" +
+	"R\x05goalsJ\x04\b\x02\x10\x03R\x04name\"\xb1\x01\n" +
 	"\n" +
 	"ToneOption\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +

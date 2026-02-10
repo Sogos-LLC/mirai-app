@@ -172,7 +172,7 @@ func (gc *GenerationContext) GetAudienceSummary() string {
 	var sb strings.Builder
 	sb.WriteString("Target audience:\n")
 	for _, aud := range gc.AudienceContext {
-		sb.WriteString(fmt.Sprintf("- %s (%s): %s\n", aud.Name, aud.Role, aud.Description))
+		sb.WriteString(fmt.Sprintf("- %s: %s\n", aud.Role, aud.Description))
 	}
 	return sb.String()
 }

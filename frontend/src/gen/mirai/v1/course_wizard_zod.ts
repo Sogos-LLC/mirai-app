@@ -32,7 +32,6 @@ export type SMEPersona = z.infer<typeof SMEPersonaSchema>;
  */
 export const AudiencePersonaSchema = z.object({
   id: z.string(),
-  name: z.string().min(1),
   role: z.string().min(1),
   description: z.string().min(1),
   goals: z.array(z.string()),

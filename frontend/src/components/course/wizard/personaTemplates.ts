@@ -22,7 +22,6 @@ export interface AudienceTemplateCategory {
 const salesAudienceTemplates: AudienceTemplate[] = [
   {
     id: 'template-sdr-bdr',
-    name: 'SDR / BDR',
     role: 'Sales Development Representative',
     description: 'Entry-level sales role focused on outbound prospecting, qualifying leads, and setting meetings for account executives. Typically 0-2 years of experience.',
     goals: ['Learn effective prospecting techniques', 'Master qualification frameworks (BANT, MEDDIC)', 'Improve cold outreach response rates'],
@@ -30,7 +29,6 @@ const salesAudienceTemplates: AudienceTemplate[] = [
   },
   {
     id: 'template-account-exec',
-    name: 'Account Executive',
     role: 'Account Executive',
     description: 'Mid-level sales role responsible for closing deals, managing the full sales cycle, and hitting quota. Typically 2-5+ years of experience.',
     goals: ['Improve deal closing rates', 'Master negotiation and objection handling', 'Build stronger customer relationships'],
@@ -38,7 +36,6 @@ const salesAudienceTemplates: AudienceTemplate[] = [
   },
   {
     id: 'template-csm',
-    name: 'Customer Success Manager',
     role: 'Customer Success Manager',
     description: 'Post-sales role focused on customer retention, expansion, and ensuring customers achieve value from the product.',
     goals: ['Reduce customer churn', 'Drive product adoption and engagement', 'Identify upsell and expansion opportunities'],
@@ -49,7 +46,6 @@ const salesAudienceTemplates: AudienceTemplate[] = [
 const productEngineeringAudienceTemplates: AudienceTemplate[] = [
   {
     id: 'template-software-engineer',
-    name: 'Software Engineer',
     role: 'Software Engineer',
     description: 'Developer responsible for building and maintaining software applications. May be frontend, backend, or full-stack focused.',
     goals: ['Learn new technologies and frameworks', 'Write more maintainable and scalable code', 'Improve debugging and problem-solving skills'],
@@ -57,7 +53,6 @@ const productEngineeringAudienceTemplates: AudienceTemplate[] = [
   },
   {
     id: 'template-product-manager',
-    name: 'Product Manager',
     role: 'Product Manager',
     description: 'Cross-functional leader responsible for product strategy, roadmap, and working with engineering to deliver value to customers.',
     goals: ['Make better data-driven decisions', 'Improve stakeholder communication', 'Master prioritization frameworks'],
@@ -65,7 +60,6 @@ const productEngineeringAudienceTemplates: AudienceTemplate[] = [
   },
   {
     id: 'template-devops-sre',
-    name: 'DevOps / SRE',
     role: 'DevOps Engineer / Site Reliability Engineer',
     description: 'Infrastructure and operations role focused on deployment automation, system reliability, and bridging development and operations.',
     goals: ['Improve deployment frequency and reliability', 'Reduce incident response time', 'Automate manual operational tasks'],
@@ -76,7 +70,6 @@ const productEngineeringAudienceTemplates: AudienceTemplate[] = [
 const hrAudienceTemplates: AudienceTemplate[] = [
   {
     id: 'template-hr-generalist',
-    name: 'HR Generalist',
     role: 'HR Generalist',
     description: 'Broad HR role handling recruitment, employee relations, benefits, compliance, and various people operations tasks.',
     goals: ['Improve employee engagement and retention', 'Stay current on employment law and compliance', 'Develop more effective onboarding programs'],
@@ -87,7 +80,6 @@ const hrAudienceTemplates: AudienceTemplate[] = [
 const securityAudienceTemplates: AudienceTemplate[] = [
   {
     id: 'template-security-analyst',
-    name: 'Security Analyst',
     role: 'Security Analyst',
     description: 'Information security role focused on threat detection, vulnerability assessment, and protecting organizational assets.',
     goals: ['Identify and respond to security threats', 'Improve security awareness across the organization', 'Master security tools and frameworks'],

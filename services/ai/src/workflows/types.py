@@ -34,7 +34,6 @@ class WizardAudiencePersona:
     """Audience persona from wizard (matches Go entity.WizardAudiencePersona)."""
 
     id: str = ""
-    name: str = ""
     role: str = ""
     description: str = ""
     goals: list[str] = field(default_factory=list)

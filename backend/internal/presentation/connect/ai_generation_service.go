@@ -769,7 +769,6 @@ func s3WizardDataToProto(data *service.S3WizardData) *v1.StoredWizardData {
 	for i, aud := range data.AudiencePersonas {
 		audiencePersonas[i] = &v1.AudiencePersona{
 			Id:          aud.ID,
-			Name:        aud.Name,
 			Role:        aud.Role,
 			Description: aud.Description,
 			Goals:       aud.Goals,
@@ -1233,7 +1232,7 @@ func (s *AIGenerationServiceServer) StartCourseCreation(
 	var audiencePersonas []entity.WizardAudiencePersona
 	for _, p := range req.Msg.GetAudiencePersonas() {
 		audiencePersonas = append(audiencePersonas, entity.WizardAudiencePersona{
-			ID: p.GetId(), Name: p.GetName(), Role: p.GetRole(),
+			ID: p.GetId(), Role: p.GetRole(),
 			Description: p.GetDescription(), Goals: p.GetGoals(),
 		})
 	}

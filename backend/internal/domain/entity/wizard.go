@@ -47,7 +47,6 @@ type WizardSMEPersona struct {
 // WizardAudiencePersona represents a target audience persona for the wizard.
 type WizardAudiencePersona struct {
 	ID          string   `json:"id"`
-	Name        string   `json:"name"`
 	Role        string   `json:"role"`
 	Description string   `json:"description"`
 	Goals       []string `json:"goals"`
