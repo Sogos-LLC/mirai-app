@@ -16,6 +16,7 @@ import {
   CreateShareLinkRequestSchema,
   UpdateShareLinkEmailsRequestSchema,
   DeactivateShareLinkRequestSchema,
+  ShareLinkStatus,
 } from '@/gen/mirai/v1/course_share_pb';
 
 export function useCreateShareLink() {
@@ -43,7 +44,18 @@ export function useCreateShareLink() {
 }
 
 export function useListShareLinks(courseId: string) {
-  const query = useQuery(listShareLinks, { courseId }, { enabled: !!courseId });
+  const query = useQuery(listShareLinks, { courseId }, {
+    enabled: !!courseId,
+    refetchInterval: (q) => {
+      const links = q.state.data?.shareLinks;
+      const hasPending = links?.some(
+        (l) =>
+          l.status === ShareLinkStatus.PENDING ||
+          l.status === ShareLinkStatus.SNAPSHOTTING,
+      );
+      return hasPending ? 2000 : false;
+    },
+  });
 
   return {
     data: query.data?.shareLinks ?? [],
