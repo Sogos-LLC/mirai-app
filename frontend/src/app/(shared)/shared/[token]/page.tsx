@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Shield, Mail, KeyRound, Loader2, AlertCircle } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -30,17 +30,19 @@ export default function ShareVerificationPage() {
   const verifyCode = useVerifyEmailCode();
 
   // Determine step from token verification
-  if (!tokenLoading && step === 'loading') {
-    if (!tokenData?.valid) {
-      setStep('invalid');
-    } else if (tokenData.requiresEmail) {
-      setStep('email');
-    } else {
-      // No email required - go straight to viewer
-      setStep('verified');
-      router.push(`/shared/${token}/view`);
+  useEffect(() => {
+    if (!tokenLoading && step === 'loading') {
+      if (!tokenData?.valid) {
+        setStep('invalid');
+      } else if (tokenData.requiresEmail) {
+        setStep('email');
+      } else {
+        // No email required - go straight to viewer
+        setStep('verified');
+        router.push(`/shared/${token}/view`);
+      }
     }
-  }
+  }, [tokenLoading, tokenData, step, token, router]);
 
   const handleSendCode = async () => {
     setError('');

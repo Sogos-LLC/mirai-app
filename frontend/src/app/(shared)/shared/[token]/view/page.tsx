@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { BookOpen, FileText, Download, Loader2, ChevronRight } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -15,6 +16,12 @@ export default function SharedCourseViewPage() {
   const { sessionToken, courseTitle: storedTitle } = useShareSession();
   const { data: course, isLoading, error } = useGetSharedCourse(sessionToken);
   const exportPDF = useExportSharedPDF();
+
+  useEffect(() => {
+    if (!sessionToken) {
+      router.push(`/shared/${token}`);
+    }
+  }, [sessionToken, token, router]);
 
   const handleExportPDF = async () => {
     try {
@@ -32,8 +39,11 @@ export default function SharedCourseViewPage() {
   };
 
   if (!sessionToken) {
-    router.push(`/shared/${token}`);
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      </div>
+    );
   }
 
   if (isLoading) {

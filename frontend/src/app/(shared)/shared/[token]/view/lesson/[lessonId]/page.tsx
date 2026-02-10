@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -52,9 +52,18 @@ export default function SharedLessonPage() {
     }
   };
 
+  useEffect(() => {
+    if (!sessionToken) {
+      router.push(`/shared/${token}`);
+    }
+  }, [sessionToken, token, router]);
+
   if (!sessionToken) {
-    router.push(`/shared/${token}`);
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      </div>
+    );
   }
 
   if (isLoading) {
