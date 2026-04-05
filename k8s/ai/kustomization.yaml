@@ -7,4 +7,4 @@ resources:
 images:
 - name: ghcr.io/sogos-llc/mirai-app/ai-service
   newName: ghcr.io/sogos-llc/mirai-app/ai-service
-  newTag: latest
+  newTag: ec109cd
