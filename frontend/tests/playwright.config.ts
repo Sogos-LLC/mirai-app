@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'https://mirai-uat.sogos.io';
+const ENV_MAP: Record<string, string> = {
+  uat: 'https://mirai-uat.sogos.io',
+  dev: 'https://mirai-dev.sogos.io',
+  prod: 'https://mirai.sogos.io',
+};
+
+const env = process.env.TEST_ENV || 'uat';
+const BASE_URL = ENV_MAP[env] || env;
 
 export default defineConfig({
   testDir: '.',
@@ -13,7 +20,7 @@ export default defineConfig({
 
   use: {
     baseURL: BASE_URL,
-    storageState: './tests/.auth/user.json',
+    storageState: `./tests/.auth/${env}.json`,
     screenshot: 'on',
     trace: 'retain-on-failure',
     video: 'retain-on-failure',

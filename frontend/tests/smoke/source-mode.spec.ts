@@ -4,6 +4,23 @@ import { screenshot, resetScreenshotCounter } from '../helpers';
 const TOPIC = 'Basic Composting at Home';
 
 /**
+ * Dismiss any driver.js guided tour overlay if present.
+ */
+async function dismissTour(page: Page): Promise<void> {
+  const overlay = page.locator('.driver-overlay');
+  if (await overlay.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    console.log('  dismissing guided tour...');
+    const closeBtn = page.locator('.driver-popover-close-btn');
+    if (await closeBtn.isVisible().catch(() => false)) {
+      await closeBtn.click();
+    } else {
+      await page.keyboard.press('Escape');
+    }
+    await overlay.waitFor({ state: 'hidden', timeout: 3_000 }).catch(() => {});
+  }
+}
+
+/**
  * Delete all courses from the dashboard.
  */
 async function deleteAllCourses(page: Page): Promise<void> {
@@ -51,6 +68,9 @@ test.describe('Source Mode & Provenance', () => {
     // Phase 0: Clean slate
     // =================================================================
     console.log('Phase 0: Cleaning dashboard...');
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2_000);
+    await dismissTour(page);
     await deleteAllCourses(page);
     await screenshot(page, 'dashboard-clean');
 
@@ -58,10 +78,12 @@ test.describe('Source Mode & Provenance', () => {
     // Phase 1: Create course via 4-step wizard
     // =================================================================
     console.log('Phase 1: Creating course...');
+    await dismissTour(page);
     await page.click('button:has-text("Create Course")');
     await page.waitForURL('**/course/wizard', { timeout: 10_000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2_000);
+    await dismissTour(page);
 
     // Step 1: Title
     const titleInput = page.locator('#courseTitle');
@@ -94,29 +116,18 @@ test.describe('Source Mode & Provenance', () => {
     // =================================================================
     console.log('Phase 2: Waiting for approval step...');
 
-    // Wait for workflow phase
-    let state = await waitForWorkflowState(
-      page,
-      ['awaiting-approval', 'completed', 'failed', 'processing'],
-      120_000,
-    );
+    const workflowResult = await Promise.race([
+      page.locator('button:has-text("Generate Course")').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'approval' as const),
+      page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'completed' as const),
+      page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'failed' as const),
+    ]).catch(() => 'timeout' as const);
 
-    if (state === 'processing') {
-      state = await waitForWorkflowState(
-        page,
-        ['awaiting-approval', 'completed', 'failed'],
-        300_000,
-      );
-    }
+    console.log(`  workflow result: ${workflowResult}`);
+    await screenshot(page, `wizard-${workflowResult}`);
+    if (workflowResult === 'failed' || workflowResult === 'timeout') throw new Error(`Workflow ${workflowResult}`);
 
-    console.log(`  state: ${state}`);
-    await screenshot(page, `wizard-${state}`);
-    if (state === 'failed') throw new Error('Workflow failed');
-
-    if (state === 'awaiting-approval') {
-      const approveBtn = page.locator('button:has-text("Generate Course")');
-      await approveBtn.waitFor({ state: 'visible', timeout: 10_000 });
-      await approveBtn.click();
+    if (workflowResult === 'approval') {
+      await page.click('button:has-text("Generate Course")');
       console.log('  approved — generating course...');
     }
 

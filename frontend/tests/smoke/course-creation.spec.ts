@@ -4,11 +4,30 @@ import { randomTopic, screenshot, resetScreenshotCounter } from '../helpers';
 const topic = randomTopic();
 
 /**
+ * Dismiss any driver.js guided tour overlay if present.
+ */
+async function dismissTour(page: Page): Promise<void> {
+  const overlay = page.locator('.driver-overlay');
+  if (await overlay.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    console.log('  dismissing guided tour...');
+    // Click the close button or press Escape
+    const closeBtn = page.locator('.driver-popover-close-btn');
+    if (await closeBtn.isVisible().catch(() => false)) {
+      await closeBtn.click();
+    } else {
+      await page.keyboard.press('Escape');
+    }
+    await overlay.waitFor({ state: 'hidden', timeout: 3_000 }).catch(() => {});
+  }
+}
+
+/**
  * Delete all courses from the dashboard.
  */
 async function deleteAllCourses(page: Page): Promise<void> {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3_000);
+  await dismissTour(page);
 
   for (let round = 0; round < 50; round++) {
     const deleteBtn = page.locator('button[title="Delete course"]').first();
@@ -61,6 +80,7 @@ test.describe('Course Creation Wizard (4-Step)', () => {
     // =================================================================
     console.log('Phase 0: Cleaning dashboard...');
     await deleteAllCourses(page);
+    await dismissTour(page);
     await screenshot(page, 'dashboard-clean');
 
     // =================================================================
@@ -71,6 +91,7 @@ test.describe('Course Creation Wizard (4-Step)', () => {
     await page.waitForURL('**/course/wizard', { timeout: 10_000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2_000);
+    await dismissTour(page);
 
     // =================================================================
     // Phase 2: Step 1 — Course Title
@@ -133,48 +154,34 @@ test.describe('Course Creation Wizard (4-Step)', () => {
     console.log('  clicked Create Course — starting workflow');
 
     // =================================================================
-    // Phase 6: Workflow — wait for the single approval step
+    // Phase 6: Workflow — wait for approval or completion
     // =================================================================
-    console.log('Phase 6: Waiting for workflow approval step...');
+    console.log('Phase 6: Waiting for workflow...');
 
-    // Wait for the workflow phase to appear (data-wizard-state attribute)
-    const state = await waitForWorkflowState(
-      page,
-      ['awaiting-approval', 'completed', 'failed', 'processing'],
-      120_000,
-    );
-    console.log(`  workflow state: ${state}`);
-    await screenshot(page, `workflow-${state}`);
+    // Wait for either the Generate Course button, Course Created, or error
+    const workflowResult = await Promise.race([
+      page.locator('button:has-text("Generate Course")').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'approval' as const),
+      page.locator('text=Course Created!').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'completed' as const),
+      page.locator('text=Something went wrong').waitFor({ state: 'visible', timeout: 300_000 }).then(() => 'failed' as const),
+    ]).catch(() => 'timeout' as const);
 
-    if (state === 'failed') {
+    console.log(`  workflow result: ${workflowResult}`);
+    await screenshot(page, `workflow-${workflowResult}`);
+
+    if (workflowResult === 'failed') {
       console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
-      throw new Error('Workflow failed to start');
+      throw new Error('Workflow failed');
+    }
+    if (workflowResult === 'timeout') {
+      console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
+      throw new Error('Timed out waiting for workflow');
     }
 
-    // If processing, wait for approval
-    if (state === 'processing') {
-      console.log('  processing — waiting for approval step...');
-      const nextState = await waitForWorkflowState(
-        page,
-        ['awaiting-approval', 'completed', 'failed'],
-        300_000,
-      );
-      console.log(`  next state: ${nextState}`);
-      await screenshot(page, `workflow-${nextState}`);
-      if (nextState === 'failed') {
-        console.log('CONSOLE LOGS:\n' + consoleLogs.join('\n'));
-        throw new Error('Workflow failed during processing');
-      }
-    }
-
-    // The single approval step: "Generate Course" button
-    if (await page.locator('[data-wizard-state="awaiting-approval"]').isVisible().catch(() => false)) {
+    // Click Generate Course if awaiting approval
+    if (workflowResult === 'approval') {
       console.log('  found approval step — clicking Generate Course');
       await screenshot(page, 'review-course-plan');
-
-      const approveBtn = page.locator('button:has-text("Generate Course")');
-      await approveBtn.waitFor({ state: 'visible', timeout: 10_000 });
-      await approveBtn.click();
+      await page.click('button:has-text("Generate Course")');
       console.log('  approved — generating course...');
       await screenshot(page, 'approved-generating');
     }
