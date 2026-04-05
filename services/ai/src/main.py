@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from temporalio.client import Client
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
+import temporalio.worker.workflow_sandbox
 
 import src.agents  # noqa: F401 — trigger all AgentRegistry registrations
 
@@ -132,6 +133,11 @@ async def run_worker() -> None:
         client,
         task_queue=settings.temporal_task_queue,
         workflows=[CourseCreationWorkflow, WizardStepWorkflow],
+        workflow_runner=temporalio.worker.workflow_sandbox.SandboxedWorkflowRunner(
+            restrictions=temporalio.worker.workflow_sandbox.SandboxRestrictions.default.with_passthrough_modules(
+                "beartype",
+            ),
+        ),
         activities=[
             # Course design activities (5-step wizard)
             generate_course_analysis,
