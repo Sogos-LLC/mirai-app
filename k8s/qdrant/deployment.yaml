@@ -7,17 +7,18 @@ metadata:
     app: qdrant
 spec:
   replicas: 1
-  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: qdrant
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
         app: qdrant
     spec:
+      securityContext:
+        fsGroup: 1000
       tolerations:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
@@ -25,7 +26,6 @@ spec:
       containers:
       - name: qdrant
         image: qdrant/qdrant:v1.12.1
-        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6333
           name: http
@@ -34,11 +34,12 @@ spec:
         env:
         - name: QDRANT__STORAGE__ON_DISK_PAYLOAD
           value: "true"
-        - name: QDRANT__SERVICE__GRPC_PORT
-          value: "6334"
         volumeMounts:
         - name: data
           mountPath: /qdrant/storage
+        - name: config
+          mountPath: /qdrant/config/config.yaml
+          subPath: config.yaml
         resources:
           requests:
             memory: "2Gi"
@@ -46,15 +47,6 @@ spec:
           limits:
             memory: "4Gi"
             cpu: "2000m"
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 1000
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          seccompProfile:
-            type: RuntimeDefault
         livenessProbe:
           httpGet:
             path: /healthz
@@ -67,7 +59,47 @@ spec:
             port: 6333
           initialDelaySeconds: 5
           periodSeconds: 10
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
       volumes:
       - name: data
         persistentVolumeClaim:
           claimName: qdrant-data
+      - name: config
+        configMap:
+          name: qdrant-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qdrant-config
+  namespace: mirai
+  labels:
+    app: qdrant
+data:
+  config.yaml: |
+    storage:
+      storage_path: /qdrant/storage
+      snapshots_path: /qdrant/storage/snapshots
+      on_disk_payload: true
+
+    service:
+      host: 0.0.0.0
+      http_port: 6333
+      grpc_port: 6334
+
+    hnsw_index:
+      m: 16
+      ef_construct: 100
+      full_scan_threshold: 10000
+
+    optimizers:
+      indexing_threshold: 20000
