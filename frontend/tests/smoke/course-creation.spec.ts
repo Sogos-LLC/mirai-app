@@ -132,9 +132,8 @@ test.describe('Course Creation Wizard (4-Step)', () => {
     // =================================================================
     console.log('Phase 4: Step 3 — Teacher & Student (waiting for AI generation...)');
 
-    // Wait for persona cards to appear
-    const personaCard = page.locator('text=Teacher').first();
-    await personaCard.waitFor({ state: 'visible', timeout: 120_000 });
+    // Wait for persona cards to appear (not the stepper label)
+    await page.locator('text=Meet Your Teacher').waitFor({ state: 'visible', timeout: 120_000 });
     await page.waitForTimeout(1_000);
     await screenshot(page, 'step3-personas');
 

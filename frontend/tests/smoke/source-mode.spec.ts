@@ -99,7 +99,7 @@ test.describe('Source Mode & Provenance', () => {
 
     // Step 3: Teacher & Student (wait for AI generation)
     console.log('  waiting for personas...');
-    await page.locator('text=Teacher').first().waitFor({ state: 'visible', timeout: 120_000 });
+    await page.locator('text=Meet Your Teacher').waitFor({ state: 'visible', timeout: 120_000 });
     await page.waitForTimeout(1_000);
     await page.click('button:has-text("Next")');
 
