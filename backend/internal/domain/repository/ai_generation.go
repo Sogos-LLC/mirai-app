@@ -82,6 +82,10 @@ type GenerationJobRepository interface {
 	// This is the preferred method as it ensures the status update is inside the atomic lock.
 	// Returns nil if parent was already finalized or not found.
 	FinalizeParentJob(ctx context.Context, parentID uuid.UUID, completedStatus, failedStatus string, progressMessage string) (*ParentJobFinalizationResult, error)
+
+	// GetLatestCourseCreationJob returns the most recent course_creation job for a course.
+	// Returns (nil, nil) if no job found.
+	GetLatestCourseCreationJob(ctx context.Context, courseID uuid.UUID) (*entity.GenerationJob, error)
 }
 
 // ParentJobFinalizationResult contains the result of trying to finalize a parent job.

@@ -43,6 +43,8 @@ type CourseCreationInput struct {
 	SelectedAudienceIDs []string                     `json:"selected_audience_ids,omitempty"`
 	SelectedTone        *entity.WizardToneOption      `json:"selected_tone,omitempty"`
 	AdditionalContext   string                       `json:"additional_context,omitempty"`
+	ContextFileURL      string                       `json:"context_file_url,omitempty"`
+	SkipQA              bool                         `json:"skip_qa"`
 }
 
 // WorkflowStarter starts Temporal workflows for async processing.

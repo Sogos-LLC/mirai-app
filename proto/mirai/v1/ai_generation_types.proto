@@ -297,6 +297,30 @@ message PlannedLesson {
 }
 
 // =============================================================================
+// GENERATION COST TRACKING
+// =============================================================================
+
+// GenerationPhaseUsage tracks token usage for one phase/activity of generation.
+message GenerationPhaseUsage {
+  string phase_name = 1;
+  int64 input_tokens = 2;
+  int64 output_tokens = 3;
+  int64 total_tokens = 4;
+  int32 requests = 5;
+}
+
+// GenerationCostReport aggregates token usage across all generation phases.
+message GenerationCostReport {
+  int64 total_input_tokens = 1;
+  int64 total_output_tokens = 2;
+  int64 total_tokens = 3;
+  int32 total_requests = 4;
+  double estimated_cost_usd = 5;
+  string model_name = 6;
+  repeated GenerationPhaseUsage phases = 7;
+}
+
+// =============================================================================
 // UNIFIED COURSE CREATION WORKFLOW (Phase 7)
 // =============================================================================
 

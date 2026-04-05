@@ -122,8 +122,7 @@ Analyze this course request and produce:
 
 1. **Purpose Statement**: A clear, specific statement of why this course exists and what
    knowledge/skill gap it fills for this audience. Be concrete, not generic.
-   IMPORTANT: Do NOT reference audience personas by name. Use "the target audience" or
-   "learners" instead of specific persona names.
+   Use "the target audience" or "learners" when referring to audience profiles.
 
 2. **Learner Assumptions** (2-6): What do learners already know coming in? Be specific
    about prerequisite skills and knowledge. These set the baseline.
@@ -227,6 +226,13 @@ Principles:
 - Every outcome must be covered by at least one section
 - Avoid redundant sections
 - 2-10 sections is the sweet spot
+
+For each section, provide `component_hints` — a list of 3-5 suggested component types that
+fit the section's content nature. Use these categories:
+- Conceptual sections (theory, background): image (illustration/infographic), list (accordion), statement, quote
+- Hands-on sections (practice, building): code, task_list, callout (tip), image (screenshot/diagram)
+- Assessment sections (review, evaluation): quiz, list (process), image (chart)
+- Mixed sections: combine from above as appropriate
 """
 
 AgentRegistry.register(AgentSpec(

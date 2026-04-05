@@ -33,6 +33,9 @@ type WorkflowStarter interface {
 	// StartCourseCreation starts the unified course creation workflow (Python).
 	StartCourseCreation(ctx context.Context, input interface{}) (string, error)
 
+	// StartShareContent starts the share content snapshot + email workflow.
+	StartShareContent(ctx context.Context, input workflow.ShareContentInput) (string, error)
+
 	// QueryWorkflow queries a running workflow for its current state.
 	QueryWorkflow(ctx context.Context, workflowID, queryType string) (map[string]interface{}, error)
 
@@ -163,6 +166,18 @@ func (s *workflowStarter) StartFeedbackSync(ctx context.Context, input activitie
 	run, err := s.client.ExecuteWorkflow(ctx, opts, "FeedbackSyncWorkflow", input)
 	if err != nil {
 		return "", fmt.Errorf("start feedback sync workflow: %w", err)
+	}
+	return run.GetID(), nil
+}
+
+func (s *workflowStarter) StartShareContent(ctx context.Context, input workflow.ShareContentInput) (string, error) {
+	opts := temporalclient.StartWorkflowOptions{
+		ID:        fmt.Sprintf("share-%s", input.ShareLinkID),
+		TaskQueue: s.goTaskQueue,
+	}
+	run, err := s.client.ExecuteWorkflow(ctx, opts, "ShareContentWorkflow", input)
+	if err != nil {
+		return "", fmt.Errorf("start share content workflow: %w", err)
 	}
 	return run.GetID(), nil
 }

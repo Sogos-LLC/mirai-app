@@ -1,0 +1,77 @@
+# CloudNativePG Cluster for Mirai Dev Database
+# Single instance, minimal resources, no backups (dev data is ephemeral)
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: mirai-loc-dev-db
+  namespace: mirai-loc-dev
+  labels:
+    app.kubernetes.io/name: mirai-loc-dev-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: mirai-loc-dev
+    environment: dev
+spec:
+  description: "Mirai Dev Database - Single instance for development"
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+
+  # Single instance - no HA for dev (cost savings)
+  instances: 1
+
+  # PostgreSQL configuration - minimal for dev
+  postgresql:
+    parameters:
+      shared_buffers: "128MB"
+      effective_cache_size: "256MB"
+      max_connections: "100"
+      log_statement: "ddl"
+      log_min_duration_statement: "1000"
+    pg_hba:
+      - host all all 10.0.0.0/8 scram-sha-256
+      - host all all 192.168.0.0/16 scram-sha-256
+
+  # Bootstrap configuration
+  bootstrap:
+    initdb:
+      database: mirai
+      owner: mirai
+      encoding: UTF8
+      secret:
+        name: mirai-loc-dev-db-credentials
+      postInitSQL:
+        - CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+
+  # Storage configuration - minimal for dev
+  storage:
+    storageClass: local-path
+    size: 5Gi
+
+  # WAL storage
+  walStorage:
+    storageClass: local-path
+    size: 2Gi
+
+  # Resource allocation - minimal for dev
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+
+  # Affinity - allow scheduling on control plane
+  affinity:
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
+  # Monitoring
+  monitoring:
+    enablePodMonitor: true
+
+  # Disable superuser access
+  enableSuperuserAccess: false
+
+  # No backup configuration for dev - dev data is ephemeral

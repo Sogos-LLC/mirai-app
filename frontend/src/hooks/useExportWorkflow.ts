@@ -22,11 +22,12 @@ interface UseExportWorkflowReturn {
   exportError: string | null;
   exportProgress: ExportProgressData | null;
   exportId: string | undefined;
+  exportFormat: ExportFormat | null;
   isStarting: boolean;
   isGettingDownload: boolean;
   openExportModal: () => void;
   closeExportModal: () => void;
-  startExport: () => Promise<void>;
+  startExport: (format: ExportFormat) => Promise<void>;
   downloadExport: () => Promise<void>;
 }
 
@@ -39,6 +40,7 @@ export function useExportWorkflow(courseId: string): UseExportWorkflowReturn {
   const [exportModalState, setExportModalState] = useState<ExportModalState>('idle');
   const [exportId, setExportId] = useState<string | undefined>(undefined);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportFormat, setExportFormat] = useState<ExportFormat | null>(null);
 
   const { mutate: startExportMutation, isLoading: isStarting, error: startError, reset: resetStart } = useExportCourse();
   const { data: exportStatus } = useGetExportStatus(exportId, { enabled: !!exportId });
@@ -71,11 +73,12 @@ export function useExportWorkflow(courseId: string): UseExportWorkflowReturn {
     }
   }, [startError]);
 
-  const handleStartExport = useCallback(async () => {
+  const handleStartExport = useCallback(async (format: ExportFormat) => {
     setExportModalState('starting');
     setExportError(null);
+    setExportFormat(format);
     try {
-      const exportRecord = await startExportMutation(courseId, ExportFormat.SCORM_2004);
+      const exportRecord = await startExportMutation(courseId, format);
       if (exportRecord) {
         setExportId(exportRecord.id);
         setExportModalState('processing');
@@ -101,6 +104,7 @@ export function useExportWorkflow(courseId: string): UseExportWorkflowReturn {
     setExportId(undefined);
     setExportModalState('idle');
     setExportError(null);
+    setExportFormat(null);
     resetStart();
   }, [resetStart]);
 
@@ -123,6 +127,7 @@ export function useExportWorkflow(courseId: string): UseExportWorkflowReturn {
     exportError,
     exportProgress,
     exportId,
+    exportFormat,
     isStarting,
     isGettingDownload,
     openExportModal,

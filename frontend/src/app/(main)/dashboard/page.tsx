@@ -9,8 +9,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useInProgressJobs } from '@/hooks/useActiveCourseCreation';
 import { useDeleteJob } from '@/hooks/ai-generation/useJobs';
 import { GapTaskList } from '@/components/dashboard/GapTaskList';
+import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
+import { GuidedTour } from '@/components/onboarding/GuidedTour';
+import { dashboardTourSteps } from '@/components/onboarding/tours/dashboardTour';
 
-type TabType = 'recent' | 'in_progress' | 'draft' | 'published';
+type TabType = 'recent' | 'in_progress';
 
 function getJobStatusDisplay(status: GenerationJobStatus) {
   switch (status) {
@@ -109,19 +112,11 @@ export default function Dashboard() {
     }
   }, [showGapsAssignedBanner]);
 
-  // Server-side filtering based on active tab (only for course tabs)
-  const statusFilter = activeTab === 'draft'
-    ? CourseStatus.DRAFT
-    : activeTab === 'published'
-      ? CourseStatus.PUBLISHED
-      : undefined;
-
-  const { data: courses, isLoading, isFetching } = useListCourses({
-    status: statusFilter,
-  });
+  const { data: courses, isLoading, isFetching } = useListCourses({});
   const deleteCourseMutation = useDeleteCourse();
   const { inProgressJobs, inProgressCount } = useInProgressJobs();
   const deleteJobHook = useDeleteJob();
+  const { showDashboardTour } = useFeatureTogglesStore();
 
   // Exclude courses that have in-progress jobs from course tabs (Recent/Drafts/Published)
   const inProgressCourseIds = new Set(
@@ -170,12 +165,12 @@ export default function Dashboard() {
   const tabs: { key: TabType; label: string; badge?: number }[] = [
     { key: 'recent', label: 'Recent' },
     { key: 'in_progress', label: 'In Progress', badge: inProgressCount > 0 ? inProgressCount : undefined },
-    { key: 'draft', label: 'Drafts' },
-    { key: 'published', label: 'Published' },
   ];
 
   return (
     <>
+      {showDashboardTour && <GuidedTour tourId="dashboard" steps={dashboardTourSteps} />}
+
       {/* Welcome Modal for Invited Users */}
       {showWelcomeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -249,13 +244,14 @@ export default function Dashboard() {
       )}
 
       {/* Hero Section with Create Button */}
-      <div className="bg-gradient-to-r from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/20 rounded-2xl p-8 mb-8 border border-transparent dark:border-dark-border">
+      <div data-tour="dashboard-hero" className="bg-gradient-to-r from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/20 rounded-2xl p-8 mb-8 border border-transparent dark:border-dark-border">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome to Your Dashboard</h2>
             <p className="text-gray-600 dark:text-gray-400">Create engaging courses with AI or import existing materials</p>
           </div>
           <button
+            data-tour="dashboard-create-btn"
             onClick={() => router.push('/course/wizard')}
             className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl"
           >
@@ -269,7 +265,7 @@ export default function Dashboard() {
       <GapTaskList />
 
       {/* Your Courses Section */}
-      <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-200 dark:border-dark-border p-6">
+      <div data-tour="dashboard-courses" className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-200 dark:border-dark-border p-6">
         {/* Header with responsive layout */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-2">
@@ -279,7 +275,7 @@ export default function Dashboard() {
             )}
           </div>
           {/* Tab buttons - horizontal scroll on mobile */}
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
+          <div data-tour="dashboard-tabs" className="flex gap-2 overflow-x-auto hide-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -408,7 +404,7 @@ export default function Dashboard() {
             </div>
           )
         ) : (
-          /* Course list tabs (recent, draft, published) */
+          /* Course list (recent) */
           isLoading ? (
             <div className="min-h-[300px] flex items-center justify-center">
               <div className="text-gray-500 dark:text-gray-400">Loading courses...</div>
@@ -489,9 +485,7 @@ export default function Dashboard() {
                 </svg>
               </div>
               <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {activeTab === 'draft' && 'No draft courses'}
-                {activeTab === 'published' && 'No published courses'}
-                {activeTab === 'recent' && 'No courses yet'}
+                No courses yet
               </h4>
               <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
                 Get started by creating your first course using AI prompts or importing existing materials

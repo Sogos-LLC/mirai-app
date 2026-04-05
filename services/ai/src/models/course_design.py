@@ -118,6 +118,10 @@ class Section(BaseModel):
     mapped_outcomes: list[str] = Field(
         description="Which learning outcome verbs+objects this section addresses"
     )
+    component_hints: list[str] = Field(
+        default_factory=list,
+        description="Suggested component types for this section's lessons (e.g., image, list, code, quiz, task_list)",
+    )
 
 
 class CourseStructure(BaseModel):

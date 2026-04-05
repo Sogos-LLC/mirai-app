@@ -358,11 +358,6 @@ def _attach_audience_validator(agent: Agent) -> None:
         if v:
             violations.append(v)
 
-        names = [p.name for p in output.personas]
-        v = check_unique_values(names, "Audience persona names")
-        if v:
-            violations.append(v)
-
         for p in output.personas:
             if len(p.goals) < 2:
                 violations.append(f"Audience '{p.id}' has {len(p.goals)} goals; minimum is 2")
@@ -410,21 +405,19 @@ def build_audience_prompt(
 
     parts.append("""\
 ## Instructions
-Generate 3 diverse audience personas who would benefit from this course. Each persona should:
+Generate 3 diverse learner profiles who would benefit from this course. Each profile should:
 
-1. Have a distinct background and current role (all roles must be unique)
+1. Have a distinct role or job title (all roles must be unique)
 2. Have different motivations for taking the course
 3. Represent different experience levels (e.g., beginner, intermediate, career-changer)
-4. Have a unique name
-5. Have 2-4 learning goals
+4. Have 2-4 learning goals
+5. Do NOT include personal names — describe the profile by role and background only
 
-Make the personas realistic and relatable. Consider:
+Make the profiles realistic and relatable. Consider:
 - Different career stages (early career, mid-career, transitioning)
 - Different industries or contexts
 - Different learning goals and motivations
-- What challenges they face that this course would address
-
-Each persona should feel like a real person with specific goals and challenges.""")
+- What challenges they face that this course would address""")
 
     return "\n".join(parts)
 
@@ -505,7 +498,7 @@ def build_tone_prompt(
     if audience_personas:
         parts.append("## Target Audience")
         for p in audience_personas:
-            parts.append(f"- **{p.name}** ({p.role}): {p.description}")
+            parts.append(f"- **{p.role}**: {p.description}")
         parts.append("")
 
     parts.append("""\

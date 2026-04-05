@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sogos/mirai-backend/internal/domain/entity"
 	domainerrors "github.com/sogos/mirai-backend/internal/domain/errors"
+	"github.com/sogos/mirai-backend/internal/infrastructure/cache"
 )
 
 // GetFolderHierarchy returns the folder structure.
@@ -119,6 +120,13 @@ func (s *CourseService) GetLibrary(ctx context.Context, kratosID uuid.UUID, incl
 		return nil, domainerrors.ErrUserNotFound
 	}
 
+	// Try cache first
+	cacheKey := cache.TenantCacheKeys.Library()
+	var cached Library
+	if entry, err := s.cache.Get(ctx, cacheKey, &cached); err == nil && entry != nil {
+		return &cached, nil
+	}
+
 	// Get courses
 	courses, err := s.courseRepo.List(ctx, entity.CourseListOptions{Limit: 1000})
 	if err != nil {
@@ -184,12 +192,17 @@ func (s *CourseService) GetLibrary(ctx context.Context, kratosID uuid.UUID, incl
 		})
 	}
 
-	return &Library{
+	result := &Library{
 		Version:     "1.0",
 		LastUpdated: time.Now(),
 		Courses:     entries,
 		Folders:     folderList,
-	}, nil
+	}
+
+	// Cache the result — mutations invalidate "library:index" so this stays fresh
+	_, _ = s.cache.Set(ctx, cacheKey, result, "", 0)
+
+	return result, nil
 }
 
 // CreateFolder creates a new folder.
@@ -222,6 +235,8 @@ func (s *CourseService) CreateFolder(ctx context.Context, kratosID uuid.UUID, na
 		log.Error("failed to create folder", "error", err)
 		return nil, domainerrors.ErrInternal.WithCause(err)
 	}
+
+	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Library())
 
 	log.Info("folder created", "folderID", folder.ID)
 	return folder, nil
@@ -265,6 +280,8 @@ func (s *CourseService) DeleteFolder(ctx context.Context, kratosID uuid.UUID, id
 		log.Error("failed to delete folder", "error", err)
 		return domainerrors.ErrInternal.WithCause(err)
 	}
+
+	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Library())
 
 	log.Info("folder deleted")
 	return nil

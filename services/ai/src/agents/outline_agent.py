@@ -172,7 +172,7 @@ def build_sections_prompt(
     if target_audience:
         parts.append("\n## Target Audience")
         for p in target_audience:
-            parts.append(f"- **{p.name}** ({p.role}): {p.description}. Goals: {', '.join(p.goals)}")
+            parts.append(f"- **{p.role}**: {p.description}. Goals: {', '.join(p.goals)}")
 
     # SME knowledge
     if personas:
@@ -269,7 +269,7 @@ def build_lesson_detail_prompt(
     audience_text = ""
     if target_audience:
         audience_text = "\n## Target Audience\n" + "\n".join(
-            f"- {p.name} ({p.role}): {p.description}" for p in target_audience
+            f"- {p.role}: {p.description}" for p in target_audience
         )
 
     sme_text = ""

@@ -75,6 +75,9 @@ docs/
 # Claude Code instructions (user-specific)
 CLAUDE.md
 
+# Presentations
+presentations/
+
 # Experiments
 experiments/
 experiments/.env.experiments

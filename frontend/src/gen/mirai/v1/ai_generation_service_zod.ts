@@ -210,6 +210,8 @@ export const StartCourseCreationRequestSchema = z.object({
   selectedAudienceIds: z.array(z.string()),
   selectedTone: ToneOptionSchema.optional(),
   additionalContext: z.string(),
+  contextFileUrl: z.string(),
+  skipQa: z.boolean(),
 });
 
 export type StartCourseCreationRequest = z.infer<typeof StartCourseCreationRequestSchema>;
@@ -268,4 +270,14 @@ export const ResumeWorkflowDeferralRequestSchema = z.object({
 });
 
 export type ResumeWorkflowDeferralRequest = z.infer<typeof ResumeWorkflowDeferralRequestSchema>;
+
+/**
+ * Zod schema for GetCourseGenerationDetailsRequest
+ * @generated from message mirai.v1.GetCourseGenerationDetailsRequest
+ */
+export const GetCourseGenerationDetailsRequestSchema = z.object({
+  courseId: z.string(),
+});
+
+export type GetCourseGenerationDetailsRequest = z.infer<typeof GetCourseGenerationDetailsRequestSchema>;
 

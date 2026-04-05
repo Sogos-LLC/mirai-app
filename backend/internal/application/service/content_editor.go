@@ -875,6 +875,43 @@ func (s *AIGenerationService) UpdateLessonComponents(ctx context.Context, kratos
 	return &UpdateLessonComponentsResult{Lesson: lesson}, nil
 }
 
+// GetCourseGenerationDetailsResult contains generation cost data.
+type GetCourseGenerationDetailsResult struct {
+	Job                *entity.GenerationJob
+	GenerationMetadata *GenerationMetadata
+	GeneratedAt        *time.Time
+}
+
+// GetCourseGenerationDetails returns generation cost/token data for a course.
+func (s *AIGenerationService) GetCourseGenerationDetails(ctx context.Context, kratosID uuid.UUID, courseID uuid.UUID) (*GetCourseGenerationDetailsResult, error) {
+	user, err := s.userRepo.GetByKratosID(ctx, kratosID)
+	if err != nil || user == nil {
+		return nil, domainerrors.ErrUserNotFound
+	}
+
+	// Get the latest course_creation job
+	job, err := s.jobRepo.GetLatestCourseCreationJob(ctx, courseID)
+	if err != nil {
+		return nil, domainerrors.ErrInternal.WithCause(err)
+	}
+	if job == nil {
+		return nil, domainerrors.ErrNotFound.WithMessage("no generation job found for this course")
+	}
+
+	result := &GetCourseGenerationDetailsResult{Job: job}
+
+	// Try to read generation metadata from S3 content.json
+	courseContent, err := s.readCourseContent(ctx, *user.TenantID, courseID)
+	if err == nil && courseContent.GenerationMetadata != nil {
+		result.GenerationMetadata = courseContent.GenerationMetadata
+		if t, parseErr := time.Parse(time.RFC3339, courseContent.GenerationMetadata.GeneratedAt); parseErr == nil {
+			result.GeneratedAt = &t
+		}
+	}
+
+	return result, nil
+}
+
 // readCourseContent reads course content from MinIO.
 func (s *AIGenerationService) readCourseContent(ctx context.Context, tenantID, courseID uuid.UUID) (*S3CourseContent, error) {
 	if s.contentStorage == nil {

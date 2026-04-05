@@ -82,5 +82,11 @@ RETURNING *;
 -- name: DeleteGenerationJobsByParentID :exec
 DELETE FROM generation_jobs WHERE parent_job_id = $1;
 
+-- name: GetLatestCourseCreationJob :one
+SELECT * FROM generation_jobs
+WHERE course_id = $1 AND type = 'course_creation'
+ORDER BY created_at DESC
+LIMIT 1;
+
 -- name: DeleteGenerationJob :exec
 DELETE FROM generation_jobs WHERE id = $1;

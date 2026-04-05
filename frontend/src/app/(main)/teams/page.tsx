@@ -4,8 +4,17 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useListTeams, useCreateTeam, useDeleteTeam, type Team } from '@/hooks/useTeams';
 import { CreateTeamModal } from '@/components/teams/CreateTeamModal';
+import { FeatureGate } from '@/components/layout/FeatureGate';
 
 export default function TeamsPage() {
+  return (
+    <FeatureGate toggle="showTeams">
+      <TeamsPageContent />
+    </FeatureGate>
+  );
+}
+
+function TeamsPageContent() {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: teams, isLoading, error } = useListTeams();

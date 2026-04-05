@@ -149,6 +149,10 @@ class ImageComponent(BaseModel):
     imageDescription: str = Field(description="Detailed image description for generation")
     imageAltText: str = Field(description="Accessibility alt text")
     imageCaption: str | None = Field(default=None, description="Optional caption")
+    imageStyle: str = Field(
+        default="illustration",
+        description="Style: diagram, chart, infographic, photograph, illustration, screenshot",
+    )
     source_refs: list[int] = Field(default_factory=list, description="[Source N] indices")
 
 

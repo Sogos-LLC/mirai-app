@@ -3,12 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Folder, Search, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useGetFolderHierarchy, useListCourses, useCreateFolder, useDeleteFolder, FolderType, type Folder as FolderNode } from '@/hooks/useCourses';
+import { useGetFolderHierarchy, useListCourses, useCreateFolder, useDeleteFolder, useUpdateCourse, useDeleteCourse, FolderType, type Folder as FolderNode } from '@/hooks/useCourses';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { FolderTreeNode } from '@/components/content-library/FolderTreeNode';
 import { CourseCard } from '@/components/content-library/CourseCard';
 import { DeleteFolderModal } from '@/components/content-library/DeleteFolderModal';
+import { CourseDetailsModal } from '@/components/content-library/CourseDetailsModal';
+import FolderSelectionModal from '@/components/course/FolderSelectionModal';
+import { ShareModal } from '@/components/share/ShareModal';
 
 const MAX_FOLDER_DEPTH = 3;
 
@@ -19,6 +22,8 @@ export default function ContentLibrary() {
   // Folder mutation hooks
   const createFolderMutation = useCreateFolder();
   const deleteFolderMutation = useDeleteFolder();
+  const updateCourseMutation = useUpdateCourse();
+  const deleteCourseMutation = useDeleteCourse();
 
   // Local UI state only
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -37,6 +42,15 @@ export default function ContentLibrary() {
     offset: pageOffset,
   });
   const [isFolderSheetOpen, setIsFolderSheetOpen] = useState(false);
+
+  // Course details state
+  const [detailsCourseId, setDetailsCourseId] = useState<string | null>(null);
+
+  // Share state
+  const [shareCourseId, setShareCourseId] = useState<string | null>(null);
+
+  // Move-to-folder state
+  const [movingCourseId, setMovingCourseId] = useState<string | null>(null);
 
   // Folder creation state
   const [creatingFolderIn, setCreatingFolderIn] = useState<string | null>(null);
@@ -103,6 +117,31 @@ export default function ContentLibrary() {
 
   const handleCoursePreview = (courseId: string) => {
     router.push(`/preview/${courseId}`);
+  };
+
+  const handleMoveToFolder = (courseId: string) => {
+    setMovingCourseId(courseId);
+  };
+
+  const handleMoveCourseConfirm = async (folderId: string) => {
+    if (!movingCourseId) return;
+    try {
+      await updateCourseMutation.mutate(movingCourseId, {
+        settings: { destinationFolder: folderId },
+      });
+    } catch (error) {
+      console.error('Failed to move course:', error);
+    }
+    setMovingCourseId(null);
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm('Are you sure you want to delete this course?\n\nThis action cannot be undone.')) return;
+    try {
+      await deleteCourseMutation.mutate(courseId);
+    } catch (error) {
+      console.error('Failed to delete course:', error);
+    }
   };
 
   // Folder creation handlers
@@ -261,12 +300,12 @@ export default function ContentLibrary() {
       {/* Two-column layout - stacked on mobile */}
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         {/* Left: Folder Sidebar (hidden on mobile - use sheet instead) */}
-        <div className="hidden lg:block w-80 flex-shrink-0 bg-primary-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-5 max-h-[calc(100vh-280px)] overflow-y-auto">
+        <div className="hidden lg:block w-80 flex-shrink-0 bg-primary-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-5 min-h-[500px] max-h-[calc(100vh-280px)] overflow-y-auto">
           {folderListContent}
         </div>
 
         {/* Right: Main Content */}
-        <div className="flex-1 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-5 lg:p-8 max-h-[calc(100vh-280px)] overflow-y-auto">
+        <div className="flex-1 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl p-5 lg:p-8 min-h-[500px] max-h-[calc(100vh-280px)] overflow-y-auto">
           <div className="mb-6 lg:mb-8">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
@@ -295,6 +334,10 @@ export default function ContentLibrary() {
                   course={course}
                   onEdit={handleCourseClick}
                   onPreview={handleCoursePreview}
+                  onDetails={setDetailsCourseId}
+                  onShare={setShareCourseId}
+                  onMoveToFolder={handleMoveToFolder}
+                  onDelete={handleDeleteCourse}
                 />
               ))}
             </div>
@@ -332,6 +375,27 @@ export default function ContentLibrary() {
         deleteError={deleteError}
         onConfirm={handleDeleteFolder}
         onCancel={handleCancelDelete}
+      />
+
+      {/* Move Course to Folder Modal */}
+      <FolderSelectionModal
+        isOpen={!!movingCourseId}
+        onClose={() => setMovingCourseId(null)}
+        onSelect={(folderId) => handleMoveCourseConfirm(folderId)}
+      />
+
+      {/* Course Details Modal */}
+      <CourseDetailsModal
+        course={filteredCourses.find(c => c.id === detailsCourseId) ?? null}
+        onClose={() => setDetailsCourseId(null)}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        courseId={shareCourseId ?? ''}
+        courseTitle={filteredCourses.find(c => c.id === shareCourseId)?.title ?? ''}
+        isOpen={!!shareCourseId}
+        onClose={() => setShareCourseId(null)}
       />
     </>
   );

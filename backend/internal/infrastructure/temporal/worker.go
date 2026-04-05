@@ -34,6 +34,7 @@ func NewWorker(
 	w.RegisterWorkflow(workflow.StripeProvisionWorkflow)
 	w.RegisterWorkflow(workflow.CleanupExpiredWorkflow)
 	w.RegisterWorkflow(workflow.FeedbackSyncWorkflow)
+	w.RegisterWorkflow(workflow.ShareContentWorkflow)
 
 	// Register Go-side activities (run on go-tasks queue)
 	w.RegisterActivity(goActivities)

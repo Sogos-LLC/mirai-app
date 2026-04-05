@@ -3,8 +3,17 @@
 import React, { useState } from 'react';
 import { BookOpen, Play, Clock, CheckCircle } from 'lucide-react';
 import { AdaptiveGrid } from '@/components/ui/AdaptiveGrid';
+import { FeatureGate } from '@/components/layout/FeatureGate';
 
 export default function TutorialsPage() {
+  return (
+    <FeatureGate toggle="showTutorials">
+      <TutorialsPageContent />
+    </FeatureGate>
+  );
+}
+
+function TutorialsPageContent() {
   const tutorials = [
     {
       id: 1,

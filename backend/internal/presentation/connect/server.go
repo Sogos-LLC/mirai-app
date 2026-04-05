@@ -50,6 +50,7 @@ type ServerConfig struct {
 	KnowledgeGapService    *service.KnowledgeGapService
 	CurriculumService      *service.CurriculumService
 	WizardService          *service.WizardService
+	CourseShareService     *service.CourseShareService
 	BaseStorage            StorageAdapter // For knowledge source presigned URLs
 
 	PendingRegRepo         repository.PendingRegistrationRepository
@@ -196,6 +197,15 @@ func NewServeMux(cfg ServerConfig) *http.ServeMux {
 	if cfg.CurriculumService != nil {
 		path, handler = miraiv1connect.NewCurriculumServiceHandler(
 			NewCurriculumServiceServer(cfg.CurriculumService),
+			interceptors,
+		)
+		mux.Handle(path, handler)
+	}
+
+	// CourseShareService - course sharing with external reviewers
+	if cfg.CourseShareService != nil {
+		path, handler = miraiv1connect.NewCourseShareServiceHandler(
+			NewCourseShareServiceServer(cfg.CourseShareService),
 			interceptors,
 		)
 		mux.Handle(path, handler)

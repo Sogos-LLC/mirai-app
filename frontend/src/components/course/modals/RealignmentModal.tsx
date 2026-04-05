@@ -191,7 +191,7 @@ export function RealignmentModal({
     const sme = smePersonas.find((p) => p.id === id);
     if (sme) return { id, name: sme.jobTitle, type: 'SME' as const };
     const audience = audiencePersonas.find((p) => p.id === id);
-    if (audience) return { id, name: audience.name, type: 'Audience' as const };
+    if (audience) return { id, name: audience.role, type: 'Audience' as const };
     return null;
   }).filter(Boolean) as Array<{ id: string; name: string; type: 'SME' | 'Audience' }>;
 
@@ -341,10 +341,7 @@ export function RealignmentModal({
                             onClick={() => addPersona(audience.id)}
                             className="w-full px-3 py-2 text-left text-sm text-secondary hover:bg-hover transition-colors flex items-center gap-2"
                           >
-                            <span className="font-medium">{audience.name}</span>
-                            {audience.role && (
-                              <span className="text-xs text-muted">({audience.role})</span>
-                            )}
+                            <span className="font-medium">{audience.role}</span>
                           </button>
                         ))}
                       </>

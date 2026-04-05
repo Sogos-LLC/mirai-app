@@ -28,7 +28,7 @@ import {
 } from '@dnd-kit/sortable';
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, LessonComponentType } from '@/hooks/useAIGeneration';
+import { useGetCourseOutline, useListGeneratedLessons, useUpdateLessonComponents, useRegenerateComponent, useUpdateCourseOutline, LessonComponentType } from '@/hooks/useAIGeneration';
 import { EditModal } from '@/components/course/modals/EditModal';
 import { AddComponentModal } from '@/components/course/modals/AddComponentModal';
 import dynamic from 'next/dynamic';
@@ -49,6 +49,10 @@ import { SourceSummaryBar } from '@/components/editor/SourceSummaryBar';
 import { useCourseEditorStore as useEditorStore } from '@/store/zustand/courseEditorStore';
 import { useExportWorkflow } from '@/hooks/useExportWorkflow';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
+import { useGetCourse, useUpdateCourse } from '@/hooks/useCourses';
+import { ShareModal } from '@/components/share/ShareModal';
+import { CourseDetailsModal } from '@/components/content-library/CourseDetailsModal';
 
 /** Check if a component is validatable (MODEL or unset source type) */
 function isComponentValidatable(component: LessonComponent): boolean {
@@ -76,6 +80,12 @@ export default function CourseEditorPage() {
   const [realignmentComponent, setRealignmentComponent] = useState<LessonComponent | null>(null);
   const [isRealigning, setIsRealigning] = useState(false);
 
+  // Share state
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  // Details modal state
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
   // Provenance panel state
   const [showProvenance, setShowProvenance] = useState(false);
 
@@ -84,7 +94,11 @@ export default function CourseEditorPage() {
   const sourceMode = useEditorStore((s) => s.sourceMode);
   const toggleSourceMode = useEditorStore((s) => s.toggleSourceMode);
 
-  // Fetch outline and lessons
+  // Feature toggles
+  const showSourceGrounding = useFeatureTogglesStore((s) => s.showSourceGrounding);
+
+  // Fetch course, outline, and lessons
+  const { data: course } = useGetCourse(courseId);
   const { data: outline, wizardData, isLoading: outlineLoading } = useGetCourseOutline(courseId);
   const { data: generatedLessons, isLoading: lessonsLoading } = useListGeneratedLessons(courseId);
 
@@ -97,6 +111,7 @@ export default function CourseEditorPage() {
     exportModalState,
     exportError,
     exportProgress,
+    exportFormat,
     isStarting,
     isGettingDownload,
     openExportModal,
@@ -104,6 +119,37 @@ export default function CourseEditorPage() {
     startExport,
     downloadExport,
   } = useExportWorkflow(courseId);
+
+  // Course update hook
+  const { mutate: updateCourse } = useUpdateCourse();
+
+  // Outline update hook (for renaming sections/lessons)
+  const { mutate: updateOutline } = useUpdateCourseOutline();
+
+  const handleUpdateCourse = useCallback(async (title: string, description: string) => {
+    await updateCourse(courseId, {
+      settings: { title, desiredOutcome: description },
+    });
+  }, [courseId, updateCourse]);
+
+  const handleRenameSection = useCallback((sectionId: string, newTitle: string) => {
+    if (!outline?.sections || !outline.id) return;
+    const updated = outline.sections.map((s) =>
+      s.id === sectionId ? { ...s, title: newTitle } : s
+    );
+    void updateOutline(courseId, outline.id, updated);
+  }, [outline, courseId, updateOutline]);
+
+  const handleRenameLesson = useCallback((lessonId: string, newTitle: string) => {
+    if (!outline?.sections || !outline.id) return;
+    const updated = outline.sections.map((s) => ({
+      ...s,
+      lessons: s.lessons?.map((l) =>
+        l.id === lessonId ? { ...l, title: newTitle } : l
+      ),
+    }));
+    void updateOutline(courseId, outline.id, updated);
+  }, [outline, courseId, updateOutline]);
 
   // Realignment hook
   const { mutate: regenerateComponent, isLoading: isRegenerating } = useRegenerateComponent();
@@ -389,12 +435,13 @@ export default function CourseEditorPage() {
 
   // Export retry handler
   const handleExportRetry = useCallback(() => {
+    const lastFormat = exportFormat;
     closeExportModal();
     setTimeout(() => {
       openExportModal();
-      startExport();
+      if (lastFormat) startExport(lastFormat);
     }, 350);
-  }, [closeExportModal, openExportModal, startExport]);
+  }, [closeExportModal, openExportModal, startExport, exportFormat]);
 
   // Realignment handlers
   const handleOpenRealignment = useCallback((component: LessonComponent) => {
@@ -484,10 +531,15 @@ export default function CourseEditorPage() {
       {/* Header */}
       <CourseEditorHeader
         courseId={courseId}
+        courseTitle={course?.settings?.title ?? ''}
+        courseDescription={course?.settings?.desiredOutcome ?? ''}
         saveStatus={saveStatus}
         onBack={() => router.push('/content-library')}
         onPreview={() => router.push(`/preview/${courseId}`)}
         onExport={openExportModal}
+        onShare={() => setShowShareModal(true)}
+        onDetails={() => setShowDetailsModal(true)}
+        onUpdateCourse={handleUpdateCourse}
       />
 
       {/* Mobile navigation FAB + BottomSheet */}
@@ -501,6 +553,8 @@ export default function CourseEditorPage() {
         selectedLessonId={selectedLessonId}
         onLessonSelect={setSelectedLessonId}
         onToggleSection={toggleSection}
+        onRenameSection={handleRenameSection}
+        onRenameLesson={handleRenameLesson}
       />
 
       {/* Editor layout */}
@@ -514,6 +568,8 @@ export default function CourseEditorPage() {
           onLessonSelect={setSelectedLessonId}
           onToggleSection={toggleSection}
           effectiveGroundings={effectiveGroundings}
+          onRenameSection={handleRenameSection}
+          onRenameLesson={handleRenameLesson}
         />
 
         {/* Main content - Lesson editor */}
@@ -529,20 +585,22 @@ export default function CourseEditorPage() {
                 <div className="flex items-center justify-between gap-4">
                   <CardTitle as="h2">{currentLesson.title}</CardTitle>
                   <div className="flex items-center gap-2">
-                    {/* Source Mode Toggle */}
-                    <button
-                      onClick={toggleSourceMode}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        sourceMode
-                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                          : 'bg-hover text-muted hover:text-secondary'
-                      }`}
-                      title="Toggle source attribution view"
-                    >
-                      <FileSearch className="w-3.5 h-3.5" />
-                      Sources
-                    </button>
-                    {currentLesson.generated?.aggregateProvenance && (
+                    {/* Source Mode Toggle - gated by feature toggle */}
+                    {showSourceGrounding && (
+                      <button
+                        onClick={toggleSourceMode}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          sourceMode
+                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+                            : 'bg-hover text-muted hover:text-secondary'
+                        }`}
+                        title="Toggle source attribution view"
+                      >
+                        <FileSearch className="w-3.5 h-3.5" />
+                        Sources
+                      </button>
+                    )}
+                    {showSourceGrounding && currentLesson.generated?.aggregateProvenance && (
                       <ProvenanceBadge
                         provenance={currentLesson.generated.aggregateProvenance}
                         isOpen={showProvenance}
@@ -553,7 +611,7 @@ export default function CourseEditorPage() {
                   </div>
                 </div>
                 {/* Provenance detail panel */}
-                {currentLesson.generated?.aggregateProvenance && (
+                {showSourceGrounding && currentLesson.generated?.aggregateProvenance && (
                   <ProvenancePanel
                     provenance={currentLesson.generated.aggregateProvenance}
                     components={currentLesson.generated.components ?? []}
@@ -564,7 +622,7 @@ export default function CourseEditorPage() {
               </CardHeader>
               <CardContent className="py-6">
                 {/* Source summary bar - only visible in source mode */}
-                {sourceMode && currentLesson.generated?.aggregateProvenance && (
+                {showSourceGrounding && sourceMode && currentLesson.generated?.aggregateProvenance && (
                   <SourceSummaryBar
                     provenance={currentLesson.generated.aggregateProvenance}
                     components={localComponents}
@@ -612,7 +670,7 @@ export default function CourseEditorPage() {
 
                           return (
                             <React.Fragment key={component.id}>
-                              {sourceMode ? (
+                              {showSourceGrounding && sourceMode ? (
                                 <SourceModeOverlay
                                   provenance={provenance}
                                   validated={component.validated}
@@ -734,6 +792,7 @@ export default function CourseEditorPage() {
         modalState={exportModalState}
         exportError={exportError}
         exportStatus={exportProgress}
+        exportFormat={exportFormat}
         isStarting={isStarting}
         isGettingDownload={isGettingDownload}
         onStartExport={startExport}
@@ -751,6 +810,25 @@ export default function CourseEditorPage() {
         learningObjectives={currentLessonLOs}
         onRealign={handleRealign}
         isLoading={isRealigning || isRegenerating}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        courseId={courseId}
+        courseTitle={course?.settings?.title ?? ''}
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+      />
+
+      {/* Details Modal */}
+      <CourseDetailsModal
+        course={showDetailsModal ? {
+          id: courseId,
+          title: course?.settings?.title ?? 'Untitled Course',
+          createdAt: course?.metadata?.createdAt,
+          modifiedAt: course?.metadata?.modifiedAt,
+        } : null}
+        onClose={() => setShowDetailsModal(false)}
       />
     </div>
   );

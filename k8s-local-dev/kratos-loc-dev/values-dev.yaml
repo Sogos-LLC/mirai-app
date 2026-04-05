@@ -1,0 +1,254 @@
+# Ory Kratos Helm Chart Values for Dev Environment
+# Install with: helm install kratos ory/kratos -f values-dev.yaml -n kratos-loc-dev --create-namespace
+
+kratos:
+  development: false
+  automigration:
+    enabled: true
+
+  config:
+    dsn: $DSN
+
+    serve:
+      public:
+        base_url: https://mirai-auth-dev.sogos.io
+        cors:
+          enabled: true
+          allowed_origins:
+            - https://mirai-dev.sogos.io
+            - https://get-mirai-dev.sogos.io
+          allowed_methods:
+            - POST
+            - GET
+            - PUT
+            - PATCH
+            - DELETE
+          allowed_headers:
+            - Authorization
+            - Cookie
+            - Content-Type
+          exposed_headers:
+            - Content-Type
+            - Set-Cookie
+          allow_credentials: true
+      admin:
+        base_url: http://kratos-admin:80
+
+    selfservice:
+      default_browser_return_url: https://mirai-dev.sogos.io/dashboard
+      allowed_return_urls:
+        - https://mirai-dev.sogos.io
+        - https://get-mirai-dev.sogos.io
+
+      methods:
+        password:
+          enabled: true
+        link:
+          enabled: true
+        code:
+          enabled: true
+
+      flows:
+        error:
+          ui_url: https://mirai-dev.sogos.io/auth/error
+
+        settings:
+          ui_url: https://mirai-dev.sogos.io/auth/settings
+          privileged_session_max_age: 15m
+
+        recovery:
+          enabled: true
+          ui_url: https://mirai-dev.sogos.io/auth/recovery
+          use: code
+
+        verification:
+          enabled: true
+          ui_url: https://mirai-dev.sogos.io/auth/verification
+          use: code
+          after:
+            default_browser_return_url: https://mirai-dev.sogos.io/dashboard
+
+        logout:
+          after:
+            default_browser_return_url: https://get-mirai-dev.sogos.io
+
+        login:
+          ui_url: https://mirai-dev.sogos.io/auth/login
+          lifespan: 10m
+
+        registration:
+          ui_url: https://mirai-dev.sogos.io/auth/registration
+          lifespan: 10m
+          after:
+            password:
+              hooks:
+                - hook: session
+            default_browser_return_url: https://mirai-dev.sogos.io/dashboard
+
+    log:
+      level: info
+      format: json
+      leak_sensitive_values: false
+
+    secrets:
+      default:
+        - $SECRETS_DEFAULT
+
+    hashers:
+      argon2:
+        parallelism: 1
+        memory: 128MB
+        iterations: 2
+        salt_length: 16
+        key_length: 16
+
+    identity:
+      default_schema_id: user
+      schemas:
+        - id: user
+          url: file:///etc/config/identity.schema.json
+
+    courier:
+      smtp:
+        connection_uri: smtp://mailpit.default.svc.cluster.local:1025/?disable_starttls=true
+        from_address: noreply-dev@mirai.sogos.io
+        from_name: Mirai Dev
+
+    session:
+      lifespan: 24h
+      cookie:
+        domain: sogos.io
+        same_site: Lax
+
+  # Identity schema file (same as production)
+  identitySchemas:
+    "identity.schema.json": |
+      {
+        "$id": "https://mirai-dev.sogos.io/schemas/user.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "User",
+        "type": "object",
+        "properties": {
+          "traits": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email",
+                "title": "Email",
+                "minLength": 3,
+                "ory.sh/kratos": {
+                  "credentials": {
+                    "password": {
+                      "identifier": true
+                    }
+                  },
+                  "recovery": {
+                    "via": "email"
+                  },
+                  "verification": {
+                    "via": "email"
+                  }
+                }
+              },
+              "name": {
+                "type": "object",
+                "properties": {
+                  "first": {
+                    "type": "string",
+                    "title": "First Name",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "last": {
+                    "type": "string",
+                    "title": "Last Name",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": ["first", "last"]
+              }
+            },
+            "required": ["email", "name"],
+            "additionalProperties": false
+          }
+        }
+      }
+
+# Deployment configuration
+deployment:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  extraEnv:
+    - name: DSN
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: dsn
+    - name: SECRETS_DEFAULT
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: secretsDefault
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 10000
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+
+# Job configuration (for migrations)
+job:
+  extraEnv:
+    - name: DSN
+      valueFrom:
+        secretKeyRef:
+          name: kratos-secret
+          key: dsn
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+
+# Service configuration
+service:
+  public:
+    enabled: true
+    type: ClusterIP
+    port: 80
+    name: http
+  admin:
+    enabled: true
+    type: ClusterIP
+    port: 80
+    name: http
+
+# Disable ingress (using Cloudflare tunnel instead)
+ingress:
+  public:
+    enabled: false
+  admin:
+    enabled: false
+
+# StatefulSet (courier) configuration
+statefulSet:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule

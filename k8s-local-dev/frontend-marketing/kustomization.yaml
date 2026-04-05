@@ -1,0 +1,49 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mirai-loc-dev
+
+resources:
+- ../../k8s/frontend-marketing
+
+# Override labels for dev
+labels:
+- pairs:
+    environment: dev
+
+# Strategic merge patches for dev configuration
+# Using target selectors to handle namespace transformation
+
+patches:
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+    - op: replace
+      path: /spec/template/spec/containers/0/env
+      value:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
+          value: "https://mirai-auth-dev.sogos.io"
+        - name: NEXT_PUBLIC_APP_URL
+          value: "https://mirai-dev.sogos.io"
+        - name: NEXT_PUBLIC_LANDING_URL
+          value: "https://get-mirai-dev.sogos.io"
+  target:
+    kind: Deployment
+    name: mirai-marketing
+- patch: |-
+    - op: replace
+      path: /spec/maxUnavailable
+      value: 1
+  target:
+    kind: PodDisruptionBudget
+    name: mirai-marketing-pdb
+
+images:
+- name: ghcr.io/sogos-llc/mirai-app/mirai-marketing
+  newName: ghcr.io/sogos-llc/mirai-app/mirai-marketing
+  newTag: dev-555a9cf

@@ -1,8 +1,5 @@
 package workflow
 
-// AITaskQueue is the task queue for Python AI service activities.
-const AITaskQueue = "ai-tasks"
-
 // KnowledgeIngestionInput is the input for knowledge ingestion workflows.
 type KnowledgeIngestionInput struct {
 	SourceID string `json:"source_id"`
@@ -15,6 +12,18 @@ type KnowledgeIngestionInput struct {
 type CourseExportInput struct {
 	ExportID string `json:"export_id"`
 	TenantID string `json:"tenant_id"`
+}
+
+// ShareContentInput is the input for the share content snapshot workflow.
+type ShareContentInput struct {
+	ShareLinkID   string   `json:"share_link_id"`
+	TenantID      string   `json:"tenant_id"`
+	CourseID      string   `json:"course_id"`
+	CreatorEmail  string   `json:"creator_email"`
+	CreatorName   string   `json:"creator_name"`
+	CourseTitle   string   `json:"course_title"`
+	AllowedEmails []string `json:"allowed_emails"`
+	ShareURL      string   `json:"share_url"`
 }
 
 // StripeProvisionInput and FeedbackSyncInput are defined in

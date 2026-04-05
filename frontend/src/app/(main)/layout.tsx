@@ -8,12 +8,13 @@ import { useAuth } from '@/contexts';
 import { useUIStore } from '@/store/zustand';
 import { setSessionTokenCookie } from '@/lib/auth.config';
 import { transport } from '@/lib/connect';
-import { listCourses } from '@/gen/mirai/v1/course-CourseService_connectquery';
+import { listCourses, getFolderHierarchy } from '@/gen/mirai/v1/course-CourseService_connectquery';
 import Sidebar, { menuItems, bottomItems } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomTabNav from '@/components/layout/BottomTabNav';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { useIsMobile } from '@/hooks/useBreakpoint';
+import { useFeatureTogglesStore } from '@/store/zustand/useFeatureTogglesStore';
 
 /**
  * Route layout for all pages in the (main) folder.
@@ -57,15 +58,20 @@ export default function Layout({
   }, [checkSession, tokenProcessed, searchParams]);
 
   const queryClient = useQueryClient();
+  const toggleStore = useFeatureTogglesStore();
 
   // Prefetch routes and dashboard data AFTER auth is initialized
   useEffect(() => {
     if (!isAuthInitialized) return;
 
-    // Prefetch all sidebar routes for instant navigation
+    // Prefetch only visible (toggle-enabled) sidebar routes
+    const visibleMenuPaths = menuItems
+      .filter((item) => !item.featureToggle || toggleStore[item.featureToggle])
+      .map((item) => item.path);
+
     const allPaths = [
       '/dashboard',
-      ...menuItems.map((item) => item.path),
+      ...visibleMenuPaths,
       ...bottomItems.map((item) => item.path),
     ];
 
@@ -78,13 +84,22 @@ export default function Layout({
     }
     allPaths.forEach((path) => router.prefetch(path));
 
-    // Prefetch course list so the dashboard is instant
-    const input = { tags: [], limit: 20, offset: 0 };
+    // Prefetch course list so the dashboard is instant.
+    // Include all fields that useListCourses({}) produces so the cache key matches exactly.
+    const coursesInput = { status: undefined, folder: undefined, tags: [], limit: 20, offset: 0 };
     queryClient.prefetchQuery({
-      queryKey: createConnectQueryKey({ schema: listCourses, input, cardinality: "finite" }),
-      queryFn: () => callUnaryMethod(transport, listCourses, input),
+      queryKey: createConnectQueryKey({ schema: listCourses, input: coursesInput, cardinality: "finite" }),
+      queryFn: () => callUnaryMethod(transport, listCourses, coursesInput),
     });
-  }, [router, queryClient, isAuthInitialized]);
+
+    // Prefetch folder hierarchy so the content library loads instantly
+    const foldersInput = { includeCourseCounts: true };
+    queryClient.prefetchQuery({
+      queryKey: createConnectQueryKey({ schema: getFolderHierarchy, input: foldersInput, cardinality: "finite" }),
+      queryFn: () => callUnaryMethod(transport, getFolderHierarchy, foldersInput),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, queryClient, isAuthInitialized, toggleStore.showTemplates, toggleStore.showTutorials, toggleStore.showTeams]);
 
   // Desktop: sidebar margin based on collapsed/expanded state
   // Mobile: no margin (sidebar is a drawer overlay)
@@ -110,6 +125,7 @@ export default function Layout({
       <Sidebar />
       <main
         className={`flex-1 transition-all duration-300 ${marginClass}`}
+        style={{ background: 'var(--gradient-page)' }}
       >
         <Header />
         {/* Content area */}

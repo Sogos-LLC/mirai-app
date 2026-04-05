@@ -322,6 +322,40 @@ func (q *Queries) GetGenerationJobByID(ctx context.Context, id uuid.UUID) (Gener
 	return i, err
 }
 
+const getLatestCourseCreationJob = `-- name: GetLatestCourseCreationJob :one
+SELECT id, tenant_id, type, status, course_id, sme_task_id, submission_id, progress_percent, progress_message, result_path, error_message, tokens_used, retry_count, max_retries, created_by_user_id, created_at, started_at, completed_at, parent_job_id FROM generation_jobs
+WHERE course_id = $1 AND type = 'course_creation'
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestCourseCreationJob(ctx context.Context, courseID uuid.NullUUID) (GenerationJob, error) {
+	row := q.db.QueryRowContext(ctx, getLatestCourseCreationJob, courseID)
+	var i GenerationJob
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Type,
+		&i.Status,
+		&i.CourseID,
+		&i.SmeTaskID,
+		&i.SubmissionID,
+		&i.ProgressPercent,
+		&i.ProgressMessage,
+		&i.ResultPath,
+		&i.ErrorMessage,
+		&i.TokensUsed,
+		&i.RetryCount,
+		&i.MaxRetries,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.ParentJobID,
+	)
+	return i, err
+}
+
 const getParentJobStatus = `-- name: GetParentJobStatus :one
 SELECT id, status FROM generation_jobs WHERE id = $1 FOR UPDATE
 `

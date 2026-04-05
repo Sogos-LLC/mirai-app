@@ -1,0 +1,83 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mirai-loc-dev
+
+resources:
+- ../../k8s/frontend
+
+# Override labels for dev
+labels:
+- pairs:
+    environment: dev
+
+# Strategic merge patches for dev configuration
+# Using target selectors to handle namespace transformation
+
+patches:
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+    - op: replace
+      path: /spec/template/spec/containers/0/env
+      value:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: USE_S3_STORAGE
+          value: "true"
+        - name: S3_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: endpoint
+        - name: S3_REGION
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: region
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: secretkey
+        - name: S3_BUCKET
+          value: "mirai-dev"
+        - name: S3_BASE_PATH
+          value: "data"
+        - name: S3_PUBLIC_ENDPOINT
+          value: "https://minio.sogos.io"
+        - name: REDIS_URL
+          value: "redis://redis.redis-loc-dev.svc.cluster.local:6379"
+        - name: KRATOS_PUBLIC_URL
+          value: "http://kratos-public.kratos-loc-dev.svc.cluster.local:80"
+        - name: NEXT_PUBLIC_KRATOS_BROWSER_URL
+          value: "https://mirai-auth-dev.sogos.io"
+        - name: NEXT_PUBLIC_API_URL
+          value: "https://mirai-api-dev.sogos.io"
+        - name: NEXT_PUBLIC_APP_URL
+          value: "https://mirai-dev.sogos.io"
+        - name: NEXT_PUBLIC_LANDING_URL
+          value: "https://get-mirai-dev.sogos.io"
+  target:
+    kind: Deployment
+    name: mirai-frontend
+- patch: |-
+    - op: replace
+      path: /spec/maxUnavailable
+      value: 1
+  target:
+    kind: PodDisruptionBudget
+    name: mirai-frontend-pdb
+
+images:
+- name: ghcr.io/sogos-llc/mirai-app/mirai-frontend
+  newName: ghcr.io/sogos-llc/mirai-app/mirai-frontend
+  newTag: dev-555a9cf

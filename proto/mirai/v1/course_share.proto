@@ -1,0 +1,227 @@
+syntax = "proto3";
+
+package mirai.v1;
+
+import "google/protobuf/timestamp.proto";
+import "mirai/v1/ai_generation_types.proto";
+
+// ShareLinkStatus indicates the readiness state of a share link.
+enum ShareLinkStatus {
+  SHARE_LINK_STATUS_UNSPECIFIED = 0;
+  SHARE_LINK_STATUS_PENDING = 1;
+  SHARE_LINK_STATUS_SNAPSHOTTING = 2;
+  SHARE_LINK_STATUS_READY = 3;
+  SHARE_LINK_STATUS_FAILED = 4;
+}
+
+// CourseShareLink represents a share link for external course review.
+message CourseShareLink {
+  string id = 1;
+  string course_id = 2;
+  string token = 3;
+  repeated string allowed_emails = 4;
+  bool is_active = 5;
+  string share_url = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  ShareLinkStatus status = 9;
+}
+
+// ReviewComment represents a review comment from an external reviewer.
+message ReviewComment {
+  string id = 1;
+  string course_id = 2;
+  string lesson_id = 3;
+  string reviewer_email = 4;
+  string comment = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// SharedCourseData represents the course structure for shared viewers.
+message SharedCourseData {
+  string course_id = 1;
+  string title = 2;
+  string desired_outcome = 3;
+  repeated SharedSection sections = 4;
+}
+
+// SharedSection represents a section in the shared course view.
+message SharedSection {
+  string id = 1;
+  string title = 2;
+  repeated SharedLesson lessons = 3;
+}
+
+// SharedLesson represents a lesson in the shared course view.
+message SharedLesson {
+  string id = 1;
+  string title = 2;
+  int32 component_count = 3;
+}
+
+// CourseShareService handles course sharing and external review.
+service CourseShareService {
+  // === Authenticated RPCs (require login) ===
+
+  // CreateShareLink creates a new share link for a course.
+  rpc CreateShareLink(CreateShareLinkRequest) returns (CreateShareLinkResponse);
+
+  // ListShareLinks lists all share links for a course.
+  rpc ListShareLinks(ListShareLinksRequest) returns (ListShareLinksResponse);
+
+  // UpdateShareLinkEmails updates the allowed emails for a share link.
+  rpc UpdateShareLinkEmails(UpdateShareLinkEmailsRequest) returns (UpdateShareLinkEmailsResponse);
+
+  // DeactivateShareLink deactivates a share link.
+  rpc DeactivateShareLink(DeactivateShareLinkRequest) returns (DeactivateShareLinkResponse);
+
+  // ListCourseReviewComments lists all review comments for a course (owner view).
+  rpc ListCourseReviewComments(ListCourseReviewCommentsRequest) returns (ListCourseReviewCommentsResponse);
+
+  // === Public RPCs (no login required, added to publicProcedures) ===
+
+  // VerifyShareToken checks if a share token is valid and active.
+  rpc VerifyShareToken(VerifyShareTokenRequest) returns (VerifyShareTokenResponse);
+
+  // SendVerificationCode sends a 6-digit code to the email if on allowed list.
+  rpc SendVerificationCode(SendVerificationCodeRequest) returns (SendVerificationCodeResponse);
+
+  // VerifyEmailCode validates the code and returns a session token.
+  rpc VerifyEmailCode(VerifyEmailCodeRequest) returns (VerifyEmailCodeResponse);
+
+  // GetSharedCourse returns the course structure for a shared viewer.
+  rpc GetSharedCourse(GetSharedCourseRequest) returns (GetSharedCourseResponse);
+
+  // GetSharedLesson returns lesson content and comments for a shared viewer.
+  rpc GetSharedLesson(GetSharedLessonRequest) returns (GetSharedLessonResponse);
+
+  // AddReviewComment adds a review comment to a lesson.
+  rpc AddReviewComment(AddReviewCommentRequest) returns (AddReviewCommentResponse);
+
+  // ListLessonReviewComments lists review comments for a specific lesson.
+  rpc ListLessonReviewComments(ListLessonReviewCommentsRequest) returns (ListLessonReviewCommentsResponse);
+
+  // ExportSharedCoursePDF generates a PDF export for a shared course.
+  rpc ExportSharedCoursePDF(ExportSharedCoursePDFRequest) returns (ExportSharedCoursePDFResponse);
+}
+
+// === Authenticated Request/Response Messages ===
+
+message CreateShareLinkRequest {
+  string course_id = 1;
+  repeated string allowed_emails = 2;
+}
+
+message CreateShareLinkResponse {
+  CourseShareLink share_link = 1;
+}
+
+message ListShareLinksRequest {
+  string course_id = 1;
+}
+
+message ListShareLinksResponse {
+  repeated CourseShareLink share_links = 1;
+}
+
+message UpdateShareLinkEmailsRequest {
+  string share_link_id = 1;
+  repeated string allowed_emails = 2;
+}
+
+message UpdateShareLinkEmailsResponse {
+  CourseShareLink share_link = 1;
+}
+
+message DeactivateShareLinkRequest {
+  string share_link_id = 1;
+}
+
+message DeactivateShareLinkResponse {}
+
+message ListCourseReviewCommentsRequest {
+  string course_id = 1;
+}
+
+message ListCourseReviewCommentsResponse {
+  repeated ReviewComment comments = 1;
+}
+
+// === Public Request/Response Messages ===
+
+message VerifyShareTokenRequest {
+  string token = 1;
+}
+
+message VerifyShareTokenResponse {
+  bool valid = 1;
+  string course_title = 2;
+  ShareLinkStatus status = 3;
+}
+
+message SendVerificationCodeRequest {
+  string token = 1;
+  string email = 2;
+}
+
+message SendVerificationCodeResponse {
+  bool sent = 1;
+}
+
+message VerifyEmailCodeRequest {
+  string token = 1;
+  string email = 2;
+  string code = 3;
+}
+
+message VerifyEmailCodeResponse {
+  string session_token = 1;
+  string course_title = 2;
+}
+
+message GetSharedCourseRequest {
+  string session_token = 1;
+}
+
+message GetSharedCourseResponse {
+  SharedCourseData course = 1;
+}
+
+message GetSharedLessonRequest {
+  string session_token = 1;
+  string lesson_id = 2;
+}
+
+message GetSharedLessonResponse {
+  string lesson_id = 1;
+  string title = 2;
+  repeated LessonComponent components = 3;
+  repeated ReviewComment comments = 4;
+}
+
+message AddReviewCommentRequest {
+  string session_token = 1;
+  string lesson_id = 2;
+  string comment = 3;
+}
+
+message AddReviewCommentResponse {
+  ReviewComment comment = 1;
+}
+
+message ListLessonReviewCommentsRequest {
+  string session_token = 1;
+  string lesson_id = 2;
+}
+
+message ListLessonReviewCommentsResponse {
+  repeated ReviewComment comments = 1;
+}
+
+message ExportSharedCoursePDFRequest {
+  string session_token = 1;
+}
+
+message ExportSharedCoursePDFResponse {
+  string download_url = 1;
+}

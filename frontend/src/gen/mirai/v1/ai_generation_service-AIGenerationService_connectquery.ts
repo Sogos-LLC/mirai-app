@@ -110,3 +110,10 @@ export const getWorkflowState = AIGenerationService.method.getWorkflowState;
  * @generated from rpc mirai.v1.AIGenerationService.ResumeWorkflowDeferral
  */
 export const resumeWorkflowDeferral = AIGenerationService.method.resumeWorkflowDeferral;
+
+/**
+ * Cost tracking
+ *
+ * @generated from rpc mirai.v1.AIGenerationService.GetCourseGenerationDetails
+ */
+export const getCourseGenerationDetails = AIGenerationService.method.getCourseGenerationDetails;

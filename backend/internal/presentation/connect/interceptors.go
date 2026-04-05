@@ -60,12 +60,20 @@ func NewAuthInterceptor(identity service.IdentityProvider, userRepo repository.U
 		cache:    cache,
 		logger:   logger,
 		publicProcedures: map[string]bool{
-			"/mirai.v1.AuthService/CheckEmail":                 true,
-			"/mirai.v1.AuthService/Register":                   true,
-			"/mirai.v1.AuthService/RegisterWithInvitation":     true, // Public for invited user registration
-			"/mirai.v1.AuthService/EnterpriseContact":          true,
-			"/mirai.v1.HealthService/Check":                    true,
-			"/mirai.v1.InvitationService/GetInvitationByToken": true, // Public for accept invite flow
+			"/mirai.v1.AuthService/CheckEmail":                          true,
+			"/mirai.v1.AuthService/Register":                            true,
+			"/mirai.v1.AuthService/RegisterWithInvitation":              true, // Public for invited user registration
+			"/mirai.v1.AuthService/EnterpriseContact":                   true,
+			"/mirai.v1.HealthService/Check":                             true,
+			"/mirai.v1.InvitationService/GetInvitationByToken":          true, // Public for accept invite flow
+			"/mirai.v1.CourseShareService/VerifyShareToken":             true, // Public share access
+			"/mirai.v1.CourseShareService/SendVerificationCode":         true,
+			"/mirai.v1.CourseShareService/VerifyEmailCode":              true,
+			"/mirai.v1.CourseShareService/GetSharedCourse":              true,
+			"/mirai.v1.CourseShareService/GetSharedLesson":              true,
+			"/mirai.v1.CourseShareService/AddReviewComment":             true,
+			"/mirai.v1.CourseShareService/ListLessonReviewComments":     true,
+			"/mirai.v1.CourseShareService/ExportSharedCoursePDF":        true,
 		},
 	}
 }

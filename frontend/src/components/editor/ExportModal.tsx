@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Loader2, Download, Check, AlertCircle } from 'lucide-react';
+import { Loader2, Download, Check, AlertCircle, FileText, Package } from 'lucide-react';
 import { ResponsiveModal } from '@/components/ui/ResponsiveModal';
+import { ExportFormat } from '@/hooks/useExport';
 import type { ExportModalState } from '@/hooks/useExportWorkflow';
 
 interface ExportStatusData {
@@ -16,11 +17,23 @@ interface ExportModalProps {
   modalState: ExportModalState;
   exportError: string | null;
   exportStatus?: ExportStatusData | null;
+  exportFormat?: ExportFormat | null;
   isStarting: boolean;
   isGettingDownload: boolean;
-  onStartExport: () => void;
+  onStartExport: (format: ExportFormat) => void;
   onDownload: () => void;
   onRetry: () => void;
+}
+
+function formatLabel(format: ExportFormat | null | undefined): string {
+  switch (format) {
+    case ExportFormat.PDF:
+      return 'PDF';
+    case ExportFormat.SCORM_2004:
+      return 'SCORM 2004';
+    default:
+      return 'Export';
+  }
 }
 
 export function ExportModal({
@@ -29,6 +42,7 @@ export function ExportModal({
   modalState,
   exportError,
   exportStatus,
+  exportFormat,
   isStarting,
   isGettingDownload,
   onStartExport,
@@ -47,27 +61,38 @@ export function ExportModal({
       size="md"
       mobileHeight="auto"
     >
-      {/* Idle state - initial format selection */}
+      {/* Idle state - format selection */}
       {modalState === 'idle' && (
         <>
-          <p className="text-secondary mb-6">
-            Export your course to SCORM 2004 format for use in your LMS (Docebo compatible).
+          <p className="text-secondary mb-4">
+            Choose an export format for your course.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
             <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
+              onClick={() => onStartExport(ExportFormat.PDF)}
+              disabled={isStarting}
+              className="flex flex-col items-center gap-2 p-4 min-h-[44px] border rounded-lg hover:bg-hover hover:border-purple-400 transition-colors text-left group"
             >
-              Cancel
+              <FileText className="w-8 h-8 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-primary">PDF</span>
+              <span className="text-xs text-muted text-center">Shareable document with all course content</span>
             </button>
             <button
-              onClick={onStartExport}
+              onClick={() => onStartExport(ExportFormat.SCORM_2004)}
               disabled={isStarting}
-              className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              className="flex flex-col items-center gap-2 p-4 min-h-[44px] border rounded-lg hover:bg-hover hover:border-purple-400 transition-colors text-left group"
             >
-              Export SCORM
+              <Package className="w-8 h-8 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-primary">SCORM 2004</span>
+              <span className="text-xs text-muted text-center">LMS-compatible package (Docebo, Cornerstone)</span>
             </button>
           </div>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 min-h-[44px] border rounded-lg hover:bg-hover text-secondary"
+          >
+            Cancel
+          </button>
         </>
       )}
 
@@ -112,7 +137,7 @@ export function ExportModal({
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
+              className="flex-1 px-4 py-2 min-h-[44px] border rounded-lg hover:bg-hover text-secondary"
             >
               Close
             </button>
@@ -122,7 +147,7 @@ export function ExportModal({
               className="flex-1 px-4 py-2 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Download size={18} />
-              {isGettingDownload ? 'Getting Download...' : 'Download SCORM'}
+              {isGettingDownload ? 'Getting Download...' : `Download ${formatLabel(exportFormat)}`}
             </button>
           </div>
         </div>
@@ -139,7 +164,7 @@ export function ExportModal({
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 min-h-[44px] border border rounded-lg hover:bg-hover text-secondary"
+              className="flex-1 px-4 py-2 min-h-[44px] border rounded-lg hover:bg-hover text-secondary"
             >
               Close
             </button>

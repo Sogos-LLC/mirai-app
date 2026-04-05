@@ -264,12 +264,14 @@ func RenderComponent(comp ComponentData, quizIndex int) (RenderedComponent, erro
 
 	switch comp.Type {
 	case ComponentTypeText:
-		// Text content - render as paragraphs
-		rendered.HTML = template.HTML(fmt.Sprintf(`<div class="text-content">%s</div>`, formatTextContent(comp.ContentJSON)))
+		// Text content - parse JSON to extract textHtml, then render as paragraphs
+		textHTML := extractTextHTML(comp.ContentJSON)
+		rendered.HTML = template.HTML(fmt.Sprintf(`<div class="text-content">%s</div>`, formatTextContent(textHTML)))
 
 	case ComponentTypeHeading:
-		// Heading - render as h2
-		rendered.HTML = template.HTML(fmt.Sprintf(`<h2>%s</h2>`, html.EscapeString(comp.ContentJSON)))
+		// Heading - parse JSON to extract headingText
+		headingText := extractHeadingText(comp.ContentJSON)
+		rendered.HTML = template.HTML(fmt.Sprintf(`<h2>%s</h2>`, html.EscapeString(headingText)))
 
 	case ComponentTypeImage:
 		var img ImageContent
@@ -453,6 +455,30 @@ func renderQuiz(id string, quiz QuizContent, index int) string {
 }
 
 // formatTextContent formats text content, converting newlines to paragraphs.
+// extractTextHTML parses the JSON contentJson for a text component and returns the textHtml field.
+// Falls back to the raw string if parsing fails.
+func extractTextHTML(contentJSON string) string {
+	var data struct {
+		TextHTML string `json:"textHtml"`
+	}
+	if err := json.Unmarshal([]byte(contentJSON), &data); err == nil && data.TextHTML != "" {
+		return data.TextHTML
+	}
+	return contentJSON
+}
+
+// extractHeadingText parses the JSON contentJson for a heading component and returns the headingText field.
+// Falls back to the raw string if parsing fails.
+func extractHeadingText(contentJSON string) string {
+	var data struct {
+		HeadingText string `json:"headingText"`
+	}
+	if err := json.Unmarshal([]byte(contentJSON), &data); err == nil && data.HeadingText != "" {
+		return data.HeadingText
+	}
+	return contentJSON
+}
+
 func formatTextContent(content string) string {
 	// If content looks like HTML, return as-is
 	if strings.Contains(content, "<p>") || strings.Contains(content, "<div>") {

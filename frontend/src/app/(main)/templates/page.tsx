@@ -3,8 +3,17 @@
 import React, { useState } from 'react';
 import { FileText, Plus, Search, Filter } from 'lucide-react';
 import DashboardCard from '@/components/dashboard/DashboardCard';
+import { FeatureGate } from '@/components/layout/FeatureGate';
 
 export default function TemplatesPage() {
+  return (
+    <FeatureGate toggle="showTemplates">
+      <TemplatesPageContent />
+    </FeatureGate>
+  );
+}
+
+function TemplatesPageContent() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const templates = [

@@ -1,0 +1,2 @@
+-- No-op: cannot restore original padding since the base64 padding depends on the original data.
+-- The normalizeShareToken function in the service layer handles both padded and unpadded tokens.

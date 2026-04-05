@@ -7,8 +7,17 @@ import { TeamMembersPanel } from '@/components/teams/TeamMembersPanel';
 import { EditTeamModal } from '@/components/teams/EditTeamModal';
 import { PageShell } from '@/components/layout/PageShell';
 import { KnowledgeBase } from '@/components/settings/TeamKnowledgeSettings';
+import { FeatureGate } from '@/components/layout/FeatureGate';
 
 export default function TeamDetailPage() {
+  return (
+    <FeatureGate toggle="showTeams">
+      <TeamDetailPageContent />
+    </FeatureGate>
+  );
+}
+
+function TeamDetailPageContent() {
   const params = useParams();
   const router = useRouter();
   const teamId = params.id as string;

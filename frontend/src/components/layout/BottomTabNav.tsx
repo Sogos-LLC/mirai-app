@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useBreakpoint';
+import { useFeatureTogglesStore, type FeatureToggleKey } from '@/store/zustand/useFeatureTogglesStore';
 
 interface NavItem {
   href: string;
@@ -18,6 +19,8 @@ interface NavItem {
   icon: React.ReactNode;
   /** Special styling for create button */
   isCreate?: boolean;
+  /** Feature toggle that must be enabled for this item to show */
+  featureToggle?: FeatureToggleKey;
 }
 
 const navItems: NavItem[] = [
@@ -41,6 +44,7 @@ const navItems: NavItem[] = [
     href: '/templates',
     label: 'Templates',
     icon: <FileText className="w-5 h-5" />,
+    featureToggle: 'showTemplates',
   },
   {
     href: '/settings',
@@ -52,6 +56,11 @@ const navItems: NavItem[] = [
 export function BottomTabNav() {
   const pathname = usePathname();
   const isMobile = useIsMobile();
+  const toggleStore = useFeatureTogglesStore();
+
+  const visibleNavItems = navItems.filter(
+    (item) => !item.featureToggle || toggleStore[item.featureToggle]
+  );
 
   // Only render on mobile
   if (!isMobile) return null;
@@ -62,7 +71,7 @@ export function BottomTabNav() {
       style={{ height: 'calc(var(--bottom-nav-height) + var(--safe-area-bottom))' }}
     >
       <div className="flex items-center justify-around h-16 px-2">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           if (item.isCreate) {

@@ -23,6 +23,7 @@ from src.agents.section_qa_agent import (
 )
 from src.models.component_content import LessonComponents
 from src.models.outcome_tracker import OutcomeCoverage
+from src.workflows.types import ActivityUsage
 
 log = structlog.get_logger()
 
@@ -48,6 +49,7 @@ class GenerateComponentsOutput:
     section_title: str
     components: LessonComponents
     outcomes_covered: list[str]
+    usage: ActivityUsage | None = None
 
 
 @dataclass
@@ -93,11 +95,23 @@ async def generate_lesson_components(
     result = await AgentRegistry.get("component-generator").run(prompt, model=model)
     activity.heartbeat()
 
+    run_usage = result.usage()
+    usage = ActivityUsage(
+        activity_name="generate_lesson_components",
+        input_tokens=run_usage.input_tokens or 0,
+        output_tokens=run_usage.output_tokens or 0,
+        cache_read_tokens=run_usage.cache_read_tokens or 0,
+        cache_write_tokens=run_usage.cache_write_tokens or 0,
+        requests=run_usage.requests or 0,
+        total_tokens=(run_usage.input_tokens or 0) + (run_usage.output_tokens or 0),
+    )
+
     return GenerateComponentsOutput(
         lesson_title=input.context.lesson_title,
         section_title=input.context.section_title,
         components=result.output,
         outcomes_covered=result.output.outcomes_covered,
+        usage=usage,
     )
 
 

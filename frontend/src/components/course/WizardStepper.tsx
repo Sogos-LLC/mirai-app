@@ -1,16 +1,15 @@
 import { Fragment } from 'react';
 import {
   CheckCircle,
-  FileText,
   Sparkles,
-  Users,
   Target,
-  MessageCircle,
+  Users,
+  FileText,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface WizardStepperProps {
-  /** Current active phase (1-5). Values > 5 mark all phases as completed. */
+  /** Current active phase (1-4). Values > 4 mark all phases as completed. */
   currentPhase: number;
 }
 
@@ -20,11 +19,10 @@ interface PhaseDefinition {
 }
 
 const PHASES: PhaseDefinition[] = [
-  { label: 'Course Name', icon: FileText },
-  { label: 'Title & Description', icon: Sparkles },
-  { label: 'SME Personas', icon: Users },
-  { label: 'Target Audience', icon: Target },
-  { label: 'Tone & Context', icon: MessageCircle },
+  { label: 'Topic', icon: Sparkles },
+  { label: 'Outcomes', icon: Target },
+  { label: 'Teacher & Student', icon: Users },
+  { label: 'Context', icon: FileText },
 ];
 
 export function WizardStepper({ currentPhase }: WizardStepperProps) {

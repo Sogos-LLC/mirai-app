@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package mirai.v1;
 
+import "google/protobuf/timestamp.proto";
 import "mirai/v1/ai_generation_types.proto";
 import "mirai/v1/course_wizard.proto";
 
@@ -38,6 +39,9 @@ service AIGenerationService {
   rpc GetGraphVisualization(GetGraphVisualizationRequest) returns (GetGraphVisualizationResponse);
   rpc GetWorkflowState(GetWorkflowStateRequest) returns (GetWorkflowStateResponse);
   rpc ResumeWorkflowDeferral(ResumeWorkflowDeferralRequest) returns (ResumeWorkflowDeferralResponse);
+
+  // Cost tracking
+  rpc GetCourseGenerationDetails(GetCourseGenerationDetailsRequest) returns (GetCourseGenerationDetailsResponse);
 }
 
 // StoredWizardData represents wizard selections persisted with the course.
@@ -211,6 +215,8 @@ message StartCourseCreationRequest {
   repeated string selected_audience_ids = 16;
   optional ToneOption selected_tone = 17;
   string additional_context = 18;
+  string context_file_url = 19;
+  bool skip_qa = 20;
 }
 
 message StartCourseCreationResponse {
@@ -260,3 +266,17 @@ message ResumeWorkflowDeferralRequest {
 }
 
 message ResumeWorkflowDeferralResponse {}
+
+// =============================================================================
+// COST TRACKING
+// =============================================================================
+
+message GetCourseGenerationDetailsRequest {
+  string course_id = 1;
+}
+
+message GetCourseGenerationDetailsResponse {
+  GenerationJob job = 1;
+  GenerationCostReport cost_report = 2;
+  google.protobuf.Timestamp generated_at = 3;
+}

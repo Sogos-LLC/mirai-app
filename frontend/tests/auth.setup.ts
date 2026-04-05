@@ -1,6 +1,8 @@
 import { chromium } from '@playwright/test';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_FILE = path.join(__dirname, '.auth', 'user.json');
 const BASE_URL = process.env.BASE_URL || 'https://mirai-uat.sogos.io';
 

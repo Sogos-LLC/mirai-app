@@ -80,12 +80,14 @@ func Detect() (Environment, error) {
 		return EnvUAT, nil
 	case strings.HasSuffix(namespace, "-local") || namespace == "mirai-local":
 		return EnvLocal, nil
+	case strings.HasSuffix(namespace, "-dev") || namespace == "mirai-loc-dev":
+		return EnvLocal, nil
 	case namespace == "" || namespace == "default":
 		// No namespace = local development outside K8s
 		return EnvLocal, nil
 	default:
 		// Unknown namespace - could be a typo or new environment
-		return "", fmt.Errorf("cannot determine environment from namespace %q: expected 'mirai', 'mirai-uat', or 'mirai-local'", namespace)
+		return "", fmt.Errorf("cannot determine environment from namespace %q: expected 'mirai', 'mirai-uat', 'mirai-local', or 'mirai-*-dev'", namespace)
 	}
 }
 

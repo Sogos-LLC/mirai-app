@@ -89,6 +89,8 @@
   --gradient-surface: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
   --gradient-glow: none;
   --gradient-card: none;
+  --gradient-page: linear-gradient(180deg, #f0f2f5 0%, #f9fafb 50%, #ffffff 100%);
+  --gradient-hero: linear-gradient(135deg, rgba(99,102,241,0.04) 0%, rgba(139,92,246,0.06) 50%, transparent 100%);
 
   /* Source mode colors */
   --source-internal-border: #8b5cf6;
@@ -153,6 +155,8 @@
   --gradient-surface: linear-gradient(180deg, #151320 0%, #12101c 100%);
   --gradient-glow: radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
   --gradient-card: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+  --gradient-page: linear-gradient(180deg, #0a0915 0%, #0d0c16 50%, #12101c 100%);
+  --gradient-hero: linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.04) 50%, transparent 100%);
 
   /* Source mode colors */
   --source-internal-border: #a78bfa;

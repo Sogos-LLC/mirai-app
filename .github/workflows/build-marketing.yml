@@ -2,7 +2,7 @@ name: Build Marketing Site (GitOps)
 
 on:
   push:
-    branches: [ main, uat ]
+    branches: [ main, uat, dev ]
     paths:
       - 'frontend/**'
       - '.github/workflows/build-marketing.yml'
@@ -48,6 +48,12 @@ jobs:
           echo "kratos_url=https://mirai-auth-uat.sogos.io" >> $GITHUB_OUTPUT
           echo "kustomize_path=k8s-uat/frontend-marketing" >> $GITHUB_OUTPUT
           echo "environment=uat" >> $GITHUB_OUTPUT
+        elif [ "$BRANCH" = "dev" ]; then
+          echo "app_url=https://mirai-dev.sogos.io" >> $GITHUB_OUTPUT
+          echo "landing_url=https://get-mirai-dev.sogos.io" >> $GITHUB_OUTPUT
+          echo "kratos_url=https://mirai-auth-dev.sogos.io" >> $GITHUB_OUTPUT
+          echo "kustomize_path=k8s-local-dev/frontend-marketing" >> $GITHUB_OUTPUT
+          echo "environment=dev" >> $GITHUB_OUTPUT
         else
           echo "app_url=https://mirai.sogos.io" >> $GITHUB_OUTPUT
           echo "landing_url=https://get-mirai.sogos.io" >> $GITHUB_OUTPUT
@@ -86,7 +92,7 @@ jobs:
           NEXT_PUBLIC_KRATOS_BROWSER_URL=${{ steps.env-config.outputs.kratos_url }}
         tags: |
           ${{ steps.version.outputs.full-tag }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.env-config.outputs.branch == 'uat' && 'uat-latest' || 'latest' }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.env-config.outputs.branch == 'uat' && 'uat-latest' || (steps.env-config.outputs.branch == 'dev' && 'dev-latest' || 'latest') }}
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.version.outputs.sha }}
         labels: |
           org.opencontainers.image.revision=${{ github.sha }}

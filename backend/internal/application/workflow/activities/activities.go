@@ -1,8 +1,6 @@
 // Package activities provides Go-side Temporal activities for the Mirai backend.
-// These activities handle database operations, storage (MinIO), event publishing,
-// and API key decryption — everything that needs direct access to Go infrastructure.
-//
-// Activities run on the "go-tasks" queue while AI generation runs on "ai-tasks" (Python).
+// These activities handle database operations, storage (MinIO), API key decryption,
+// and document ingestion (chunking, embedding, vector storage).
 package activities
 
 import (
@@ -15,6 +13,7 @@ import (
 	"go.temporal.io/sdk/activity"
 
 	"github.com/sogos/mirai-backend/internal/domain/repository"
+	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
 	"github.com/sogos/mirai-backend/internal/domain/tenant"
 	"github.com/sogos/mirai-backend/internal/domain/valueobject"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/gemini"
@@ -27,6 +26,11 @@ type APIKeyDecryptor interface {
 	DecryptAPIKey(ctx context.Context, tenantID uuid.UUID) (string, error)
 }
 
+// CourseExportProcessor processes course export jobs.
+type CourseExportProcessor interface {
+	ProcessExport(ctx context.Context, exportID uuid.UUID) error
+}
+
 // GoActivities holds all dependencies for Go-side Temporal activities.
 // Register this struct with the Temporal worker to make all methods available.
 type GoActivities struct {
@@ -34,9 +38,12 @@ type GoActivities struct {
 	KnowledgeRepo    repository.TeamKnowledgeRepository
 	ContentStorage   storage.StorageAdapter
 	KeyDecryptor     APIKeyDecryptor
+	ExportProcessor  CourseExportProcessor
 	EmbeddingClient  *gemini.EmbeddingClient
 	QdrantClient     *vectordb.QdrantClient
 	QdrantCollection string
+	ShareLinkRepo    repository.ShareLinkRepository
+	EmailProvider    domainservice.EmailProvider
 	Logger           *slog.Logger
 }
 
@@ -309,5 +316,37 @@ func (a *GoActivities) UpdateKnowledgeStatus(ctx context.Context, input UpdateKn
 		"sourceID", input.SourceID,
 		"status", input.Status,
 	)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Course Export Activities
+// ---------------------------------------------------------------------------
+
+// ProcessCourseExportInput is the input for the ProcessCourseExport activity.
+type ProcessCourseExportInput struct {
+	ExportID string `json:"export_id"`
+	TenantID string `json:"tenant_id"`
+}
+
+// ProcessCourseExport processes a course export job (PDF or SCORM).
+func (a *GoActivities) ProcessCourseExport(ctx context.Context, input ProcessCourseExportInput) error {
+	tenantID, err := uuid.Parse(input.TenantID)
+	if err != nil {
+		return fmt.Errorf("parse tenant ID: %w", err)
+	}
+	exportID, err := uuid.Parse(input.ExportID)
+	if err != nil {
+		return fmt.Errorf("parse export ID: %w", err)
+	}
+
+	// Set tenant context for RLS-scoped queries.
+	ctx = tenant.WithTenantID(ctx, tenantID)
+
+	if err := a.ExportProcessor.ProcessExport(ctx, exportID); err != nil {
+		return fmt.Errorf("process export: %w", err)
+	}
+
+	activity.GetLogger(ctx).Info("course export processed", "exportID", input.ExportID)
 	return nil
 }

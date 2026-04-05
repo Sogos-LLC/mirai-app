@@ -264,7 +264,6 @@ func audiencePersonasToProto(personas []entity.WizardAudiencePersona) []*v1.Audi
 	for i, p := range personas {
 		out[i] = &v1.AudiencePersona{
 			Id:          p.ID,
-			Name:        p.Name,
 			Role:        p.Role,
 			Description: p.Description,
 			Goals:       p.Goals,
@@ -278,7 +277,6 @@ func audiencePersonasFromProto(protos []*v1.AudiencePersona) []entity.WizardAudi
 	for i, p := range protos {
 		out[i] = entity.WizardAudiencePersona{
 			ID:          p.GetId(),
-			Name:        p.GetName(),
 			Role:        p.GetRole(),
 			Description: p.GetDescription(),
 			Goals:       p.GetGoals(),
@@ -358,7 +356,6 @@ func wizardStepDataFromProto(pb *v1.WizardStepData) *entity.WizardStepData {
 	for _, p := range pb.GetAudiencePersonas() {
 		data.AudiencePersonas = append(data.AudiencePersonas, entity.WizardAudiencePersona{
 			ID:          p.GetId(),
-			Name:        p.GetName(),
 			Role:        p.GetRole(),
 			Description: p.GetDescription(),
 			Goals:       p.GetGoals(),

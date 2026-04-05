@@ -22,6 +22,7 @@ import (
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/stripe"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/twenty"
 	"github.com/sogos/mirai-backend/internal/infrastructure/external/vectordb"
+	"github.com/sogos/mirai-backend/internal/infrastructure/auth"
 	"github.com/sogos/mirai-backend/internal/infrastructure/logging"
 	"github.com/sogos/mirai-backend/internal/infrastructure/observability"
 	"github.com/sogos/mirai-backend/internal/infrastructure/persistence/postgres"
@@ -37,6 +38,7 @@ import (
 
 	// Domain
 	domainservice "github.com/sogos/mirai-backend/internal/domain/service"
+	"github.com/sogos/mirai-backend/internal/domain/pdf"
 	"github.com/sogos/mirai-backend/internal/domain/scorm"
 
 	// Application services
@@ -291,8 +293,9 @@ func main() {
 	knowledgeGapService := service.NewKnowledgeGapService(gapTaskRepo, userRepo, courseRepo, teamRepo, notificationService, kratosClient, logger)
 	logger.Info("knowledge gap service initialized")
 
-	// SCORM packager for course exports
+	// SCORM packager and PDF generator for course exports
 	scormPackager := scorm.NewPackager()
+	pdfGenerator := pdf.NewGenerator()
 
 	// Course export service (uses WorkflowStarter instead of Asynq)
 	courseExportService := service.NewCourseExportService(
@@ -300,6 +303,7 @@ func main() {
 		courseRepo,
 		exportRepo,
 		scormPackager,
+		pdfGenerator,
 		baseStorage,
 		tenantStorage,
 		workflowStarter,
@@ -307,6 +311,26 @@ func main() {
 		logger,
 	)
 	logger.Info("course export service initialized")
+
+	// Course sharing service
+	shareLinkRepo := sqlc.NewShareLinkRepository(db.DB)
+	verificationCodeRepo := sqlc.NewVerificationCodeRepository(db.DB)
+	reviewCommentRepo := sqlc.NewReviewCommentRepository(db.DB)
+	shareSessionManager := auth.NewShareSessionManager(cfg.ShareSessionSecret)
+	courseShareService := service.NewCourseShareService(
+		shareLinkRepo,
+		verificationCodeRepo,
+		reviewCommentRepo,
+		courseRepo,
+		userRepo,
+		tenantStorage,
+		courseExportService,
+		shareSessionManager,
+		emailClient,
+		workflowStarter,
+		cfg.FrontendURL,
+	)
+	logger.Info("course share service initialized")
 
 	// Unified Knowledge service
 	unifiedKnowledgeService := service.NewUnifiedKnowledgeService(
@@ -397,6 +421,13 @@ func main() {
 			goActivities.KeyDecryptor = temporalinfra.NewSettingsAPIKeyDecryptor(tenantSettingsService)
 		}
 
+		// Set up course export processor
+		goActivities.ExportProcessor = courseExportService
+
+		// Set up share link dependencies
+		goActivities.ShareLinkRepo = shareLinkRepo
+		goActivities.EmailProvider = emailClient
+
 		// OpsActivities: provisioning, cleanup, feedback sync
 		opsActivities := &activities.OpsActivities{
 			Provisioner: provisioningService,
@@ -442,6 +473,7 @@ func main() {
 		KnowledgeGapService:    knowledgeGapService,
 		CurriculumService:      curriculumService,
 		WizardService:          wizardService,
+		CourseShareService:     courseShareService,
 		BaseStorage:            baseStorage,
 		PendingRegRepo:         pendingRegRepo,
 		UserRepo:               userRepo,

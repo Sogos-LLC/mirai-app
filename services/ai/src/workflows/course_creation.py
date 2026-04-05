@@ -78,6 +78,7 @@ with workflow.unsafe.imports_passed_through():
     from src.workflows.types import (
         CourseCreationInput,
         CourseCreationOutput,
+        GenerationCostReport,
         LockedArtifacts,
         StepApproval,
     )
@@ -168,6 +169,7 @@ class CourseCreationWorkflow:
         self._orchestrator: ResearchOrchestrator | None = None
         self._course_research: ResearchResult | None = None  # Cached top-level research
         self._section_source_refs: dict[str, list[SourceReference]] = {}  # section_title -> refs
+        self._cost_report = GenerationCostReport()
 
     # ------------------------------------------------------------------
     # Query handler
@@ -243,8 +245,19 @@ class CourseCreationWorkflow:
         self._progress_message = "Starting course creation"
         await self._update_job(input, "PROCESSING", 0, "Starting course creation")
 
+        # Use wizard-improved title if provided
+        if input.improved_title:
+            input.topic = input.improved_title
+
         # Decrypt API key (Go activity)
         api_key = await self._decrypt_api_key(input.tenant_id)
+
+        # If context file was uploaded, read its content and prepend to use_context
+        if input.context_file_url:
+            file_text = await self._read_context_file(input.context_file_url)
+            if file_text:
+                input.use_context = f"{file_text}\n\n{input.use_context}" if input.use_context else file_text
+                log.info("context_file_loaded", url=input.context_file_url, chars=len(file_text))
 
         # Initialize research orchestrator + health check
         self._orchestrator = ResearchOrchestrator.from_input(input)
@@ -413,7 +426,10 @@ class CourseCreationWorkflow:
             len(lc.components) for lcs in all_lesson_components.values()
             for lc in lcs.values()
         )
-        await self._run_qa(api_key, input, outcomes, structure, all_lesson_components, total_components)
+        if not input.skip_qa:
+            await self._run_qa(api_key, input, outcomes, structure, all_lesson_components, total_components)
+        else:
+            log.info("skipping QA check (skip_qa=True)")
 
         # =============================================================
         # AUTO-RUN: Export to S3
@@ -425,13 +441,17 @@ class CourseCreationWorkflow:
         course_content = self._build_s3_content_v2(
             input, analysis, outcomes, structure,
             section_outcomes, all_lesson_components,
+            self._cost_report,
         )
         await self._write_course_content(input.tenant_id, input.course_id, course_content)
 
         self._status = "completed"
         self._progress = 100
         self._progress_message = "Course creation complete"
-        await self._update_job(input, "COMPLETED", 100, "Course creation complete")
+        await self._update_job(
+            input, "COMPLETED", 100, "Course creation complete",
+            tokens_used=self._cost_report.total_tokens,
+        )
 
         await workflow.wait_condition(workflow.all_handlers_finished)
 
@@ -440,6 +460,7 @@ class CourseCreationWorkflow:
             course_id=input.course_id,
             total_lessons=total_lessons,
             total_sections=len(structure.sections),
+            usage=self._cost_report,
         )
 
     # -------------------------------------------------------------------
@@ -482,6 +503,7 @@ class CourseCreationWorkflow:
             ),
             GenerateAnalysisOutput,
         )
+        self._record_usage(analysis_result)
 
         # Build knowledge coverage if strict mode
         knowledge_coverage = None
@@ -500,6 +522,15 @@ class CourseCreationWorkflow:
         # Use cached course-level research
         rag_context = self._course_research.formatted_context if self._course_research else ""
 
+        # If wizard provided desired outcomes, inject them as high-priority context
+        additional = input.additional_context or ""
+        if input.desired_outcomes:
+            additional = (
+                f"IMPORTANT — The creator has already defined desired outcomes. "
+                f"Use these as the primary foundation for the learning outcomes:\n"
+                f"{input.desired_outcomes}\n\n{additional}"
+            ).strip()
+
         outcomes_result: GenerateOutcomesOutput = await self._run_ai_activity(
             "generate_course_outcomes",
             GenerateOutcomesInput(
@@ -511,10 +542,11 @@ class CourseCreationWorkflow:
                 constraints=analysis.constraints,
                 rag_context=rag_context,
                 strict_knowledge_only=input.strict_knowledge_only,
-                additional_context=input.additional_context,
+                additional_context=additional,
             ),
             GenerateOutcomesOutput,
         )
+        self._record_usage(outcomes_result)
 
         return outcomes_result.outcomes
 
@@ -541,6 +573,7 @@ class CourseCreationWorkflow:
             ),
             GenerateStructureOutput,
         )
+        self._record_usage(structure_result)
 
         # Generate section outcomes
         self._set_progress(30, "Mapping section outcomes...")
@@ -597,6 +630,7 @@ class CourseCreationWorkflow:
             GenerateSampleLessonOutput,
             timeout=AI_LESSON_TIMEOUT,
         )
+        self._record_usage(lesson_result)
 
         # Format the sample lesson through the component agent
         self._set_progress(45, "Formatting sample lesson components...")
@@ -643,6 +677,7 @@ class CourseCreationWorkflow:
             GenerateComponentsOutput,
             timeout=AI_LESSON_TIMEOUT,
         )
+        self._record_usage(sample_components_result)
 
         # Inject missing reference links into sample lesson
         if resource_hints:
@@ -774,6 +809,7 @@ class CourseCreationWorkflow:
         )
 
         self._artifacts.qa = qa_result.qa
+        self._record_usage(qa_result)
 
         log.info(
             "qa_complete",
@@ -915,6 +951,7 @@ class CourseCreationWorkflow:
                     source_references=source_references,
                     strict_knowledge_only=input.strict_knowledge_only,
                     additional_context=input.additional_context,
+                    component_hints=section.component_hints,
                 )
                 lesson_contexts.append(
                     GenerateComponentsInput(api_key=api_key, context=ctx)
@@ -936,6 +973,7 @@ class CourseCreationWorkflow:
 
                 for r in results:
                     section_results[r.lesson_title] = r.components
+                    self._record_usage(r)
 
                 completed_lessons += len(batch)
                 progress = 60 + int((completed_lessons / total_lessons) * 22)
@@ -1019,6 +1057,7 @@ class CourseCreationWorkflow:
         structure: CourseStructure,
         section_outcomes: SectionOutcomes,
         all_lesson_components: dict[str, dict[str, LessonComponents]],
+        cost_report: GenerationCostReport | None = None,
     ) -> dict:
         """Transform validated artifacts into S3CourseContent format for the editor.
 
@@ -1151,6 +1190,7 @@ class CourseCreationWorkflow:
                 "courseBlocks": [],
             },
             "generatedLessons": all_lessons,
+            "generationMetadata": self._build_generation_metadata(cost_report, now),
         }
 
     @staticmethod
@@ -1183,6 +1223,34 @@ class CourseCreationWorkflow:
                 "contentJson": json.dumps(content_data),
             })
         return preview
+
+    @staticmethod
+    def _build_generation_metadata(
+        cost_report: "GenerationCostReport | None",
+        generated_at: str,
+    ) -> dict:
+        """Build generation metadata dict for S3 content.json."""
+        if cost_report is None:
+            return {"generatedAt": generated_at}
+        return {
+            "generatedAt": generated_at,
+            "modelName": cost_report.model_name,
+            "totalInputTokens": cost_report.total_input_tokens,
+            "totalOutputTokens": cost_report.total_output_tokens,
+            "totalTokens": cost_report.total_tokens,
+            "totalRequests": cost_report.total_requests,
+            "estimatedCostUsd": round(cost_report.estimated_cost_usd, 6),
+            "phases": [
+                {
+                    "phaseName": a.activity_name,
+                    "inputTokens": a.input_tokens,
+                    "outputTokens": a.output_tokens,
+                    "totalTokens": a.total_tokens,
+                    "requests": a.requests,
+                }
+                for a in cost_report.activities
+            ],
+        }
 
     @staticmethod
     def _strip_source_markers(text: str) -> str:
@@ -1228,6 +1296,12 @@ class CourseCreationWorkflow:
     # Helpers
     # -------------------------------------------------------------------
 
+    def _record_usage(self, result: object) -> None:
+        """Record token usage from an activity result if it has a usage field."""
+        usage = getattr(result, "usage", None)
+        if usage is not None:
+            self._cost_report.record(usage)
+
     def _set_progress(self, percent: int, message: str) -> None:
         self._progress = percent
         self._progress_message = message
@@ -1261,6 +1335,21 @@ class CourseCreationWorkflow:
         self._step_data = ""
         return approval
 
+    async def _read_context_file(self, file_path: str) -> str:
+        """Read uploaded context file from MinIO via Go activity."""
+        try:
+            result = await workflow.execute_activity(
+                "ReadFileContent",
+                {"file_path": file_path},
+                task_queue=GO_TASKS,
+                start_to_close_timeout=GO_TIMEOUT,
+                retry_policy=RetryPolicy(**GO_RETRY),
+            )
+            return result.get("content", "")
+        except Exception as e:
+            log.warning("context_file_read_failed", path=file_path, error=str(e))
+            return ""
+
     async def _decrypt_api_key(self, tenant_id: str) -> str:
         result = await workflow.execute_activity(
             "DecryptAPIKey",
@@ -1277,15 +1366,19 @@ class CourseCreationWorkflow:
         status: str,
         progress: int,
         message: str,
+        tokens_used: int = 0,
     ) -> None:
+        payload: dict = {
+            "job_id": input.job_id,
+            "status": status,
+            "progress_percent": progress,
+            "progress_message": message,
+        }
+        if tokens_used > 0:
+            payload["tokens_used"] = tokens_used
         await workflow.execute_activity(
             "UpdateJobStatus",
-            {
-                "job_id": input.job_id,
-                "status": status,
-                "progress_percent": progress,
-                "progress_message": message,
-            },
+            payload,
             task_queue=GO_TASKS,
             start_to_close_timeout=GO_TIMEOUT,
             retry_policy=RetryPolicy(**GO_RETRY),

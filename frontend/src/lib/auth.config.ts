@@ -116,6 +116,7 @@ export const PUBLIC_ROUTES = [
   '/auth/error',
   '/auth/accept-invite',
   '/auth/reset-password',
+  '/shared',
 ] as const;
 
 /**

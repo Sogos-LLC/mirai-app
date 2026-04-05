@@ -41,6 +41,8 @@ type LessonProvenance = content.LessonProvenance
 type OutlineProvenance = content.OutlineProvenance
 type CourseContent = content.CourseContent
 type CourseSettings = content.CourseSettings
+type GenerationMetadata = content.GenerationMetadata
+type GenerationPhaseUsage = content.GenerationPhaseUsage
 
 // CourseService handles course and library operations.
 // Uses a hybrid model: metadata in PostgreSQL, content in S3.
@@ -444,6 +446,7 @@ func (s *CourseService) CreateCourse(ctx context.Context, kratosID uuid.UUID, in
 
 	// Invalidate cache
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
+	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Library())
 
 	return &StoredCourse{
 		ID:      course.ID.String(),
@@ -559,6 +562,7 @@ func (s *CourseService) UpdateCourse(ctx context.Context, kratosID uuid.UUID, id
 	// Invalidate cache (TenantCache automatically prefixes keys with tenant:{id}:)
 	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Course(id))
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
+	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Library())
 
 	log.Info("course updated")
 
@@ -635,6 +639,7 @@ func (s *CourseService) DeleteCourse(ctx context.Context, kratosID uuid.UUID, id
 	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Course(id))
 	_ = s.cache.InvalidatePattern(ctx, "courses:*")
 	_ = s.cache.InvalidatePattern(ctx, "folder:*")
+	_ = s.cache.Delete(ctx, cache.TenantCacheKeys.Library())
 
 	log.Info("course deleted")
 	return nil

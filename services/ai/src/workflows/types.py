@@ -34,7 +34,6 @@ class WizardAudiencePersona:
     """Audience persona from wizard (matches Go entity.WizardAudiencePersona)."""
 
     id: str = ""
-    name: str = ""
     role: str = ""
     description: str = ""
     goals: list[str] = field(default_factory=list)
@@ -81,6 +80,8 @@ class CourseCreationInput:
     selected_audience_ids: list[str] | None = field(default_factory=list)
     selected_tone: WizardToneOption | None = None
     additional_context: str = ""
+    context_file_url: str = ""
+    skip_qa: bool = True
 
     def __post_init__(self) -> None:
         """Normalize None → empty for optional collection fields."""
@@ -99,12 +100,52 @@ class CourseCreationInput:
 
 
 @dataclass
+class ActivityUsage:
+    """Token usage from a single AI activity invocation."""
+
+    activity_name: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_tokens: int = 0
+    cache_write_tokens: int = 0
+    requests: int = 0
+    total_tokens: int = 0
+
+
+@dataclass
+class GenerationCostReport:
+    """Aggregated token usage and cost estimate for a full course generation."""
+
+    activities: list[ActivityUsage] = field(default_factory=list)
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_tokens: int = 0
+    total_requests: int = 0
+    model_name: str = "gemini-2.5-flash"
+    estimated_cost_usd: float = 0.0
+
+    def record(self, usage: ActivityUsage) -> None:
+        """Add an activity's usage to the running totals."""
+        self.activities.append(usage)
+        self.total_input_tokens += usage.input_tokens
+        self.total_output_tokens += usage.output_tokens
+        self.total_tokens += usage.total_tokens
+        self.total_requests += usage.requests
+        # Gemini 2.5 Flash pricing: $0.15/M input, $0.60/M output
+        self.estimated_cost_usd = (
+            self.total_input_tokens * 0.15 / 1_000_000
+            + self.total_output_tokens * 0.60 / 1_000_000
+        )
+
+
+@dataclass
 class CourseCreationOutput:
     """Output from the course creation workflow."""
 
     course_id: str
     total_lessons: int = 0
     total_sections: int = 0
+    usage: GenerationCostReport | None = None
 
 
 @dataclass
